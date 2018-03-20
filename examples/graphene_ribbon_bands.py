@@ -1,0 +1,81 @@
+"""graphene.py
+
+Graphene ribbon band structure example for tipsi.
+"""
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import sys
+sys.path.append("..")
+import tipsi
+import params_simple_graphene
+import numpy as np
+
+def main():
+    
+    #########################
+    # SIMULATION PARAMETERS #
+    #########################
+    
+    # available cores for parallel sample construction
+    nr_processes = 8
+    
+    # band plot resolution
+    res_bands = 100
+    
+    # sample size in unit cells
+    W = 64 # must be even
+    H = 1
+    
+    a = 0.24 # lattice constant in nm
+    t = 2.8 # hopping value
+    e = 0. # onsite potential
+    
+    # create lattice, hop_dict and pbc_wrap
+    lat = params_simple_graphene.graphene_lattice(a)
+    hop_dict = params_simple_graphene.graphene_hop_dict(t, e)
+    def pbc_wrap(unit_cell_coords, orbital):
+        return params_simple_graphene.graphene_pbc_zigzag(W, H, unit_cell_coords, orbital)
+    
+    #######################
+    # SAMPLE CONSTRUCTION #
+    #######################
+    
+    # create SiteSet objects
+    site_set = params_simple_graphene.graphene_sheet_sites(W, H)
+    
+    # make sample
+    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+
+    # apply HopDict
+    sample.add_hop_dict(hop_dict)
+    
+    # rescale Hamiltonian
+    sample.rescale_H(9.)
+    
+    # plot
+    sample.plot()
+    
+    #############
+    # GET BANDS #
+    #############
+
+    # get ribbon band structure
+    N = res_bands
+    kpoints = [[0., (i / N) * 2 * np.pi / a - np.pi / a, 0.] for i in range(N + 1)]
+    kvals = [(i / N) * 2 * np.pi / a for i in range(N + 1)]
+    bands = sample.band_structure(kpoints)
+    for i in range(len(bands[0,:])):
+        plt.plot(kvals, bands[:,i], color='k')
+    plt.xlim((0., np.amax(kvals)))
+    plt.xlabel("k (1/nm)")
+    plt.ylabel("E (eV)")
+    plt.savefig("bands.png")
+    plt.close()
+
+    
+if __name__ == '__main__':
+    main()
+            
