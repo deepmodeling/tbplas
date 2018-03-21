@@ -6,12 +6,13 @@ Graphene ribbon band structure example for tipsi.
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import numpy as np
 
 import sys
 sys.path.append("..")
+sys.path.append("../materials")
 import tipsi
-import params_simple_graphene
-import numpy as np
+import graphene_nn
 
 def main():
     
@@ -34,17 +35,17 @@ def main():
     e = 0. # onsite potential
     
     # create lattice, hop_dict and pbc_wrap
-    lat = params_simple_graphene.graphene_lattice(a)
-    hop_dict = params_simple_graphene.graphene_hop_dict(t, e)
+    lat = graphene_nn.graphene_lattice(a)
+    hop_dict = graphene_nn.graphene_hop_dict(t, e)
     def pbc_wrap(unit_cell_coords, orbital):
-        return params_simple_graphene.graphene_pbc_zigzag(W, H, unit_cell_coords, orbital)
+        return graphene_nn.graphene_pbc_zigzag(W, H, unit_cell_coords, orbital)
     
     #######################
     # SAMPLE CONSTRUCTION #
     #######################
     
     # create SiteSet objects
-    site_set = params_simple_graphene.graphene_sheet_sites(W, H)
+    site_set = graphene_nn.graphene_sheet_sites(W, H)
     
     # make sample
     sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
