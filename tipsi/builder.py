@@ -8,6 +8,8 @@ Functions
         Make sublist iterables for a list, for parallel computation.
     hop_dict_ft
         Calculate Fourier transform of a Lattice, HopDict pair.
+    interpolate_k_points
+        Get list of momenta by interpolation between symmetry points.
     band_structure
         Calculate band structure for a Lattice, HopDict pair.
 
@@ -32,6 +34,8 @@ Classes
 #     -> Do we need to use csc_matrix instead?
 #   - Parallellize rescale value finding?
 #   - Adding magnetic field is quite slow
+#   - Maybe all the momentum based functions should be moved to a 
+#     new file (hop_dict_ft, interpolate_k_points, band_structure).
 #
 ################
 
@@ -147,6 +151,51 @@ def hop_dict_ft(hop_dict, lattice, momentum):
             
     return Hk
     
+def interpolate_k_points(k_points, resolution):
+    """Get list of momenta by interpolation between
+    symmetry points.
+ 
+    Parameters
+    ----------
+    k_points : (n, 3) list of floats
+        k-point coordinates
+    resolution : integer
+        number of momenta between two k-points
+        
+    Returns
+    ----------
+    momenta : ((n - 1) * resolution + 1, 3) list of floats
+        interpolated k-point coordinates
+    xvals : ((n - 1) * resolution + 1) list of floats
+        x-axis values for band plot
+    ticks : (n) list of floats
+        list of xvals corresponding to symmetry points
+    """ 
+    
+    # get momenta
+    momenta = []
+    for i in range(len(k_points)-1):
+        kp0 = k_points[i]
+        kp1 = k_points[i + 1]
+        for j in range(resolution):
+            rat = 1. * j / resolution
+            momenta.append([kp0[0] + (kp1[0] - kp0[0]) * rat, \
+                            kp0[1] + (kp1[1] - kp0[1]) * rat, \
+                            kp0[2] + (kp1[2] - kp0[2]) * rat])
+    momenta.append(k_points[-1])
+
+    # get xvals
+    xvals = [0]
+    for i in range(len(momenta) - 1):
+        diff = np.subtract(momenta[i + 1], momenta[i])
+        xvals.append(xvals[-1] + np.linalg.norm(diff))
+        
+    # get ticks
+    ticks=[xvals[i * resolution] for i in range(len(k_points))]
+    ticks.append(xvals[-1])
+        
+    return momenta, xvals, ticks
+    
 def band_structure(hop_dict, lattice, momenta):
     """Calculate band structure for a HopDict, Lattice pair.
     
@@ -227,6 +276,36 @@ class HopDict:
         hopping = np.array(hopping, dtype=complex)
         self.dict[rel_unit_cell] = hopping
         
+    def empty(self, rel_unit_cell, shape):
+        """Add empty hopping matrix to dictionary.
+        
+        Parameters
+        ----------
+        rel_unit_cell : 3-tuple of integers
+            relative unit cell coordinates
+        shape : 2-tuple of integers
+            shape of empty hopping matrix
+        """
+        
+        # add empty matrix to dictionary
+        empty_mat = np.zeros(shape, dtype=complex)
+        self.dict[rel_unit_cell] = empty_mat
+    
+    def set_element(self, rel_unit_cell, element, hop):
+        """Add empty hopping matrix to dictionary.
+        
+        Parameters
+        ----------
+        rel_unit_cell : 3-tuple of integers
+            relative unit cell coordinates
+        element : 2-tuple of integers
+            element indices
+        hop : complex float
+            hopping value
+        """
+        
+        self.dict[rel_unit_cell][element[0], element[1]] = hop
+    
     def delete(self, rel_unit_cell):
         """Delete hopping matrix from dictionary.
         
@@ -244,15 +323,28 @@ class HopDict:
         return self.dict.pop(rel_unit_cell, None)
     
     def add_conjugates(self):
-        """Adds hopping conjugates for all nonzero hoppings."""
+        """Adds hopping conjugates to self.dict."""
         
+        # declare new dict
         self.new_dict = copy.deepcopy(self.dict)
+        # iterate over items
         for rel_unit_cell, hopping in self.dict.items():
             (x, y, z) = rel_unit_cell
             reverse_unit_cell = (-x, -y, -z)
+            # create reverse_unit_cell dict key
             if reverse_unit_cell not in self.dict:
                 reverse_hopping = np.conjugate(np.transpose(hopping))
                 self.new_dict[reverse_unit_cell] = reverse_hopping
+            # if key exists, make sure all conjugate hoppings are there
+            else:
+                for i in range(hopping.shape[0]):
+                    for j in range(hopping.shape[1]):
+                        hop = hopping[i,j]
+                        hop_conjg = self.dict[reverse_unit_cell][j,i]
+                        if (not hop == 0.) and (hop_conjg == 0.):
+                            self.new_dict[reverse_unit_cell][j,i] = np.conjugate(hop)
+                            
+        # done
         self.dict = self.new_dict
     
     def sparse(self):
@@ -358,7 +450,7 @@ class Lattice:
         
         vec = self.vectors
         div = np.inner(vec[0], np.cross(vec[1], vec[2]))
-        rec = [2.0 * pi * np.cross(vec[(i + 1) % 3], vec[(i + 2) % 3]) / div \
+        rec = [2.0 * np.pi * np.cross(vec[(i + 1) % 3], vec[(i + 2) % 3]) / div \
                for i in range(3)]
         return np.array(rec)
 
