@@ -62,75 +62,90 @@ class Config():
     
     Attributes
     ----------
+    sample['area_unit_cell'] : float
+        Area of the unit cell.
+    sample['energy_range'] : float
+        Energy range in eV, centered at 0.
+    sample['nr_orbitals'] : integer
+        Degrees of freedom per unit cell.
     generic['Bessel_max'] : int
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
         Bessel function precision cut-off. Default value: 1.0e-13
-    generic['energy_range'] : float
-        Energy range in eV, centered at 0. If False, energy range 
-        is computed automatically. Default value: False.
+    generic['beta'] : float
+        Value for 1/kT. Default value: 11604.505/300 (room temperature, using eV)
     generic['correct_spin'] : bool
         If True, results are corrected for spin. Default value: False.
-    generic['nr_time_steps'] : int
-        Number of time steps. Default value: 1024
-    generic['nr_ran_samples'] : int
-        Number of random initial wave functions. Default value: 1
-    generic['beta'] : float
-        Value for 1/kT. 
-        Default value: 11604.505/300 (room temperature, using eV)
+    generic['Fermi_cheb_precision'] : float
+        Precision cut-off of Fermi-Dirac distribution. 
+        Default value: 1.0e-10
     generic['mu'] : float
         Chemical potential. Default value: 0.
     generic['nr_Fermi_fft_steps'] : int
         Maximum number of Fermi-Dirac distribution FFT steps, 
         must be power of two. Default value: 2**15
-    generic['Fermi_cheb_precision'] : float
-        Precision cut-off of Fermi-Dirac distribution. 
-        Default value: 1.0e-10
+    generic['nr_ran_samples'] : int
+        Number of random initial wave functions. Default value: 1
+    generic['nr_time_steps'] : int
+        Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wavefunction generation. Default value: 1337.
-    dyn_pol['q_points'] : (n_q_points, 3) list of floats
-        List of q-points. Default value: [[0.1, 0., 0.]].
-    dyn_pol['coulomb_constant'] : float
-        Coulomb constant. Default value: 1.0
     dyn_pol['background_dielectric_constant'] : float
         Background dielectric constant. Default value: 23.6.
+    dyn_pol['coulomb_constant'] : float
+        Coulomb constant. Default value: 1.0
+    dyn_pol['q_points'] : (n_q_points, 3) list of floats
+        List of q-points. Default value: [[0.1, 0., 0.]].
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
     output['timestamp'] : int
         Timestamp generated at __init__ call to make output 
         files unique.
-    output['directory'] : string
-        Output directory. Default value: "sim_data".
-    output['corr_DOS'] : string
-        DOS correlation output file. 
-        Default value: "sim_data/" + timestamp + "corr_DOS.dat".
     output['corr_AC'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_AC.dat".
     output['corr_DC'] : string
         DC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_DC.dat".
-    output['corr_KB_DC'] : string
-        Kubo-Bastin DC conductivity correlation output file. 
-        Default value: "sim_data/" + timestamp + "corr_KB_DC.dat".
+    output['corr_DOS'] : string
+        DOS correlation output file. 
+        Default value: "sim_data/" + timestamp + "corr_DOS.dat".
     output['corr_dyn_pol'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
+    output['corr_KB_DC'] : string
+        Kubo-Bastin DC conductivity correlation output file. 
+        Default value: "sim_data/" + timestamp + "corr_KB_DC.dat".
+    output['directory'] : string
+        Output directory. Default value: "sim_data".
     """
 
     # initialize
-    def __init__(self):
-    
+    def __init__(self, sample = False):
+        """Initialize.
+        
+        Parameters
+        ----------
+        sample : Sample object
+            Sample object of which to take sample parameters.
+        """
+        
         # declare dicts
+        self.sample = {}
         self.generic = {}
         self.dyn_pol = {}
         self.quasi_eigenstates = {}
         self.output = {}
         
+        # sample parameters
+        if sample:
+            self.sample['nr_orbitals'] = len(sample.lattice.orbital_coords)
+            self.sample['energy_range'] = sample.energy_range()
+            self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
+                   
         # generic standard values
         self.generic['Bessel_max'] = 100
         self.generic['Bessel_precision'] = 1.0e-13
-        self.generic['energy_range'] = 0. # pick range automatically
         self.generic['correct_spin'] = False
         self.generic['nr_time_steps'] = 1024
         self.generic['nr_random_samples'] = 1
@@ -150,7 +165,8 @@ class Config():
         
         # output settings
         self.output['timestamp'] = str(int(time.time()))
-        self.set_output('sim_data', self.output['timestamp'])
+        self.set_output(directory = 'sim_data', \
+                        prefix = self.output['timestamp'])
     
     def set_output(self, directory = False, prefix = ""):
         """Function to set data output options.
@@ -171,7 +187,7 @@ class Config():
         self.output['directory'] = td
         self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'
         self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
-        self.output['corr_dyn_pol'] = td + prefix + 'dyn_pol' + '.dat'
+        self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
         self.output['corr_KB_DC'] = td + prefix + 'corr_KB_DC' + '.dat'
     

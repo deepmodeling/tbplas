@@ -24,8 +24,8 @@ def main():
     nr_processes = 24
     
     # sample size in unit cells
-    W = 1024 # must be even
-    H = 1024
+    W = 512 # must be even
+    H = 512
     
     a = 0.24 # lattice constant in nm
     t = 2.8 # hopping value
@@ -41,7 +41,7 @@ def main():
     # SAMPLE CONSTRUCTION #
     #######################
     
-    # create SiteSet objects
+    # create SiteSet object
     site_set = graphene.sheet(W, H)
     
     # make sample
@@ -57,20 +57,22 @@ def main():
     # SIMULATION PARAMETERS #
     #########################
     
-    config = tipsi.Config()
+    config = tipsi.Config(sample)
     config.generic['nr_time_steps'] = 1024
     config.generic['nr_random_samples'] = 1
     config.generic['energy_range'] = 20.
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
-    
+    config.save(directory = 'sim_data', \
+                prefix = config.output['timestamp'])
+                  
     ############
     # RUN TBPM #
     ############
     
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)
-    energies_DOS, DOS = tipsi.analyze_corr_DOS(sample, config, corr_DOS)
+    energies_DOS, DOS = tipsi.analyze_corr_DOS(config, corr_DOS)
     plt.plot(energies_DOS, DOS)
     plt.xlabel("E (eV)")
     plt.ylabel("DOS")
@@ -79,7 +81,7 @@ def main():
 
     # get AC conductivity
     corr_AC = tipsi.corr_AC(sample, config)
-    omegas_AC, AC = tipsi.analyze_corr_AC(sample, config, corr_AC)
+    omegas_AC, AC = tipsi.analyze_corr_AC(config, corr_AC)
     plt.plot(omegas_AC, AC[0])
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("sigma_xx (sigma_0)")
@@ -88,8 +90,8 @@ def main():
     
     # get dyn pol
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
-    qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(sample, config, corr_dyn_pol)
-    qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(sample, config, dyn_pol)
+    qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
+    qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(config, dyn_pol)
     plt.plot(omegas, dyn_pol[0,:].imag)
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("Im(dp)")

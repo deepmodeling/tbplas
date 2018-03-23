@@ -16,13 +16,6 @@ import antimonene
 
 def main():
     
-    #########################
-    # SIMULATION PARAMETERS #
-    #########################
-    
-    # available cores for parallel sample construction
-    nr_processes = 8
-    
     # band plot resolution
     res_bands = 50
     

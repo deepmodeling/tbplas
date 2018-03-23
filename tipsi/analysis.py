@@ -8,8 +8,6 @@ Functions
         Exponential window
     window_exp_ten
         Window function given by exponential of 10
-    get_energy_range
-        Function for getting the energy range of a sample
     analyze_corr_DOS
         Analyze DOS correlation function
     analyze_corr_AC
@@ -95,33 +93,11 @@ def window_exp_ten(i, N):
 # correlation function analysis
 ################
 
-def get_energy_range(sample, config):
-    """Function for getting the total energy range of a sample.
-    
-    Parameters
-    ----------
-    sample : Sample object
-        contains sample information
-    config : Config object
-        contains TBPM configuration parameters
-        
-    Returns
-    ----------
-    float
-        Energy range in eV, centered at 0.
-    """
-    if config.generic['energy_range'] == 0.:
-        return sample.energy_range()
-    else:
-        return config.generic['energy_range']
-
-def analyze_corr_DOS(sample, config, corr_DOS, window = window_Hanning):
+def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
     """Function for analyzing the DOS correlation function.
     
     Parameters
     ----------
-    sample : Sample object
-        contains sample information
     config : Config object
         contains TBPM configuration parameters
     corr_DOS : list of complex floats
@@ -139,7 +115,7 @@ def analyze_corr_DOS(sample, config, corr_DOS, window = window_Hanning):
     
     # get useful things
     tnr = config.generic['nr_time_steps']
-    en_range = get_energy_range(sample, config)
+    en_range = config.sample['energy_range']
     energies = [0.5 * i * en_range / tnr - en_range / 2. \
                 for i in range(tnr * 2)]
     en_step = 0.5 * en_range / tnr
@@ -170,13 +146,11 @@ def analyze_corr_DOS(sample, config, corr_DOS, window = window_Hanning):
             
     return energies, DOS
     
-def analyze_corr_AC(sample, config, corr_AC, window = window_exp):
+def analyze_corr_AC(config, corr_AC, window = window_exp):
     """Function for analyzing the DOS correlation function.
     
     Parameters
     ----------
-    sample : Sample object
-        contains sample information
     config : Config object
         contains TBPM configuration parameters
     corr_AC : (4,n) list of complex floats
@@ -195,12 +169,12 @@ def analyze_corr_AC(sample, config, corr_AC, window = window_exp):
 
     # get useful things
     tnr = config.generic['nr_time_steps']
-    en_range = get_energy_range(sample, config)
+    en_range = config.sample['energy_range']
     t_step = np.pi / en_range
     beta = config.generic['beta']
     omegas = [i * en_range / tnr for i in range(tnr)]
-    ac_prefactor = 4. * len(sample.lattice.orbital_coords) \
-                   / sample.lattice.area_unit_cell()
+    ac_prefactor = 4. * config.sample['nr_orbitals'] \
+                        / config.sample['area_unit_cell']
     
     # get AC conductivity
     AC = np.zeros((4, tnr))
@@ -224,16 +198,13 @@ def analyze_corr_AC(sample, config, corr_AC, window = window_exp):
         AC = 2. * AC
             
     return omegas, AC
-    
 
-def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
+def analyze_corr_dyn_pol(config, corr_dyn_pol, \
                          window = window_exp_ten):
     """Function for analyzing the DOS correlation function.
     
     Parameters
     ----------
-    sample : Sample object
-        contains sample information
     config : Config object
         contains TBPM configuration parameters
     corr_dyn_pol : (n_q_points, n_t_steps) list of floats
@@ -253,7 +224,7 @@ def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
 
     # get useful things
     tnr = config.generic['nr_time_steps']
-    en_range = get_energy_range(sample, config)
+    en_range = config.sample['energy_range']
     t_step = np.pi / en_range
     beta = config.generic['beta']
     q_points = config.dyn_pol['q_points']
@@ -261,8 +232,8 @@ def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
     omegas = [i * en_range / tnr for i in range(tnr)]
     n_omegas = tnr
     # do we need to divide the prefac by 1.5??
-    dyn_pol_prefactor = -2. * len(sample.lattice.orbital_coords) \
-                        / sample.lattice.area_unit_cell()
+    dyn_pol_prefactor = -2. * config.sample['nr_orbitals'] \
+                        / config.sample['area_unit_cell']
     
     # get dynamical polarization
     dyn_pol = np.zeros((n_q_points, n_omegas), dtype = complex)
@@ -282,7 +253,7 @@ def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
     
     return q_points, omegas, dyn_pol
     
-def get_dielectric_function(sample, config, dyn_pol):
+def get_dielectric_function(config, dyn_pol):
     """Function for analyzing the DOS correlation function.
     
     Parameters
@@ -302,7 +273,7 @@ def get_dielectric_function(sample, config, dyn_pol):
     
     # get useful things
     tnr = config.generic['nr_time_steps']
-    en_range = get_energy_range(sample, config)
+    en_range = config.sample['energy_range']
     t_step = np.pi / en_range
     beta = config.generic['beta']
     q_points = config.dyn_pol['q_points']

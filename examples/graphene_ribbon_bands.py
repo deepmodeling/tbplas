@@ -20,9 +20,6 @@ def main():
     # SIMULATION PARAMETERS #
     #########################
     
-    # available cores for parallel sample construction
-    nr_processes = 8
-    
     # band plot resolution
     res_bands = 100
     
@@ -34,21 +31,21 @@ def main():
     t = 2.8 # hopping value
     e = 0. # onsite potential
     
-    # create lattice, hop_dict and pbc_wrap
+    # get lattice, hop_dict and pbc_wrap from materials file
     lat = graphene.lattice(a)
     hop_dict = graphene.hop_dict_nn(t, e)
-    def pbc_wrap(unit_cell_coords, orbital):
-        return graphene.pbc_zigzag(W, H, unit_cell_coords, orbital)
+    def pbc_wrap(uc_coords, orbital):
+        return graphene.pbc_zigzag(W, H, uc_coords, orbital)
     
     #######################
     # SAMPLE CONSTRUCTION #
     #######################
     
-    # create SiteSet objects
+    # create SiteSet object
     site_set = graphene.sheet(W, H)
     
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tipsi.Sample(lat, site_set, pbc_wrap)
 
     # apply HopDict
     sample.add_hop_dict(hop_dict)
@@ -65,7 +62,8 @@ def main():
 
     # get ribbon band structure
     N = res_bands
-    kpoints = [[0., (i / N) * 2 * np.pi / a - np.pi / a, 0.] for i in range(N + 1)]
+    kpoints = [[0., (i / N) * 2 * np.pi / a - np.pi / a, 0.] \
+               for i in range(N + 1)]
     kvals = [(i / N) * 2 * np.pi / a for i in range(N + 1)]
     bands = sample.band_structure(kpoints)
     for i in range(len(bands[0,:])):

@@ -67,6 +67,7 @@ def read_config(filename):
     with open(filename, 'rb') as f:
         dict = pickle.load(f)
     config = Config()
+    config.sample = dict.sample
     config.generic = dict.generic
     config.dyn_pol = dict.dyn_pol
     config.quasi_eigenstates = dict.quasi_eigenstates
@@ -155,10 +156,8 @@ def read_corr_dyn_pol(filename):
             
     for i_q in range(n_q_points):
         temp_string = f.readline().split()
-        print(temp_string)
         for i in range(n_samples):
             temp_string = f.readline().split()
-            print(temp_string)
             for j in range(n_timesteps):
                 line = f.readline().split()
                 corr_dyn_pol[i_q, j] += float(line[1])

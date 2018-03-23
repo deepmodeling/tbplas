@@ -6,8 +6,6 @@ Functions
 ----------
     Bessel
         Get Bessel functions. (Move this function to fortran?)
-    get_energy_range
-        Get energy range of tipsi sample.
     corr_DOS
         Get DOS correlation function.
     corr_AC
@@ -68,27 +66,6 @@ def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
                 return Bes
     return False
     
-def get_energy_range(sample, config):
-    """Get energy range of tipsi system.
- 
-    Parameters
-    ----------
-    sample : Sample object
-        sample information
-    config : Config object
-        tbpm parameters
-        
-    Returns
-    ----------
-    float
-        Energy range centered at E = 0.
-    """ 
-    
-    if config.generic['energy_range'] == 0.:
-        return sample.energy_range()
-    else:
-        return config.generic['energy_range']
-    
 def corr_DOS(sample, config):
     """Get density of states correlation function
  
@@ -106,8 +83,7 @@ def corr_DOS(sample, config):
     """ 
     
     # get Bessel functions
-    en_range = get_energy_range(sample, config)
-    t_step = 2 * np.pi / en_range
+    t_step = 2 * np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])
@@ -138,8 +114,7 @@ def corr_AC(sample, config):
     """ 
     
     # get Bessel functions
-    en_range = get_energy_range(sample, config)
-    t_step = np.pi / en_range
+    t_step = np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])
@@ -176,8 +151,7 @@ def corr_dyn_pol(sample, config):
     """ 
     
     # get Bessel functions
-    en_range = get_energy_range(sample, config)
-    t_step = np.pi / en_range
+    t_step = np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])
@@ -253,8 +227,7 @@ def quasi_eigenstates(sample, config):
     """ 
     
     # get Bessel functions
-    en_range = get_energy_range(sample, config)
-    t_step = 2 * np.pi / en_range
+    t_step = 2 * np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])

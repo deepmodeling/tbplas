@@ -16,10 +16,6 @@ import black_phosphorus
 
 def main():
     
-    #########################
-    # SIMULATION PARAMETERS #
-    #########################
-    
     # band plot resolution
     res_bands = 25
     
