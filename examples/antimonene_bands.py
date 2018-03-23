@@ -1,6 +1,6 @@
-"""black_phosphorus_bands.py
+"""antimonene_bands.py
 
-Black phosphorus band structure example for tipsi.
+Antimonene band structure example for tipsi.
 """
 
 import matplotlib
@@ -12,7 +12,7 @@ import sys
 sys.path.append("..")
 sys.path.append("../materials")
 import tipsi
-import black_phosphorus
+import antimonene
 
 def main():
     
@@ -20,20 +20,26 @@ def main():
     # SIMULATION PARAMETERS #
     #########################
     
+    # available cores for parallel sample construction
+    nr_processes = 8
+    
     # band plot resolution
-    res_bands = 25
+    res_bands = 50
     
     # create lattice, hop_dict and pbc_wrap
-    lat = black_phosphorus.lattice()
-    hop_dict = black_phosphorus.hop_dict()
+    lat_const = 0.411975806
+    vert_disp = 0.16455347
+    SOC = True
+    SOC_lambda = 0.34
+    lat = antimonene.lattice(SOC, lat_const, vert_disp)
+    hop_dict = antimonene.hop_dict(SOC, SOC_lambda)
     
     # define symmetry points
-    G = np.array([0. ,0. ,0. ])
-    X = lat.reciprocal_latt()[0] / 2
-    Y = lat.reciprocal_latt()[1] / 2
-    S = X + Y
-    kpoints = [G, Y, S, X, G]
-    ticktitles = ["G","Y","S","X","G"]
+    G = [0. ,0. ,0. ]
+    M = [np.pi / (np.sqrt(3.) * lat_const), np.pi / lat_const, 0.]
+    K = [2 * np.pi / (np.sqrt(3.) * lat_const), 2. * np.pi / (3. * lat_const), 0.]
+    kpoints = [G, M, K, G]
+    ticktitles = ["G","M","K","G"]
 
     # get band structure
     kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
@@ -48,7 +54,7 @@ def main():
     plt.ylabel("E (eV)")
     plt.savefig("bands.png")
     plt.close()
-
+    
     
 if __name__ == '__main__':
     main()

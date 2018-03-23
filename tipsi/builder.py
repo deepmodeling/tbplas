@@ -36,6 +36,7 @@ Classes
 #   - Adding magnetic field is quite slow
 #   - Maybe all the momentum based functions should be moved to a 
 #     new file (hop_dict_ft, interpolate_k_points, band_structure).
+#   - Multilayer band structure.
 #
 ################
 
@@ -136,7 +137,7 @@ def hop_dict_ft(hop_dict, lattice, momentum):
     nr_orbitals = len(lattice.orbital_coords)
     sparse_hop_dict = hop_dict.sparse()
     Hk = np.zeros((nr_orbitals, nr_orbitals), dtype = complex)
-    
+
     # iterate over orbitals
     for orb0 in range(nr_orbitals):
         r0 = lattice.site_pos((0, 0, 0), orb0)
@@ -292,7 +293,7 @@ class HopDict:
         self.dict[rel_unit_cell] = empty_mat
     
     def set_element(self, rel_unit_cell, element, hop):
-        """Add empty hopping matrix to dictionary.
+        """Add single hopping to hopping matrix.
         
         Parameters
         ----------
@@ -329,21 +330,19 @@ class HopDict:
         self.new_dict = copy.deepcopy(self.dict)
         # iterate over items
         for rel_unit_cell, hopping in self.dict.items():
-            (x, y, z) = rel_unit_cell
+            x, y, z = rel_unit_cell
             reverse_unit_cell = (-x, -y, -z)
             # create reverse_unit_cell dict key
             if reverse_unit_cell not in self.dict:
                 reverse_hopping = np.conjugate(np.transpose(hopping))
                 self.new_dict[reverse_unit_cell] = reverse_hopping
-            # if key exists, make sure all conjugate hoppings are there
-            else:
-                for i in range(hopping.shape[0]):
-                    for j in range(hopping.shape[1]):
-                        hop = hopping[i,j]
-                        hop_conjg = self.dict[reverse_unit_cell][j,i]
-                        if (not hop == 0.) and (hop_conjg == 0.):
-                            self.new_dict[reverse_unit_cell][j,i] = np.conjugate(hop)
-                            
+            # then, make sure all conjugate hoppings are there
+            for i in range(hopping.shape[0]):
+                for j in range(hopping.shape[1]):
+                    hop = hopping[i,j]
+                    hop_conjg = self.new_dict[reverse_unit_cell][j,i]
+                    if (not hop == 0.) and (hop_conjg == 0.):
+                        self.new_dict[reverse_unit_cell][j,i] = np.conjugate(hop)
         # done
         self.dict = self.new_dict
     
@@ -364,7 +363,7 @@ class HopDict:
             max_orb = np.amax(hopping.shape + (max_orb,))
         
         # declare sparse dict
-        sparse_dict = [{} for i in range(max_orb + 1)]
+        sparse_dict = [{} for i in range(max_orb)]
     
         # iterate over elements, add nonzero elements to sparse dict
         for rel_unit_cell, hopping in self.dict.items():
@@ -396,13 +395,15 @@ class Lattice:
         
         Parameters
         ----------
-        vectors : 3-list of float 3-tuples
+        vectors : (2 or 3)-list of float 3-tuples
             list of lattice vectors
         orbital_coords : list of float 3-tuples
             list of orbital positions within unit cell
         """
         
         self.vectors = np.array(vectors)
+        if (len(self.vectors) == 2):
+            self.vectors = np.append(self.vectors, [[0., 0., 1.]], axis = 0)
         self.vectorsT = np.transpose(self.vectors)
         self.orbital_coords = np.array(orbital_coords)
     
