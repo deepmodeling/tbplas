@@ -6,10 +6,12 @@ Functions
         Read sample object from file.
     read_config
         Read config object from file.
-    read_dos_corr
+    read_corr_DOS
         Read DOS correlation function from file.
-    read_ac_corr
+    read_corr_AC
         Read AC correlation function from file.
+    read_corr_dyn_pol
+        Read dynamical polarization correlation function from file.
     read_wannier90
         Read Wannier90 files.
 """
@@ -17,7 +19,7 @@ Functions
 ################
 # TO DO:
 #
-#   - add read_corr for dyn_pol
+#   - test read_dyn_pol_corr 
 #   - add read_corr for DC + KBDC corr funcs
 #   - how to properly deal with intra-package import?
 #
@@ -80,7 +82,7 @@ def read_config(filename):
     config.output = dict.output
     return config
 
-def read_dos_corr(filename):
+def read_corr_DOS(filename):
     """Read DOS correlation from file
     
     Parameters
@@ -98,17 +100,17 @@ def read_dos_corr(filename):
         
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_DOS = np.zeros(n_timesteps,dtype=complex)
+    corr_DOS = np.zeros(n_timesteps, dtype = complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
         for j in range(n_timesteps):
             line = f.readline().split()
-            corr_DOS[j] += float(line[1]) + 1j*float(line[2])
+            corr_DOS[j] += float(line[1]) + 1j * float(line[2])
                 
     return corr_DOS / n_samples
     
-def read_ac_corr(filename):
+def read_corr_AC(filename):
     """Read AC correlation from file
     
     Parameters
@@ -126,18 +128,51 @@ def read_ac_corr(filename):
         
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_AC = np.zeros((4,n_timesteps),dtype=complex)
+    corr_AC = np.zeros((4, n_timesteps), dtype = complex)
             
     for i in range(n_samples):
         temp_string = f.readline().split()
         for j in range(n_timesteps):
             line = f.readline().split()
-            corr_AC[0,j] += float(line[1]) + 1j*float(line[2])
-            corr_AC[1,j] += float(line[3]) + 1j*float(line[4])
-            corr_AC[2,j] += float(line[5]) + 1j*float(line[6])
-            corr_AC[3,j] += float(line[7]) + 1j*float(line[8])
+            corr_AC[0, j] += float(line[1]) + 1j * float(line[2])
+            corr_AC[1, j] += float(line[3]) + 1j * float(line[4])
+            corr_AC[2, j] += float(line[5]) + 1j * float(line[6])
+            corr_AC[3, j] += float(line[7]) + 1j * float(line[8])
                 
     return corr_AC / n_samples
+    
+def read_corr_dyn_pol(filename):
+    """Read dynamical polarization correlation from file
+    
+    Parameters
+    ----------
+    filename : string
+        read correlation values from this file
+    
+    Returns
+    ----------
+    corr_dyn_pol : (n_q_points, n_timesteps) list of complex floats
+        the dynamical polarization  correlation function
+    """
+    
+    f = open(filename,'r')
+        
+    n_q_points = int(f.readline().split()[-1])
+    n_samples = int(f.readline().split()[-1])
+    n_timesteps = int(f.readline().split()[-1])
+    corr_dyn_pol = np.zeros((n_q_points, n_timesteps), dtype = complex)
+            
+    for i_q in range(n_q_points):
+        temp_string = f.readline().split()
+        print(temp_string)
+        for i in range(n_samples):
+            temp_string = f.readline().split()
+            print(temp_string)
+            for j in range(n_timesteps):
+                line = f.readline().split()
+                corr_dyn_pol[i_q, j] += float(line[1])
+                
+    return corr_dyn_pol / n_samples
     
 def read_wannier90(coord_file, ham_file):
     """Read Lattice and HopDict information from Wannier90 file

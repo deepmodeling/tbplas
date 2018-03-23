@@ -23,9 +23,6 @@ def main():
     # available cores for parallel sample construction
     nr_processes = 24
     
-    # band plot resolution
-    res_bands = 100
-    
     # sample size in unit cells
     W = 1024 # must be even
     H = 1024
@@ -65,7 +62,7 @@ def main():
     config.generic['nr_random_samples'] = 1
     config.generic['energy_range'] = 20.
     config.generic['correct_spin'] = True
-    config.dyn_pol['q_points'] = [[0.5,0.0,0.0] , [1.0,0.0,0.0]]
+    config.dyn_pol['q_points'] = [[1., 0., 0.]]
     
     ############
     # RUN TBPM #
@@ -84,21 +81,18 @@ def main():
     corr_AC = tipsi.corr_AC(sample, config)
     omegas_AC, AC = tipsi.analyze_corr_AC(sample, config, corr_AC)
     plt.plot(omegas_AC, AC[0])
-    plt.xlim((0,10))
-    plt.ylim((0,8))
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("sigma_xx (sigma_0)")
     plt.savefig("graphene_ACxx.png")
     plt.close()
-
+    
     # get dyn pol
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
     qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(sample, config, corr_dyn_pol)
     qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(sample, config, dyn_pol)
     plt.plot(omegas, dyn_pol[0,:].imag)
-    plt.plot(omegas, dyn_pol[1,:].imag)
     plt.xlabel("hbar * omega (eV)")
-    plt.ylabel("Re(dp)")
+    plt.ylabel("Im(dp)")
     plt.savefig("graphene_dp_imag.png")
     plt.close()
     

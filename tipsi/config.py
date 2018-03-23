@@ -121,6 +121,12 @@ class Config():
     output['corr_AC'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_AC.dat".
+    output['corr_DC'] : string
+        DC conductivity correlation output file. 
+        Default value: "sim_data/" + timestamp + "corr_DC.dat".
+    output['corr_KB_DC'] : string
+        Kubo-Bastin DC conductivity correlation output file. 
+        Default value: "sim_data/" + timestamp + "corr_KB_DC.dat".
     output['corr_dyn_pol'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
@@ -152,7 +158,7 @@ class Config():
         self.quasi_eigenstates['energies'] = [-0.1, 0., 0.1]
         
         # dynamical polarization
-        self.dyn_pol['q_points'] = [[0.1, 0., 0.]]
+        self.dyn_pol['q_points'] = [[1., 0., 0.]]
         self.dyn_pol['coulomb_constant'] = 1.0
         self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
         
@@ -180,6 +186,8 @@ class Config():
         self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'
         self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
         self.output['corr_dyn_pol'] = td + prefix + 'dyn_pol' + '.dat'
+        self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
+        self.output['corr_KB_DC'] = td + prefix + 'corr_KB_DC' + '.dat'
     
     def save(self, filename = "config.pkl", directory = False, prefix = ""):
         """Function to save config parameters to a .pkl file.

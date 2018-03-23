@@ -219,7 +219,7 @@ def analyze_corr_AC(sample, config, corr_AC, window = window_exp):
             acv = 0.
             for k in range(tnr):
                 acv += 2. * window(k + 1, tnr) \
-                       * np.sin(omega * (k + 1) * t_step) \
+                       * np.sin(omega * k * t_step) \
                        * corr_AC[j,k].imag
             if omega == 0.:
                 acv = 0.
@@ -263,15 +263,15 @@ def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
     # get useful things
     tnr = config.generic['nr_time_steps']
     en_range = get_energy_range(sample, config)
-    t_step = 2. * np.pi / en_range
+    t_step = np.pi / en_range
     beta = config.generic['beta']
     q_points = config.dyn_pol['q_points']
     n_q_points = len(q_points)
     omegas = [i * en_range / tnr for i in range(tnr)]
     n_omegas = tnr
-    # is this a universal prefactor????
+    # do we need to divide the prefac by 1.5??
     dyn_pol_prefactor = -2. * len(sample.lattice.orbital_coords) \
-                        / (1.5 * sample.lattice.area_unit_cell()) 
+                        / sample.lattice.area_unit_cell()
     
     # get dynamical polarization
     dyn_pol = np.zeros((n_q_points, n_omegas), dtype = complex)
@@ -282,7 +282,7 @@ def analyze_corr_dyn_pol(sample, config, corr_dyn_pol, \
             for k in range(tnr):
                 tau = k * t_step
                 dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
-                       * (np.cos(omega * tau) + 1j * np.sin(omega * tau))
+                       * np.exp(1j * omega * tau)
             dyn_pol[i_q,i] = dyn_pol_prefactor * t_step * dpv
             
     # correct for spin

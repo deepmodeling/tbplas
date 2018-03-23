@@ -172,8 +172,31 @@ subroutine tbpm_accond(Bes, n_bes, beta, mu, &
             s_indptr, n_indptr, s_indices, n_indices, &
             s_hop, n_hop, psi2)
 
+        !get correlation functions in all directions
+        call current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
+            n_indices, sys_current_x, n_hop, wf1)
+        corrval(1) = inner_prod(psi2, wf1, n_wf)
+        call current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
+            n_indices, sys_current_y, n_hop, wf1)
+        corrval(2) = inner_prod(psi2, wf1, n_wf)
+        call current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
+            n_indices, sys_current_x, n_hop, wf1)
+        corrval(3) = inner_prod(psi2, wf1, n_wf)
+        call current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
+            n_indices, sys_current_y, n_hop, wf1)
+        corrval(4) = inner_prod(psi2, wf1, n_wf)
+
+        ! write to file
+        write(27,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3,&
+                   ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)")&
+             1, &
+             real(corrval(1)), aimag(corrval(1)), &
+             real(corrval(2)), aimag(corrval(2)), &
+             real(corrval(3)), aimag(corrval(3)), &
+             real(corrval(4)), aimag(corrval(4))
+                 
         ! iterate over time
-        do k = 1, n_timestep
+        do k = 2, n_timestep
  
             if (MODULO(k,64) == 0) then
                 print*, "    Timestep ", k, " of ", n_timestep
@@ -328,7 +351,7 @@ subroutine tbpm_dyn_pol(Bes, n_bes, beta, mu, &
                 
             ! get correlation and store
             corrval = aimag(inner_prod(psi2, wf1, n_wf))
-            write(27,*) corrval
+            write(27,*) 1, corrval
             corr(i_q, 1) = corr(i_q, 1) + corrval / n_ran_samples
             
             ! iterate over tau
@@ -349,7 +372,7 @@ subroutine tbpm_dyn_pol(Bes, n_bes, beta, mu, &
                     
                 ! get correlation and store
                 corrval = aimag(inner_prod(psi2, wf1, n_wf))
-                write(27,*) corrval
+                write(27,*) k, corrval
                 corr(i_q, k) = corr(i_q, k) + corrval / n_ran_samples
                 
             end do

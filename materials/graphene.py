@@ -27,8 +27,7 @@ def lattice(a = 0.24):
     # a is lattice constant in nm
     b = a / np.sqrt(3.)
     vectors        = [[1.5 * b, -0.5 * a, 0.], 
-                      [1.5 * b, 0.5 * a, 0.], 
-                      [0., 0., 1.]]
+                      [1.5 * b, 0.5 * a, 0.]]
     orbital_coords = [[-b / 2., 0., 0.], 
                       [b / 2., 0., 0.]]
     return tipsi.Lattice(vectors, orbital_coords)
