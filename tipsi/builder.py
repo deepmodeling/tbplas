@@ -25,20 +25,6 @@ Classes
         Contains all the information of the tight-binding system:
         geometry, hoppings, boundary conditions, etc.
 """
-        
-################
-# TO DO:
-#
-#   - For ~1e9 hops we get mp.Pipe integer overflow.
-#   - Check hopping matrix row/col ordering (also in fortran).
-#     -> Do we need to use csc_matrix instead?
-#   - Parallellize rescale value finding?
-#   - Adding magnetic field is quite slow
-#   - Maybe all the momentum based functions should be moved to a 
-#     new file (hop_dict_ft, interpolate_k_points, band_structure).
-#   - Multilayer band structure.
-#
-################
 
 ################
 # dependencies
