@@ -15,15 +15,6 @@ Functions
     read_wannier90
         Read Wannier90 files.
 """
-        
-################
-# TO DO:
-#
-#   - test read_dyn_pol_corr 
-#   - add read_corr for DC + KBDC corr funcs
-#   - how to properly deal with intra-package import?
-#
-################
 
 ################
 # dependencies

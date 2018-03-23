@@ -12,20 +12,6 @@ Classes
         Contains TBPM parameters.
 """
 
-##########
-# TO DO:
-#
-# ADD params for:
-#   - DC conductivity
-#   - Kubo-Bastin DC conductivity
-#   - cuda
-#
-# ALSO:
-#   - move dielectric function params to different dict?
-#   - how to deal with units?
-#
-##########
-
 ################
 # dependencies
 ################

@@ -1,8 +1,3 @@
-################
-# TO DO:
-# include tipsi lite?
-################
-
 from .analysis import *
 from .builder import *
 from .config import *

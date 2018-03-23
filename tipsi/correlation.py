@@ -22,16 +22,6 @@ Functions
         Get quasi-eigenstates.
 """
 
-##########
-# TO DO:
-#
-#   - look at negative dynpol for high omega
-#   - add DC + KBDC corr functions
-#   - add cuda functionality
-#   - t, prefac, etc. should be written to corr files
-#
-##########
-
 ################
 # dependencies
 ################

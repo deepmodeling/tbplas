@@ -1,12 +1,6 @@
 ! ------------------------------------------
 ! MODULE with helper functions for tbpm_f2py
 ! ------------------------------------------
-!
-! TO DO: 
-! - combine Hamiltonian and current operators into single subroutine
-!   and combine fermi & timestep cheb decomp
-! - move BESSEL_JN func to fortran as well
-! 
 
 module tbpm_mod
 

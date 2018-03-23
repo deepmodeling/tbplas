@@ -19,15 +19,6 @@ Functions
     get_dielectric_function
         Get dielectric function from dynamical polarization
 """
-        
-################
-# TO DO:
-#
-#   - add DC + KBDC correlation function analysis functions
-#   - test get_dielectric_function
-#   - is the dyn pol prefactor correct for all materials?
-#
-################
 
 ################
 # dependencies
