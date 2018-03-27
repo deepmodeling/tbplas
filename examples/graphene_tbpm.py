@@ -63,7 +63,7 @@ def main():
     config.generic['energy_range'] = 20.
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
-    config.DC_conductivity['energy_limits'] = (-0.5, 0.5)
+    config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
     config.save(directory = 'sim_data', \
                 prefix = config.output['timestamp'])
                   

@@ -20,7 +20,7 @@ def main():
     # READ CONFIG AND CORR FILES #
     ##############################
     
-    timestamp = "1522149718"
+    timestamp = "1522172330"
     config = tipsi.read_config("sim_data/" + timestamp + "config.pkl")
                   
     ####################

@@ -204,7 +204,7 @@ def corr_DC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
     
     # pass to FORTRAN
-    corr_DC = fortran_tbpm.tbpm_dccond(Bes, beta_re, mu_re, \
+    corr_DOS, corr_DC = fortran_tbpm.tbpm_dccond(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
         sample.rescale, sample.dx, sample.dy, \
         config.generic['seed'], config.generic['nr_time_steps'], \
