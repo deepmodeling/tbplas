@@ -1,6 +1,6 @@
-"""graphene_tbpm.py
+"""read_corr.py
 
-Graphene TBPM example.
+Read graphene TBPM correlation functions from sim_data folder.
 """
 
 import matplotlib

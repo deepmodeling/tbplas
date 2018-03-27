@@ -568,7 +568,7 @@ subroutine tbpm_dccond(Bes, n_bes, beta, mu, &
                 
             ! iterate over time
             do k = 2, n_timestep
-                ! NEGATIVE time evolution
+                ! NEGATIVE time evolution of QE state
                 call cheb_wf_timestep(wfE_J(1,:), n_wf, Bes, n_Bes, &
                     s_indptr, n_indptr, s_indices, n_indices, &
                     -s_hop, n_hop, wfE_J(1,:))

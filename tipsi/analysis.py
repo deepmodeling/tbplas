@@ -340,8 +340,8 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
     QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
     n_energies = len(QE_indices)
     energies = energies_DOS[QE_indices]
-    dc_prefactor = 4. * config.sample['nr_orbitals'] \
-                        / config.sample['area_unit_cell']
+    dc_prefactor = config.sample['nr_orbitals'] \
+                   / config.sample['area_unit_cell']
     
     # get DC conductivity
     DC = np.zeros((2, n_energies))
