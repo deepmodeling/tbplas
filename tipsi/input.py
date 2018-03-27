@@ -12,6 +12,8 @@ Functions
         Read AC correlation function from file.
     read_corr_dyn_pol
         Read dynamical polarization correlation function from file.
+    read_corr_DC
+        Read DC correlation function from file.
     read_wannier90
         Read Wannier90 files.
 """
@@ -70,6 +72,7 @@ def read_config(filename):
     config.sample = dict.sample
     config.generic = dict.generic
     config.dyn_pol = dict.dyn_pol
+    config.DC_conductivity = dict.DC_conductivity
     config.quasi_eigenstates = dict.quasi_eigenstates
     config.output = dict.output
     return config
@@ -163,6 +166,38 @@ def read_corr_dyn_pol(filename):
                 corr_dyn_pol[i_q, j] += float(line[1])
                 
     return corr_dyn_pol / n_samples
+
+def read_corr_DC(filename):
+    """Read DC conductivity correlation from file
+    
+    Parameters
+    ----------
+    filename : string
+        read DC conductivity correlation values from this file
+    
+    Returns
+    ----------
+    corr_DC : (2, n_energies, n_t_steps) list of complex floats
+        the dynamical polarization  correlation function
+    """
+    
+    f = open(filename,'r')
+        
+    n_samples = int(f.readline().split()[-1])
+    n_energies = int(f.readline().split()[-1])
+    n_t_steps = int(f.readline().split()[-1])
+    corr_DC = np.zeros((2, n_energies, n_t_steps), dtype = complex)
+            
+    for i in range(n_samples):
+        temp_string = f.readline().split()
+        for j in range(n_energies):
+            temp_string = f.readline().split()
+            for k in range(n_t_steps):
+                line = f.readline().split()
+                corr_DC[0, j, k] += float(line[1]) + 1j * float(line[2])
+                corr_DC[1, j, k] += float(line[3]) + 1j * float(line[4])
+                
+    return corr_DC / n_samples
     
 def read_wannier90(coord_file, ham_file):
     """Read Lattice and HopDict information from Wannier90 file

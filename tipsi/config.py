@@ -96,6 +96,9 @@ class Config():
         Coulomb constant. Default value: 1.0
     dyn_pol['q_points'] : (n_q_points, 3) list of floats
         List of q-points. Default value: [[0.1, 0., 0.]].
+    DC_conductivity['energy_limits'] : 2-tuple of floats
+        Minimum and maximum of energy window for dc conductivity. 
+        Default value: [-0.5, 0.5].
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
     output['timestamp'] : int
@@ -113,9 +116,6 @@ class Config():
     output['corr_dyn_pol'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
-    output['corr_KB_DC'] : string
-        Kubo-Bastin DC conductivity correlation output file. 
-        Default value: "sim_data/" + timestamp + "corr_KB_DC.dat".
     output['directory'] : string
         Output directory. Default value: "sim_data".
     """
@@ -134,6 +134,7 @@ class Config():
         self.sample = {}
         self.generic = {}
         self.dyn_pol = {}
+        self.DC_conductivity = {}
         self.quasi_eigenstates = {}
         self.output = {}
         
@@ -154,6 +155,9 @@ class Config():
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
         self.generic['seed'] = 1337
+        
+        # DC conductivity
+        self.DC_conductivity['energy_limits'] = (-0.5, 0.5)
         
         # quasi-eigenstates
         self.quasi_eigenstates['energies'] = [-0.1, 0., 0.1]
@@ -189,7 +193,6 @@ class Config():
         self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
         self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
-        self.output['corr_KB_DC'] = td + prefix + 'corr_KB_DC' + '.dat'
     
     def save(self, filename = "config.pkl", directory = False, prefix = ""):
         """Function to save config parameters to a .pkl file.

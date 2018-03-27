@@ -63,6 +63,7 @@ def main():
     config.generic['energy_range'] = 20.
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
+    config.DC_conductivity['energy_limits'] = (-0.5, 0.5)
     config.save(directory = 'sim_data', \
                 prefix = config.output['timestamp'])
                   
@@ -96,6 +97,15 @@ def main():
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("Im(dp)")
     plt.savefig("graphene_dp_imag.png")
+    plt.close()
+    
+    # get DC conductivity
+    corr_DOS, corr_DC = tipsi.corr_DC(sample, config)
+    energies_DC, DC = tipsi.analyze_corr_DC(config, corr_DOS, corr_DC)
+    plt.plot(energies_DC, DC[0, :])
+    plt.xlabel("E (eV)")
+    plt.ylabel("DC conductivity")
+    plt.savefig("graphene_DC.png")
     plt.close()
     
 if __name__ == '__main__':

@@ -14,8 +14,6 @@ Functions
         Get dynamical polarization correlation function.
     corr_DC
         Get DC conductivity correlation function.
-    corr_KB_DC
-        Get Kubo-Bastin DC conductivity correlation function.
     quasi_eigenstates
         Get quasi-eigenstates.
 """
@@ -185,29 +183,36 @@ def corr_DC(sample, config):
         
     Returns
     ----------
+    corr_DOS : (n_t_steps) list of complex floats
+        DOS correlation function.
     corr_DC : (2, n_energies, n_t_steps) list of complex floats
         DC conductivity correlation function.
     """ 
     
-    return
+    # Get parameters
+    tnr = config.generic['nr_time_steps']
+    en_range = config.sample['energy_range']
+    t_step = 2 * np.pi / en_range
+    Bes = Bessel(t_step, sample.rescale, \
+                 config.generic['Bessel_precision'], \
+                 config.generic['Bessel_max'])
+    energies_DOS = np.array([0.5 * i * en_range / tnr - en_range / 2. \
+                for i in range(tnr * 2)])
+    lims = config.DC_conductivity['energy_limits']
+    QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
+    beta_re = config.generic['beta'] * sample.rescale
+    mu_re = config.generic['mu'] / sample.rescale
     
-def corr_KB_DC(sample, config):
-    """Get Kubo-Bastin DC conductivity correlation function
- 
-    Parameters
-    ----------
-    sample : Sample object
-        sample information
-    config : Config object
-        tbpm parameters
-        
-    Returns
-    ----------
-    corr_KB_DC : (n_kernel, n_kernel) list of complex floats
-        Kubo-Bastin DC conductivity correlation function.
-    """ 
-    
-    return
+    # pass to FORTRAN
+    corr_DC = fortran_tbpm.tbpm_dccond(Bes, beta_re, mu_re, \
+        sample.indptr, sample.indices, sample.hop, \
+        sample.rescale, sample.dx, sample.dy, \
+        config.generic['seed'], config.generic['nr_time_steps'], \
+        config.generic['nr_random_samples'], t_step, \
+        energies_DOS, QE_indices, \
+        config.output['corr_DOS'], config.output['corr_DC'])
+                                                 
+    return corr_DOS, corr_DC
     
 def quasi_eigenstates(sample, config):
     """Get quasi-eigenstates

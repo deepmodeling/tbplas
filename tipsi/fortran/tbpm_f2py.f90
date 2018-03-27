@@ -384,6 +384,222 @@ subroutine tbpm_dyn_pol(Bes, n_bes, beta, mu, &
     
 end subroutine tbpm_dyn_pol
     
+! Get DC conductivity
+subroutine tbpm_dccond(Bes, n_bes, beta, mu, &
+    s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, H_rescale, &
+    s_dx, n_dx, s_dy, n_dy, seed, n_timestep, n_ran_samples, &
+    t_step, energies, n_energies, en_inds, n_en_inds, &
+    output_filename_dos, output_filename_dc, dos_corr, dc_corr)
+    
+    ! prepare
+    use tbpm_mod
+    implicit none
+    
+    ! deal with input
+    integer, intent(in) :: n_bes, n_indptr, n_indices, n_hop, n_dx, n_dy
+    integer, intent(in) :: n_timestep, n_ran_samples, seed, n_energies
+    integer, intent(in) :: n_en_inds
+    real(8), intent(in) :: H_rescale, beta, mu, t_step
+    real(8), intent(in), dimension(n_Bes) :: Bes
+    integer(8), intent(in), dimension(n_indptr) :: s_indptr
+    integer(8), intent(in), dimension(n_indices) :: s_indices
+    complex(8), intent(in), dimension(n_hop) :: s_hop
+    real(8), intent(in), dimension(n_dx) :: s_dx
+    real(8), intent(in), dimension(n_dy) :: s_dy
+    real(8), intent(in), dimension(n_energies) :: energies
+    integer(8), intent(in), dimension(n_en_inds) :: en_inds
+    character*(*), intent(in) :: output_filename_dos
+    character*(*), intent(in) :: output_filename_dc
+    
+    ! declare vars
+    integer :: i_sample,  i, j, k, l, t, n_wf
+    real(8) :: W, QE_sum, en
+    complex(8), dimension(n_indptr - 1) :: wf0,wf_t_pos,wf_t_neg,wfE
+    complex(8), dimension(n_en_inds, n_indptr - 1) :: wf_QE
+    complex(8), dimension(2,n_indptr - 1) :: wf0_J,wfE_J,wfE_J_t
+    real(8), allocatable :: coef_F(:) ! cheb coefs for Fermi operator
+    real(8), allocatable :: coef_omF(:) ! cheb coefs one minus Fermi operator
+    complex(8), dimension(n_hop) :: sys_current_x ! coefs for x current
+    complex(8), dimension(n_hop) :: sys_current_y ! coefs for y current
+    complex(8) :: dos_corrval
+    complex(8), dimension(2) :: dc_corrval
+    
+    ! output
+    complex(8), intent(out), dimension(n_timestep) :: dos_corr
+    complex(8), intent(out), dimension(2, n_energies, n_timestep) :: dc_corr
+    ! elements dc_corr_x and dc_corr_y
+    
+    ! set some values
+    n_wf = n_indptr - 1
+    dos_corr = 0.0d0
+    dc_corr = 0.0d0
+    
+    ! prepare output files
+    open(unit=27,file=output_filename_dos)
+    write(27,*) "Number of samples =", n_ran_samples
+    write(27,*) "Number of timesteps =", n_timestep
+    
+    open(unit=28,file=output_filename_dc)
+    write(28,*) "Number of samples =", n_ran_samples
+    write(28,*) "Number of energies =", n_en_inds
+    write(28,*) "Number of timesteps =", n_timestep
+    
+    ! get current coefficients
+    call current_coefficient(s_hop, s_dx, n_hop, sys_current_x)
+    call current_coefficient(s_hop, s_dy, n_hop, sys_current_y)
+    sys_current_x = H_rescale * sys_current_x
+    sys_current_y = H_rescale * sys_current_y
+    
+    print*, "Calculating DC conductivity correlation function."
+        
+    ! Average over (n_ran_samples) samples
+    do i_sample=1, n_ran_samples
+        
+        print*, "  Calculating for sample ", i_sample, " of ", n_ran_samples
+        write(27,*) "Sample =", i_sample
+        write(28,*) "Sample =", i_sample
+  
+        ! make random state
+        call random_state(wf0, n_wf, seed*i_sample)
+        
+        ! ------------
+        ! first, get DOS and quasi-eigenstates
+        ! ------------
+
+        ! initial values for wf_t and wf_QE
+        do i = 1, n_wf
+            wf_t_pos(i) = wf0(i)
+            wf_t_neg(i) = wf0(i)
+        end do
+        do i = 1, n_en_inds
+            do j = 1, n_wf
+                wf_QE(i, j) = wf0(j)
+            end do
+        end do
+
+        ! Iterate over time, get Fourier transform
+        do k = 1, n_timestep
+
+            if (MODULO(k,64) == 0) then
+                print*, "    Getting DOS/QE for timestep ", k, " of ", n_timestep
+            end if
+
+            ! time evolution
+            call cheb_wf_timestep(wf_t_pos, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                s_hop, n_hop, wf_t_pos)
+            call cheb_wf_timestep(wf_t_neg, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                -s_hop, n_hop, wf_t_neg)
+            
+            ! get dos correlation
+            dos_corrval = inner_prod(wf0, wf_t_pos, n_wf)
+            dos_corr(k) = dos_corr(k) + dos_corrval/n_ran_samples
+            write(27,*) k, real(dos_corrval), aimag(dos_corrval)
+
+            W = 0.5*(1+cos(pi*k/n_timestep)) ! Hanning window
+
+            !$OMP parallel do private (j)
+            do i = 1, n_en_inds
+            
+                en = energies(en_inds(i))
+                
+                do j = 1, n_wf
+                    wf_QE(i,j) = wf_QE(i,j)+&
+                        exp(img*en*k*t_step)*wf_t_pos(j)*W
+                    wf_QE(i,j) = wf_QE(i,j)+&
+                        exp(img*en*k*t_step)*wf_t_neg(j)*W
+                end do
+            end do
+            !$OMP end parallel do
+
+        end do
+
+        ! Normalise
+        do i = 1, n_en_inds
+            QE_sum = 0
+            do j = 1, n_wf
+                QE_sum = QE_sum + abs(wf_QE(i, j))**2
+            end do
+            do j = 1, n_wf
+                wf_QE(i, j) = wf_QE(i, j)/sqrt(QE_sum)
+            end do
+        end do
+        
+        ! ------------
+        ! then, get dc conductivity
+        ! ------------
+        
+        ! iterate over energies
+        do i = 1, n_en_inds
+        
+            ! some output
+            if (MODULO(i,8) == 0) then
+                print*, "    Getting DC conductivity for energy: ", i, " of ", n_en_inds
+            end if
+            write(28,*) "Energy ", i, en_inds(i), energies(en_inds(i))
+        
+            ! get corresponding quasi-eigenstate
+            wfE(:) = wf_QE(i,:)/abs(inner_prod(wf0(:),wf_QE(i,:), n_wf))
+        
+            ! make psi1, psi2
+            call current(wf0, n_wf, s_indptr, n_indptr, s_indices, &
+                n_indices, sys_current_y, n_hop, wf0_J(1,:))
+            call current(wf0, n_wf, s_indptr, n_indptr, s_indices, &
+                n_indices, sys_current_y, n_hop, wf0_J(2,:))
+            call current(wfE, n_wf, s_indptr, n_indptr, s_indices, &
+                n_indices, sys_current_y, n_hop, wfE_J(1,:))
+            call current(wfE, n_wf, s_indptr, n_indptr, s_indices, &
+                n_indices, sys_current_y, n_hop, wfE_J(2,:))
+            
+            ! get correlation values
+            dc_corrval(1) = inner_prod(wf0_J(1,:),wfE_J(1,:), n_wf)
+            dc_corrval(2) = inner_prod(wf0_J(2,:),wfE_J(2,:), n_wf)
+
+            ! write to file
+            write(28,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)")&
+                        1, &
+                        real(dc_corrval(1)), aimag(dc_corrval(1)), &
+                        real(dc_corrval(2)), aimag(dc_corrval(2))
+
+            ! update correlation functions
+            dc_corr(1,i,1)=dc_corr(1,i,1)+dc_corrval(1)/n_ran_samples
+            dc_corr(2,i,1)=dc_corr(2,i,1)+dc_corrval(2)/n_ran_samples
+                
+            ! iterate over time
+            do k = 2, n_timestep
+                ! NEGATIVE time evolution
+                call cheb_wf_timestep(wfE_J(1,:), n_wf, Bes, n_Bes, &
+                    s_indptr, n_indptr, s_indices, n_indices, &
+                    -s_hop, n_hop, wfE_J(1,:))
+                call cheb_wf_timestep(wfE_J(2,:), n_wf, Bes, n_Bes, &
+                    s_indptr, n_indptr, s_indices, n_indices, &
+                    -s_hop, n_hop, wfE_J(2,:))
+                
+                ! get correlation values
+                dc_corrval(1) = inner_prod(wf0_J(1,:),wfE_J(1,:), n_wf)
+                dc_corrval(2) = inner_prod(wf0_J(2,:),wfE_J(2,:), n_wf)
+                  
+                ! write to file
+                write(28,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)")&
+                            k, &
+                            real(dc_corrval(1)), aimag(dc_corrval(1)), &
+                            real(dc_corrval(2)), aimag(dc_corrval(2))
+                        
+                ! update correlation functions
+                dc_corr(1,i,k)=dc_corr(1,i,k)+dc_corrval(1)/n_ran_samples
+                dc_corr(2,i,k)=dc_corr(2,i,k)+dc_corrval(2)/n_ran_samples
+            end do
+            
+        end do
+    
+    end do
+    
+    close(27)
+    close(28)
+
+end subroutine tbpm_dccond
+    
 ! Get quasi-eigenstates
 subroutine tbpm_eigenstates(Bes, n_Bes, &
     s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, &

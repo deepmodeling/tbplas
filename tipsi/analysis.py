@@ -16,6 +16,8 @@ Functions
         Analyze dynamical polarization correlation function
     get_dielectric_function
         Get dielectric function from dynamical polarization
+    analyze_corr_DC
+        Analyze AC correlation function
 """
 
 ################
@@ -299,3 +301,65 @@ def get_dielectric_function(config, dyn_pol):
                 epsilon[i,:] -= V[i] * dyn_pol[i,:]
     
     return q_points, omegas, epsilon
+
+def analyze_corr_DC(config, corr_DOS, corr_DC, \
+    window_DOS = window_Hanning, window_DC = window_exp):
+    """Function for analyzing the DC correlation function.
+    
+    Parameters
+    ----------
+    config : Config object
+        contains TBPM configuration parameters
+    corr_DOS : (n_t_steps) list of floats
+        DOS correlation function
+    corr_DC : (2, n_energies, n_t_steps) list of floats
+        DC conductivity correlation function
+    window_DOS : function, optional
+        window function for DOS integral; default: window_Hanning
+    window_DC : function, optional
+        window function for DC integral; default: window_exp
+        
+    Returns
+    ----------
+    energies : list of floats
+        energy values
+    DC : (2, n_energies) list of floats
+        DC conductivity values
+    """
+
+    # get DOS
+    energies_DOS, DOS = analyze_corr_DOS(config, corr_DOS, window_DOS)
+    energies_DOS = np.array(energies_DOS)
+    DOS = np.array(DOS)
+    
+    # get useful things
+    tnr = config.generic['nr_time_steps']
+    en_range = config.sample['energy_range']
+    t_step = 2 * np.pi / en_range
+    lims = config.DC_conductivity['energy_limits']
+    QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
+    n_energies = len(QE_indices)
+    energies = energies_DOS[QE_indices]
+    dc_prefactor = 4. * config.sample['nr_orbitals'] \
+                        / config.sample['area_unit_cell']
+    
+    # get DC conductivity
+    DC = np.zeros((2, n_energies))
+    for i in range(2):
+        for j in range(n_energies):
+
+            en = energies[j]
+            dosval = DOS[QE_indices[j]]
+            dcval = 0.
+            for k in range(tnr):
+                W = window_DC(k + 1, tnr)
+                cexp = np.exp(-1j * k * t_step * en)
+                add_dcv = W * (cexp * corr_DC[i,j,k]).real
+                dcval += add_dcv
+            DC[i,j] = dc_prefactor * t_step * dosval * dcval
+            
+    # correct for spin
+    if config.generic['correct_spin']:
+        DC = 2. * DC
+    
+    return energies, DC

@@ -20,7 +20,7 @@ def main():
     # READ CONFIG AND CORR FILES #
     ##############################
     
-    timestamp = "1521818923"
+    timestamp = "1522149718"
     config = tipsi.read_config("sim_data/" + timestamp + "config.pkl")
                   
     ####################
@@ -53,6 +53,16 @@ def main():
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("Im(dp)")
     plt.savefig("graphene_dp_imag.png")
+    plt.close()
+    
+    # get DC conductivity
+    corr_DOS = tipsi.read_corr_DOS("sim_data/" + timestamp + "corr_DOS.dat")
+    corr_DC = tipsi.read_corr_DC("sim_data/" + timestamp + "corr_DC.dat")
+    energies_DC, DC = tipsi.analyze_corr_DC(config, corr_DOS, corr_DC)
+    plt.plot(energies_DC, DC[0, :])
+    plt.xlabel("E (eV)")
+    plt.ylabel("DC conductivity")
+    plt.savefig("graphene_DC.png")
     plt.close()
     
 if __name__ == '__main__':
