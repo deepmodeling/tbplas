@@ -1,5 +1,7 @@
 Copyright 2018 E.N.W. van Veen (RU), G.J. Slotman (RU), S. Yuan (WHU)
+
 (RU: Radboud University, Nijmegen, The Netherlands)
+
 (WHU: Wuhan University, China)
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
