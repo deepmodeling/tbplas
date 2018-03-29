@@ -42,7 +42,7 @@ def main():
     #######################
     
     # create SiteSet object
-    site_set = graphene.sheet(W, H)
+    site_set = graphene.sheet_rectangle(W, H)
     
     # remove dangling bonds to make zigzag edge
     site_set.delete_site((0, 0, 0), 0)
