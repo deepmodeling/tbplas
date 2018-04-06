@@ -20,7 +20,7 @@ Functions
 """
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 import tipsi
 import numpy as np
         

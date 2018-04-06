@@ -15,10 +15,12 @@ Functions
         Periodic boundary conditions function with armchair edge
     pbc_zigzag
         Periodic boundary conditions function with zigzag edge
+    sample
+        Returns graphene sample.
 """
 
 import sys
-sys.path.append("..")
+sys.path.append("../..")
 import tipsi
 import numpy as np
   
@@ -125,3 +127,31 @@ def pbc_zigzag(W, H, unit_cell_coords, orbital):
     y = int(xloc + yloc)
     # done
     return (x, y, z), orbital
+
+# return graphene tipsi.Sample
+def sample(W = 500, H = 500, a = 0.24, t = 2.8, e = 0.0, \
+    nr_processes = 1):
+    # (W, H) gives sample size, a gives lattice constant,
+    # t is hopping, e is onsite potential, nr_processes is
+    # nr of available cores for parallel sample construction
+    
+    # create lattice, hop_dict and pbc_wrap
+    lat = lattice(a)
+    hop_dict = hop_dict_nn(t, e)
+    def pbc_wrap(unit_cell_coords, orbital):
+        return pbc(W, H, unit_cell_coords, orbital)
+    
+    # create SiteSet object
+    site_set = sheet(W, H)
+    
+    # make sample
+    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+
+    # apply HopDict
+    sample.add_hop_dict(hop_dict)
+    
+    # rescale Hamiltonian
+    sample.rescale_H(9.)
+    
+    # done
+    return sample

@@ -45,3 +45,7 @@ Thumbs.db
 *.dat
 *.hdf5
 *.pkl
+
+# testing
+###########################
+testing
