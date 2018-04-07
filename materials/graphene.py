@@ -49,8 +49,18 @@ def hop_dict_nn(t = 2.7, e = 0.):
     hops.set((0, -1, 0), A_nn1)
     return hops
   
-# fill tipsi.SiteSet with graphene sheet sites  
+# fill tipsi.SiteSet with diamond shaped graphene sheet sites  
 def sheet(W, H):
+    site_set = tipsi.SiteSet()
+    for i in range(W):
+        for j in range(H):
+            unit_cell_coords = (i, j, 0)
+            site_set.add_site(unit_cell_coords, 0)
+            site_set.add_site(unit_cell_coords, 1)
+    return site_set
+
+# fill tipsi.SiteSet with rectangular graphene sheet sites  
+def sheet_rectangle(W, H):
     site_set = tipsi.SiteSet()
     for x in range(int(W / 2)):
         for y in range(H):
@@ -63,8 +73,13 @@ def sheet(W, H):
             site_set.add_site(unit_cell_coords, 1)
     return site_set
 
-# pbc in all directions
+# pbc in all directions for a diamond shaped sample
 def pbc(W, H, unit_cell_coords, orbital):
+    x, y, z = unit_cell_coords
+    return (x % W, y % H, z), orbital
+
+# pbc in all directions for a rectangular sample
+def pbc_rectangle(W, H, unit_cell_coords, orbital):
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -79,7 +94,7 @@ def pbc(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
     
-# pbc for zigzag boundary
+# pbc for armchair boundary
 def pbc_armchair(W, H, unit_cell_coords, orbital):
     # get input
     x, y, z = unit_cell_coords

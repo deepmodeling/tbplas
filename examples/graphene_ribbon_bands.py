@@ -42,8 +42,12 @@ def main():
     #######################
     
     # create SiteSet object
-    site_set = graphene.sheet(W, H)
+    site_set = graphene.sheet_rectangle(W, H)
     
+    # remove dangling bonds to make zigzag edge
+    site_set.delete_site((0, 0, 0), 0)
+    site_set.delete_site((int(W / 2) - H, int(W / 2) - 1 + H, 0), 1)
+        
     # make sample
     sample = tipsi.Sample(lat, site_set, pbc_wrap)
 

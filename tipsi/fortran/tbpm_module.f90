@@ -378,7 +378,7 @@ subroutine random_state(wf, n_wf, iseed)
     integer, intent(in) :: n_wf, iseed
     complex(8), intent(out), dimension(n_wf) :: wf
     integer :: i, iseed0
-    real(8) :: f, g, wf_sum
+    real(8) :: f, g, wf_sum, abs_z_sq
     complex(8) :: z
 
     ! make random wf
@@ -389,9 +389,10 @@ subroutine random_state(wf, n_wf, iseed)
     do i = 1, n_wf
         f=ranx(0)
         g=ranx(0)
-        z = cmplx(f-0.5d0, g-0.5d0)
+        abs_z_sq = -1.0d0 * log(1.0d0 - f) ! dirichlet distribution
+        z = dsqrt(abs_z_sq)*exp(img*2*pi*g) ! give random phase
         wf(i) = z
-        wf_sum = wf_sum + abs(z)**2
+        wf_sum = wf_sum + abs_z_sq
     end do
     do i = 1, n_wf
         wf(i) = wf(i)/dsqrt(wf_sum)
@@ -401,13 +402,17 @@ subroutine random_state(wf, n_wf, iseed)
 
     ! random number
     function ranx(idum)
-        integer :: idum,seed(1:12)
-        !we changed seed(1:1) to (1:12)
-        !effect of this on results is not 
-        !checked
+        integer :: idum, n
+        integer, allocatable :: seed(:)
         real*8 :: ranx
         if (idum>0) then
-            seed(1)=idum
+            call random_seed(size=n) 
+            allocate(seed(n))
+            ! is there a better way to create a seed array
+            ! based on the input integer?
+            do i=1, n
+                seed(i)=int(modulo(i * idum * 74231, 104717))
+            end do
             call random_seed(put=seed) 
         end if
         call random_number(ranx)
