@@ -10,9 +10,8 @@ import numpy as np
 
 import sys
 sys.path.append("..")
-sys.path.append("../materials")
 import tipsi
-import black_phosphorus
+from tipsi.materials import black_phosphorus
 
 def main():
     

@@ -10,9 +10,8 @@ import numpy as np
 
 import sys
 sys.path.append("..")
-sys.path.append("../materials")
 import tipsi
-import antimonene
+from tipsi.materials import antimonene
 
 def main():
     
