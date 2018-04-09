@@ -187,6 +187,9 @@ class Config():
             prefix for filenames
         """
         
+        if prefix != "":
+            print("Output prefix: " + prefix)
+        
         td = create_dir(directory)
         self.output['directory'] = td
         self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'

@@ -36,8 +36,8 @@ def main():
     # get band structure
     kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
     bands = tipsi.band_structure(hop_dict, lat, kpoints)
-    for i in range(len(bands[0,:])):
-        plt.plot(kvals, bands[:,i], color='k')
+    for band in bands.swapaxes(0, 1):
+        plt.plot(kvals, band, color='k')
     for tick in ticks:
         plt.axvline(tick, color='k', linewidth=0.5)
     plt.xticks(ticks, ticktitles)
