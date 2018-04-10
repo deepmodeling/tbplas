@@ -15,37 +15,37 @@ from tipsi.materials import antimonene
 
 def main():
     
-    # band plot resolution
-    res_bands = 50
-    
-    # create lattice, hop_dict and pbc_wrap
-    lat_const = 0.411975806
-    vert_disp = 0.16455347
-    SOC = True
-    SOC_lambda = 0.34
-    lat = antimonene.lattice(SOC, lat_const, vert_disp)
-    hop_dict = antimonene.hop_dict(SOC, SOC_lambda)
-    
-    # define symmetry points
+    # parameters
+    res_bands = 50           # band plot resolution
+    lat_const = 0.411975806  # lattice constant
+
+    # create lattice, hop_dict
+    lat = antimonene.lattice(a = lat_const)
+    hops = antimonene.hop_dict()
+
+    # define momenta
+    k1 = np.pi / (np.sqrt(3.) * lat_const)
+    k2 = np.pi / lat_const
     G = [0. ,0. ,0. ]
-    M = [np.pi / (np.sqrt(3.) * lat_const), np.pi / lat_const, 0.]
-    K = [2 * np.pi / (np.sqrt(3.) * lat_const), 2. * np.pi / (3. * lat_const), 0.]
+    M = [k1, k2, 0.]
+    K = [2 * k1, (2. / 3.) * k2, 0.]
     kpoints = [G, M, K, G]
     ticktitles = ["G","M","K","G"]
+    kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
 
     # get band structure
-    kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
-    bands = tipsi.band_structure(hop_dict, lat, kpoints)
+    bands = tipsi.band_structure(hops, lat, kpoints)
+
+    # plot
     for band in bands.swapaxes(0, 1):
-        plt.plot(kvals, band, color='k')
+        plt.plot(kvals, band, color = 'k')
     for tick in ticks:
-        plt.axvline(tick, color='k', linewidth=0.5)
+        plt.axvline(tick, color = 'k', linewidth = 0.5)
     plt.xticks(ticks, ticktitles)
     plt.xlim((0., np.amax(kvals)))
     plt.xlabel("k (1/nm)")
     plt.ylabel("E (eV)")
-    plt.savefig("bands.png")
-    plt.close()
+    plt.show()
     
     
 if __name__ == '__main__':
