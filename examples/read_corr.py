@@ -11,20 +11,14 @@ import numpy as np
 import sys
 sys.path.append("..")
 import tipsi
-from tipsi.materials import graphene
 
 def main():
 
-    ##############################
-    # READ CONFIG AND CORR FILES #
-    ##############################
-    
+    # set timestamp
     timestamp = "1522172330"
+    
+    # read config file
     config = tipsi.read_config("sim_data/" + timestamp + "config.pkl")
-                  
-    ####################
-    # ANALYZE AND PLOT #
-    ####################
     
     # get DOS
     corr_DOS = tipsi.read_corr_DOS("sim_data/" + timestamp + "corr_DOS.dat")

@@ -34,19 +34,19 @@ def lattice(dist_nn = 0.22156, dist_nnb = 0.07159, theta = 48.395, \
     """
 
     # useful params
-    a = 2*dist_nn*np.sin(np.radians(theta))
-    b = 2*dist_nnb+2*dist_nn*np.cos(np.radians(theta))
+    a = 2 * dist_nn * np.sin(np.radians(theta))
+    b = 2 * dist_nnb + 2 * dist_nn * np.cos(np.radians(theta))
     c = dist_interz
     p = dist_nnb
-    q = dist_nz*np.cos(np.radians(thetaz-90))
+    q = dist_nz * np.cos(np.radians(thetaz - 90))
     
     # lattice arrays
     vectors = [[a, 0., 0.], [0., b, 0.], [a/2., 0., c]]
     orbital_coords = [[] for i in range(4)]
     orbital_coords[0] = [0., 0., 0.]
     orbital_coords[1] = [0., p, q]
-    orbital_coords[2] = [a/2., b/2., q]
-    orbital_coords[3] = [a/2., b/2.+p, 0.]
+    orbital_coords[2] = [a / 2., b / 2., q]
+    orbital_coords[3] = [a / 2., b / 2. + p, 0.]
     
     return tipsi.Lattice(vectors, orbital_coords)
     
