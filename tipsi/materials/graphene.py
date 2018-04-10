@@ -341,7 +341,7 @@ def sample_rectangle(W = 500, H = 500, a = 0.24, t = 2.8, \
     
     # create lattice, hop_dict and pbc_wrap
     lat = lattice(a)
-    hop_dict = hop_dict_nn(t, e)
+    hops = hop_dict_nn(t, e)
     def pbc_wrap(unit_cell_coords, orbital):
         return pbc_rectangle(W, H, unit_cell_coords, orbital)
     
@@ -352,7 +352,7 @@ def sample_rectangle(W = 500, H = 500, a = 0.24, t = 2.8, \
     sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
-    sample.add_hop_dict(hop_dict)
+    sample.add_hop_dict(hops)
     
     # rescale Hamiltonian
     sample.rescale_H(9.)

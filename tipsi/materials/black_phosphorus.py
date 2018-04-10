@@ -196,6 +196,7 @@ def sheet(W, H, n_layers = 1):
         rectangular black phosphorus sheet SiteSet
     """
     
+    site_set = tipsi.SiteSet()
     for z in range(n_layers):
         for x in range(W):
             for y in range(H):
@@ -228,7 +229,7 @@ def pbc(W, H, unit_cell_coords, orbital):
     x, y, z = unit_cell_coords
     return (x % W, y % H, z), orbital
 
-def sample_rectangle(W = 500, H = 500, n_layers = 1, nr_processes = 1):
+def sample(W = 500, H = 500, n_layers = 1, nr_processes = 1):
     """Multilayer rectangular black phosphorus sample.
     
     Parameters
@@ -250,7 +251,7 @@ def sample_rectangle(W = 500, H = 500, n_layers = 1, nr_processes = 1):
     
     # create lattice, hop_dict and pbc_wrap
     lat = lattice()
-    hop_dict = hop_dict()
+    hops = hop_dict()
     def pbc_wrap(unit_cell_coords, orbital):
         return pbc(W, H, unit_cell_coords, orbital)
     
@@ -261,7 +262,7 @@ def sample_rectangle(W = 500, H = 500, n_layers = 1, nr_processes = 1):
     sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
-    sample.add_hop_dict(hop_dict)
+    sample.add_hop_dict(hops)
     
     # rescale Hamiltonian
     sample.rescale_H(8.5)

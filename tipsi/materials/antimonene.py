@@ -81,7 +81,7 @@ def SOC_matrix(SOC_lambda):
     return M
 
 def hop_dict(SOC = True, SOC_lambda = 0.34):
-    """Antimonene SOC matrix.
+    """Antimonene hopping dictionary.
     
     Parameters
     ----------
@@ -540,7 +540,7 @@ def sample(W = 500, H = 500, SOC = True, SOC_lambda = 0.34, \
     
     # create lattice, hop_dict and pbc_wrap
     lat = lattice(SOC, a, z)
-    hop_dict = hop_dict(SOC, SOC_lambda)
+    hops = hop_dict(SOC, SOC_lambda)
     def pbc_wrap(unit_cell_coords, orbital):
         return pbc(W, H, unit_cell_coords, orbital)
     
@@ -551,7 +551,7 @@ def sample(W = 500, H = 500, SOC = True, SOC_lambda = 0.34, \
     sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
-    sample.add_hop_dict(hop_dict)
+    sample.add_hop_dict(hops)
     
     # rescale Hamiltonian
     sample.rescale_H(4.5)
