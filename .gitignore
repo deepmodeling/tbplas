@@ -46,6 +46,7 @@ Thumbs.db
 *.hdf5
 *.pkl
 
-# testing
-###########################
+# testing and building #
+########################
 testing
+build
