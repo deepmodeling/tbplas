@@ -34,11 +34,11 @@ def bp_lat_hop(n_layers = 1, bias = 0., strain = 0.):
     hops = black_phosphorus.hop_dict()
     
     # add strain to hop_dict and lattice
-    strain_vector = [1.0 - 0.002 * strain, \
-                     1.0 + 0.01 * strain, \
-                     1.0 - 0.002 * strain]
+    strain_tensor = np.diag([1.0 - 0.002 * strain, \
+                             1.0 + 0.01 * strain, \
+                             1.0 - 0.002 * strain])
     beta = 4.5
-    lat, hops = tipsi.uniform_strain(lat, hops, strain_vector, beta)
+    lat, hops = tipsi.uniform_strain(lat, hops, strain_tensor, beta)
     
     # extend unit cell and add bias
     lat, hops = tipsi.extend_unit_cell(lat, hops, 2, n_layers)

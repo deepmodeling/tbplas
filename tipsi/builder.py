@@ -229,7 +229,7 @@ def band_structure(hop_dict, lattice, momenta):
         
     return bands
     
-def uniform_strain(lattice_old, hop_dict_old, strain_vector, beta):
+def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
     """Uniformly strain a Lattice, HopDict pair.
     
     Parameters
@@ -238,8 +238,8 @@ def uniform_strain(lattice_old, hop_dict_old, strain_vector, beta):
         lattice to strain
     hop_dict_old : tipsi.HopDict
         hopping dictionary to strain
-    strain_vector : 3-list of floats
-        strain vector
+    strain_tensor : (3,3)-list of floats
+        strain tensor
     beta : float
         strain coefficient
     
@@ -252,9 +252,9 @@ def uniform_strain(lattice_old, hop_dict_old, strain_vector, beta):
     """
 
     # rescale lattice
-    vectors_new = [np.multiply(vector, strain_vector) \
+    vectors_new = [np.dot(strain_tensor, vector) \
                    for vector in lattice_old.vectors]
-    orbital_coords_new = [np.multiply(coord, strain_vector) \
+    orbital_coords_new = [np.dot(strain_tensor, coord) \
                           for coord in lattice_old.orbital_coords]
     lattice_new = Lattice(vectors_new, orbital_coords_new)
     

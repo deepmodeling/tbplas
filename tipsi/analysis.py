@@ -19,7 +19,7 @@ Functions
     get_dielectric_function
         Get dielectric function from dynamical polarization
     analyze_corr_DC
-        Analyze AC correlation function
+        Analyze DC correlation function
 """
 
 ################
