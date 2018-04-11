@@ -41,11 +41,14 @@ try:
 except ImportError:
     print("Plotting functions not available.")
 
+# input & output
+try:
+    import h5py       
+except ImportError:
+    print("h5py functions not available.")
+
 # multiprocessing
 import multiprocessing as mp
-
-# input & output
-import h5py
 
 # numerics & math
 import copy

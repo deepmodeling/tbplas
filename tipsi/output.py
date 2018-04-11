@@ -14,7 +14,10 @@ Functions
 import numpy as np
 
 # plotting
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt          
+except ImportError:
+    print("Plotting functions not available.")
 
 def plot_wf(wf, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
     """Plot wavefunction

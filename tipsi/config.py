@@ -21,7 +21,10 @@ import numpy as np
 import pickle
 
 # input & output
-import h5py
+try:
+    import h5py       
+except ImportError:
+    print("h5py functions not available.")
 import time
 import os
 

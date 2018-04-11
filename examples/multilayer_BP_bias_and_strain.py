@@ -2,10 +2,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-import random
 
 import sys
-sys.path.append("../..")
+sys.path.append("..")
 import tipsi
 from tipsi.materials import black_phosphorus
 
