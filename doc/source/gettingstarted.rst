@@ -11,7 +11,6 @@ Tipsi requires python3, some dependencies and a fortran compiler. The easiest wa
 Packages required by TiPSi:
     - numpy
     - scipy
-    - multiprocessing
     
 Optional:
     - h5py (for binary file input/output)

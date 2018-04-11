@@ -3,9 +3,9 @@ Material library
 ================
 
 For now, tipsi contains three materials:
-- single layer graphene with nearest neighbor hoppings
-- single layer antimonene
-- multilayer black phosphorus
+    - single layer graphene with nearest neighbor hoppings
+    - single layer antimonene
+    - multilayer black phosphorus
 
 graphene
 --------

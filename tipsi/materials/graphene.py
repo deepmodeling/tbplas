@@ -1,30 +1,3 @@
-"""graphene.py contains hoppings and geometric data for a
-graphene tipsi model.
-
-Functions
-----------
-    lattice
-        Returns honeycomb tipsi.Lattice
-    hop_dict_nn
-        Returns graphene nearest neighbor tipsi.HopDict
-    sheet
-        Returns diamond shaped graphene sheet tipsi.SiteSet
-    sheet_rectangle
-        Returns rectangular graphene sheet tipsi.SiteSet
-    pbc
-        Periodic boundary conditions function
-    pbc_rectangle
-        Rectangular periodic boundary conditions function
-    pbc_rectangle_armchair
-        Periodic boundary conditions function with armchair edge
-    pbc_rectangle_zigzag
-        Periodic boundary conditions function with zigzag edge
-    sample
-        Returns graphene sample.
-    sample_rectangle
-        Returns rectangular graphene sample.
-"""
-
 import sys
 sys.path.append("../..")
 import tipsi
@@ -52,7 +25,7 @@ def lattice(a = 0.24):
     return tipsi.Lattice(vectors, orbital_coords)
              
 def hop_dict_nn(t = 2.7, e = 0.):
-    """Graphene HopDict.
+    """Graphene nearest neighbor HopDict.
     
     Parameters
     ----------

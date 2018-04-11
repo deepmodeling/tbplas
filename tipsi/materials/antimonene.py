@@ -1,26 +1,3 @@
-"""antimonene.py contains hoppings and geometric data for a 
-antimonene tipsi model.
-
-Functions
-----------
-    lattice
-        Returns antimonene tipsi.Lattice
-    SOC_matrix
-        Returns 6x6 onsite SOC matrix
-    hop_dict
-        Returns antimonene tipsi.HopDict
-    sheet
-        Returns rectangular antimonene sheet tipsi.SiteSet
-    pbc
-        Periodic boundary conditions function
-    pbc_armchair
-        Periodic boundary conditions function with armchair edge
-    pbc_zigzag
-        Periodic boundary conditions function with zigzag edge
-    sample
-        Rectangular antimonene tipsi.Sample
-"""
-
 import sys
 sys.path.append("../..")
 import tipsi

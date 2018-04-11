@@ -1,18 +1,3 @@
-"""black_phosphorus.py contains hoppings and geometric data for a 
-black phosphorus tipsi model.
-
-Functions
-----------
-    lattice
-        Returns  tipsi.Lattice
-    hop_dict
-        Returns tipsi.HopDict
-    sheet
-        Returns rectangular sheet tipsi.SiteSet
-    pbc
-        Periodic boundary conditions function
-"""
-
 import sys
 sys.path.append("../..")
 import tipsi

@@ -20,7 +20,7 @@ see it as a collection of hopping matrices from the ``(0, 0, 0)`` unit cell to o
 cells ``(x, y, z)``. The size of these hopping matrices is given by the number of orbitals
 in the unit cell. The first index of the hopping matrix corresponds to the orbital in the
 origin unit cell ``(0, 0, 0)``, and the second index of the hopping matrix corresponds to the orbital in the
-target unit cell ``(x, y, z``.
+target unit cell ``(x, y, z)``.
 
 Lattice
 -------

@@ -14,9 +14,7 @@ Welcome to TiPSi's documentation!
    analysis
    examples
 
-Indices and tables
+Full documentation
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
