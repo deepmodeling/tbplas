@@ -5,11 +5,14 @@ Welcome to TiPSi's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   gettingstarted/index
-   buildingsample/index
+   gettingstarted
+   firstrun
+   builder
+   materials
    parameters
-   simulation
-   examples/index
+   correlation
+   analysis
+   examples
 
 Indices and tables
 ==================

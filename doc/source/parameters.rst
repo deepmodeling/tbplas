@@ -1,5 +1,5 @@
 Simulation parameters
 =================================
 
-.. automodule:: tipsi.config
+.. autoclass:: tipsi.config.Config
    :members:

@@ -4,7 +4,6 @@ Antimonene band structure example for tipsi.
 """
 
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,7 +1,0 @@
-[config_fc]
-fcompiler=gnu95
-f90flags="-fopenmp -O3 -march=native -heap-arrays"
-
-[build_ext]
-#library-dirs =
-libraries = gomp

@@ -34,7 +34,7 @@ def main():
     # get band structure
     bands = tipsi.band_structure(hop_dict, lat, kpoints)
 
-    # plot
+    # plot bulk band structure
     for i in range(len(bands[0,:])):
         plt.plot(kvals, bands[:,i], color='k')
     for tick in ticks:
@@ -43,7 +43,25 @@ def main():
     plt.xlim((0., np.amax(kvals)))
     plt.xlabel("k (1/nm)")
     plt.ylabel("E (eV)")
-    plt.savefig("bands.png")
+    plt.savefig("bands_bp_bulk.png")
+    plt.close()
+    
+    # remove z hoppings from hopdict
+    hop_dict.remove_z_hoppings()
+    
+    # get bands again
+    bands = tipsi.band_structure(hop_dict, lat, kpoints)
+    
+    # plot single layer band structure
+    for i in range(len(bands[0,:])):
+        plt.plot(kvals, bands[:,i], color='k')
+    for tick in ticks:
+        plt.axvline(tick, color='k', linewidth=0.5)
+    plt.xticks(ticks, ticktitles)
+    plt.xlim((0., np.amax(kvals)))
+    plt.xlabel("k (1/nm)")
+    plt.ylabel("E (eV)")
+    plt.savefig("bands_bp_monolayer.png")
     plt.close()
 
     
