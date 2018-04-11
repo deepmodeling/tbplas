@@ -12,6 +12,10 @@ Functions
         Get list of momenta by interpolation between symmetry points.
     band_structure
         Calculate band structure for a Lattice, HopDict pair.
+    uniform_strain
+        Uniformly strain a Lattice, HopDict pair.
+    extend_unit_cell
+        Extend the unit cell.
 
 Classes
 ----------
@@ -31,8 +35,11 @@ Classes
 ################
 
 # plotting
-import matplotlib.pyplot as plt
-import matplotlib.collections as mc
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as mc                
+except ImportError:
+    print("Plotting functions not available.")
 
 # multiprocessing
 import multiprocessing as mp
@@ -222,6 +229,120 @@ def band_structure(hop_dict, lattice, momenta):
         
     return bands
     
+def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
+    """Uniformly strain a Lattice, HopDict pair.
+    
+    Parameters
+    ----------
+    lattice_old : tipsi.Lattice
+        lattice to strain
+    hop_dict_old : tipsi.HopDict
+        hopping dictionary to strain
+    strain_tensor : (3,3)-list of floats
+        strain tensor
+    beta : float
+        strain coefficient
+    
+    Returns
+    ----------
+    lattice_new : tipsi.Lattice
+        strained lattice
+    hop_dict_new : tipsi.HopDict
+        strained hopping dictionary
+    """
+
+    # rescale lattice
+    vectors_new = [np.dot(strain_tensor, vector) \
+                   for vector in lattice_old.vectors]
+    orbital_coords_new = [np.dot(strain_tensor, coord) \
+                          for coord in lattice_old.orbital_coords]
+    lattice_new = Lattice(vectors_new, orbital_coords_new)
+    
+    # rescale hop_dict
+    hop_dict_new = HopDict()
+    for uc, hop in hop_dict_old.dict.items():
+        hop_dict_new.empty(uc, hop.shape)
+        for i in range(hop.shape[0]):
+            for j in range(hop.shape[1]):
+                hopval = hop[i, j]
+                r_old = npla.norm(lattice_old.site_pos(uc, j) \
+                                  - lattice_old.site_pos(uc, i))
+                r_new = npla.norm(lattice_new.site_pos(uc, j) \
+                                  - lattice_new.site_pos(uc, i))
+                if r_old != 0.0:
+                    hopval_new = hopval * np.exp(-beta * (r_new / r_old - 1.))
+                    hop_dict_new.set_element(uc, (i, j), hopval_new)
+                else:
+                    hop_dict_new.set_element(uc, (i, j), hopval)
+        
+    return lattice_new, hop_dict_new
+
+def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
+    """Extend the unit cell in a certain direction. Especially
+    helpful for including bias.
+    
+    Parameters
+    ----------
+    lattice_old : tipsi.Lattice
+        lattice to extend
+    hop_dict_old : tipsi.HopDict
+        hopping dictionary to extend
+    direction : integer
+        index of lattice vector giving direction of extension
+    amount : integer
+        number of unit cells to combine
+    
+    Returns
+    ----------
+    lattice_new : tipsi.Lattice
+        extended lattice
+    hop_dict_new : tipsi.HopDict
+        extended hopping dictionary
+    """
+    
+    # get useful parameters
+    d = direction
+    ext_vector = amount * lattice_old.vectors[d]
+    nr_orb_old = len(lattice_old.orbital_coords)
+    
+    # function for transforming to new coordinate system
+    def extend_coords(unit_cell_coord, orbital):
+        r_old = unit_cell_coord[d]
+        r_new = int(np.floor(r_old / amount))
+        orb_new = orbital + (r_old - r_new) * nr_orb_old
+        uc_new = list(unit_cell_coord)
+        uc_new[d] = r_new
+        return tuple(uc_new), orb_new
+        
+    # extend lattice
+    vectors_new = lattice_old.vectors
+    vectors_new[d] = ext_vector
+    orbital_coords_new = lattice_old.orbital_coords
+    extra_orbitals = lattice_old.orbital_coords + ext_vector
+    for i in range(1, amount):
+        orbital_coords_new = np.append(orbital_coords_new, \
+            lattice_old.orbital_coords + i * lattice_old.vectors[d], \
+            axis = 0)
+    lattice_new = Lattice(vectors_new, orbital_coords_new)
+    
+    # extend hop_dict
+    hop_dict_new = HopDict()
+    for k in range(amount):
+        for uc, hop in hop_dict_old.dict.items():
+            for i in range(hop.shape[0]):
+                for j in range(hop.shape[1]):
+                    uc_transpose = list(uc)
+                    uc_transpose[d] += k
+                    uc_new, orb1 = extend_coords(tuple(uc_transpose), j)
+                    if uc_new not in hop_dict_new.dict.keys():
+                         hop_dict_new.empty(uc_new, (hop.shape[0] * amount, \
+                                                     hop.shape[1] * amount))
+                    hopval = hop[i, j]
+                    orb0 = i + k * nr_orb_old
+                    hop_dict_new.set_element(uc_new, (orb0, orb1), hopval)
+        
+    return lattice_new, hop_dict_new
+
         
 ################
 # classes
@@ -331,6 +452,16 @@ class HopDict:
                         self.new_dict[reverse_unit_cell][j,i] = np.conjugate(hop)
         # done
         self.dict = self.new_dict
+    
+    def remove_z_hoppings(self):
+        """Remove z-direction hoppings.
+        """
+    
+        dict_new = {}
+        for uc, hop in self.dict.items():
+            if uc[2] == 0:
+                dict_new[uc] = hop
+        self.dict = dict_new
     
     def sparse(self):
         """Get sparse hopping dictionary.

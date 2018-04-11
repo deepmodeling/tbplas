@@ -17,6 +17,8 @@ Functions
         Periodic boundary conditions function with armchair edge
     pbc_zigzag
         Periodic boundary conditions function with zigzag edge
+    sample
+        Rectangular antimonene tipsi.Sample
 """
 
 import sys
@@ -24,10 +26,24 @@ sys.path.append("../..")
 import tipsi
 import numpy as np
         
-# return graphene tipsi.Lattice  
 def lattice(SOC = True, a = 0.411975806, z = 0.16455347):
-    # a is lattice constant in nm
-    # z is vertical displacement in nm
+    """Antimonene lattice.
+    
+    Parameters
+    ----------
+    SOC : bool
+        set to True to include spin orbit coupling
+    a : float
+        lattice constant
+    z : float
+        vertical displacement
+        
+    Returns
+    ----------
+    tipsi.Lattice object
+        Antimonene lattice.
+    """
+    
     b = a / np.sqrt(3.)
     vectors = [[1.5 * b, -0.5 * a, 0.], 
                [1.5 * b, 0.5 * a, 0.]]
@@ -39,9 +55,21 @@ def lattice(SOC = True, a = 0.411975806, z = 0.16455347):
         [[-b / 2., 0., -z / 2.] for i in range(n_orbitals_per_site)] + \
         [[b / 2., 0., z / 2.] for i in range(n_orbitals_per_site)]
     return tipsi.Lattice(vectors, orbital_coords)
-         
-# onsite SOC matrix         
+             
 def SOC_matrix(SOC_lambda):
+    """On-site SOC matrix.
+    
+    Parameters
+    ----------
+    SOC_lambda : float
+        strength of spin orbit coupling
+        
+    Returns
+    ----------
+    M : (6, 6) numpy array
+        on-site SOC matrix
+    """
+    
     M = 0.5 * SOC_lambda * np.array([ \
         [   0.0000 + 0.0000j,   0.0000 + 0.5854j,   0.0000 - 0.5854j,  -0.0000 + 0.0000j,   0.7020 - 0.4053j,  -0.0000 - 0.8107j ], \
         [   0.0000 - 0.5854j,   0.0000 + 0.0000j,   0.0000 + 0.5854j,  -0.7020 + 0.4053j,   0.0000 + 0.0000j,  -0.7020 - 0.4053j ], \
@@ -52,8 +80,21 @@ def SOC_matrix(SOC_lambda):
         ])
     return M
 
-# return antimonene tipsi.HopDict
 def hop_dict(SOC = True, SOC_lambda = 0.34):
+    """Antimonene hopping dictionary.
+    
+    Parameters
+    ----------
+    SOC : bool
+        set to True to include spin orbit coupling
+    SOC_lambda : float
+        strength of spin orbit coupling
+        
+    Returns
+    ----------
+    hops : tipsi.HopDict object
+        antimonene HopDict
+    """
     
     # hopping parameters
     t_01 = -2.09
@@ -327,8 +368,24 @@ def hop_dict(SOC = True, SOC_lambda = 0.34):
     
     return hop_dict
 
-# fill tipsi.SiteSet with antimonene sheet sites  
 def sheet(W, H, SOC = True):
+    """Antimonene SiteSet for a rectangular sheet.
+    
+    Parameters
+    ----------
+    W : integer
+        width of SiteSet in unit cells
+    H : integer
+        height of SiteSet in unit cells
+    SOC : bool
+        set to True to include spin orbit coupling
+        
+    Returns
+    ----------
+    site_set : tipsi.SiteSet object
+        rectangular antimonene SiteSet
+    """
+    
     site_set = tipsi.SiteSet()
     if SOC:
         n_orbs = 12
@@ -344,8 +401,28 @@ def sheet(W, H, SOC = True):
                 site_set.add_site(unit_cell_coords, orb)
     return site_set
     
-# pbc in all directions
 def pbc(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular antimonene sheet.
+    
+    Parameters
+    ----------
+    W : integer
+        width of SiteSet in unit cells
+    H : integer
+        height of SiteSet in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -360,8 +437,29 @@ def pbc(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
     
-# pbc for zigzag boundary
 def pbc_armchair(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular antimonene sheet
+    with an armchair edge.
+    
+    Parameters
+    ----------
+    W : integer
+        width of SiteSet in unit cells
+    H : integer
+        height of SiteSet in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -376,8 +474,29 @@ def pbc_armchair(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
     
-# pbc for zigzag boundary
 def pbc_zigzag(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular antimonene sheet
+    with a zigzag edge.
+    
+    Parameters
+    ----------
+    W : integer
+        width of SiteSet in unit cells
+    H : integer
+        height of SiteSet in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -391,3 +510,51 @@ def pbc_zigzag(W, H, unit_cell_coords, orbital):
     y = int(xloc + yloc)
     # done
     return (x, y, z), orbital
+
+def sample(W = 500, H = 500, SOC = True, SOC_lambda = 0.34, \
+           a = 0.411975806, z = 0.16455347, nr_processes = 1):
+    """Rectangular antimonene sample.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    SOC : bool
+        set to True to include spin orbit coupling
+    SOC_lambda : float
+        strength of spin orbit coupling
+    a : float
+        lattice constant
+    z : float
+        vertical displacement
+    nr_processes : integer
+        number of processes for sample building, optional (default 1)
+        
+    Returns
+    ----------
+    sample : tipsi.Sample object
+        Antimonene sample.
+    """
+    
+    # create lattice, hop_dict and pbc_wrap
+    lat = lattice(SOC, a, z)
+    hops = hop_dict(SOC, SOC_lambda)
+    def pbc_wrap(unit_cell_coords, orbital):
+        return pbc(W, H, unit_cell_coords, orbital)
+    
+    # create SiteSet object
+    site_set = sheet(W, H, SOC)
+    
+    # make sample
+    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+
+    # apply HopDict
+    sample.add_hop_dict(hops)
+    
+    # rescale Hamiltonian
+    sample.rescale_H(4.5)
+    
+    # done
+    return sample

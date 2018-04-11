@@ -10,53 +10,15 @@ import numpy as np
 
 import sys
 sys.path.append("..")
-sys.path.append("../materials")
 import tipsi
-import graphene
+from tipsi.materials import graphene
 
 def main():
 
-    #########################
-    # SIMULATION PARAMETERS #
-    #########################
+    # make 1000*1000 unit cell sample
+    sample = graphene.sample_rectangle(1000, 1000, nr_processes = 8)
     
-    # available cores for parallel sample construction
-    nr_processes = 24
-    
-    # sample size in unit cells
-    W = 512 # must be even
-    H = 512
-    
-    a = 0.24 # lattice constant in nm
-    t = 2.8 # hopping value
-    e = 0. # onsite potential
-    
-    # create lattice, hop_dict and pbc_wrap
-    lat = graphene.lattice(a)
-    hop_dict = graphene.hop_dict_nn(t, e)
-    def pbc_wrap(unit_cell_coords, orbital):
-        return graphene.pbc(W, H, unit_cell_coords, orbital)
-    
-    #######################
-    # SAMPLE CONSTRUCTION #
-    #######################
-    
-    # create SiteSet object
-    site_set = graphene.sheet(W, H)
-    
-    # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
-
-    # apply HopDict
-    sample.add_hop_dict(hop_dict)
-    
-    # rescale Hamiltonian
-    sample.rescale_H(9.)
-    
-    #########################
-    # SIMULATION PARAMETERS #
-    #########################
-    
+    # set config parameters
     config = tipsi.Config(sample)
     config.generic['nr_time_steps'] = 1024
     config.generic['nr_random_samples'] = 1
@@ -66,10 +28,6 @@ def main():
     config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
     config.save(directory = 'sim_data', \
                 prefix = config.output['timestamp'])
-                  
-    ############
-    # RUN TBPM #
-    ############
     
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)

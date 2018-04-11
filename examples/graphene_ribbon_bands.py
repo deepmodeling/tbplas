@@ -10,36 +10,24 @@ import numpy as np
 
 import sys
 sys.path.append("..")
-sys.path.append("../materials")
 import tipsi
-import graphene
+from tipsi.materials import graphene
 
 def main():
     
-    #########################
-    # SIMULATION PARAMETERS #
-    #########################
-    
-    # band plot resolution
-    res_bands = 100
-    
-    # sample size in unit cells
-    W = 64 # must be even
-    H = 1
-    
-    a = 0.24 # lattice constant in nm
-    t = 2.8 # hopping value
-    e = 0. # onsite potential
+    # parameters
+    res_bands = 100     # band plot resolution
+    W = 64              # sample width in unit cells, must be even
+    H = 1               # sample width in unit cells
+    a = 0.24            # lattice constant in nm
+    t = 2.8             # hopping value
+    e = 0.              # onsite potential
     
     # get lattice, hop_dict and pbc_wrap from materials file
     lat = graphene.lattice(a)
     hop_dict = graphene.hop_dict_nn(t, e)
     def pbc_wrap(uc_coords, orbital):
         return graphene.pbc_zigzag(W, H, uc_coords, orbital)
-    
-    #######################
-    # SAMPLE CONSTRUCTION #
-    #######################
     
     # create SiteSet object
     site_set = graphene.sheet_rectangle(W, H)
@@ -57,12 +45,8 @@ def main():
     # rescale Hamiltonian
     sample.rescale_H(9.)
     
-    # plot
+    # plot sample
     sample.plot()
-    
-    #############
-    # GET BANDS #
-    #############
 
     # get ribbon band structure
     N = res_bands
@@ -70,6 +54,8 @@ def main():
                for i in range(N + 1)]
     kvals = [(i / N) * 2 * np.pi / a for i in range(N + 1)]
     bands = sample.band_structure(kpoints)
+    
+    # plot bands
     for i in range(len(bands[0,:])):
         plt.plot(kvals, bands[:,i], color='k')
     plt.xlim((0., np.amax(kvals)))
@@ -78,7 +64,5 @@ def main():
     plt.savefig("bands.png")
     plt.close()
 
-    
 if __name__ == '__main__':
     main()
-            

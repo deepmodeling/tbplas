@@ -12,12 +12,14 @@ Functions
         Analyze DOS correlation function
     analyze_corr_AC
         Analyze AC correlation function
+    AC_imag
+        Calculate the imaginary part of the AC conductivity
     analyze_corr_dyn_pol
         Analyze dynamical polarization correlation function
     get_dielectric_function
         Get dielectric function from dynamical polarization
     analyze_corr_DC
-        Analyze AC correlation function
+        Analyze DC correlation function
 """
 
 ################
@@ -27,6 +29,7 @@ Functions
 # numerics & math
 import numpy as np
 import numpy.linalg as npla
+from scipy.signal import hilbert
 
 ################
 # window functions
@@ -149,7 +152,7 @@ def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
     return energies, DOS
     
 def analyze_corr_AC(config, corr_AC, window = window_exp):
-    """Function for analyzing the DOS correlation function.
+    """Function for analyzing the AC conductivity correlation function.
     
     Parameters
     ----------
@@ -201,9 +204,32 @@ def analyze_corr_AC(config, corr_AC, window = window_exp):
             
     return omegas, AC
 
+def AC_imag(AC_real):
+    """Get the imaginary part of the AC conductivity
+    from the real part using the Kramers-Kronig relations
+    (the Hilbert transform).
+    
+    Parameters
+    ----------
+    AC_real : array of floats
+        Re(sigma)
+        
+    Returns
+    ----------
+    array of floats
+        Im(sigma)
+    """
+    
+    N = len(AC_real)
+    sigma = np.zeros(2 * N)
+    for i in range(N):
+        sigma[N + i] = AC_real[i]
+        sigma[N - i] = AC_real[i]
+    return  np.imag(hilbert(sigma))[N : 2 * N]
+
 def analyze_corr_dyn_pol(config, corr_dyn_pol, \
                          window = window_exp_ten):
-    """Function for analyzing the DOS correlation function.
+    """Function for analyzing the dynamical polarization correlation function.
     
     Parameters
     ----------

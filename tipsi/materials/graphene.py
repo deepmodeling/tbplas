@@ -8,15 +8,21 @@ Functions
     hop_dict_nn
         Returns graphene nearest neighbor tipsi.HopDict
     sheet
+        Returns diamond shaped graphene sheet tipsi.SiteSet
+    sheet_rectangle
         Returns rectangular graphene sheet tipsi.SiteSet
     pbc
         Periodic boundary conditions function
-    pbc_armchair
+    pbc_rectangle
+        Rectangular periodic boundary conditions function
+    pbc_rectangle_armchair
         Periodic boundary conditions function with armchair edge
-    pbc_zigzag
+    pbc_rectangle_zigzag
         Periodic boundary conditions function with zigzag edge
     sample
         Returns graphene sample.
+    sample_rectangle
+        Returns rectangular graphene sample.
 """
 
 import sys
@@ -24,9 +30,20 @@ sys.path.append("../..")
 import tipsi
 import numpy as np
   
-# return graphene tipsi.Lattice  
 def lattice(a = 0.24):
-    # a is lattice constant in nm
+    """Graphene lattice.
+    
+    Parameters
+    ----------
+    a : float
+        lattice constant
+        
+    Returns
+    ----------
+    tipsi.Lattice object
+        Graphene lattice.
+    """
+    
     b = a / np.sqrt(3.)
     vectors        = [[1.5 * b, -0.5 * a, 0.], 
                       [1.5 * b, 0.5 * a, 0.]]
@@ -34,9 +51,22 @@ def lattice(a = 0.24):
                       [b / 2., 0., 0.]]
     return tipsi.Lattice(vectors, orbital_coords)
              
-# return graphene nearest neighbor tipsi.HopDict
 def hop_dict_nn(t = 2.7, e = 0.):
-    # t and e are hopping value and onsite potential in eV
+    """Graphene HopDict.
+    
+    Parameters
+    ----------
+    t : float
+        hopping constant
+    e : float
+        on-site potential
+        
+    Returns
+    ----------
+    hops : tipsi.HopDict object
+        Graphene HopDict.
+    """
+    
     A_0   = [[e, t],
              [t, e]]
     A_nn0 = [[0., 0.],
@@ -51,8 +81,22 @@ def hop_dict_nn(t = 2.7, e = 0.):
     hops.set((0, -1, 0), A_nn1)
     return hops
   
-# fill tipsi.SiteSet with diamond shaped graphene sheet sites  
 def sheet(W, H):
+    """Graphene SiteSet, diamond shaped.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the SiteSet, in unit cells
+    H : integer
+        height of the SiteSet, in unit cells
+        
+    Returns
+    ----------
+    site_set : tipsi.SiteSet object
+        Diamond shaped graphene SiteSet.
+    """
+    
     site_set = tipsi.SiteSet()
     for i in range(W):
         for j in range(H):
@@ -61,8 +105,22 @@ def sheet(W, H):
             site_set.add_site(unit_cell_coords, 1)
     return site_set
 
-# fill tipsi.SiteSet with rectangular graphene sheet sites  
 def sheet_rectangle(W, H):
+    """Graphene SiteSet, rectangular.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the SiteSet, in unit cells
+    H : integer
+        height of the SiteSet, in unit cells
+        
+    Returns
+    ----------
+    site_set : tipsi.SiteSet object
+        Rectangular graphene SiteSet.
+    """
+    
     site_set = tipsi.SiteSet()
     for x in range(int(W / 2)):
         for y in range(H):
@@ -75,13 +133,53 @@ def sheet_rectangle(W, H):
             site_set.add_site(unit_cell_coords, 1)
     return site_set
 
-# pbc in all directions for a diamond shaped sample
 def pbc(W, H, unit_cell_coords, orbital):
+    """PBC for a diamond shaped graphene sample.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     x, y, z = unit_cell_coords
     return (x % W, y % H, z), orbital
 
-# pbc in all directions for a rectangular sample
 def pbc_rectangle(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular graphene sample.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -96,8 +194,29 @@ def pbc_rectangle(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
     
-# pbc for armchair boundary
-def pbc_armchair(W, H, unit_cell_coords, orbital):
+def pbc_rectangle_armchair(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular graphene sample
+    with an armchair boundary.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -112,8 +231,29 @@ def pbc_armchair(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
     
-# pbc for zigzag boundary
-def pbc_zigzag(W, H, unit_cell_coords, orbital):
+def pbc_rectangle_zigzag(W, H, unit_cell_coords, orbital):
+    """PBC for a rectangular graphene sample
+    with a zigzag boundary.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+        
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+    
     # get input
     x, y, z = unit_cell_coords
     # transform to rectangular coords (xloc, yloc)
@@ -128,12 +268,30 @@ def pbc_zigzag(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
 
-# return graphene tipsi.Sample
 def sample(W = 500, H = 500, a = 0.24, t = 2.8, e = 0.0, \
-    nr_processes = 1):
-    # (W, H) gives sample size, a gives lattice constant,
-    # t is hopping, e is onsite potential, nr_processes is
-    # nr of available cores for parallel sample construction
+           nr_processes = 1):
+    """Diamond shaped graphene sample.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    a : float
+        lattice constant, optional (default 0.24)
+    t : float
+        hopping constant, optional (default 2.8)
+    e : float
+        hopping constant, optional (default 0.0)
+    nr_processes : integer
+        number of processes for sample building, optional (default 1)
+        
+    Returns
+    ----------
+    sample : tipsi.Sample object
+        Diamond shaped graphene sample.
+    """
     
     # create lattice, hop_dict and pbc_wrap
     lat = lattice(a)
@@ -149,6 +307,52 @@ def sample(W = 500, H = 500, a = 0.24, t = 2.8, e = 0.0, \
 
     # apply HopDict
     sample.add_hop_dict(hop_dict)
+    
+    # rescale Hamiltonian
+    sample.rescale_H(9.)
+    
+    # done
+    return sample
+
+def sample_rectangle(W = 500, H = 500, a = 0.24, t = 2.8, \
+                       e = 0.0, nr_processes = 1):
+    """Rectangular graphene sample.
+    
+    Parameters
+    ----------
+    W : integer
+        width of the sample, in unit cells
+    H : integer
+        height of the sample, in unit cells
+    a : float
+        lattice constant, optional (default 0.24)
+    t : float
+        hopping constant, optional (default 2.8)
+    e : float
+        hopping constant, optional (default 0.0)
+    nr_processes : integer
+        number of processes for sample building, optional (default 1)
+        
+    Returns
+    ----------
+    sample : tipsi.Sample object
+        Rectangular graphene sample.
+    """
+    
+    # create lattice, hop_dict and pbc_wrap
+    lat = lattice(a)
+    hops = hop_dict_nn(t, e)
+    def pbc_wrap(unit_cell_coords, orbital):
+        return pbc_rectangle(W, H, unit_cell_coords, orbital)
+    
+    # create SiteSet object
+    site_set = sheet_rectangle(W, H)
+    
+    # make sample
+    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+
+    # apply HopDict
+    sample.add_hop_dict(hops)
     
     # rescale Hamiltonian
     sample.rescale_H(9.)
