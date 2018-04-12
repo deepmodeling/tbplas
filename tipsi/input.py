@@ -230,7 +230,7 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     #######################
 
     # open lattice file
-    with open(lat_file) as f:
+    with open(lat_file, 'r') as f:
         lat_content = f.readlines()
 
     # prepare
@@ -259,11 +259,9 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
             parsing_unitcell = False
         elif parsing_unitcell:
             nr_atoms += 1
-            # data = line.split()
-            # orbital_coords.append([float(x) for x in data[1:]])
 
     # open coordinate file
-    with open(coord_file) as f:
+    with open(coord_file, 'r') as f:
         coord_content = f.readlines()
 
     # prepare
@@ -282,15 +280,15 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     #######################
 
     # open hopping file
-    with open(ham_file) as f:
+    with open(ham_file, 'r') as f:
         ham_content = f.readlines()
-    nr_orbitals = int(ham_content[1])
+    nr_wann = int(ham_content[1])
     nr_hoppings = int(ham_content[2])
     skip_lines = 3+int(np.ceil(nr_hoppings/15))
 
     # read correction terms
     cor = {}
-    with open(correct_file) as iterator:
+    with open(correct_file, 'r') as iterator:
         # skip comment line
         next(iterator)
         for first_line in iterator:
@@ -319,10 +317,10 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
 
         # read data
         data = line.split()
-        x0 = int(data[0])
-        y0 = int(data[1])
-        z0 = int(data[2])
-        unit_cell_coord_new = (x0, y0, z0)
+        x = int(data[0])
+        y = int(data[1])
+        z = int(data[2])
+        unit_cell_coord_new = (x, y, z)
         orb0 = int(data[3])-1
         orb1 = int(data[4])-1
         hop = float(data[5])+1j*float(data[6])
@@ -332,7 +330,7 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
         if unit_cell_coord_new != unit_cell_coord_old:
             if unit_cell_coord_old:
                 hop_dict.set(unit_cell_coord_old, hop_matrix)
-            hop_matrix = np.zeros((nr_orbitals, nr_orbitals), \
+            hop_matrix = np.zeros((nr_wann, nr_wann), \
                                   dtype = complex)
             unit_cell_coord_old = unit_cell_coord_new
 
@@ -343,14 +341,17 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     hop_dict.set(unit_cell_coord_old, hop_matrix)
 
     # apply correction terms
-    for term in cor.keys():
-        N = len(cor[term])
+    for x0, y0, z0, orb0, orb1 in cor.keys():
+        N = len(cor[x0, y0, z0, orb0, orb1])
+        hop_dict.dict[(x0, y0, z0)] = np.zeros((nr_wann, nr_wann), \
+                                               dtype = complex)
         for i in range(N):
-            x, y, z = cor[term][i]
+            x, y, z = cor[x0, y0, z0, orb0, orb1][i]
+            x, y, z = x+x0, y+y0, z+z0
             if (x, y, z) in hop_dict.dict.keys():
                 hop_dict.dict[(x, y, z)][orb0, orb1] = hop/N
             else:
-                hop_matrix = np.zeros((nr_orbitals, nr_orbitals), \
+                hop_matrix = np.zeros((nr_wann, nr_wann), \
                                       dtype = complex)
                 hop_matrix[orb0, orb1] = hop/N
                 hop_dict.set((x, y, z), hop_matrix)
