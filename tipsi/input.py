@@ -199,20 +199,23 @@ def read_corr_DC(filename):
 
     return corr_DC / n_samples
 
-def read_wannier90(lat_file, coord_file, ham_file):
+def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     """Read Lattice and HopDict information from Wannier90 file
 
     Parameters
     ----------
     lat_file : string
-        read lattice vectors and atom numbers from this file
-        usually named "*.win"
+        read lattice vectors and atom numbers from this file,
+        usually named "*seedname*.win"
     coord_file : string
-        read coordinate information from this file
-        usually named "*_centres.xyz"
+        read wannier centres from this file,
+        usually named "*seedname*_centres.xyz"
     ham_file : string
-        read Hamiltonian information from this file
-        usually named "*_hr.dat"
+        read hopping terms from this file,
+        usually named "*seedname*_hr.dat"
+    correct_file : string
+        correction terms for hoppings, available since Wannier90 2.1,
+        usually named "*seedname*_wsvec.dat"
 
     Returns
     ----------
@@ -278,12 +281,34 @@ def read_wannier90(lat_file, coord_file, ham_file):
     # MAKE HOPDICT OBJECT #
     #######################
 
-    # open hamiltonian file
+    # open hopping file
     with open(ham_file) as f:
         ham_content = f.readlines()
     nr_orbitals = int(ham_content[1])
     nr_hoppings = int(ham_content[2])
     skip_lines = 3+int(np.ceil(nr_hoppings/15))
+
+    # read correction terms
+    cor = {}
+    with open(correct_file) as iterator:
+        # skip comment line
+        next(iterator)
+        for first_line in iterator:
+            data = first_line.split()
+            x0 = int(data[0])
+            y0 = int(data[1])
+            z0 = int(data[2])
+            orb0 = int(data[3])-1
+            orb1 = int(data[4])-1
+            N = int(next(iterator))
+            sites_cor = []
+            for i in range(N):
+                data = next(iterator).split()
+                x = int(data[0])
+                y = int(data[1])
+                z = int(data[2])
+                sites_cor.append((x, y, z))
+            cor[(x0, y0, z0, orb0, orb1)] = sites_cor
 
     # prepare
     hop_dict = HopDict()
