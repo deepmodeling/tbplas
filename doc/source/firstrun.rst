@@ -41,7 +41,7 @@ Also we can tell tipsi to correct for spin, as currently our model is single-spi
 
 Then, we save the configuration parameters to file, in case we want to use them later::
 
-    config.save(directory = 'sim_data', prefix = config.output['timestamp'])
+    config.save()
 
 Running the simulation
 ----------------------
@@ -91,7 +91,7 @@ The full code of this example is::
     config = tipsi.Config(sample)
     config.generic['correct_spin'] = True
     config.generic['nr_random_samples'] = 4
-    config.save(directory = 'sim_data', prefix = config.output['timestamp'])
+    config.save()
 
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)

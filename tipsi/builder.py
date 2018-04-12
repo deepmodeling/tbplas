@@ -503,7 +503,7 @@ class Lattice:
     Attributes
     -----------
     vectors : (3,3) numpy array
-        array of lattice vectors
+        array of lattice vectors [a_0, a_1, a_2]
     vectorsT : (3,3) numpy array
         transposed lattice vectors
     orbital_coords : (n,3) numpy array
@@ -557,6 +557,19 @@ class Lattice:
         
         a = self.vectors[0,:]
         b = self.vectors[1,:]
+        return npla.norm(np.cross(a, b))
+    
+    def volume_unit_cell(self):
+        """Get unit cell volume.
+        
+        Returns
+        -----------
+        float
+            unit cell volume
+        """
+        
+        a = self.vectors[0,:]
+        b = self.vectors[1,:]
         c = self.vectors[2,:]
         return np.inner(a, np.cross(b, c))
     
@@ -566,7 +579,7 @@ class Lattice:
         Returns
         -----------
         (3,3) numpy array of floats
-            array containing [k_x, k_y, k_z]
+            array containing [k_0, k_1, k_2]
         """
         
         vec = self.vectors
