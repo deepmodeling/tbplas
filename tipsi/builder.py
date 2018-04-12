@@ -327,6 +327,7 @@ def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
             lattice_old.orbital_coords + i * lattice_old.vectors[d], \
             axis = 0)
     lattice_new = Lattice(vectors_new, orbital_coords_new)
+    lattice_new.extended *= amount
     
     # extend hop_dict
     hop_dict_new = HopDict()
@@ -508,6 +509,8 @@ class Lattice:
         transposed lattice vectors
     orbital_coords : (n,3) numpy array
         array of orbital coordinates for all n orbitals
+    extended : integer
+        number of times the unit cell has been extended, default 1
     """ 
     
     def __init__(self, vectors, orbital_coords):
@@ -526,6 +529,7 @@ class Lattice:
             self.vectors = np.append(self.vectors, [[0., 0., 1.]], axis = 0)
         self.vectorsT = np.transpose(self.vectors)
         self.orbital_coords = np.array(orbital_coords)
+        self.extended = 1
     
     def site_pos(self, unit_cell_coords, orbital):
         """Get orbital position in Cartesian coordinates.

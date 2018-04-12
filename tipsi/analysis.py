@@ -179,7 +179,8 @@ def analyze_corr_AC(config, corr_AC, window = window_exp):
     beta = config.generic['beta']
     omegas = [i * en_range / tnr for i in range(tnr)]
     ac_prefactor = 4. * config.sample['nr_orbitals'] \
-                        / config.sample['area_unit_cell']
+                        / config.sample['area_unit_cell'] \
+                        / config.sample['extended']
     
     # get AC conductivity
     AC = np.zeros((4, tnr))
@@ -261,7 +262,8 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
     n_omegas = tnr
     # do we need to divide the prefac by 1.5??
     dyn_pol_prefactor = -2. * config.sample['nr_orbitals'] \
-                        / config.sample['area_unit_cell']
+                        / config.sample['area_unit_cell'] \
+                        / config.sample['extended']
     
     # get dynamical polarization
     dyn_pol = np.zeros((n_q_points, n_omegas), dtype = complex)
@@ -309,7 +311,8 @@ def get_dielectric_function(config, dyn_pol):
     omegas = [i * en_range / tnr for i in range(tnr)]
     n_omegas = tnr
     epsilon_prefactor = config.dyn_pol['coulomb_constant'] \
-                        / config.dyn_pol['background_dielectric_constant']
+                        / config.dyn_pol['background_dielectric_constant'] \
+                        / config.sample['extended']
     
     # declare arrays
     epsilon = np.ones((n_q_points, n_omegas)) \

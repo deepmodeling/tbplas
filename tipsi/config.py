@@ -69,6 +69,8 @@ class Config():
         Area of the unit cell.
     sample['energy_range'] : float
         Energy range in eV, centered at 0.
+    sample['extended'] : integer
+        Number of times the unit cell has been extended.
     sample['nr_orbitals'] : integer
         Degrees of freedom per unit cell.
     sample['volume_unit_cell'] : float
@@ -149,6 +151,7 @@ class Config():
             self.sample['energy_range'] = sample.energy_range()
             self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
             self.sample['volume_unit_cell'] = sample.lattice.volume_unit_cell()
+            self.sample['extended'] = sample.lattice.extended
                    
         # generic standard values
         self.generic['Bessel_max'] = 100
