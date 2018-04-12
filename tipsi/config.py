@@ -69,8 +69,12 @@ class Config():
         Area of the unit cell.
     sample['energy_range'] : float
         Energy range in eV, centered at 0.
+    sample['extended'] : integer
+        Number of times the unit cell has been extended.
     sample['nr_orbitals'] : integer
         Degrees of freedom per unit cell.
+    sample['volume_unit_cell'] : float
+        Volume of the unit cell.
     generic['Bessel_max'] : int
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
@@ -146,6 +150,8 @@ class Config():
             self.sample['nr_orbitals'] = len(sample.lattice.orbital_coords)
             self.sample['energy_range'] = sample.energy_range()
             self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
+            self.sample['volume_unit_cell'] = sample.lattice.volume_unit_cell()
+            self.sample['extended'] = sample.lattice.extended
                    
         # generic standard values
         self.generic['Bessel_max'] = 100
@@ -172,10 +178,9 @@ class Config():
         
         # output settings
         self.output['timestamp'] = str(int(time.time()))
-        self.set_output(directory = 'sim_data', \
-                        prefix = self.output['timestamp'])
+        self.set_output()
     
-    def set_output(self, directory = False, prefix = ""):
+    def set_output(self, directory = 'sim_data', prefix = False):
         """Function to set data output options.
         
         This function will set self.output['directory'] and correlation 
@@ -187,9 +192,11 @@ class Config():
             output directory, set to False if you don't want to specify
             an output directory
         prefix : string, optional
-            prefix for filenames
+            prefix for filenames, set to False for standard (timestamp) prefix
         """
         
+        if prefix == False:
+            prefix = self.output['timestamp']
         if prefix != "":
             print("Output prefix: " + prefix)
         
@@ -200,20 +207,22 @@ class Config():
         self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
     
-    def save(self, filename = "config.pkl", directory = False, prefix = ""):
+    def save(self, filename = "config.pkl", directory = 'sim_data', prefix = False):
         """Function to save config parameters to a .pkl file.
         
         Parameters
         ----------
+        filename : string, optional
+            file name
         directory : string, optional
             output directory, set to False if you don't want to specify
             an output directory
-        filename : string, optional
-            file name
-        suffix : string, optional
-            suffix for filenames
+        prefix : string, optional
+            prefix for filenames, , set to False for standard (timestamp) prefix
         """
         
+        if prefix == False:
+            prefix = self.output['timestamp']
         td = create_dir(directory)
         with open(td + prefix + filename, 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)

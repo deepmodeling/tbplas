@@ -4,9 +4,9 @@ Builder
 A sample is built using a lattice, a collection of sites, periodic boundary
 conditions, and a hopping dictionary.
 
-The lattice contains lattice vectors and site locations. It tells the sample
+The lattice contains lattice vectors, and site locations within the unit cell. It tells the sample
 where a site with a certain coordinate ``(x, y, z), orbital_index`` is located in space.
-The coordinates ``(x, y, z)`` give a unit cell location in terms of lattice vectors.
+The **integer** coordinates ``(x, y, z)`` give a unit cell location in terms of lattice vectors. 
 The orbital index gives the location of a site within its unit cell.
 
 A collection of sites is given by a list of coordinates ``(x, y, z), orbital_index``.
@@ -26,7 +26,7 @@ Lattice
 -------
 
 A Lattice object contains the geometrical information of a material. It is 
-initiated with a list of lattice vectors and a list of orbital coordinates. 
+initiated with a list of 2 or 3 lattice vectors and a list of orbital coordinates. 
 E.g., for graphene::
 
     a = 0.24 # lattice constant in nm

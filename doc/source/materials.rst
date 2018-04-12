@@ -7,21 +7,21 @@ For now, tipsi contains three materials:
     - single layer antimonene
     - multilayer black phosphorus
 
-graphene
+Graphene
 --------
 
 .. automodule:: tipsi.materials.graphene
    :members:
    :undoc-members:
    
-antimonene
+Antimonene
 ----------
 
 .. automodule:: tipsi.materials.antimonene
    :members:
    :undoc-members:
 
-black_phosphorus
+Black phosphorus
 ----------------
 
 .. automodule:: tipsi.materials.black_phosphorus

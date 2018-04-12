@@ -26,8 +26,7 @@ def main():
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
     config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
-    config.save(directory = 'sim_data', \
-                prefix = config.output['timestamp'])
+    config.save()
     
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)

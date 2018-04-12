@@ -58,8 +58,8 @@ def main():
     
     # config object
     config = tipsi.Config(sample)
-    config.save(directory = 'sim_data', \
-        prefix = config.output['timestamp'])
+    config.generic['correct_spin'] = True
+    config.save()
 
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)
