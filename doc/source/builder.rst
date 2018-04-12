@@ -6,7 +6,7 @@ conditions, and a hopping dictionary.
 
 The lattice contains lattice vectors, and site locations within the unit cell. It tells the sample
 where a site with a certain coordinate ``(x, y, z), orbital_index`` is located in space.
-The **integer** coordinates ``(x, y, z)`` give a unit cell location in terms of lattice vectors. 
+The **integer** coordinates ``(x, y, z)`` give a unit cell location in terms of lattice vectors.
 The orbital index gives the location of a site within its unit cell.
 
 A collection of sites is given by a list of coordinates ``(x, y, z), orbital_index``.
@@ -25,19 +25,19 @@ target unit cell ``(x, y, z)``.
 Lattice
 -------
 
-A Lattice object contains the geometrical information of a material. It is 
-initiated with a list of 2 or 3 lattice vectors and a list of orbital coordinates. 
+A Lattice object contains the geometrical information of a material. It is
+initiated with a list of 2 or 3 lattice vectors and a list of orbital coordinates.
 E.g., for graphene::
 
     a = 0.24 # lattice constant in nm
     b = a / sqrt(3.) # carbon-carbon distance in nm
-    vectors        = [[1.5 * b, -0.5 * a, 0.], 
+    vectors        = [[1.5 * b, -0.5 * a, 0.],
                       [1.5 * b, 0.5 * a, 0.]]
-    orbital_coords = [[-b / 2., 0., 0.], 
+    orbital_coords = [[-b / 2., 0., 0.],
                       [b / 2., 0., 0.]]
     lat = tipsi.Lattice(vectors, orbital_coords)
 
-If you are working with multiple orbitals per site, each orbital must be 
+If you are working with multiple orbitals per site, each orbital must be
 listed separately in the second argument. In tipsi, you should always use
 nanometers as distance unit.
 
@@ -48,7 +48,7 @@ nanometers as distance unit.
 SiteSet
 -------
 
-A SiteSet object contains sites, that are added by unit cell coordinate and 
+A SiteSet object contains sites, that are added by unit cell coordinate and
 orbital index. E.g., for graphene::
 
     W = 10 # width
@@ -60,17 +60,17 @@ orbital index. E.g., for graphene::
                 site_set.add_site(unit_cell_coords, 0)
                 site_set.add_site(unit_cell_coords, 1)
 
-At each unit cell coordinate, we add two sites, generating 10 by 10 unit cells in total. 
+At each unit cell coordinate, we add two sites, generating 10 by 10 unit cells in total.
 
 .. autoclass:: tipsi.builder.SiteSet
    :members:
    :undoc-members:
-   
+
 HopDict
 -------
 
-A HopDict object contains the electronic information of a material. It is given by a 
-list of hopping matrices corresponding to relative unit cell coordinates. 
+A HopDict object contains the electronic information of a material. It is given by a
+list of hopping matrices corresponding to relative unit cell coordinates.
 E.g., for graphene::
 
     t = 2.7 # hopping constant in eV
@@ -119,18 +119,18 @@ In tipsi, you should always use the energy unit electronvolts.
 Periodic boundary conditions
 ----------------------------
 
-We need to tell \tipsi\ how to treat the boundary of the sample. Hence, we define 
-a function that takes a site coordinate outside the sample, and returns 
+We need to tell \tipsi\ how to treat the boundary of the sample. Hence, we define
+a function that takes a site coordinate outside the sample, and returns
 a coordinate that falls within the sample. E.g., for graphene::
 
     def pbc_func(unit_cell_coords, orbital):
         x, y, z = unit_cell_coords
         return (x % W, y % H, z), orbital
-    
-This gives periodic boundary conditions in all directions. Of course, 
-we could also define periodic boundary conditions in only one direction, 
+
+This gives periodic boundary conditions in all directions. Of course,
+we could also define periodic boundary conditions in only one direction,
 to create a ribbon sample::
-    
+
     def pbc_func_ribbon(unit_cell_coords, orbital):
         x, y, z = unit_cell_coords
         return (x % W, y, z), orbital
@@ -143,10 +143,10 @@ conditions.
 Sample
 ------
 
-We now have all the ingredients to create a sample. A Sample object 
-generates the full tight-binding Hamiltonian, given a Lattice, SiteSet, 
-HopDict, and boundary conditions. Also, keep in mind the Hamiltonian will 
-have to be rescaled, to fulfill the requirement that all eigenvalues 
+We now have all the ingredients to create a sample. A Sample object
+generates the full tight-binding Hamiltonian, given a Lattice, SiteSet,
+HopDict, and boundary conditions. Also, keep in mind the Hamiltonian will
+have to be rescaled, to fulfill the requirement that all eigenvalues
 must be in the range ``[-1, 1]``::
 
     sample = tipsi.Sample(lat, site_set, pbc_func)
@@ -180,7 +180,7 @@ After adding a HopDict, we can add or change individual hoppings with::
     sample.set_hopping(hop, unit_cell_coord0, \
         unit_cell_coord1, orbital0, orbital1)
 
-Moreover, tipsi has some convenience functions for common types of 
+Moreover, tipsi has some convenience functions for common types of
 global disorder::
 
 We can uniformly strain the Lattice, HopDict pair with
@@ -214,7 +214,7 @@ we can create a multilayer sample and add bias by using::
 
     # remove redundant z-direction hoppings
     hops.remove_z_hoppings()
-    
+
 Finally, a magnetic field can be introduced using a Peierls substitution,
 using units of Tesla, with::
 
@@ -231,27 +231,27 @@ It is easy to create a Lattice, HopDict pair using Wannier90 output files.
 To this end, we use the function::
 
     lattice, hop_dict = \
-        read_wannier90(lat_file, coord_file, ham_file)
+        read_wannier90(lat_file, coord_file, ham_file, correct_file)
 
-Here, ``lat_file`` is the file containing lattice vectors
-and atom numbers, usually named ***.win**. ``coord_file``
-is the file containing orbital coordinates, usually named
-***\_centres.xyz**. ``ham_file`` is the file containing
-all the hoppings, usually named ***\_hr.dat**.
+Here:
+    - ``lat_file`` is the file containing lattice vectors and atom numbers, usually named ***.win**.
+    - ``coord_file`` is the file containing orbital coordinates, usually named ***\_centres.xyz**. It can be generated by parameter ``write_xyz = true`` in wannier90 input file.
+    - ``ham_file`` is the file containing all the hoppings, usually named ***\_hr.dat**. It can be generated by parameter ``write_hr = true`` in wannier90 input file.
+    - ``correct_file`` correction terms for hoppings, usually named ***\_wsvec.dat**. It can be generated by parameter ``use_ws_distance = true`` (available since wannier90 2.1) in wannier90 input file.
 
 .. autofunction:: tipsi.input.read_wannier90()
 
 k-space functions
 -----------------
 
-To check the Lattice and HopDict objects, we can calculate the band structure 
+To check the Lattice and HopDict objects, we can calculate the band structure
 that they produce, provided a list of points in k-space::
 
     bands = tipsi.band_structure(hop_dict, \
         lat, kpoints)
     for band in bands.swapaxes(0, 1):
         plt.plot(kvals, band)
-        
+
 We can also calculate band structures for entire Sample objects, although this
 is of course not feasible for larger systems::
 

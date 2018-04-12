@@ -200,22 +200,22 @@ def read_corr_DC(filename):
     return corr_DC / n_samples
 
 def read_wannier90(lat_file, coord_file, ham_file, correct_file):
-    """Read Lattice and HopDict information from Wannier90 file
+    r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
     ----------
     lat_file : string
         read lattice vectors and atom numbers from this file,
-        usually named "*seedname*.win"
+        usually named "\*.win"
     coord_file : string
         read wannier centres from this file,
-        usually named "*seedname*_centres.xyz"
+        usually named "\*_centres.xyz"
     ham_file : string
         read hopping terms from this file,
-        usually named "*seedname*_hr.dat"
+        usually named "\*_hr.dat"
     correct_file : string
         correction terms for hoppings, available since Wannier90 2.1,
-        usually named "*seedname*_wsvec.dat"
+        usually named "\*_wsvec.dat"
 
     Returns
     ----------
