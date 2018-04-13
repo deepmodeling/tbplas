@@ -128,13 +128,15 @@ class Config():
     """
 
     # initialize
-    def __init__(self, sample = False):
+    def __init__(self, sample = False, read_from_file = False):
         """Initialize.
         
         Parameters
         ----------
         sample : Sample object
             Sample object of which to take sample parameters.
+        read_from_file : bool
+            set to True if you are reading a config object from file
         """
         
         # declare dicts
@@ -177,8 +179,9 @@ class Config():
         self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
         
         # output settings
-        self.output['timestamp'] = str(int(time.time()))
-        self.set_output()
+        if not read_from_file:
+            self.output['timestamp'] = str(int(time.time()))
+            self.set_output()
     
     def set_output(self, directory = 'sim_data', prefix = False):
         """Function to set data output options.

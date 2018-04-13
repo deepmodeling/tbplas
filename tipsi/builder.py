@@ -305,7 +305,6 @@ def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
     
     # get useful parameters
     d = direction
-    ext_vector = amount * lattice_old.vectors[d]
     nr_orb_old = len(lattice_old.orbital_coords)
     
     # function for transforming to new coordinate system
@@ -318,14 +317,13 @@ def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
         return tuple(uc_new), orb_new
         
     # extend lattice
-    vectors_new = lattice_old.vectors
-    vectors_new[d] = ext_vector
     orbital_coords_new = lattice_old.orbital_coords
-    extra_orbitals = lattice_old.orbital_coords + ext_vector
     for i in range(1, amount):
         orbital_coords_new = np.append(orbital_coords_new, \
             lattice_old.orbital_coords + i * lattice_old.vectors[d], \
             axis = 0)
+    vectors_new = lattice_old.vectors.copy()
+    vectors_new[d] *= amount
     lattice_new = Lattice(vectors_new, orbital_coords_new)
     lattice_new.extended *= amount
     
@@ -1016,7 +1014,7 @@ class Sample:
 
     def set_hopping(self, hop, unit_cell_coord0, unit_cell_coord1, \
                     orbital0 = 0, orbital1 = 0):
-        """Add or change hopping.
+        """Add or change hopping, automatically add conjugate.
         
         Parameters
         ----------
@@ -1038,6 +1036,10 @@ class Sample:
             False if hopping value is added
         """
         
+        # this method needs to be improved
+        # move change/insert code to separate methods
+        # take care of situation where H is empty when calling this method
+        
         # get site tags, indices and distances
         tag0 = unit_cell_coord0 + (orbital0,)
         i0 = self.tag_to_index[tag0]
@@ -1052,6 +1054,8 @@ class Sample:
             pbc_tag = pbc_r1 + (pbc_orb1,)
             if pbc_tag in self.tag_to_index:
                 i1 = self.tag_to_index[pbc_tag]
+            else:
+                print("Site not in sample.")
         dist_x = r1[0] - r0[0]
         dist_y = r1[1] - r0[1]
         
@@ -1061,6 +1065,11 @@ class Sample:
         for i, j in enumerate(subindices):
             if j == i1:
                 self.hop[self.indptr[i0] + i] = hop
+        # conjugate
+        subindices = self.indices[self.indptr[i1]:self.indptr[i1+1]]
+        for i, j in enumerate(subindices):
+            if j == i0:
+                self.hop[self.indptr[i1] + i] = hop
                 return True
             
         # if not, add hopping value and distance values
@@ -1069,6 +1078,13 @@ class Sample:
         self.dx = np.insert(self.dx, self.indptr[i0], dist_x)
         self.dy = np.insert(self.dy, self.indptr[i0], dist_y)
         for i in range(i0 + 1, len(self.indptr)):
+            self.indptr[i] += 1
+        # conjugate
+        self.indices = np.insert(self.indices, self.indptr[i1], i0)
+        self.hop = np.insert(self.hop, self.indptr[i1], hop)
+        self.dx = np.insert(self.dx, self.indptr[i1], dist_x)
+        self.dy = np.insert(self.dy, self.indptr[i1], dist_y)
+        for i in range(i1 + 1, len(self.indptr)):
             self.indptr[i] += 1
         return False
 

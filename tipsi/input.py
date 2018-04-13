@@ -68,7 +68,7 @@ def read_config(filename):
 
     with open(filename, 'rb') as f:
         dict = pickle.load(f)
-    config = Config()
+    config = Config(read_from_file = True)
     config.sample = dict.sample
     config.generic = dict.generic
     config.dyn_pol = dict.dyn_pol
