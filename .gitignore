@@ -38,15 +38,8 @@ __pycache__
 ehthumbs.db
 Thumbs.db
 
-# Example images and data #
-###########################
-*.png
-*.csv
-*.dat
-*.hdf5
-*.pkl
-
 # testing and building #
 ########################
 testing
 build
+sim_data
