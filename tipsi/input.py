@@ -199,20 +199,23 @@ def read_corr_DC(filename):
 
     return corr_DC / n_samples
 
-def read_wannier90(lat_file, coord_file, ham_file):
-    """Read Lattice and HopDict information from Wannier90 file
+def read_wannier90(lat_file, coord_file, ham_file, correct_file):
+    r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
     ----------
     lat_file : string
-        read lattice vectors and atom numbers from this file
-        usually named "*.win"
+        read lattice vectors from this file,
+        usually named "\*.win"
     coord_file : string
-        read coordinate information from this file
-        usually named "*_centres.xyz"
+        read wannier centres from this file,
+        usually named "\*_centres.xyz"
     ham_file : string
-        read Hamiltonian information from this file
-        usually named "*_hr.dat"
+        read hopping terms from this file,
+        usually named "\*_hr.dat"
+    correct_file : string
+        correction terms for hoppings, available since Wannier90 2.1,
+        usually named "\*_wsvec.dat"
 
     Returns
     ----------
@@ -227,15 +230,13 @@ def read_wannier90(lat_file, coord_file, ham_file):
     #######################
 
     # open lattice file
-    with open(lat_file) as f:
+    with open(lat_file, 'r') as f:
         lat_content = f.readlines()
 
     # prepare
     parsing_lattice = False
     parsing_unitcell = False
     lattice_vectors = []
-    # orbital_coords = []
-    nr_atoms = 0
 
     # parse
     for line in lat_content:
@@ -249,27 +250,18 @@ def read_wannier90(lat_file, coord_file, ham_file):
             data = line.split()
             lattice_vectors.append([float(x) for x in data])
 
-        # atoms numbers within unit cell
-        if line.startswith("begin atoms_cart"):
-            parsing_unitcell = True
-        elif line.startswith("end atoms_cart"):
-            parsing_unitcell = False
-        elif parsing_unitcell:
-            nr_atoms += 1
-            # data = line.split()
-            # orbital_coords.append([float(x) for x in data[1:]])
-
     # open coordinate file
-    with open(lat_file) as f:
+    with open(coord_file, 'r') as f:
         coord_content = f.readlines()
 
     # prepare
     orbital_coords = []
 
     # parse
-    for line in coord_content[2:-nr_atoms]:
+    for line in coord_content[2:]:
         data = line.split()
-        orbital_coords.append([float(x) for x in data[1:]])
+        if data[0] == 'X':
+            orbital_coords.append([float(x) for x in data[1:]])
 
     # init lattice object
     lat = Lattice(lattice_vectors, orbital_coords)
@@ -278,12 +270,34 @@ def read_wannier90(lat_file, coord_file, ham_file):
     # MAKE HOPDICT OBJECT #
     #######################
 
-    # open hamiltonian file
-    with open(ham_file) as f:
+    # open hopping file
+    with open(ham_file, 'r') as f:
         ham_content = f.readlines()
-    nr_orbitals = int(ham_content[1])
+    nr_wann = int(ham_content[1])
     nr_hoppings = int(ham_content[2])
     skip_lines = 3+int(np.ceil(nr_hoppings/15))
+
+    # read correction terms
+    cor = {}
+    with open(correct_file, 'r') as iterator:
+        # skip comment line
+        next(iterator)
+        for first_line in iterator:
+            data = first_line.split()
+            x0 = int(data[0])
+            y0 = int(data[1])
+            z0 = int(data[2])
+            orb0 = int(data[3])-1
+            orb1 = int(data[4])-1
+            N = int(next(iterator))
+            sites_cor = []
+            for i in range(N):
+                data = next(iterator).split()
+                x = int(data[0])
+                y = int(data[1])
+                z = int(data[2])
+                sites_cor.append((x, y, z))
+            cor[(x0, y0, z0, orb0, orb1)] = sites_cor
 
     # prepare
     hop_dict = HopDict()
@@ -297,16 +311,17 @@ def read_wannier90(lat_file, coord_file, ham_file):
         x = int(data[0])
         y = int(data[1])
         z = int(data[2])
-        unit_cell_coord_new = (x,y,z)
+        unit_cell_coord_new = (x, y, z)
         orb0 = int(data[3])-1
         orb1 = int(data[4])-1
         hop = float(data[5])+1j*float(data[6])
 
+        # add hopping terms
         # if new (x,y,z), fill hop_dict with old one
         if unit_cell_coord_new != unit_cell_coord_old:
             if unit_cell_coord_old:
                 hop_dict.set(unit_cell_coord_old, hop_matrix)
-            hop_matrix = np.zeros((nr_orbitals, nr_orbitals), \
+            hop_matrix = np.zeros((nr_wann, nr_wann), \
                                   dtype = complex)
             unit_cell_coord_old = unit_cell_coord_new
 
@@ -315,5 +330,22 @@ def read_wannier90(lat_file, coord_file, ham_file):
 
     # enter last hop_matrix
     hop_dict.set(unit_cell_coord_old, hop_matrix)
+
+    # apply correction terms
+    for x0, y0, z0, orb0, orb1 in cor.keys():
+        N = len(cor[(x0, y0, z0, orb0, orb1)])
+        hop = hop_dict.dict[(x0, y0, z0)][orb0, orb1]
+        hop_dict.dict[(x0, y0, z0)][orb0, orb1] = 0
+
+        for i in range(N):
+            x, y, z = cor[(x0, y0, z0, orb0, orb1)][i]
+            x, y, z = x+x0, y+y0, z+z0
+            if (x, y, z) in hop_dict.dict.keys():
+                hop_dict.dict[(x, y, z)][orb0, orb1] = hop / N
+            else:
+                hop_matrix = np.zeros((nr_wann, nr_wann), \
+                                      dtype = complex)
+                hop_matrix[orb0, orb1] = hop / N
+                hop_dict.set((x, y, z), hop_matrix)
 
     return lat, hop_dict
