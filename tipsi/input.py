@@ -205,7 +205,7 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     Parameters
     ----------
     lat_file : string
-        read lattice vectors and atom numbers from this file,
+        read lattice vectors from this file,
         usually named "\*.win"
     coord_file : string
         read wannier centres from this file,
@@ -237,8 +237,6 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     parsing_lattice = False
     parsing_unitcell = False
     lattice_vectors = []
-    # orbital_coords = []
-    nr_atoms = 0
 
     # parse
     for line in lat_content:
@@ -252,14 +250,6 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
             data = line.split()
             lattice_vectors.append([float(x) for x in data])
 
-        # atoms numbers within unit cell
-        if line.startswith("begin atoms_cart"):
-            parsing_unitcell = True
-        elif line.startswith("end atoms_cart"):
-            parsing_unitcell = False
-        elif parsing_unitcell:
-            nr_atoms += 1
-
     # open coordinate file
     with open(coord_file, 'r') as f:
         coord_content = f.readlines()
@@ -268,9 +258,10 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     orbital_coords = []
 
     # parse
-    for line in coord_content[2:-nr_atoms]:
+    for line in coord_content[2:]:
         data = line.split()
-        orbital_coords.append([float(x) for x in data[1:]])
+        if data[0] == 'X':
+            orbital_coords.append([float(x) for x in data[1:]])
 
     # init lattice object
     lat = Lattice(lattice_vectors, orbital_coords)
@@ -342,18 +333,19 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
 
     # apply correction terms
     for x0, y0, z0, orb0, orb1 in cor.keys():
-        N = len(cor[x0, y0, z0, orb0, orb1])
-        hop_dict.dict[(x0, y0, z0)] = np.zeros((nr_wann, nr_wann), \
-                                               dtype = complex)
+        N = len(cor[(x0, y0, z0, orb0, orb1)])
+        hop = hop_dict.dict[(x0, y0, z0)][orb0, orb1]
+        hop_dict.dict[(x0, y0, z0)][orb0, orb1] = 0
+
         for i in range(N):
-            x, y, z = cor[x0, y0, z0, orb0, orb1][i]
+            x, y, z = cor[(x0, y0, z0, orb0, orb1)][i]
             x, y, z = x+x0, y+y0, z+z0
             if (x, y, z) in hop_dict.dict.keys():
-                hop_dict.dict[(x, y, z)][orb0, orb1] = hop/N
+                hop_dict.dict[(x, y, z)][orb0, orb1] = hop / N
             else:
                 hop_matrix = np.zeros((nr_wann, nr_wann), \
                                       dtype = complex)
-                hop_matrix[orb0, orb1] = hop/N
+                hop_matrix[orb0, orb1] = hop / N
                 hop_dict.set((x, y, z), hop_matrix)
 
     return lat, hop_dict
