@@ -11,7 +11,7 @@ Reading from file
 .. autofunction:: tipsi.input.read_corr_AC()
 .. autofunction:: tipsi.input.read_corr_DC()
 .. autofunction:: tipsi.input.read_corr_dyn_pol()
-   
+
 Window functions
 ----------------
 
@@ -31,4 +31,5 @@ Correlation function analysis
 
 Output
 -----------------------------
+
 .. autofunction:: tipsi.output.plot_wf()

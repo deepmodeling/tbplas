@@ -199,7 +199,7 @@ def read_corr_DC(filename):
 
     return corr_DC / n_samples
 
-def read_wannier90(lat_file, coord_file, ham_file, correct_file):
+def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
     r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
@@ -213,7 +213,7 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     ham_file : string
         read hopping terms from this file,
         usually named "\*_hr.dat"
-    correct_file : string
+    correct_file : string, optional
         correction terms for hoppings, available since Wannier90 2.1,
         usually named "\*_wsvec.dat"
 
@@ -277,28 +277,6 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     nr_hoppings = int(ham_content[2])
     skip_lines = 3+int(np.ceil(nr_hoppings/15))
 
-    # read correction terms
-    cor = {}
-    with open(correct_file, 'r') as iterator:
-        # skip comment line
-        next(iterator)
-        for first_line in iterator:
-            data = first_line.split()
-            x0 = int(data[0])
-            y0 = int(data[1])
-            z0 = int(data[2])
-            orb0 = int(data[3])-1
-            orb1 = int(data[4])-1
-            N = int(next(iterator))
-            sites_cor = []
-            for i in range(N):
-                data = next(iterator).split()
-                x = int(data[0])
-                y = int(data[1])
-                z = int(data[2])
-                sites_cor.append((x, y, z))
-            cor[(x0, y0, z0, orb0, orb1)] = sites_cor
-
     # prepare
     hop_dict = HopDict()
     unit_cell_coord_old = False
@@ -331,21 +309,43 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file):
     # enter last hop_matrix
     hop_dict.set(unit_cell_coord_old, hop_matrix)
 
-    # apply correction terms
-    for x0, y0, z0, orb0, orb1 in cor.keys():
-        N = len(cor[(x0, y0, z0, orb0, orb1)])
-        hop = hop_dict.dict[(x0, y0, z0)][orb0, orb1]
-        hop_dict.dict[(x0, y0, z0)][orb0, orb1] = 0
+    if correct_file:
+        # read correction terms
+        cor = {}
+        with open(correct_file, 'r') as iterator:
+            next(iterator)  # skip comment line
+            for first_line in iterator:
+                data = first_line.split()
+                x0 = int(data[0])
+                y0 = int(data[1])
+                z0 = int(data[2])
+                orb0 = int(data[3])-1
+                orb1 = int(data[4])-1
+                N = int(next(iterator))
+                sites_cor = []
+                for i in range(N):
+                    data = next(iterator).split()
+                    x = int(data[0])
+                    y = int(data[1])
+                    z = int(data[2])
+                    sites_cor.append((x, y, z))
+                cor[(x0, y0, z0, orb0, orb1)] = sites_cor
 
-        for i in range(N):
-            x, y, z = cor[(x0, y0, z0, orb0, orb1)][i]
-            x, y, z = x+x0, y+y0, z+z0
-            if (x, y, z) in hop_dict.dict.keys():
-                hop_dict.dict[(x, y, z)][orb0, orb1] = hop / N
-            else:
-                hop_matrix = np.zeros((nr_wann, nr_wann), \
-                                      dtype = complex)
-                hop_matrix[orb0, orb1] = hop / N
-                hop_dict.set((x, y, z), hop_matrix)
+        # apply correction terms
+        for x0, y0, z0, orb0, orb1 in cor.keys():
+            N = len(cor[(x0, y0, z0, orb0, orb1)])
+            hop = hop_dict.dict[(x0, y0, z0)][orb0, orb1]
+            hop_dict.dict[(x0, y0, z0)][orb0, orb1] = 0
+
+            for i in range(N):
+                x, y, z = cor[(x0, y0, z0, orb0, orb1)][i]
+                x, y, z = x+x0, y+y0, z+z0
+                if (x, y, z) in hop_dict.dict.keys():
+                    hop_dict.dict[(x, y, z)][orb0, orb1] = hop / N
+                else:
+                    hop_matrix = np.zeros((nr_wann, nr_wann), \
+                                          dtype = complex)
+                    hop_matrix[orb0, orb1] = hop / N
+                    hop_dict.set((x, y, z), hop_matrix)
 
     return lat, hop_dict
