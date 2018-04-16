@@ -15,11 +15,11 @@ Making a simple sample
 We can make a graphene sample by importing the graphene material library::
 
     from tipsi.materials import graphene
-    
+
 Now, making a tight-binding sample of 1000 by 1000 unit cells is done with::
 
     sample = graphene.sample_rectangle(1000, 1000, nr_processes = 8)
-    
+
 This sample object contains the locations of all the sites, as well as all the hopping information.
 
 We can add a magnetic field by::
@@ -32,7 +32,7 @@ Simulation parameters
 All the parameters for our calculation are defined in a Config object::
 
     config = tipsi.Config(sample)
-    
+
 We can set, for example, the number of random initial wave functions to 4.
 Also we can tell tipsi to correct for spin, as currently our model is single-spin::
 
@@ -49,7 +49,7 @@ Running the simulation
 Now we are ready to calculate the DOS correlation function::
 
     corr_DOS = tipsi.corr_DOS(sample, config)
-    
+
 To analyze the correlation function, use::
 
     energies_DOS, DOS = tipsi.analyze_corr_DOS(config, corr_DOS)
@@ -57,7 +57,7 @@ To analyze the correlation function, use::
 We can plot the results with::
 
     import matplotlib.pyplot as plt
-    
+
     plt.plot(energies_DOS, DOS, color = 'k')
     plt.xlim((-1., 1.))
     plt.ylim((0., 0.05))
@@ -67,7 +67,7 @@ We can plot the results with::
 
 If everything went well, you should be able to see Landau levels near the Fermi energy.
 
-.. image:: images/magnetic_field_graphene.png
+.. image:: images/magnetic_field_graphene.svg
 
 Full code
 ---------
@@ -75,7 +75,7 @@ Full code
 The full code of this example is::
 
     # DOS of graphene with magnetic field
-    
+
     # imports
     import tipsi
     from tipsi.materials import graphene
