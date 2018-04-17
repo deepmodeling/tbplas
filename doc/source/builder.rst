@@ -5,22 +5,22 @@ A sample is built using a lattice, a collection of sites, periodic boundary
 conditions, and a hopping dictionary.
 
 The lattice contains lattice vectors, and site locations within the unit cell. It tells the sample
-where a site with a certain coordinate ``(x, y, z), orbital_index`` is located in space.
-The **integer** coordinates ``(x, y, z)`` give a unit cell location in terms of lattice vectors.
+where a site with a certain coordinate ``(n0,n1,n2), orbital_index`` is located in space.
+The **integer** coordinates ``(n0,n1,n2)`` give a unit cell location in terms of lattice vectors.
 The orbital index gives the location of a site within its unit cell.
 
-A collection of sites is given by a list of coordinates ``(x, y, z), orbital_index``.
+A collection of sites is given by a list of coordinates ``(n0,n1,n2), orbital_index``.
 This tells the sample which sites you want to include in your model.
 
 The periodic boundary condition function tells the sample how to deal with its edge.
 It takes coordinates falling outside the sample, and returns coordinates within the sample.
 
 Finally, the hopping dictionary lists the hoppings in the tight-binding system. You can
-see it as a collection of hopping matrices from the ``(0, 0, 0)`` unit cell to other unit
-cells ``(x, y, z)``. The size of these hopping matrices is given by the number of orbitals
+see it as a collection of hopping matrices from the ``(0,0,0)`` unit cell to other unit
+cells ``(n0,n1,n2)``. The size of these hopping matrices is given by the number of orbitals
 in the unit cell. The first index of the hopping matrix corresponds to the orbital in the
-origin unit cell ``(0, 0, 0)``, and the second index of the hopping matrix corresponds to the orbital in the
-target unit cell ``(x, y, z)``.
+origin unit cell ``(0,0,0)``, and the second index of the hopping matrix corresponds to the orbital in the
+target unit cell ``(n0,n1,n2)``.
 
 Lattice
 -------
@@ -54,11 +54,11 @@ orbital index. E.g., for graphene::
     W = 10 # width
     H = 10 # height
     site_set = tipsi.SiteSet()
-        for i in range(W):
-            for j in range(H):
-                unit_cell_coords = (i, j, 0)
-                site_set.add_site(unit_cell_coords, 0)
-                site_set.add_site(unit_cell_coords, 1)
+    for i in range(W):
+        for j in range(H):
+            unit_cell_coords = (i, j, 0)
+            site_set.add_site(unit_cell_coords, 0)
+            site_set.add_site(unit_cell_coords, 1)
 
 At each unit cell coordinate, we add two sites, generating 10 by 10 unit cells in total.
 
@@ -72,6 +72,11 @@ HopDict
 A HopDict object contains the electronic information of a material. It is given by a
 list of hopping matrices corresponding to relative unit cell coordinates.
 E.g., for graphene::
+
+    # graphene example for hop_dict.set((n0,n1,n2), A)
+    # (n0,n1,n2) gives relative unit cell coordinate
+    # A[i, j] gives hopping from orbital i in (0,0,0)
+    # to orbital j in (n1,n2,n3)
 
     t = 2.7 # hopping constant in eV
     e = 0.0 # on-site potential in eV
@@ -95,19 +100,19 @@ Alternatively, you can set matrix elements individually, using::
     e = 0.0 # on-site potential in eV
 
     hop_dict = tipsi.HopDict()
-    hop_dict.empty((0, 0, 0))
+    hop_dict.empty((0, 0, 0), (2, 2)) # create a 2 by 2 empty hopping matrix
     hop_dict.set_element((0, 0, 0), (0, 0), e)
     hop_dict.set_element((0, 0, 0), (1, 0), t)
     hop_dict.set_element((0, 0, 0), (1, 1), e)
     hop_dict.set_element((0, 0, 0), (0, 1), t)
 
-    hop_dict.empty((1, 0, 0))
+    hop_dict.empty((1, 0, 0), (2, 2))
     hop_dict.set_element((1, 0, 0), (0, 1), t)
-    hop_dict.empty((0, 1, 0))
+    hop_dict.empty((0, 1, 0), (2, 2))
     hop_dict.set_element((0, 1, 0), (0, 1), t)
-    hop_dict.empty((-1, 0, 0))
+    hop_dict.empty((-1, 0, 0), (2, 2))
     hop_dict.set_element((-1, 0, 0), (1, 0), t)
-    hop_dict.empty((0, -1, 0))
+    hop_dict.empty((0, -1, 0), (2, 2))
     hop_dict.set_element((0, -1, 0), (1, 0), t)
 
 In tipsi, you should always use the energy unit electronvolts.
@@ -124,16 +129,20 @@ a function that takes a site coordinate outside the sample, and returns
 a coordinate that falls within the sample. E.g., for graphene::
 
     def pbc_func(unit_cell_coords, orbital):
-        x, y, z = unit_cell_coords
-        return (x % W, y % H, z), orbital
+        n0, n1, n2 = unit_cell_coords
+        # PBC are given by n0 modulo W and n1 modulo H
+        # so that site coordinate n0 = W is mapped to n0 = 0
+        # and so that site coordinate n0 = W + 1 is mapped to n0 = 1
+        # etcetera - same for the n1 coordinate
+        return (n0 % W, n1 % H, n2), orbital
 
 This gives periodic boundary conditions in all directions. Of course,
 we could also define periodic boundary conditions in only one direction,
 to create a ribbon sample::
 
     def pbc_func_ribbon(unit_cell_coords, orbital):
-        x, y, z = unit_cell_coords
-        return (x % W, y, z), orbital
+        n0, n1, n2 = unit_cell_coords
+        return (n0 % W, n1, n2), orbital
 
 If you don't specify periodic boundary conditions, tipsi uses closed boundary
 conditions.
@@ -247,8 +256,7 @@ k-space functions
 To check the Lattice and HopDict objects, we can calculate the band structure
 that they produce, provided a list of points in k-space::
 
-    bands = tipsi.band_structure(hop_dict, \
-        lat, kpoints)
+    bands = tipsi.band_structure(hop_dict, lat, kpoints)
     for band in bands.swapaxes(0, 1):
         plt.plot(kvals, band)
 

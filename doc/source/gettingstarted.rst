@@ -43,13 +43,13 @@ If needed, you can link additional libraries in the **setup.cfg** file.
 
 Then, go to the main directory and run::
 
-    python setup.py install
+    python3 setup.py install
 
 This will install tipsi in your default python package location.
 
 To install it in a different location, if you don't have sudo rights, use::
 
-    python setup.py install --home=<dir>
+    python3 setup.py install --home=<dir>
 
 This directory needs to be added manually to your python path.
 
