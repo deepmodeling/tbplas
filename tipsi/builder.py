@@ -255,9 +255,10 @@ def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
     """
 
     # rescale lattice
-    vectors_new = [np.dot(strain_tensor, vector) \
+    one_plus_eps = np.diag([1., 1., 1.]) + strain_tensor
+    vectors_new = [np.dot(one_plus_eps, vector) \
                    for vector in lattice_old.vectors]
-    orbital_coords_new = [np.dot(strain_tensor, coord) \
+    orbital_coords_new = [np.dot(one_plus_eps, coord) \
                           for coord in lattice_old.orbital_coords]
     lattice_new = Lattice(vectors_new, orbital_coords_new)
     
@@ -269,9 +270,9 @@ def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
             for j in range(hop.shape[1]):
                 hopval = hop[i, j]
                 r_old = npla.norm(lattice_old.site_pos(uc, j) \
-                                  - lattice_old.site_pos(uc, i))
+                                  - lattice_old.site_pos((0,0,0), i))
                 r_new = npla.norm(lattice_new.site_pos(uc, j) \
-                                  - lattice_new.site_pos(uc, i))
+                                  - lattice_new.site_pos((0,0,0), i))
                 if r_old != 0.0:
                     hopval_new = hopval * np.exp(-beta * (r_new / r_old - 1.))
                     hop_dict_new.set_element(uc, (i, j), hopval_new)
