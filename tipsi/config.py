@@ -97,6 +97,8 @@ class Config():
         Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wavefunction generation. Default value: 1337.
+    LDOS['site_index'] : int
+        Site index for LDOS calculation.
     dyn_pol['background_dielectric_constant'] : float
         Background dielectric constant. Default value: 23.6.
     dyn_pol['coulomb_constant'] : float
@@ -120,6 +122,9 @@ class Config():
     output['corr_DOS'] : string
         DOS correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_DOS.dat".
+    output['corr_LDOS'] : string
+        LDOS correlation output file. 
+        Default value: "sim_data/" + timestamp + "corr_LDOS.dat".
     output['corr_dyn_pol'] : string
         AC conductivity correlation output file. 
         Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
@@ -142,6 +147,7 @@ class Config():
         # declare dicts
         self.sample = {}
         self.generic = {}
+        self.LDOS = {}
         self.dyn_pol = {}
         self.DC_conductivity = {}
         self.quasi_eigenstates = {}
@@ -166,6 +172,9 @@ class Config():
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
         self.generic['seed'] = 1337
+        
+        # LDOS
+        self.LDOS['site_index'] = 0
         
         # DC conductivity
         self.DC_conductivity['energy_limits'] = (-0.5, 0.5)
@@ -206,6 +215,7 @@ class Config():
         td = create_dir(directory)
         self.output['directory'] = td
         self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'
+        self.output['corr_LDOS'] = td + prefix + 'corr_LDOS' + '.dat'
         self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
         self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'

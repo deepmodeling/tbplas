@@ -93,6 +93,36 @@ def corr_DOS(sample, config):
         config.generic['nr_random_samples'], config.output['corr_DOS'])
     
     return corr_DOS
+
+def corr_LDOS(sample, config):
+    """Get density of states correlation function
+ 
+    Parameters
+    ----------
+    sample : Sample object
+        sample information
+    config : Config object
+        tbpm parameters
+        
+    Returns
+    ----------
+    corr_DOS : list of complex floats
+        DOS correlation function
+    """ 
+    
+    # get Bessel functions
+    t_step = 2 * np.pi / config.sample['energy_range']
+    Bes = Bessel(t_step, sample.rescale, \
+                 config.generic['Bessel_precision'], \
+                 config.generic['Bessel_max'])
+
+    # pass to FORTRAN
+    corr_LDOS = fortran_tbpm.tbpm_ldos(config.LDOS['site_index'], Bes, \
+        sample.indptr, sample.indices, sample.hop, \
+        config.generic['seed'], config.generic['nr_time_steps'], \
+        config.output['corr_LDOS'])
+    
+    return corr_LDOS
     
 def corr_AC(sample, config):
     """Get AC conductivity

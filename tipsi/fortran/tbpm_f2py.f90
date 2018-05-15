@@ -75,6 +75,73 @@ subroutine tbpm_dos(Bes, n_Bes, &
     
 end subroutine tbpm_dos
 
+! Get LDOS
+subroutine tbpm_ldos(site_index, Bes, n_Bes, &
+    s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, &
+    seed, n_timestep, output_filename, corr)
+    
+    ! prepare
+    use tbpm_mod
+    implicit none
+    
+    ! deal with input
+    integer, intent(in) :: site_index
+    integer, intent(in) :: n_Bes, n_indptr, n_indices, n_hop
+    integer, intent(in) :: n_timestep, seed
+    real(8), intent(in), dimension(n_Bes) :: Bes
+    integer(8), intent(in), dimension(n_indptr) :: s_indptr
+    integer(8), intent(in), dimension(n_indices) :: s_indices
+    complex(8), intent(in), dimension(n_hop) :: s_hop
+    character*(*), intent(in) :: output_filename    
+
+    ! declare vars
+    integer :: k, i, n_wf
+    complex(8), dimension(n_indptr - 1) :: wf0, wf_t
+    complex(8) :: corrval
+ 
+    ! output
+    complex(8), intent(out), dimension(n_timestep) :: corr
+    
+    ! set some values
+    corr = 0.0d0
+    n_wf = n_indptr - 1
+    
+    open(unit=27,file=output_filename)
+    write(27,*) "Site ID =", site_index
+    write(27,*) "Number of timesteps =", n_timestep
+
+    print*, "Calculating LDOS correlation function."
+    
+    ! make LDOS state
+    wf0 = 0.0d0
+    wf0(site_index + 1) = 1.0d0
+
+    do i = 1, n_wf
+        wf_t(i) = wf0(i)
+    end do
+
+    ! iterate over time, get correlation function
+    do k = 1, n_timestep
+
+        if (MODULO(k,64) == 0) then
+            print*, "    Timestep ", k, " of ", n_timestep
+        end if
+
+        call cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
+            s_indptr, n_indptr, s_indices, n_indices, &
+            s_hop, n_hop, wf_t)
+        corrval = inner_prod(wf0, wf_t, n_wf)
+
+        write(27,*) k, real(corrval), aimag(corrval)
+
+        corr(k) = corr(k) + corrval
+
+    end do
+    
+    close(27)
+    
+end subroutine tbpm_ldos
+
 ! Get AC conductivity
 subroutine tbpm_accond(Bes, n_bes, beta, mu, &
     s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, H_rescale, &

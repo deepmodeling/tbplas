@@ -10,6 +10,8 @@ Functions
         Window function given by exponential of 10
     analyze_corr_DOS
         Analyze DOS correlation function
+    analyze_corr_LDOS
+        Analyze LDOS correlation function
     analyze_corr_AC
         Analyze AC correlation function
     AC_imag
@@ -97,7 +99,7 @@ def window_exp_ten(i, N):
 ################
 # correlation function analysis
 ################
-
+    
 def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
     """Function for analyzing the DOS correlation function.
     
@@ -150,6 +152,28 @@ def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
         DOS = 2. * DOS
             
     return energies, DOS
+
+def analyze_corr_LDOS(config, corr_LDOS, window = window_Hanning):
+    """Function for analyzing the LDOS correlation function - 
+    exactly the same as DOS analysis function.
+    
+    Parameters
+    ----------
+    config : Config object
+        contains TBPM configuration parameters
+    corr_LDOS : list of complex floats
+        LDOS correlation function
+    window : function, optional
+        window function for integral; default: window_Hanning
+        
+    Returns
+    ----------
+    energies : list of floats
+        energy values
+    LDOS : list of floats
+        LDOS values corresponding to energies
+    """
+    return analyze_corr_DOS(config, corr_LDOS, window)
     
 def analyze_corr_AC(config, corr_AC, window = window_exp):
     """Function for analyzing the AC conductivity correlation function.

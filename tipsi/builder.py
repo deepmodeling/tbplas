@@ -735,7 +735,7 @@ class Sample:
         
         # indexing
         self.index_to_tag = list(site_set.sites)
-        self.index_to_tag.sort(key = lambda tag: tag) # this will speed up FORTRAN
+        self.index_to_tag.sort(key = lambda tag: tag) # this will speed up FORTRAN / use itemgetter() instead?
         self.tag_to_index = {tag: i for i, tag in \
                              enumerate(self.index_to_tag)}
         
@@ -1135,7 +1135,7 @@ class Sample:
         return en_range
 
     def plot(self, fig_name = 'system.png', single_site_coord = False,
-             draw_size = 5):
+             draw_size = 5, draw_dpi = 600):
         """Plot sample in 2D, save to file.
         
         Parameters
@@ -1147,6 +1147,8 @@ class Sample:
             site coordinate
         draw_size : float, optional
             scale site and hopping drawing size
+        draw_dpi : integer, optional
+            dpi of image
         """
         
         fig, ax = plt.subplots()
@@ -1156,7 +1158,8 @@ class Sample:
                     self.site_y, 
                     s = 0.5 * draw_size ** 2, 
                     c = 'black', 
-                    zorder = 2)
+                    zorder = 2,
+                    edgecolors = 'none')
                     
         # put hoppings in LineCollection
         hops = []
@@ -1185,7 +1188,7 @@ class Sample:
         ax.set_aspect('equal')
         plt.axis('off')
         plt.draw() 
-        plt.savefig(fig_name, bbox_inches='tight', dpi=600)
+        plt.savefig(fig_name, bbox_inches='tight', dpi=draw_dpi)
         plt.close()
         
     def save(self, filename="sample.hdf5"):

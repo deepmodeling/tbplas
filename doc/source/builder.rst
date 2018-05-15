@@ -197,9 +197,9 @@ We can uniformly strain the Lattice, HopDict pair with
 
     strain = 5     # strain in percent
     beta = 4.5     # strain coefficient
-    strain_tensor = np.diag([1.0 - 0.002 * strain, \
-                             1.0 + 0.01 * strain, \
-                             1.0 - 0.002 * strain])
+    strain_tensor = np.diag([-0.002 * strain, \
+                             0.01 * strain, \
+                             -0.002 * strain])
     lattice, hop_dict = tipsi.uniform_strain(lattice, \
         hop_dict, strain_tensor, beta)
 

@@ -8,6 +8,8 @@ Functions
         Read config object from file.
     read_corr_DOS
         Read DOS correlation function from file.
+    read_corr_LDOS
+        Read LDOS correlation function from file.
     read_corr_AC
         Read AC correlation function from file.
     read_corr_dyn_pol
@@ -71,6 +73,7 @@ def read_config(filename):
     config = Config(read_from_file = True)
     config.sample = dict.sample
     config.generic = dict.generic
+    config.LDOS = dict.LDOS
     config.dyn_pol = dict.dyn_pol
     config.DC_conductivity = dict.DC_conductivity
     config.quasi_eigenstates = dict.quasi_eigenstates
@@ -104,6 +107,32 @@ def read_corr_DOS(filename):
             corr_DOS[j] += float(line[1]) + 1j * float(line[2])
 
     return corr_DOS / n_samples
+
+def read_corr_LDOS(filename):
+    """Read LDOS correlation from file
+
+    Parameters
+    ----------
+    filename : string
+        read correlation values from this file
+
+    Returns
+    ----------
+    corr_LDOS : (n_timesteps) list of complex floats
+        the LDOS correlation function
+    """
+
+    f = open(filename,'r')
+
+    site_id = int(f.readline().split()[-1])
+    n_timesteps = int(f.readline().split()[-1])
+    corr_LDOS = np.zeros(n_timesteps, dtype = complex)
+
+    for j in range(n_timesteps):
+        line = f.readline().split()
+        corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
+
+    return corr_LDOS
 
 def read_corr_AC(filename):
     """Read AC correlation from file
