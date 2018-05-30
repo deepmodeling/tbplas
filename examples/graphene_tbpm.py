@@ -17,7 +17,7 @@ def main():
 
     # make 1000*1000 unit cell sample
     sample = graphene.sample_rectangle(1000, 1000, nr_processes = 8)
-    
+
     # set config parameters
     config = tipsi.Config(sample)
     config.generic['nr_time_steps'] = 1024
@@ -27,7 +27,7 @@ def main():
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
     config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
     config.save()
-    
+
     # get DOS
     corr_DOS = tipsi.corr_DOS(sample, config)
     energies_DOS, DOS = tipsi.analyze_corr_DOS(config, corr_DOS)
@@ -45,7 +45,7 @@ def main():
     plt.ylabel("sigma_xx (sigma_0)")
     plt.savefig("graphene_ACxx.png")
     plt.close()
-    
+
     # get dyn pol
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
     qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
@@ -55,7 +55,7 @@ def main():
     plt.ylabel("Im(dp)")
     plt.savefig("graphene_dp_imag.png")
     plt.close()
-    
+
     # get DC conductivity
     corr_DOS, corr_DC = tipsi.corr_DC(sample, config)
     energies_DC, DC = tipsi.analyze_corr_DC(config, corr_DOS, corr_DC)
@@ -64,7 +64,6 @@ def main():
     plt.ylabel("DC conductivity")
     plt.savefig("graphene_DC.png")
     plt.close()
-    
+
 if __name__ == '__main__':
     main()
-            

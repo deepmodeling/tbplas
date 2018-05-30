@@ -1,0 +1,7 @@
+[config_fc]
+fcompiler=intelem
+f90flags="-qopenmp -O3 -march=native -heap-arrays -mkl=parallel"
+
+[build_ext]
+library-dirs = ${MKLROOT}/lib/intel64
+libraries = iomp5 ifcoremt mkl_intel_lp64 mkl_intel_thread mkl_core pthread m dl
