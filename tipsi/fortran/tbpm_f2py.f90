@@ -47,12 +47,17 @@ subroutine tbpm_dos(Bes, n_Bes, &
         ! make random state
         call random_state(wf0, n_wf, seed*i_sample)
 
-        do i = 1, n_wf
-            wf_t(i) = wf0(i)
-        end do
+        call cheb_wf_timestep(wf0, n_wf, Bes, n_Bes, &
+            s_indptr, n_indptr, s_indices, n_indices, &
+            s_hop, n_hop, wf_t)
+        corrval = inner_prod(wf0, wf_t, n_wf)
+
+        write(27,*) 1, real(corrval), aimag(corrval)
+
+        corr(1) = corr(1) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
-        do k = 1, n_timestep
+        do k = 2, n_timestep
 
             if (MODULO(k,64) == 0) then
                 print*, "    Timestep ", k, " of ", n_timestep
@@ -143,7 +148,7 @@ subroutine tbpm_ldos(site_index, Bes, n_Bes, &
 end subroutine tbpm_ldos
 
 ! Get AC conductivity
-subroutine tbpm_accond(Bes, n_bes, beta, mu, &
+subroutine tbpm_accond(Bes, n_Bes, beta, mu, &
     s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, H_rescale, &
     s_dx, n_dx, s_dy, n_dy, seed, n_timestep, n_ran_samples, &
     nr_Fermi, Fermi_precision, output_filename, corr)
@@ -318,7 +323,7 @@ subroutine tbpm_accond(Bes, n_bes, beta, mu, &
 end subroutine tbpm_accond
 
 ! Get dynamical polarization
-subroutine tbpm_dyn_pol(Bes, n_bes, beta, mu, &
+subroutine tbpm_dyn_pol(Bes, n_Bes, beta, mu, &
     s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, H_rescale, &
     s_dx, n_dx, s_dy, n_dy, s_site_x, n_site_x, s_site_y, n_site_y, &
     s_site_z, n_site_z, seed, n_timestep, n_ran_samples, nr_Fermi, &
@@ -452,7 +457,7 @@ subroutine tbpm_dyn_pol(Bes, n_bes, beta, mu, &
 end subroutine tbpm_dyn_pol
 
 ! Get DC conductivity
-subroutine tbpm_dccond(Bes, n_bes, beta, mu, &
+subroutine tbpm_dccond(Bes, n_Bes, beta, mu, &
     s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, H_rescale, &
     s_dx, n_dx, s_dy, n_dy, seed, n_timestep, n_ran_samples, &
     t_step, energies, n_energies, en_inds, n_en_inds, &
@@ -463,7 +468,7 @@ subroutine tbpm_dccond(Bes, n_bes, beta, mu, &
     implicit none
 
     ! deal with input
-    integer, intent(in) :: n_bes, n_indptr, n_indices, n_hop, n_dx, n_dy
+    integer, intent(in) :: n_Bes, n_indptr, n_indices, n_hop, n_dx, n_dy
     integer, intent(in) :: n_timestep, n_ran_samples, seed, n_energies
     integer, intent(in) :: n_en_inds
     real(8), intent(in) :: H_rescale, beta, mu, t_step

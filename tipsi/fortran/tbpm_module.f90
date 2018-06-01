@@ -16,13 +16,7 @@ complex(8) function inner_prod(A, B, N)
     implicit none
     integer, intent(in) :: N
     complex(8), intent(in), dimension(N) :: A, B
-    integer :: i
     complex(8) :: zdotc
-
-    ! inner_prod = 0.0d0
-    ! do i=1, N
-    !     inner_prod = inner_prod + conjg(A(i))*B(i)
-    ! end do
 
     ! use BLAS to calculate the inner product
     inner_prod = zdotc(N, A, 1, B, 1)
@@ -82,25 +76,8 @@ subroutine Hamiltonian(wf_in, n_wf, s_indptr, &
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_out
 
-    ! declare vars
-    integer :: i, j, k, j_start, j_end
-
-    ! wf_out = 0.0d0
-    !
-    ! !$OMP parallel do private (j,k)
-    ! ! Nota bene: fortran indexing is off by 1
-    ! do i = 1, n_wf
-    !     j_start = s_indptr(i)
-    !     j_end = s_indptr(i + 1)
-    !     do j = j_start, j_end - 1
-    !         k = s_indices(j + 1)
-    !         wf_out(i) = wf_out(i) + s_hop(j + 1)  * wf_in(k + 1)
-    !     end do
-    ! end do
-    ! !$OMP end parallel do
-
     !use Sparse BLAS in MKL to calculate the production
-    call mkl_zcsrgemv('N', n_wf, s_hop, s_indptr+1, s_indices+1, &
+    call mkl_cspblas_zcsrgemv('N', n_wf, s_hop, s_indptr, s_indices, &
         wf_in, wf_out)
 
 end subroutine Hamiltonian
@@ -112,7 +89,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     ! deal with input
     implicit none
     integer, intent(in) :: n_wf, n_Bes, n_indptr, n_indices, n_hop
-    complex(8), intent(in), dimension(n_wf) :: wf_t
+    complex(8), intent(in), dimension(n_wf), target :: wf_t
     real(8), intent(in), dimension(n_Bes) :: Bes
     integer, intent(in), dimension(n_indptr) :: s_indptr
     integer, intent(in), dimension(n_indices) :: s_indices
@@ -121,7 +98,8 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     ! declare vars
     integer :: i, j, k, l
     real(8) :: sum_wf
-    complex(8), dimension(n_wf) :: Tcheb0, Tcheb1, Tcheb2
+    complex(8), dimension(n_wf), target :: Tcheb0, Tcheb1, Tcheb2
+    complex(8), dimension(:), pointer :: p0, p1, p2
 
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_t1
@@ -133,41 +111,26 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     do i = 1, n_wf
         Tcheb0(i) = wf_t(i)
         Tcheb1(i) = -img * Tcheb1(i)
-        wf_t1(i) = Bes(1) * Tcheb0(i) + 2  * Bes(2) * Tcheb1(i)
+        wf_t1(i) = Bes(1) * wf_t(i) + 2  * Bes(2) * Tcheb1(i)
     end do
     !$OMP end parallel do
 
+    p0 => Tcheb0
+    p1 => Tcheb1
     do k=3, n_Bes
-        call Hamiltonian(Tcheb1, n_wf, s_indptr, &
+        p2 => p0
+        call Hamiltonian(p1, n_wf, s_indptr, &
             n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
         !$OMP parallel do
         do i = 1, n_wf
-            Tcheb2(i) = Tcheb0(i) - 2 * img * Tcheb2(i)
-            wf_t1(i) = wf_t1(i) + 2 * Bes(k) * Tcheb2(i)
-            Tcheb0(i) = Tcheb1(i)
-            Tcheb1(i) = Tcheb2(i)
+            p2(i) = p0(i) - 2 * img * Tcheb2(i)
+            wf_t1(i) = wf_t1(i) + 2 * Bes(k) * p2(i)
         end do
         !$OMP end parallel do
+        p0 => p1
+        p1 => p2
     end do
-
-    ! ! use BLAS to calculate recurrence propagation
-    ! call zcopy(n_wf, wf_t, 1, Tcheb0, 1)
-    ! call zscal(n_wf, -img, Tcheb1, 1)
-    ! wf_t1 = 0D0
-    ! call zaxpy(n_wf, Bes(1), Tcheb0, 1, wf_t1, 1)
-    ! call zaxpy(n_wf, 2*Bes(2), Tcheb1, 1, wf_t1, 1)
-    !
-    ! do k = 3, n_Bes
-    !     call Hamiltonian(Tcheb1, n_wf, s_indptr, &
-    !         n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
-    !
-    !     call zscal(n_wf, -2*img, Tcheb2, 1)
-    !     call zaxpy(n_wf, 1D0, Tcheb0, 1, Tcheb2, 1)
-    !     call zaxpy(n_wf, 2*Bes(k), Tcheb2, 1, wf_t1, 1)
-    !     call zcopy(n_wf, Tcheb1, 1, Tcheb0, 1)
-    !     call zcopy(n_wf, Tcheb2, 1, Tcheb1, 1)
-    ! end do
 
 end subroutine cheb_wf_timestep
 
