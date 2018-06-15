@@ -50,9 +50,9 @@ def main():
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
     qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
     qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(config, dyn_pol)
-    plt.plot(omegas, dyn_pol[0,:].imag)
+    plt.plot(omegas, -1 * dyn_pol[0,:].imag)
     plt.xlabel("hbar * omega (eV)")
-    plt.ylabel("Im(dp)")
+    plt.ylabel("-Im(dp)")
     plt.savefig("graphene_dp_imag.png")
     plt.close()
     

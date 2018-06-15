@@ -124,15 +124,17 @@ def read_corr_LDOS(filename):
 
     f = open(filename,'r')
 
-    site_id = int(f.readline().split()[-1])
+    n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
     corr_LDOS = np.zeros(n_timesteps, dtype = complex)
 
-    for j in range(n_timesteps):
-        line = f.readline().split()
-        corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
+    for i in range(n_samples):
+        temp_string = f.readline().split()
+        for j in range(n_timesteps):
+            line = f.readline().split()
+            corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
 
-    return corr_LDOS
+    return corr_LDOS / n_samples
 
 def read_corr_AC(filename):
     """Read AC correlation from file

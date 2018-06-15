@@ -97,8 +97,10 @@ class Config():
         Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wavefunction generation. Default value: 1337.
-    LDOS['site_index'] : int
-        Site index for LDOS calculation.
+    LDOS['site_indices'] : int
+        Site indices for LDOS calculation.
+    LDOS['wf_weights'] : int
+        Wave function weights for LDOS calculation. Default: equal weights for all sites.
     dyn_pol['background_dielectric_constant'] : float
         Background dielectric constant. Default value: 23.6.
     dyn_pol['coulomb_constant'] : float
@@ -174,7 +176,8 @@ class Config():
         self.generic['seed'] = 1337
         
         # LDOS
-        self.LDOS['site_index'] = 0
+        self.LDOS['site_indices'] = 0
+        self.LDOS['wf_weights'] = False
         
         # DC conductivity
         self.DC_conductivity['energy_limits'] = (-0.5, 0.5)

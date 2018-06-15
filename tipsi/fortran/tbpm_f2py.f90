@@ -76,18 +76,21 @@ subroutine tbpm_dos(Bes, n_Bes, &
 end subroutine tbpm_dos
 
 ! Get LDOS
-subroutine tbpm_ldos(site_index, Bes, n_Bes, &
-    s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, &
-    seed, n_timestep, output_filename, corr)
+subroutine tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
+    Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
+    s_hop, n_hop, seed, n_timestep, n_ran_samples, &
+    output_filename, corr)
     
     ! prepare
     use tbpm_mod
     implicit none
     
     ! deal with input
-    integer, intent(in) :: site_index
     integer, intent(in) :: n_Bes, n_indptr, n_indices, n_hop
-    integer, intent(in) :: n_timestep, seed
+    integer, intent(in) :: n_timestep, seed, n_siteind, n_wfw
+    integer, intent(in) :: n_ran_samples
+    integer, intent(in), dimension(n_siteind) :: site_indices
+    real(8), intent(in), dimension(n_wfw) :: wf_weights
     real(8), intent(in), dimension(n_Bes) :: Bes
     integer(8), intent(in), dimension(n_indptr) :: s_indptr
     integer(8), intent(in), dimension(n_indices) :: s_indices
@@ -95,7 +98,8 @@ subroutine tbpm_ldos(site_index, Bes, n_Bes, &
     character*(*), intent(in) :: output_filename    
 
     ! declare vars
-    integer :: k, i, n_wf
+    integer :: k, i, n_wf, i_sample
+    complex(8), dimension(n_siteind) :: wf_temp
     complex(8), dimension(n_indptr - 1) :: wf0, wf_t
     complex(8) :: corrval
  
@@ -107,35 +111,44 @@ subroutine tbpm_ldos(site_index, Bes, n_Bes, &
     n_wf = n_indptr - 1
     
     open(unit=27,file=output_filename)
-    write(27,*) "Site ID =", site_index
+    write(27,*) "Number of samples =", n_ran_samples
     write(27,*) "Number of timesteps =", n_timestep
 
     print*, "Calculating LDOS correlation function."
     
-    ! make LDOS state
-    wf0 = 0.0d0
-    wf0(site_index + 1) = 1.0d0
+    do i_sample=1, n_ran_samples
+        
+        print*, "  Sample ", i_sample, " of ", n_ran_samples
+        write(27,*) "Sample =", i_sample
 
-    do i = 1, n_wf
-        wf_t(i) = wf0(i)
-    end do
+        ! make LDOS state
+        call random_state(wf_temp, n_siteind, seed*i_sample)
+        wf0 = 0.0d0
+        do i = 1, n_siteind
+            wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
+        end do
+        do i = 1, n_wf
+            wf_t(i) = wf0(i)
+        end do
 
-    ! iterate over time, get correlation function
-    do k = 1, n_timestep
+        ! iterate over time, get correlation function
+        do k = 1, n_timestep
 
-        if (MODULO(k,64) == 0) then
-            print*, "    Timestep ", k, " of ", n_timestep
-        end if
+            if (MODULO(k,64) == 0) then
+                print*, "    Timestep ", k, " of ", n_timestep
+            end if
 
-        call cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
-            s_indptr, n_indptr, s_indices, n_indices, &
-            s_hop, n_hop, wf_t)
-        corrval = inner_prod(wf0, wf_t, n_wf)
+            call cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                s_hop, n_hop, wf_t)
+            corrval = inner_prod(wf0, wf_t, n_wf)
 
-        write(27,*) k, real(corrval), aimag(corrval)
+            write(27,*) k, real(corrval), aimag(corrval)
 
-        corr(k) = corr(k) + corrval
+            corr(k) = corr(k) + corrval / n_ran_samples
 
+        end do
+        
     end do
     
     close(27)
