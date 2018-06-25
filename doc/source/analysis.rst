@@ -33,11 +33,50 @@ Correlation function analysis
 -----------------------------
 
 .. autofunction:: tipsi.analysis.analyze_corr_DOS
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.generic['correct_spin']
+
+.. autofunction:: tipsi.analysis.analyze_corr_LDOS
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.generic['correct_spin']
+    
 .. autofunction:: tipsi.analysis.analyze_corr_AC
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.generic['correct_spin']
+    
 .. autofunction:: tipsi.analysis.AC_imag
 .. autofunction:: tipsi.analysis.analyze_corr_DC
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.generic['correct_spin']
+    config.DC_conductivity['energy_limits']
+    
 .. autofunction:: tipsi.analysis.analyze_corr_dyn_pol
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.generic['correct_spin']
+    config.dyn_pol['q_points']
+    
 .. autofunction:: tipsi.analysis.get_dielectric_function
+
+Relevant config parameters::
+
+    config.generic['nr_time_steps']
+    config.dyn_pol['coulomb_constant']
+    config.dyn_pol['q_points']
 
 Reading from file
 -----------------
@@ -45,6 +84,7 @@ Reading from file
 .. autofunction:: tipsi.input.read_config
 .. autofunction:: tipsi.input.read_sample
 .. autofunction:: tipsi.input.read_corr_DOS
+.. autofunction:: tipsi.input.read_corr_LDOS
 .. autofunction:: tipsi.input.read_corr_AC
 .. autofunction:: tipsi.input.read_corr_DC
 .. autofunction:: tipsi.input.read_corr_dyn_pol

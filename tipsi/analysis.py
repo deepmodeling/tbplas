@@ -279,7 +279,6 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
     tnr = config.generic['nr_time_steps']
     en_range = config.sample['energy_range']
     t_step = np.pi / en_range
-    beta = config.generic['beta']
     q_points = config.dyn_pol['q_points']
     n_q_points = len(q_points)
     omegas = [i * en_range / tnr for i in range(tnr)]
@@ -329,7 +328,6 @@ def get_dielectric_function(config, dyn_pol):
     tnr = config.generic['nr_time_steps']
     en_range = config.sample['energy_range']
     t_step = np.pi / en_range
-    beta = config.generic['beta']
     q_points = config.dyn_pol['q_points']
     n_q_points = len(q_points)
     omegas = [i * en_range / tnr for i in range(tnr)]
