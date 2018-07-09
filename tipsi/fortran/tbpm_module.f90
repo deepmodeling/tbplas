@@ -16,48 +16,24 @@ complex(8) function inner_prod(A, B, N)
     implicit none
     integer, intent(in) :: N
     complex(8), intent(in), dimension(N) :: A, B
-    complex(8) :: zdotc
+    complex(8), external :: zdotc
 
     ! use BLAS to calculate the inner product
     inner_prod = zdotc(N, A, 1, B, 1)
 
 end function inner_prod
 
-! Cooley-Tukey FFT
-recursive subroutine fft(x,sgn)
+! FFTW interface
+subroutine fft(x, n_x, sgn)
 
     implicit none
-    integer, intent(in) :: sgn
-    complex(8), dimension(:), intent(inout) :: x
-    complex(8) :: t
-    integer :: N
-    integer :: i
-    complex(8), dimension(:), allocatable :: even, odd
+    integer, intent(in) :: sgn, n_x
+    complex(8), dimension(n_x), intent(inout) :: x
+    integer(8) :: plan
 
-    N=size(x)
-
-    if(N .le. 1) return
-
-    allocate(odd((N+1)/2))
-    allocate(even(N/2))
-
-    ! divide
-    odd =x(1:N:2)
-    even=x(2:N:2)
-
-    ! conquer
-    call fft(odd, sgn)
-    call fft(even, sgn)
-
-    ! combine
-    do i=1,N/2
-        t=exp(cmplx(0.0d0,sgn*2.0d0*pi*(i-1)/N))*even(i)
-        x(i)     = odd(i) + t
-        x(i+N/2) = odd(i) - t
-    end do
-
-    deallocate(odd)
-    deallocate(even)
+    call dfftw_plan_dft_1d(plan, n_x, x, x, sgn, 64)
+    call dfftw_execute_dft(plan, x, x)
+    call dfftw_destroy_plan(plan)
 
 end subroutine fft
 
@@ -96,8 +72,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     complex(8), intent(in), dimension(n_hop) :: s_hop
 
     ! declare vars
-    integer :: i, j, k, l
-    real(8) :: sum_wf
+    integer :: i, k
     complex(8), dimension(n_wf), target :: Tcheb0, Tcheb1, Tcheb2
     complex(8), dimension(:), pointer :: p0, p1, p2
 
@@ -170,22 +145,9 @@ subroutine current(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_out
 
-    ! declare vars
-    integer :: i, j, k, j_start, j_end
-
-    wf_out = 0.0d0
-
-    !$OMP parallel do private (j, k)
-    ! Nota bene: fortran indexing is off by 1
-    do i = 1, n_wf
-        j_start = s_indptr(i)
-        j_end = s_indptr(i + 1)
-        do j = j_start, j_end - 1
-            k = s_indices(j + 1)
-            wf_out(i) = wf_out(i) + cur_coefs(j + 1)  * wf_in(k + 1)
-        end do
-    end do
-    !$OMP end parallel do
+    !use Sparse BLAS in MKL to calculate the production
+    call mkl_cspblas_zcsrgemv('N', n_wf, cur_coefs, s_indptr, s_indices, &
+        wf_in, wf_out)
 
 end subroutine current
 
@@ -196,10 +158,10 @@ real(8) function Fermi_dist(beta,Ef,energy,eps)
     real(8) :: eps, beta, Ef, energy, x
 
     if (energy >= Ef) then
-        x = 1. * exp(beta * (Ef - energy))
+        x = exp(beta * (Ef - energy))
         Fermi_dist = x / (1 + x)
     else
-        x = 1. * exp(beta * (energy - Ef))
+        x = exp(beta * (energy - Ef))
         Fermi_dist = 1 / (1 + x)
     end if
 
@@ -239,7 +201,7 @@ subroutine get_Fermi_cheb_coef(cheb_coef, n_cheb, &
     end if
 
     ! Fourier transform result
-    call fft(cheb_coef_complex, -1)
+    call fft(cheb_coef_complex, nr_Fermi, -1)
 
     ! Get number of nonzero elements
     prec = -log10(eps)
@@ -277,7 +239,8 @@ subroutine Fermi(wf_in, n_wf, cheb_coef, n_cheb, &
     ! declare vars
     integer :: i, j, k, l
     real(8) :: sum_wf
-    complex(8), dimension(n_wf) :: Tcheb0, Tcheb1, Tcheb2
+    complex(8), dimension(n_wf), target :: Tcheb0, Tcheb1, Tcheb2
+    complex(8), dimension(:), pointer :: p0, p1, p2
 
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_out
@@ -292,18 +255,21 @@ subroutine Fermi(wf_in, n_wf, cheb_coef, n_cheb, &
     end do
     !$OMP end parallel do
 
+    p0 => Tcheb0
+    p1 => Tcheb1
     do k=3, n_cheb
+        p2 => p0
         call Hamiltonian(Tcheb1, n_wf, s_indptr, &
             n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
         !$OMP parallel do
         do i = 1, n_wf
-            Tcheb2(i) = 2 * Tcheb2(i) - Tcheb0(i)
-            wf_out(i) = wf_out(i) + cheb_coef(k) * Tcheb2(i)
-            Tcheb0(i) = Tcheb1(i)
-            Tcheb1(i) = Tcheb2(i)
+            p2(i) = 2 * Tcheb2(i) - p0(i)
+            wf_out(i) = wf_out(i) + cheb_coef(k) * p2(i)
         end do
         !$OMP end parallel do
+        p0 => p1
+        p1 => p2
     end do
 
 end subroutine fermi
@@ -349,8 +315,6 @@ subroutine density(wf_in, n_wf, s_density, wf_out)
 
     ! declare vars
     integer :: i
-
-    wf_out = 0.0d0
 
     !$OMP parallel do
     do i = 1, n_wf
