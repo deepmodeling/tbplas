@@ -95,7 +95,7 @@ def corr_DOS(sample, config):
     return corr_DOS
 
 def corr_LDOS(sample, config):
-    """Get density of states correlation function
+    """Get local density of states correlation function
 
     Parameters
     ----------
@@ -106,8 +106,8 @@ def corr_LDOS(sample, config):
 
     Returns
     ----------
-    corr_DOS : list of complex floats
-        DOS correlation function
+    corr_LDOS : list of complex floats
+        LDOS correlation function
     """
 
     # get Bessel functions
@@ -283,8 +283,25 @@ def quasi_eigenstates(sample, config):
     return states
 
 def get_ldos_haydock(sample, config):
-    hop = sample.hop * sample.rescale
+    """Get local density of states using Haydock recursion method
 
+    Parameters
+    ----------
+    sample : Sample object
+        Sample information
+    config : Config object
+        Parameters, LDOS['site_indices'], LDOS['delta'],
+        sample['energy_range'], LDOS['recursion_depth'],
+        generic['nr_time_steps'], output['corr_LDOS'] are used
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    LDOS : list of complex floats
+        LDOS value to corresponding energies_DOS
+    """
+    hop = sample.hop * sample.rescale
     # get wf_weights:
     if not config.LDOS['wf_weights']:
         N = len(config.LDOS['site_indices'])
