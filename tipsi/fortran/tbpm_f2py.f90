@@ -81,18 +81,21 @@ subroutine tbpm_dos(Bes, n_Bes, &
 end subroutine tbpm_dos
 
 ! Get LDOS
-subroutine tbpm_ldos(site_index, Bes, n_Bes, &
-    s_indptr, n_indptr, s_indices, n_indices, s_hop, n_hop, &
-    seed, n_timestep, output_filename, corr)
+subroutine tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
+    Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
+    s_hop, n_hop, seed, n_timestep, n_ran_samples, &
+    output_filename, corr)
 
     ! prepare
     use tbpm_mod
     implicit none
 
     ! deal with input
-    integer, intent(in) :: site_index
     integer, intent(in) :: n_Bes, n_indptr, n_indices, n_hop
-    integer, intent(in) :: n_timestep, seed
+    integer, intent(in) :: n_timestep, seed, n_siteind, n_wfw
+    integer, intent(in) :: n_ran_samples
+    integer, intent(in), dimension(n_siteind) :: site_indices
+    real(8), intent(in), dimension(n_wfw) :: wf_weights
     real(8), intent(in), dimension(n_Bes) :: Bes
     integer, intent(in), dimension(n_indptr) :: s_indptr
     integer, intent(in), dimension(n_indices) :: s_indices
@@ -100,7 +103,8 @@ subroutine tbpm_ldos(site_index, Bes, n_Bes, &
     character*(*), intent(in) :: output_filename
 
     ! declare vars
-    integer :: k, i, n_wf
+    integer :: k, i, n_wf, i_sample
+    complex(8), dimension(n_siteind) :: wf_temp
     complex(8), dimension(n_indptr - 1) :: wf0, wf_t
     complex(8) :: corrval
 
@@ -112,35 +116,39 @@ subroutine tbpm_ldos(site_index, Bes, n_Bes, &
     n_wf = n_indptr - 1
 
     open(unit=27,file=output_filename)
-    write(27,*) "Site ID =", site_index
+    write(27,*) "Number of samples =", n_ran_samples
     write(27,*) "Number of timesteps =", n_timestep
 
     print*, "Calculating LDOS correlation function."
 
-    ! make LDOS state
-    wf0 = 0.0d0
-    wf0(site_index + 1) = 1.0d0
+    do i_sample=1, n_ran_samples
 
-    do i = 1, n_wf
-        wf_t(i) = wf0(i)
-    end do
+        print*, "  Sample ", i_sample, " of ", n_ran_samples
+        write(27,*) "Sample =", i_sample
 
-    ! iterate over time, get correlation function
-    do k = 1, n_timestep
+        ! make LDOS state
+        call random_state(wf_temp, n_siteind, seed*i_sample)
+        wf0 = 0.0d0
+        do i = 1, n_siteind
+            wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
+        end do
+        do i = 1, n_wf
+            wf_t(i) = wf0(i)
+        end do
+        ! iterate over time, get correlation function
+        do k = 1, n_timestep
+            if (MODULO(k,64) == 0) then
+                print*, "    Timestep ", k, " of ", n_timestep
+            end if
 
-        if (MODULO(k,64) == 0) then
-            print*, "    Timestep ", k, " of ", n_timestep
-        end if
+            call cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                s_hop, n_hop, wf_t)
+            corrval = inner_prod(wf0, wf_t, n_wf)
 
-        call cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
-            s_indptr, n_indptr, s_indices, n_indices, &
-            s_hop, n_hop, wf_t)
-        corrval = inner_prod(wf0, wf_t, n_wf)
-
-        write(27,*) k, real(corrval), aimag(corrval)
-
-        corr(k) = corr(k) + corrval
-
+            write(27,*) k, real(corrval), aimag(corrval)
+            corr(k) = corr(k) + corrval / n_ran_samples
+        end do
     end do
 
     close(27)
@@ -594,7 +602,7 @@ subroutine tbpm_dccond(Bes, n_Bes, beta, mu, &
                 QE_sum = QE_sum + abs(wf_QE(i, j))**2
             end do
             do j = 1, n_wf
-                wf_QE(i, j) = wf_QE(i, j)/sqrt(QE_sum)
+                wf_QE(i, j) = wf_QE(i, j)/dsqrt(QE_sum)
             end do
         end do
 
@@ -750,8 +758,47 @@ subroutine tbpm_eigenstates(Bes, n_Bes, &
             QE_sum = QE_sum + abs(wf_QE(i, j))**2
         end do
         do j = 1, n_wf
-            wf_QE(i, j) = wf_QE(i, j)/sqrt(QE_sum)
+            wf_QE(i, j) = wf_QE(i, j)/dsqrt(QE_sum)
         end do
     end do
 
 end subroutine tbpm_eigenstates
+
+SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
+                        E_range, s_indptr, n_indptr, s_indices, n_indices, &
+                        s_hop, n_hop, n_depth, n_timestep, &
+                        output_filename, energy, ldos)
+    USE tbpm_mod
+    ! deal with input
+    IMPLICIT NONE
+    INTEGER, INTENT(IN) :: n_siteind, n_indptr, n_indices, n_hop
+    INTEGER, INTENT(IN) :: n_depth, n_timestep, n_wfw
+    INTEGER, INTENT(IN), DIMENSION(n_siteind) :: site_indices
+    INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+    INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+    REAL(KIND=8), INTENT(IN) :: E_range, delta
+    REAL(KIND=8), INTENT(IN), DIMENSION(n_wfw) :: wf_weights
+    COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+    CHARACTER*(*), INTENT(IN) :: output_filename
+
+    ! declare variables
+    COMPLEX(KIND=8) :: g00
+    INTEGER :: i
+    COMPLEX(KIND=8), DIMENSION(n_depth) :: coefa
+    REAL(KIND=8), DIMENSION(n_depth) :: coefb
+
+    ! output
+    REAL(KIND=8), INTENT(OUT), DIMENSION(-n_timestep:n_timestep) :: energy
+    REAL(KIND=8), INTENT(OUT), DIMENSION(-n_timestep:n_timestep) :: ldos
+
+    energy = (/(0.5*i*E_range/n_timestep, i = -n_timestep, n_timestep)/)
+    CALL recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
+                   s_indptr, n_indptr, s_indices, n_indices, &
+                   s_hop, n_hop, coefa, coefb)
+
+    DO i = -n_timestep, n_timestep
+        CALL green_function(energy(i), delta, coefa, coefb, &
+                            n_depth, g00)
+        ldos(i) = -1D0 / pi * AIMAG(g00)
+    END DO
+END SUBROUTINE ldos_haydock

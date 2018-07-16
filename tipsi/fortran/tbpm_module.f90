@@ -5,8 +5,8 @@
 module tbpm_mod
 
     implicit none
-    real(8), parameter :: pi=3.141592653589793238460d0
-    complex(8), parameter :: img = cmplx(0.0d0, 1.0d0)
+    real(8), parameter :: pi = 3.14159265358979323846264338327950D0
+    complex(8), parameter :: img = cmplx(0.0d0, 1.0d0, kind=8)
 
 contains
 
@@ -16,25 +16,49 @@ complex(8) function inner_prod(A, B, N)
     implicit none
     integer, intent(in) :: N
     complex(8), intent(in), dimension(N) :: A, B
-    complex(8), external :: zdotc
-
-    ! use BLAS to calculate the inner product
-    inner_prod = zdotc(N, A, 1, B, 1)
+    inner_prod = dot_product(A, B)
 
 end function inner_prod
 
-! FFTW interface
-subroutine fft(x, n_x, sgn)
+! Cooley-Tukey FFT
+subroutine fft(x, sgn)
+    complex(kind=8), intent(inout) :: x(:)
+    integer, intent(in) :: sgn
 
-    implicit none
-    integer, intent(in) :: sgn, n_x
-    complex(8), dimension(n_x), intent(inout) :: x
-    integer(8) :: plan
-
-    call dfftw_plan_dft_1d(plan, n_x, x, x, sgn, 64)
-    call dfftw_execute_dft(plan, x, x)
-    call dfftw_destroy_plan(plan)
-
+    integer :: n, i, j, k, ncur, ntmp, itmp
+    real(kind=8) :: e
+    complex(kind=8) :: ctmp
+    n = size(x)
+    ncur = n
+    do
+        ntmp = ncur
+        e = 2.0 * pi / ncur
+        ncur = ncur / 2
+        if ( ncur < 1 ) exit
+        do j = 1, ncur
+            do i = j, n, ntmp
+                itmp = i + ncur
+                ctmp = x(i) - x(itmp)
+                x(i) = x(i) + x(itmp)
+                x(itmp) = ctmp * exp(cmplx(0.0, sgn*e*(j-1), kind=8))
+            end do
+        end do
+    end do
+    j = 1
+    do i = 1, n - 1
+        if ( i < j ) then
+            ctmp = x(j)
+            x(j) = x(i)
+            x(i) = ctmp
+        end if
+        k = n/2
+        do while( k < j )
+            j = j - k
+            k = k / 2
+        end do
+        j = j + k
+    end do
+    return
 end subroutine fft
 
 ! Hamiltonian operator
@@ -52,9 +76,22 @@ subroutine Hamiltonian(wf_in, n_wf, s_indptr, &
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_out
 
-    !use Sparse BLAS in MKL to calculate the production
-    call mkl_cspblas_zcsrgemv('N', n_wf, s_hop, s_indptr, s_indices, &
-        wf_in, wf_out)
+    ! declare vars
+    integer :: i, j, k, j_start, j_end
+
+    wf_out = 0.0d0
+
+    !$OMP parallel do private (j,k)
+    ! Nota bene: fortran indexing is off by 1
+    do i = 1, n_wf
+        j_start = s_indptr(i)
+        j_end = s_indptr(i + 1)
+        do j = j_start, j_end - 1
+            k = s_indices(j + 1)
+            wf_out(i) = wf_out(i) + s_hop(j + 1)  * wf_in(k + 1)
+        end do
+    end do
+    !$OMP end parallel do
 
 end subroutine Hamiltonian
 
@@ -65,7 +102,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     ! deal with input
     implicit none
     integer, intent(in) :: n_wf, n_Bes, n_indptr, n_indices, n_hop
-    complex(8), intent(in), dimension(n_wf), target :: wf_t
+    complex(8), intent(in), dimension(n_wf) :: wf_t
     real(8), intent(in), dimension(n_Bes) :: Bes
     integer, intent(in), dimension(n_indptr) :: s_indptr
     integer, intent(in), dimension(n_indices) :: s_indices
@@ -73,6 +110,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
 
     ! declare vars
     integer :: i, k
+    real(8) :: sum_wf
     complex(8), dimension(n_wf), target :: Tcheb0, Tcheb1, Tcheb2
     complex(8), dimension(:), pointer :: p0, p1, p2
 
@@ -86,7 +124,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     do i = 1, n_wf
         Tcheb0(i) = wf_t(i)
         Tcheb1(i) = -img * Tcheb1(i)
-        wf_t1(i) = Bes(1) * wf_t(i) + 2  * Bes(2) * Tcheb1(i)
+        wf_t1(i) = Bes(1) * Tcheb0(i) + 2  * Bes(2) * Tcheb1(i)
     end do
     !$OMP end parallel do
 
@@ -94,7 +132,7 @@ subroutine cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
     p1 => Tcheb1
     do k=3, n_Bes
         p2 => p0
-        call Hamiltonian(p1, n_wf, s_indptr, &
+        call Hamiltonian(Tcheb1, n_wf, s_indptr, &
             n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
         !$OMP parallel do
@@ -145,9 +183,22 @@ subroutine current(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
     ! output
     complex(8), intent(out), dimension(n_wf) :: wf_out
 
-    !use Sparse BLAS in MKL to calculate the production
-    call mkl_cspblas_zcsrgemv('N', n_wf, cur_coefs, s_indptr, s_indices, &
-        wf_in, wf_out)
+    ! declare vars
+    integer :: i, j, k, j_start, j_end
+
+    wf_out = 0.0d0
+
+    !$OMP parallel do private (j, k)
+    ! Nota bene: fortran indexing is off by 1
+    do i = 1, n_wf
+        j_start = s_indptr(i)
+        j_end = s_indptr(i + 1)
+        do j = j_start, j_end - 1
+            k = s_indices(j + 1)
+            wf_out(i) = wf_out(i) + cur_coefs(j + 1)  * wf_in(k + 1)
+        end do
+    end do
+    !$OMP end parallel do
 
 end subroutine current
 
@@ -158,10 +209,10 @@ real(8) function Fermi_dist(beta,Ef,energy,eps)
     real(8) :: eps, beta, Ef, energy, x
 
     if (energy >= Ef) then
-        x = exp(beta * (Ef - energy))
+        x = 1. * exp(beta * (Ef - energy))
         Fermi_dist = x / (1 + x)
     else
-        x = exp(beta * (energy - Ef))
+        x = 1. * exp(beta * (energy - Ef))
         Fermi_dist = 1 / (1 + x)
     end if
 
@@ -201,7 +252,7 @@ subroutine get_Fermi_cheb_coef(cheb_coef, n_cheb, &
     end if
 
     ! Fourier transform result
-    call fft(cheb_coef_complex, nr_Fermi, -1)
+    call fft(cheb_coef_complex, -1)
 
     ! Get number of nonzero elements
     prec = -log10(eps)
@@ -237,7 +288,7 @@ subroutine Fermi(wf_in, n_wf, cheb_coef, n_cheb, &
     complex(8), intent(in), dimension(n_hop) :: s_hop
 
     ! declare vars
-    integer :: i, j, k, l
+    integer :: i, k
     real(8) :: sum_wf
     complex(8), dimension(n_wf), target :: Tcheb0, Tcheb1, Tcheb2
     complex(8), dimension(:), pointer :: p0, p1, p2
@@ -316,6 +367,8 @@ subroutine density(wf_in, n_wf, s_density, wf_out)
     ! declare vars
     integer :: i
 
+    wf_out = 0.0d0
+
     !$OMP parallel do
     do i = 1, n_wf
         wf_out(i) = s_density(i) * wf_in(i)
@@ -373,5 +426,97 @@ subroutine random_state(wf, n_wf, iseed)
     end function ranx
 
 end subroutine random_state
+
+! Haydock recursion method
+SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
+                     s_indptr, n_indptr, s_indices, n_indices, &
+                     s_hop, n_hop, coefa, coefb)
+    IMPLICIT NONE
+    ! deal with input
+    INTEGER, INTENT(IN) :: n_depth, n_indptr, n_indices
+    INTEGER, INTENT(IN) :: n_hop, n_siteind, n_wfw
+    INTEGER, INTENT(IN), DIMENSION(n_siteind) :: site_indices
+    INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+    INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+    REAL(KIND=8), INTENT(IN), DIMENSION(n_wfw) :: wf_weights
+    COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+
+    ! declare variables
+    INTEGER :: i, j, n_wf
+    COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: n0, n1, n2
+    COMPLEX(KIND=8), DIMENSION(n_siteind) :: wf_temp
+
+    ! output
+    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_depth) :: coefa
+    REAL(KIND=8), INTENT(OUT), DIMENSION(n_depth) :: coefb
+
+    n_wf = n_indptr - 1
+    ! make LDOS state
+    n1 = 0D0
+    wf_temp = 1D0 / DSQRT(REAL(n_siteind, KIND=8))
+    do i = 1, n_siteind
+        n1(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
+    end do
+
+    ! get a1
+    CALL Hamiltonian(n1, n_wf, s_indptr, &
+        n_indptr, s_indices, n_indices, s_hop, n_hop, n2)
+    coefa(1) = inner_prod(n1, n2, n_wf)
+
+    !$OMP PARALLEL DO
+    DO j = 1, n_wf
+        n2(j) = n2(j) - coefa(1) * n1(j)
+    END DO
+    !$OMP END PARALLEL DO
+
+    coefb(1) = DSQRT(DBLE(inner_prod(n2, n2, n_wf)))
+
+    ! recursion
+    DO i = 2, n_depth
+        !$OMP PARALLEL DO
+        DO j = 1, n_wf
+            n0(j) = n1(j)
+            n1(j) = n2(j) / coefb(i-1)
+        END DO
+        !$OMP END PARALLEL DO
+
+        CALL Hamiltonian(n1, n_wf, s_indptr, &
+            n_indptr, s_indices, n_indices, s_hop, n_hop, n2)
+        coefa(i) = inner_prod(n1, n2, n_wf)
+
+        !$OMP PARALLEL DO
+        DO j = 1, n_wf
+            n2(j) = n2(j) - coefa(i) * n1(j) - coefb(i-1) * n0(j)
+        END DO
+        !$OMP END PARALLEL DO
+
+        coefb(i) = DSQRT(DBLE(inner_prod(n2, n2, n_wf)))
+    END DO
+END SUBROUTINE recursion
+
+! Green's function G00(E) using Haydock recursion method
+SUBROUTINE green_function(energy, delta, coefa, coefb, n_depth, g00)
+    IMPLICIT NONE
+    ! deal with input
+    INTEGER, INTENT(IN) :: n_depth
+    REAL(KIND=8), INTENT(IN) :: energy, delta
+    COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_depth) :: coefa
+    REAL(KIND=8), INTENT(IN), DIMENSION(n_depth) :: coefb
+
+    ! declare variables
+    COMPLEX(KIND=8) :: E_cmplx
+    INTEGER :: i
+
+    ! output
+    COMPLEX(KIND=8), INTENT(OUT) :: g00
+
+    E_cmplx = CMPLX(energy, delta, KIND=8)
+    g00 = CMPLX(0D0, 0D0)
+
+    DO i = n_depth, 1, -1
+        g00 = 1D0 / (E_cmplx - coefa(i) - coefb(i)**2 * g00)
+    END DO
+
+END SUBROUTINE green_function
 
 end module tbpm_mod

@@ -16,7 +16,7 @@ from tipsi.materials import graphene
 def main():
 
     # make 1000*1000 unit cell sample
-    sample = graphene.sample_rectangle(1000, 1000, nr_processes = 8)
+    sample = graphene.sample_rectangle(256, 256, nr_processes = 8)
 
     # set config parameters
     config = tipsi.Config(sample)
@@ -26,6 +26,9 @@ def main():
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
     config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
+    config.LDOS['site_indices'] = [0]
+    config.LDOS['delta'] = 0.1
+    config.LDOS['recursion_depth'] = 2000
     config.save()
 
     # get DOS
@@ -35,6 +38,14 @@ def main():
     plt.xlabel("E (eV)")
     plt.ylabel("DOS")
     plt.savefig("graphene_DOS.png")
+    plt.close()
+
+    # get LDOS using Haydock recursion method
+    energies_LDOS, LDOS = tipsi.get_ldos_haydock(sample, config)
+    plt.plot(energies_LDOS, LDOS)
+    plt.xlabel("E (eV)")
+    plt.ylabel("LDOS")
+    plt.savefig("graphene_LDOS.png")
     plt.close()
 
     # get AC conductivity
@@ -50,9 +61,9 @@ def main():
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
     qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
     qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(config, dyn_pol)
-    plt.plot(omegas, dyn_pol[0,:].imag)
+    plt.plot(omegas, -1 * dyn_pol[0,:].imag)
     plt.xlabel("hbar * omega (eV)")
-    plt.ylabel("Im(dp)")
+    plt.ylabel("-Im(dp)")
     plt.savefig("graphene_dp_imag.png")
     plt.close()
 

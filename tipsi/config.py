@@ -22,7 +22,7 @@ import pickle
 
 # input & output
 try:
-    import h5py       
+    import h5py
 except ImportError:
     print("h5py functions not available.")
 import time
@@ -30,18 +30,18 @@ import os
 
 def create_dir(dir):
     """Function that creates a directory.
-    
+
     Parameters
     ----------
     dir : string
         Name of directory; if False, no directory is created.
-        
+
     Returns
     ----------
     td : string
         Path to directory.
     """
-    
+
     if dir:
         td = dir
         try:
@@ -62,7 +62,7 @@ def create_dir(dir):
 
 class Config():
     """Class for TBPM parameters.
-    
+
     Attributes
     ----------
     sample['area_unit_cell'] : float
@@ -84,12 +84,12 @@ class Config():
     generic['correct_spin'] : bool
         If True, results are corrected for spin. Default value: False.
     generic['Fermi_cheb_precision'] : float
-        Precision cut-off of Fermi-Dirac distribution. 
+        Precision cut-off of Fermi-Dirac distribution.
         Default value: 1.0e-10
     generic['mu'] : float
         Chemical potential. Default value: 0.
     generic['nr_Fermi_fft_steps'] : int
-        Maximum number of Fermi-Dirac distribution FFT steps, 
+        Maximum number of Fermi-Dirac distribution FFT steps,
         must be power of two. Default value: 2**15
     generic['nr_ran_samples'] : int
         Number of random initial wave functions. Default value: 1
@@ -97,8 +97,15 @@ class Config():
         Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wavefunction generation. Default value: 1337.
-    LDOS['site_index'] : int
-        Site index for LDOS calculation.
+    LDOS['site_indices'] : int
+        Site indices for LDOS calculation.
+    LDOS['wf_weights'] : int
+        Wave function weights for LDOS calculation.
+        Default: equal weights for all sites.
+    LDOS['delta'] : float
+        Parameter of infinitesimal. Default value: 0.1.
+    LDOS['recursion_depth'] : int
+        Recursion depth of Haydock method. Default value: 10000
     dyn_pol['background_dielectric_constant'] : float
         Background dielectric constant. Default value: 23.6.
     dyn_pol['coulomb_constant'] : float
@@ -106,27 +113,27 @@ class Config():
     dyn_pol['q_points'] : (n_q_points, 3) list of floats
         List of q-points. Default value: [[0.1, 0., 0.]].
     DC_conductivity['energy_limits'] : 2-tuple of floats
-        Minimum and maximum of energy window for dc conductivity. 
+        Minimum and maximum of energy window for dc conductivity.
         Default value: [-0.5, 0.5].
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
     output['timestamp'] : int
-        Timestamp generated at __init__ call to make output 
+        Timestamp generated at __init__ call to make output
         files unique.
     output['corr_AC'] : string
-        AC conductivity correlation output file. 
+        AC conductivity correlation output file.
         Default value: "sim_data/" + timestamp + "corr_AC.dat".
     output['corr_DC'] : string
-        DC conductivity correlation output file. 
+        DC conductivity correlation output file.
         Default value: "sim_data/" + timestamp + "corr_DC.dat".
     output['corr_DOS'] : string
-        DOS correlation output file. 
+        DOS correlation output file.
         Default value: "sim_data/" + timestamp + "corr_DOS.dat".
     output['corr_LDOS'] : string
-        LDOS correlation output file. 
+        LDOS correlation output file.
         Default value: "sim_data/" + timestamp + "corr_LDOS.dat".
     output['corr_dyn_pol'] : string
-        AC conductivity correlation output file. 
+        AC conductivity correlation output file.
         Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
     output['directory'] : string
         Output directory. Default value: "sim_data".
@@ -135,7 +142,7 @@ class Config():
     # initialize
     def __init__(self, sample = False, read_from_file = False):
         """Initialize.
-        
+
         Parameters
         ----------
         sample : Sample object
@@ -143,7 +150,7 @@ class Config():
         read_from_file : bool
             set to True if you are reading a config object from file
         """
-        
+
         # declare dicts
         self.sample = {}
         self.generic = {}
@@ -152,7 +159,7 @@ class Config():
         self.DC_conductivity = {}
         self.quasi_eigenstates = {}
         self.output = {}
-        
+
         # sample parameters
         if sample:
             self.sample['nr_orbitals'] = len(sample.lattice.orbital_coords)
@@ -160,7 +167,7 @@ class Config():
             self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
             self.sample['volume_unit_cell'] = sample.lattice.volume_unit_cell()
             self.sample['extended'] = sample.lattice.extended
-                   
+
         # generic standard values
         self.generic['Bessel_max'] = 100
         self.generic['Bessel_precision'] = 1.0e-13
@@ -172,32 +179,35 @@ class Config():
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
         self.generic['seed'] = 1337
-        
+
         # LDOS
-        self.LDOS['site_index'] = 0
-        
+        self.LDOS['site_indices'] = 0
+        self.LDOS['wf_weights'] = False
+        self.LDOS['delta'] = 0.1
+        self.LDOS['recursion_depth'] = 10000
+
         # DC conductivity
         self.DC_conductivity['energy_limits'] = (-0.5, 0.5)
-        
+
         # quasi-eigenstates
         self.quasi_eigenstates['energies'] = [-0.1, 0., 0.1]
-        
+
         # dynamical polarization
         self.dyn_pol['q_points'] = [[1., 0., 0.]]
         self.dyn_pol['coulomb_constant'] = 1.0
         self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
-        
+
         # output settings
         if not read_from_file:
             self.output['timestamp'] = str(int(time.time()))
             self.set_output()
-    
+
     def set_output(self, directory = 'sim_data', prefix = False):
         """Function to set data output options.
-        
-        This function will set self.output['directory'] and correlation 
+
+        This function will set self.output['directory'] and correlation
         file names for automised data output.
-        
+
         Parameters
         ----------
         directory : string, optional
@@ -206,12 +216,12 @@ class Config():
         prefix : string, optional
             prefix for filenames, set to False for standard (timestamp) prefix
         """
-        
+
         if prefix == False:
             prefix = self.output['timestamp']
         if prefix != "":
             print("Output prefix: " + prefix)
-        
+
         td = create_dir(directory)
         self.output['directory'] = td
         self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'
@@ -219,10 +229,10 @@ class Config():
         self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
         self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
-    
+
     def save(self, filename = "config.pkl", directory = 'sim_data', prefix = False):
         """Function to save config parameters to a .pkl file.
-        
+
         Parameters
         ----------
         filename : string, optional
@@ -233,7 +243,7 @@ class Config():
         prefix : string, optional
             prefix for filenames, , set to False for standard (timestamp) prefix
         """
-        
+
         if prefix == False:
             prefix = self.output['timestamp']
         td = create_dir(directory)
