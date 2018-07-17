@@ -705,7 +705,7 @@ subroutine tbpm_eigenstates(Bes, n_Bes, &
     complex(8), dimension(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg
     
     ! output
-    real(8), intent(out), dimension(n_energies, n_indptr - 1) :: wf_QE
+    complex(8),intent(out),dimension(n_energies,n_indptr-1)::wf_QE
     n_wf = n_indptr - 1
     
     ! make random state
