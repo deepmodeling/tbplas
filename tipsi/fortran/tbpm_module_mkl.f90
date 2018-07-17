@@ -28,10 +28,11 @@ SUBROUTINE fft(x, n_x, sgn)
 
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: sgn, n_x
+    INTEGER, PARAMETER :: FFTW_ESTIMATE=64
     COMPLEX(KIND=8), DIMENSION(n_x), INTENT(INOUT) :: x
     INTEGER(KIND=8) :: plan
 
-    CALL dfftw_plan_dft_1d(plan, n_x, x, x, sgn, 64)
+    CALL dfftw_plan_dft_1d(plan, n_x, x, x, sgn, FFTW_ESTIMATE)
     CALL dfftw_execute_dft(plan, x, x)
     CALL dfftw_destroy_plan(plan)
 
