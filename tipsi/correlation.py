@@ -29,6 +29,7 @@ import scipy.special as spec
 # fortran tbpm
 from .fortran import tbpm_f2py as fortran_tbpm
 
+
 def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
     """Get Bessel functions of the first kind.
 
@@ -64,6 +65,7 @@ def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
                 return Bes
     return False
 
+
 def corr_DOS(sample, config):
     """Get density of states correlation function
 
@@ -93,6 +95,7 @@ def corr_DOS(sample, config):
         config.generic['nr_random_samples'], config.output['corr_DOS'])
 
     return corr_DOS
+
 
 def corr_LDOS(sample, config):
     """Get local density of states correlation function
@@ -131,6 +134,7 @@ def corr_LDOS(sample, config):
 
     return corr_LDOS
 
+
 def corr_AC(sample, config):
     """Get AC conductivity
 
@@ -168,6 +172,7 @@ def corr_AC(sample, config):
         config.generic['Fermi_cheb_precision'], config.output['corr_AC'])
 
     return corr_AC
+
 
 def corr_dyn_pol(sample, config):
     """Get dynamical polarization correlation function
@@ -208,6 +213,7 @@ def corr_dyn_pol(sample, config):
 
     return corr_dyn_pol
 
+
 def corr_DC(sample, config):
     """Get DC conductivity correlation function
 
@@ -236,7 +242,8 @@ def corr_DC(sample, config):
     energies_DOS = np.array([0.5 * i * en_range / tnr - en_range / 2. \
                 for i in range(tnr * 2)])
     lims = config.DC_conductivity['energy_limits']
-    QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
+    QE_indices = np.where((energies_DOS >= lims[0]) &
+                          (energies_DOS <= lims[1]))[0]
     beta_re = config.generic['beta'] * sample.rescale
     mu_re = config.generic['mu'] / sample.rescale
 
@@ -250,6 +257,7 @@ def corr_DC(sample, config):
         config.output['corr_DOS'], config.output['corr_DC'])
 
     return corr_DOS, corr_DC
+
 
 def quasi_eigenstates(sample, config):
     """Get quasi-eigenstates
@@ -281,6 +289,7 @@ def quasi_eigenstates(sample, config):
         t_step, config.quasi_eigenstates['energies'])
 
     return states
+
 
 def get_ldos_haydock(sample, config):
     """Get local density of states using Haydock recursion method

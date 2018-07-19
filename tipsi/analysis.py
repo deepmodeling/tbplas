@@ -37,6 +37,7 @@ from scipy.signal import hilbert
 # window functions
 ################
 
+
 # Hanning window
 def window_Hanning(i, N):
     """Hanning window.
@@ -56,6 +57,7 @@ def window_Hanning(i, N):
 
     return 0.5 * (1 + np.cos(np.pi * i / N))
 
+
 # Exponential window
 def window_exp(i, N):
     """Exponential window.
@@ -73,7 +75,8 @@ def window_exp(i, N):
         exponential window value
     """
 
-    return np.exp(-2. * (i / N) ** 2)
+    return np.exp(-2. * (i / N)**2)
+
 
 # Exponential of 10 window
 def window_exp_ten(i, N):
@@ -92,15 +95,16 @@ def window_exp_ten(i, N):
         exponential window value
     """
 
-    power = -2 * (1. * i / N) ** 2
-    return 10. ** power
+    power = -2 * (1. * i / N)**2
+    return 10.**power
 
 
 ################
 # correlation function analysis
 ################
 
-def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
+
+def analyze_corr_DOS(config, corr_DOS, window=window_Hanning):
     """Function for analyzing the DOS correlation function.
 
     Parameters
@@ -128,7 +132,7 @@ def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
     en_step = 0.5 * en_range / tnr
 
     # Get negative time correlation
-    corr_negtime = np.zeros(tnr * 2, dtype = complex)
+    corr_negtime = np.zeros(tnr * 2, dtype=complex)
     corr_negtime[tnr - 1] = 1.
     corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) \
                                 * corr_DOS[tnr - 1]
@@ -153,7 +157,8 @@ def analyze_corr_DOS(config, corr_DOS, window = window_Hanning):
 
     return energies, DOS
 
-def analyze_corr_LDOS(config, corr_LDOS, window = window_Hanning):
+
+def analyze_corr_LDOS(config, corr_LDOS, window=window_Hanning):
     """Function for analyzing the LDOS correlation function -
     exactly the same as DOS analysis function.
 
@@ -175,7 +180,8 @@ def analyze_corr_LDOS(config, corr_LDOS, window = window_Hanning):
     """
     return analyze_corr_DOS(config, corr_LDOS, window)
 
-def analyze_corr_AC(config, corr_AC, window = window_exp):
+
+def analyze_corr_AC(config, corr_AC, window=window_exp):
     """Function for analyzing the AC conductivity correlation function.
 
     Parameters
@@ -221,13 +227,14 @@ def analyze_corr_AC(config, corr_AC, window = window_exp):
             else:
                 acv = ac_prefactor * t_step * acv \
                       * (np.exp(-beta * omega) - 1) / omega
-            AC[j,i] = acv
+            AC[j, i] = acv
 
     # correct for spin
     if config.generic['correct_spin']:
         AC = 2. * AC
 
     return omegas, AC
+
 
 def AC_imag(AC_real):
     """Get the imaginary part of the AC conductivity
@@ -250,7 +257,7 @@ def AC_imag(AC_real):
     for i in range(N):
         sigma[N + i] = AC_real[i]
         sigma[N - i] = AC_real[i]
-    return  np.imag(hilbert(sigma))[N : 2 * N]
+    return np.imag(hilbert(sigma))[N:2 * N]
 
 def analyze_corr_dyn_pol(config, corr_dyn_pol, \
                          window = window_exp_ten):
@@ -290,7 +297,7 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
                         / config.sample['extended']
 
     # get dynamical polarization
-    dyn_pol = np.zeros((n_q_points, n_omegas), dtype = complex)
+    dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
     for i_q in range(n_q_points):
         for i in range(n_omegas):
             omega = omegas[i]
@@ -299,13 +306,14 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
                 tau = k * t_step
                 dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
                        * np.exp(1j * omega * tau)
-            dyn_pol[i_q,i] = dyn_pol_prefactor * t_step * dpv
+            dyn_pol[i_q, i] = dyn_pol_prefactor * t_step * dpv
 
     # correct for spin
     if config.generic['correct_spin']:
         dyn_pol = 2. * dyn_pol
 
     return q_points, omegas, dyn_pol
+
 
 def get_dielectric_function(config, dyn_pol):
     """Function for analyzing the DOS correlation function.
@@ -346,17 +354,17 @@ def get_dielectric_function(config, dyn_pol):
 
     # calculate epsilon
     for i, q_point in enumerate(q_points):
-            k = npla.norm(q_point)
-            if k == 0.0:
-                V[i] = 0.
-            else:
-                V[i] = V0[i] / k
-                epsilon[i,:] -= V[i] * dyn_pol[i,:]
+        k = npla.norm(q_point)
+        if k == 0.0:
+            V[i] = 0.
+        else:
+            V[i] = V0[i] / k
+            epsilon[i, :] -= V[i] * dyn_pol[i, :]
 
     return q_points, omegas, epsilon
 
 def analyze_corr_DC(config, corr_DOS, corr_DC, \
-    window_DOS = window_Hanning, window_DC = window_exp):
+                    window_DOS = window_Hanning, window_DC = window_exp):
     """Function for analyzing the DC correlation function.
 
     Parameters
@@ -390,7 +398,8 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
     en_range = config.sample['energy_range']
     t_step = 2 * np.pi / en_range
     lims = config.DC_conductivity['energy_limits']
-    QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
+    QE_indices = np.where((energies_DOS >= lims[0]) &
+                          (energies_DOS <= lims[1]))[0]
     n_energies = len(QE_indices)
     energies = energies_DOS[QE_indices]
     dc_prefactor = config.sample['nr_orbitals'] \
@@ -407,9 +416,9 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
             for k in range(tnr):
                 W = window_DC(k + 1, tnr)
                 cexp = np.exp(-1j * k * t_step * en)
-                add_dcv = W * (cexp * corr_DC[i,j,k]).real
+                add_dcv = W * (cexp * corr_DC[i, j, k]).real
                 dcval += add_dcv
-            DC[i,j] = dc_prefactor * t_step * dosval * dcval
+            DC[i, j] = dc_prefactor * t_step * dosval * dcval
 
     # correct for spin
     if config.generic['correct_spin']:

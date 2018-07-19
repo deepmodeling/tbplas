@@ -28,6 +28,7 @@ except ImportError:
 import time
 import os
 
+
 def create_dir(dir):
     """Function that creates a directory.
 
@@ -50,15 +51,17 @@ def create_dir(dir):
             if td[-1] is not '/':
                 td += '/'
         except:
-            print( 'Cannot create output dir')
+            print('Cannot create output dir')
             td = ''
     else:
         td = ''
     return td
 
+
 ################
 # Config class
 ################
+
 
 class Config():
     """Class for TBPM parameters.
@@ -140,7 +143,7 @@ class Config():
     """
 
     # initialize
-    def __init__(self, sample = False, read_from_file = False):
+    def __init__(self, sample=False, read_from_file=False):
         """Initialize.
 
         Parameters
@@ -174,7 +177,7 @@ class Config():
         self.generic['correct_spin'] = False
         self.generic['nr_time_steps'] = 1024
         self.generic['nr_random_samples'] = 1
-        self.generic['beta'] = 11604.505/300
+        self.generic['beta'] = 11604.505 / 300
         self.generic['mu'] = 0.
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
@@ -202,7 +205,7 @@ class Config():
             self.output['timestamp'] = str(int(time.time()))
             self.set_output()
 
-    def set_output(self, directory = 'sim_data', prefix = False):
+    def set_output(self, directory='sim_data', prefix=False):
         """Function to set data output options.
 
         This function will set self.output['directory'] and correlation
@@ -230,7 +233,7 @@ class Config():
         self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
         self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
 
-    def save(self, filename = "config.pkl", directory = 'sim_data', prefix = False):
+    def save(self, filename="config.pkl", directory='sim_data', prefix=False):
         """Function to save config parameters to a .pkl file.
 
         Parameters

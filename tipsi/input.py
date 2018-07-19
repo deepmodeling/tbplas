@@ -55,6 +55,7 @@ def read_sample(filename, lattice = None, bc_func = bc_default, \
                   nr_processes = nr_processes, \
                   read_from_file = filename)
 
+
 def read_config(filename):
     """Read Config object from file
 
@@ -70,7 +71,7 @@ def read_config(filename):
 
     with open(filename, 'rb') as f:
         dict = pickle.load(f)
-    config = Config(read_from_file = True)
+    config = Config(read_from_file=True)
     config.sample = dict.sample
     config.generic = dict.generic
     config.LDOS = dict.LDOS
@@ -79,6 +80,7 @@ def read_config(filename):
     config.quasi_eigenstates = dict.quasi_eigenstates
     config.output = dict.output
     return config
+
 
 def read_corr_DOS(filename):
     """Read DOS correlation from file
@@ -94,11 +96,11 @@ def read_corr_DOS(filename):
         the DOS correlation function
     """
 
-    f = open(filename,'r')
+    f = open(filename, 'r')
 
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_DOS = np.zeros(n_timesteps, dtype = complex)
+    corr_DOS = np.zeros(n_timesteps, dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
@@ -107,6 +109,7 @@ def read_corr_DOS(filename):
             corr_DOS[j] += float(line[1]) + 1j * float(line[2])
 
     return corr_DOS / n_samples
+
 
 def read_corr_LDOS(filename):
     """Read LDOS correlation from file
@@ -122,11 +125,11 @@ def read_corr_LDOS(filename):
         the LDOS correlation function
     """
 
-    f = open(filename,'r')
+    f = open(filename, 'r')
 
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_LDOS = np.zeros(n_timesteps, dtype = complex)
+    corr_LDOS = np.zeros(n_timesteps, dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
@@ -135,6 +138,7 @@ def read_corr_LDOS(filename):
             corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
 
     return corr_LDOS / n_samples
+
 
 def read_corr_AC(filename):
     """Read AC correlation from file
@@ -150,11 +154,11 @@ def read_corr_AC(filename):
         the AC correlation function
     """
 
-    f = open(filename,'r')
+    f = open(filename, 'r')
 
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_AC = np.zeros((4, n_timesteps), dtype = complex)
+    corr_AC = np.zeros((4, n_timesteps), dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
@@ -166,6 +170,7 @@ def read_corr_AC(filename):
             corr_AC[3, j] += float(line[7]) + 1j * float(line[8])
 
     return corr_AC / n_samples
+
 
 def read_corr_dyn_pol(filename):
     """Read dynamical polarization correlation from file
@@ -181,12 +186,12 @@ def read_corr_dyn_pol(filename):
         the dynamical polarization  correlation function
     """
 
-    f = open(filename,'r')
+    f = open(filename, 'r')
 
     n_q_points = int(f.readline().split()[-1])
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_dyn_pol = np.zeros((n_q_points, n_timesteps), dtype = complex)
+    corr_dyn_pol = np.zeros((n_q_points, n_timesteps), dtype=complex)
 
     for i_q in range(n_q_points):
         temp_string = f.readline().split()
@@ -197,6 +202,7 @@ def read_corr_dyn_pol(filename):
                 corr_dyn_pol[i_q, j] += float(line[1])
 
     return corr_dyn_pol / n_samples
+
 
 def read_corr_DC(filename):
     """Read DC conductivity correlation from file
@@ -212,12 +218,12 @@ def read_corr_DC(filename):
         the dynamical polarization  correlation function
     """
 
-    f = open(filename,'r')
+    f = open(filename, 'r')
 
     n_samples = int(f.readline().split()[-1])
     n_energies = int(f.readline().split()[-1])
     n_t_steps = int(f.readline().split()[-1])
-    corr_DC = np.zeros((2, n_energies, n_t_steps), dtype = complex)
+    corr_DC = np.zeros((2, n_energies, n_t_steps), dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
@@ -229,6 +235,7 @@ def read_corr_DC(filename):
                 corr_DC[1, j, k] += float(line[3]) + 1j * float(line[4])
 
     return corr_DC / n_samples
+
 
 def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
     r"""Read Lattice and HopDict information from Wannier90 file
@@ -306,7 +313,7 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
         ham_content = f.readlines()
     nr_wann = int(ham_content[1])
     nr_hoppings = int(ham_content[2])
-    skip_lines = 3+int(np.ceil(nr_hoppings/15))
+    skip_lines = 3 + int(np.ceil(nr_hoppings / 15))
 
     # prepare
     hop_dict = HopDict()
@@ -321,17 +328,16 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
         y = int(data[1])
         z = int(data[2])
         unit_cell_coord_new = (x, y, z)
-        orb0 = int(data[3])-1
-        orb1 = int(data[4])-1
-        hop = float(data[5])+1j*float(data[6])
+        orb0 = int(data[3]) - 1
+        orb1 = int(data[4]) - 1
+        hop = float(data[5]) + 1j * float(data[6])
 
         # add hopping terms
         # if new (x,y,z), fill hop_dict with old one
         if unit_cell_coord_new != unit_cell_coord_old:
             if unit_cell_coord_old:
                 hop_dict.set(unit_cell_coord_old, hop_matrix)
-            hop_matrix = np.zeros((nr_wann, nr_wann), \
-                                  dtype = complex)
+            hop_matrix = np.zeros((nr_wann, nr_wann), dtype=complex)
             unit_cell_coord_old = unit_cell_coord_new
 
         # if same (x,y,z), fill hopping matrix
@@ -350,8 +356,8 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
                 x0 = int(data[0])
                 y0 = int(data[1])
                 z0 = int(data[2])
-                orb0 = int(data[3])-1
-                orb1 = int(data[4])-1
+                orb0 = int(data[3]) - 1
+                orb1 = int(data[4]) - 1
                 N = int(next(iterator))
                 sites_cor = []
                 for i in range(N):
@@ -370,12 +376,11 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
 
             for i in range(N):
                 x, y, z = cor[(x0, y0, z0, orb0, orb1)][i]
-                x, y, z = x+x0, y+y0, z+z0
+                x, y, z = x + x0, y + y0, z + z0
                 if (x, y, z) in hop_dict.dict.keys():
                     hop_dict.dict[(x, y, z)][orb0, orb1] = hop / N
                 else:
-                    hop_matrix = np.zeros((nr_wann, nr_wann), \
-                                          dtype = complex)
+                    hop_matrix = np.zeros((nr_wann, nr_wann), dtype=complex)
                     hop_matrix[orb0, orb1] = hop / N
                     hop_dict.set((x, y, z), hop_matrix)
 
