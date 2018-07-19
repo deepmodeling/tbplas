@@ -742,9 +742,9 @@ subroutine tbpm_eigenstates(Bes, n_Bes, &
         do i = 1, n_energies
             do j = 1, n_wf
                 wf_QE(i,j) = wf_QE(i,j)+&
-                    exp(img*energies(i+1)*k*t_step)*wf_t_pos(j)*W
+                    exp(img*energies(i)*k*t_step)*wf_t_pos(j)*W
                 wf_QE(i,j) = wf_QE(i,j)+&
-                    exp(img*energies(i+1)*k*t_step)*wf_t_neg(j)*W
+                    exp(-img*energies(i)*k*t_step)*wf_t_neg(j)*W
             end do
         end do
         !$OMP end parallel do
