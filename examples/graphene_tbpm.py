@@ -13,10 +13,11 @@ sys.path.append("..")
 import tipsi
 from tipsi.materials import graphene
 
+
 def main():
 
     # make 1000*1000 unit cell sample
-    sample = graphene.sample_rectangle(256, 256, nr_processes = 8)
+    sample = graphene.sample_rectangle(256, 256, nr_processes=8)
 
     # set config parameters
     config = tipsi.Config(sample)
@@ -61,7 +62,7 @@ def main():
     corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
     qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
     qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(config, dyn_pol)
-    plt.plot(omegas, -1 * dyn_pol[0,:].imag)
+    plt.plot(omegas, -1 * dyn_pol[0, :].imag)
     plt.xlabel("hbar * omega (eV)")
     plt.ylabel("-Im(dp)")
     plt.savefig("graphene_dp_imag.png")
@@ -75,6 +76,7 @@ def main():
     plt.ylabel("DC conductivity")
     plt.savefig("graphene_DC.png")
     plt.close()
+
 
 if __name__ == '__main__':
     main()
