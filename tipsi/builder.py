@@ -1135,7 +1135,7 @@ class Sample:
         return en_range
 
     def plot(self, fig_name = 'system.png', single_site_coord = False,
-             draw_size = 5, draw_dpi = 600):
+             single_site_orbital = 0, draw_size = 5, draw_dpi = 600):
         """Plot sample in 2D, save to file.
         
         Parameters
@@ -1145,6 +1145,8 @@ class Sample:
         single_site_coord : int 3-tuple int, optional
             if not False, only print hoppings to a single site with this 
             site coordinate
+        single_site_orbital : int, optional
+            only print hoppings to a single site with this orbital index
         draw_size : float, optional
             scale site and hopping drawing size
         draw_dpi : integer, optional
@@ -1173,8 +1175,8 @@ class Sample:
                                  [self.site_x[j], self.site_y[j]]])
                     linews.append(draw_size * npla.norm(hop))
             else:
-                site_i_coord = self.index_to_tag[i][0:3]
-                if site_i_coord == single_site_coord:
+                site_i_coord = self.index_to_tag[i]
+                if site_i_coord == single_site_coord + (single_site_orbital,):
                     hops.append([[self.site_x[i], self.site_y[i]],
                                  [self.site_x[j], self.site_y[j]]])
                     linews.append(draw_size * npla.norm(hop))
