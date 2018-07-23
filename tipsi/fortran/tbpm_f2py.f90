@@ -588,7 +588,7 @@ subroutine tbpm_dccond(Bes, n_bes, beta, mu, &
                     wf_QE(i,j) = wf_QE(i,j)+&
                         exp(img*en*k*t_step)*wf_t_pos(j)*W
                     wf_QE(i,j) = wf_QE(i,j)+&
-                        exp(img*en*k*t_step)*wf_t_neg(j)*W
+                        exp(-img*en*k*t_step)*wf_t_neg(j)*W
                 end do
             end do
             !$OMP end parallel do
