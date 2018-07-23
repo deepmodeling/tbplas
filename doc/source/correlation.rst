@@ -122,4 +122,5 @@ returns wave functions to python. Relevant config parameters::
     config.generic['Bessel_max']
     config.generic['seed']
     config.generic['nr_time_steps']
+    config.generic['nr_random_samples']
     config.quasi_eigenstates['energies']

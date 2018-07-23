@@ -278,6 +278,7 @@ def quasi_eigenstates(sample, config):
     states = fortran_tbpm.tbpm_eigenstates(Bes, \
         sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
-        t_step, config.quasi_eigenstates['energies'])
+        config.generic['nr_random_samples'], t_step, \
+        config.quasi_eigenstates['energies'])
     
     return states
