@@ -17,11 +17,11 @@ from tipsi.materials import graphene
 def main():
 
     # make 1000*1000 unit cell sample
-    sample = graphene.sample_rectangle(256, 256, nr_processes=8)
+    sample = graphene.sample_rectangle(1024, 1024, nr_processes=8)
 
     # set config parameters
     config = tipsi.Config(sample)
-    config.generic['nr_time_steps'] = 1024
+    config.generic['nr_time_steps'] = 256
     config.generic['nr_random_samples'] = 1
     config.generic['energy_range'] = 20.
     config.generic['correct_spin'] = True

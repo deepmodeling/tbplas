@@ -568,7 +568,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 			W = 0.5*(1+COS(pi*k/n_timestep)) ! Hanning window
 
-			!$OMP parallel do private (j)
+			!$OMP PARALLEL DO PRIVATE (j)
 			DO i = 1, n_en_inds
 
 				en = energies(en_inds(i))
@@ -577,10 +577,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 					wf_QE(i,j) = wf_QE(i,j) + &
 								 EXP(img*en*k*t_step)*wf_t_pos(j)*W
 					wf_QE(i,j) = wf_QE(i,j) + &
-								 EXP(img*en*k*t_step)*wf_t_neg(j)*W
+								 EXP(-img*en*k*t_step)*wf_t_neg(j)*W
 				END DO
 			END DO
-			!$OMP end parallel do
+			!$OMP END PARALLEL DO
 		END DO
 
 		! Normalise
@@ -590,7 +590,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 				QE_sum = QE_sum + ABS(wf_QE(i, j))**2
 			END DO
 			DO j = 1, n_wf
-				wf_QE(i, j) = wf_QE(i, j)/dsqrt(QE_sum)
+				wf_QE(i, j) = wf_QE(i, j)/DSQRT(QE_sum)
 			END DO
 		END DO
 
@@ -668,7 +668,7 @@ END SUBROUTINE tbpm_dccond
 ! Get quasi-eigenstates
 SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 							s_indices, n_indices, s_hop, n_hop, &
-							seed, n_timestep, t_step, &
+							seed, n_timestep, n_ran_samples, t_step, &
 							energies, n_energies, wf_QE)
 
 	! prepare
@@ -677,7 +677,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 
 	! deal with input
 	INTEGER, INTENT(in) :: n_Bes, n_indptr, n_indices, n_hop
-	INTEGER, INTENT(in) :: n_timestep, seed, n_energies
+	INTEGER, INTENT(in) :: n_timestep, seed, n_energies, n_ran_samples
 	REAL(8), INTENT(in), DIMENSION(n_Bes) :: Bes
 	REAL(8), INTENT(in) :: t_step
 	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
@@ -686,66 +686,79 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 	REAL(8), INTENT(in), DIMENSION(n_energies) :: energies
 
 	! declare vars
-	INTEGER :: i, j, k, l, t, n_wf
+	INTEGER :: i, j, k, l, t, n_wf, i_sample
 	REAL(8) :: W, QE_sum
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg
+	COMPLEX(8), DIMENSION(n_energies,n_indptr-1) :: wfq
 
 	! output
 	COMPLEX(8), INTENT(out), DIMENSION(n_energies, n_indptr - 1) :: wf_QE
 	n_wf = n_indptr - 1
 
-	! make random state
-	CALL random_state(wf0, n_wf, seed)
+	wf_QE = 0D0
 
-	! initial values for wf_t and wf_QE
-	DO i = 1, n_wf
-		wf_t_pos(i) = wf0(i)
-		wf_t_neg(i) = wf0(i)
-	END DO
-	DO i = 1, n_energies
-		DO j = 1, n_wf
-			wf_QE(i, j) = wf0(j)
-		END DO
-	END DO
+	PRINT*, "Calculating quasi-eigenstates."
 
-	! Iterate over time, get Fourier transform
-	DO k = 1, n_timestep
+	! Average over (n_ran_samples) samples
+	DO i_sample=1, n_ran_samples
 
-		IF (MODULO(k,64) == 0) THEN
-			PRINT*, "Timestep ", k, " of ", n_timestep
-		END IF
+		PRINT*, "  Calculating for sample ", i_sample, " of ", n_ran_samples
+		! make random state
+        CALL random_state(wf0, n_wf, seed*i_sample)
 
-		CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, n_Bes, &
-							  s_indptr, n_indptr, s_indices, n_indices, &
-							  s_hop, n_hop, wf_t_pos)
-		CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, n_Bes, &
-							  s_indptr, n_indptr, s_indices, n_indices, &
-							  -s_hop, n_hop, wf_t_neg)
-
-		W = 0.5*(1+COS(pi*k/n_timestep)) ! Hanning window
-
-		!$OMP parallel do private (j)
+        ! initial values for wf_t and wf_QE
+        DO i = 1, n_wf
+            wf_t_pos(i) = wf0(i)
+            wf_t_neg(i) = wf0(i)
+        END DO
 		DO i = 1, n_energies
 			DO j = 1, n_wf
-				wf_QE(i,j) = wf_QE(i,j) + &
-							 EXP(img*energies(i)*k*t_step)*wf_t_pos(j)*W
-				wf_QE(i,j) = wf_QE(i,j) + &
-							 EXP(-img*energies(i)*k*t_step)*wf_t_neg(j)*W
+				wfq(i, j) = wf0(j)
 			END DO
 		END DO
-		!$OMP end parallel do
 
-	END DO
+		! Iterate over time, get Fourier transform
+        DO k = 1, n_timestep
 
-	! Normalise
-	DO i = 1, n_energies
-		QE_sum = 0
-		DO j = 1, n_wf
-			QE_sum = QE_sum + ABS(wf_QE(i, j))**2
+            IF (MODULO(k,64) == 0) THEN
+                PRINT*, "    Timestep ", k, " of ", n_timestep
+            END IF
+
+            CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                s_hop, n_hop, wf_t_pos)
+            CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, n_Bes, &
+                s_indptr, n_indptr, s_indices, n_indices, &
+                -s_hop, n_hop, wf_t_neg)
+
+            W = 0.5*(1+cos(pi*k/n_timestep)) ! Hanning window
+
+            !$OMP PARALLEL DO PRIVATE (j)
+            DO i = 1, n_energies
+                DO j = 1, n_wf
+                    wfq(i,j) = wfq(i,j)+&
+                        	   exp(img*energies(i)*k*t_step)*wf_t_pos(j)*W
+                    wfq(i,j) = wfq(i,j)+&
+                        	   exp(-img*energies(i)*k*t_step)*wf_t_neg(j)*W
+                END DO
+            END DO
+            !$OMP END PARALLEL DO
+
 		END DO
-		DO j = 1, n_wf
-			wf_QE(i, j) = wf_QE(i, j)/dsqrt(QE_sum)
+
+		! Normalise
+		DO i = 1, n_energies
+			QE_sum = 0
+			DO j = 1, n_wf
+				QE_sum = QE_sum + ABS(wf_QE(i, j))**2
+			END DO
+			DO j = 1, n_wf
+				wf_QE(i, j) = wf_QE(i, j)/DSQRT(QE_sum)
+			END DO
 		END DO
+
+		wf_QE(:,:) = wf_QE(:,:) + wfq(:,:) / n_ran_samples
+
 	END DO
 
 END SUBROUTINE tbpm_eigenstates
