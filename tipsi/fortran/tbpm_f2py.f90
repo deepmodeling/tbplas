@@ -707,7 +707,7 @@ subroutine tbpm_eigenstates(Bes, n_Bes, &
     complex(8), dimension(n_energies,n_indptr-1) :: wfq
     
     ! output
-    complex(8),intent(out),dimension(n_energies,n_indptr-1)::wf_QE
+    real(8),intent(out),dimension(n_energies,n_indptr-1)::wf_QE
     n_wf = n_indptr - 1
 
     wf_QE = 0.0d0
@@ -773,7 +773,11 @@ subroutine tbpm_eigenstates(Bes, n_Bes, &
             end do
         end do
 
-        wf_QE(:,:) = wf_QE(:,:) + wfq(:,:) / n_ran_samples
+        do i = 1, n_energies
+            do j = 1, n_wf
+                wf_QE(i,j)=wf_QE(i,j)+abs(wfq(i,j))**2/n_ran_samples
+            end do
+        end do
 
     end do
 

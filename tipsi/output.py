@@ -19,13 +19,13 @@ try:
 except ImportError:
     print("Plotting functions not available.")
 
-def plot_wf(wf, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
+def plot_wf(wfsq, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
     """Plot wavefunction
     
     Parameters
     ----------
-    wf : list of complex floats
-        wavefunction
+    wfsq : list of positive real numbers
+        wave function squared
     sample : Sample object
         geometric information of the sample
     filename : string
@@ -43,7 +43,7 @@ def plot_wf(wf, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
     y = np.array(sample.site_y)
     
     # get absolute square of wave function and sort
-    z = np.power(np.array(np.abs(wf)), 2)
+    z = wfsq
     idx = z.argsort()
     x, y, z = x[idx], y[idx], z[idx]
     
