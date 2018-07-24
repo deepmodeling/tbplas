@@ -1,4 +1,3 @@
-
 """input.py contains tools for reading data.
 
 Functions
