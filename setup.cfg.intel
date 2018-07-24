@@ -1,7 +1,0 @@
-[config_fc]
-fcompiler=intelem
-f90flags="-qopenmp -O3 -march=native -heap-arrays"
-
-[build_ext]
-#library-dirs =
-libraries = iomp5 ifcoremt

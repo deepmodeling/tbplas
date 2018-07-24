@@ -6,5 +6,3 @@ from .input import *
 from .output import *
 
 __all__ = ['analysis', 'builder', 'config', 'correlation', 'input', 'output']
-
-

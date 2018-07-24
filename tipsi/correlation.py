@@ -1,5 +1,5 @@
 """correlation.py is the interface between python and fortran.
-Most importantly, it returns correlation functions for given 
+Most importantly, it returns correlation functions for given
 Sample and Config objects.
 
 Functions
@@ -29,9 +29,10 @@ import scipy.special as spec
 # fortran tbpm
 from .fortran import tbpm_f2py as fortran_tbpm
 
+
 def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
     """Get Bessel functions of the first kind.
- 
+
     Parameters
     ----------
     t_step : float
@@ -43,14 +44,14 @@ def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
         get Bessel functions above this cut-off
     Bessel_max : int
         maximum order
-        
+
     Returns
     ----------
     Bes : list of floats
-        list of Bessel functions; returns False if Bessel_max is 
+        list of Bessel functions; returns False if Bessel_max is
         too low
-    """ 
-    
+    """
+
     Bes = []
     for i in range(Bessel_max):
         besval = spec.jv(i, t_step * H_rescale)
@@ -63,23 +64,24 @@ def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
             else:
                 return Bes
     return False
-    
+
+
 def corr_DOS(sample, config):
     """Get density of states correlation function
- 
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
     corr_DOS : list of complex floats
         DOS correlation function
-    """ 
-    
+    """
+
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
@@ -91,25 +93,26 @@ def corr_DOS(sample, config):
         sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], config.output['corr_DOS'])
-    
+
     return corr_DOS
 
+
 def corr_LDOS(sample, config):
-    """Get density of states correlation function
- 
+    """Get local density of states correlation function
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
-    corr_DOS : list of complex floats
-        DOS correlation function
-    """ 
-    
+    corr_LDOS : list of complex floats
+        LDOS correlation function
+    """
+
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
@@ -122,42 +125,43 @@ def corr_LDOS(sample, config):
         wf_weights = [1 for i in range(N)]
     else:
         wf_weights = config.LDOS['wf_weights']
-    
+
     # pass to FORTRAN
     corr_LDOS = fortran_tbpm.tbpm_ldos(config.LDOS['site_indices'], \
         wf_weights, Bes, sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], config.output['corr_LDOS'])
-    
+
     return corr_LDOS
-    
+
+
 def corr_AC(sample, config):
     """Get AC conductivity
- 
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
     corr_AC : (4, n) list of complex floats
         AC correlation function in 4 directions:
         xx, xy, yx, yy, respectively.
-    """ 
-    
+    """
+
     # get Bessel functions
     t_step = np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])
-                 
+
     # get rescaled simulation parameters
     beta_re = config.generic['beta'] * sample.rescale
     mu_re = config.generic['mu'] / sample.rescale
-    
+
     # pass to FORTRAN
     corr_AC = fortran_tbpm.tbpm_accond(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
@@ -168,33 +172,34 @@ def corr_AC(sample, config):
         config.generic['Fermi_cheb_precision'], config.output['corr_AC'])
 
     return corr_AC
-    
+
+
 def corr_dyn_pol(sample, config):
     """Get dynamical polarization correlation function
- 
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
     corr_dyn_pol : (n_q_points, n_t_steps) list of complex floats
         Dynamical polarization correlation function.
-    """ 
-    
+    """
+
     # get Bessel functions
     t_step = np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
                  config.generic['Bessel_precision'], \
                  config.generic['Bessel_max'])
-                 
+
     # get rescaled simulation parameters
     beta_re = config.generic['beta'] * sample.rescale
     mu_re = config.generic['mu'] / sample.rescale
-    
+
     # pass to FORTRAN
     corr_dyn_pol = fortran_tbpm.tbpm_dyn_pol(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
@@ -207,25 +212,26 @@ def corr_dyn_pol(sample, config):
         config.dyn_pol['q_points'], config.output['corr_dyn_pol'])
 
     return corr_dyn_pol
-    
+
+
 def corr_DC(sample, config):
     """Get DC conductivity correlation function
- 
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
     corr_DOS : (n_t_steps) list of complex floats
         DOS correlation function.
     corr_DC : (2, n_energies, n_t_steps) list of complex floats
         DC conductivity correlation function.
-    """ 
-    
+    """
+
     # Get parameters
     tnr = config.generic['nr_time_steps']
     en_range = config.sample['energy_range']
@@ -236,10 +242,11 @@ def corr_DC(sample, config):
     energies_DOS = np.array([0.5 * i * en_range / tnr - en_range / 2. \
                 for i in range(tnr * 2)])
     lims = config.DC_conductivity['energy_limits']
-    QE_indices = np.where((energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
+    QE_indices = np.where((energies_DOS >= lims[0]) &
+                          (energies_DOS <= lims[1]))[0]
     beta_re = config.generic['beta'] * sample.rescale
     mu_re = config.generic['mu'] / sample.rescale
-    
+
     # pass to FORTRAN
     corr_DOS, corr_DC = fortran_tbpm.tbpm_dccond(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
@@ -248,26 +255,27 @@ def corr_DC(sample, config):
         config.generic['nr_random_samples'], t_step, \
         energies_DOS, QE_indices, \
         config.output['corr_DOS'], config.output['corr_DC'])
-                                                 
+
     return corr_DOS, corr_DC
-    
+
+
 def quasi_eigenstates(sample, config):
     """Get quasi-eigenstates
- 
+
     Parameters
     ----------
     sample : Sample object
         sample information
     config : Config object
         tbpm parameters
-        
+
     Returns
     ----------
     states : list of list of complex floats
-        Quasi-eigenstates of the sample; states[i,:] is a quasi-eigenstate 
+        Quasi-eigenstates of the sample; states[i,:] is a quasi-eigenstate
         at energy config.quasi_eigenstates['energies'][i].
-    """ 
-    
+    """
+
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
     Bes = Bessel(t_step, sample.rescale, \
@@ -280,5 +288,39 @@ def quasi_eigenstates(sample, config):
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], t_step, \
         config.quasi_eigenstates['energies'])
-    
+
     return states
+
+
+def get_ldos_haydock(sample, config):
+    """Get local density of states using Haydock recursion method
+
+    Parameters
+    ----------
+    sample : Sample object
+        Sample information
+    config : Config object
+        Parameters, LDOS['site_indices'], LDOS['delta'],
+        sample['energy_range'], LDOS['recursion_depth'],
+        generic['nr_time_steps'], output['corr_LDOS'] are used
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    LDOS : list of complex floats
+        LDOS value to corresponding energies_DOS
+    """
+    hop = sample.hop * sample.rescale
+    # get wf_weights:
+    if not config.LDOS['wf_weights']:
+        N = len(config.LDOS['site_indices'])
+        wf_weights = [1 for i in range(N)]
+    else:
+        wf_weights = config.LDOS['wf_weights']
+
+    energies, LDOS = fortran_tbpm.ldos_haydock(config.LDOS['site_indices'], \
+        wf_weights, config.LDOS['delta'], config.sample['energy_range'], \
+        sample.indptr, sample.indices, hop, config.LDOS['recursion_depth'], \
+        config.generic['nr_time_steps'], config.output['corr_LDOS'])
+    return energies, LDOS

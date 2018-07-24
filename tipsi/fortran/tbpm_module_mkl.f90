@@ -5,93 +5,57 @@
 MODULE tbpm_mod
 
 	IMPLICIT NONE
-	REAL(8), PARAMETER :: pi = 3.14159265358979323846264338327950D0
-	COMPLEX(8), PARAMETER :: img = CMPLX(0.0d0, 1.0d0, kind=8)
+	REAL(KIND=8), PARAMETER :: pi=3.141592653589793238460D0
+	COMPLEX(KIND=8), PARAMETER :: img = CMPLX(0.0D0, 1.0D0, KIND=8)
 
 CONTAINS
 
 ! Scalar product
-COMPLEX(8) FUNCTION inner_prod(A, B, N)
+COMPLEX(KIND=8) FUNCTION inner_prod(A, B, N)
 
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: N
-	COMPLEX(8), INTENT(in), DIMENSION(N) :: A, B
-	inner_prod = dot_PRODUCT(A, B)
+	INTEGER, INTENT(IN) :: N
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(N) :: A, B
+	COMPLEX(KIND=8), EXTERNAL :: zdotc
+
+	! use BLAS to calculate the inner product
+	inner_prod = zdotc(N, A, 1, B, 1)
 
 END FUNCTION inner_prod
 
-! Cooley-Tukey FFT
-SUBROUTINE fft(x, sgn)
-	COMPLEX(kind=8), INTENT(inout) :: x(:)
-	INTEGER, INTENT(in) :: sgn
+! FFTW interface
+SUBROUTINE fft(x, n_x, sgn)
 
-	INTEGER :: n, i, j, k, ncur, ntmp, itmp
-	REAL(kind=8) :: e
-	COMPLEX(kind=8) :: ctmp
-	n = SIZE(x)
-	ncur = n
-	DO
-		ntmp = ncur
-		e = 2.0 * pi / ncur
-		ncur = ncur / 2
-		IF ( ncur < 1 ) EXIT
-		DO j = 1, ncur
-			DO i = j, n, ntmp
-				itmp = i + ncur
-				ctmp = x(i) - x(itmp)
-				x(i) = x(i) + x(itmp)
-				x(itmp) = ctmp * EXP(CMPLX(0.0, sgn*e*(j-1), kind=8))
-			END DO
-		END DO
-	END DO
-	j = 1
-	DO i = 1, n - 1
-		IF ( i < j ) THEN
-			ctmp = x(j)
-			x(j) = x(i)
-			x(i) = ctmp
-		END IF
-		k = n/2
-		DO WHILE( k < j )
-			j = j - k
-			k = k / 2
-		END DO
-		j = j + k
-	END DO
-	RETURN
+	IMPLICIT NONE
+	INTEGER, INTENT(IN) :: sgn, n_x
+	INTEGER, PARAMETER :: FFTW_ESTIMATE=64
+	COMPLEX(KIND=8), DIMENSION(n_x), INTENT(INOUT) :: x
+	INTEGER(KIND=8) :: plan
+
+	CALL dfftw_plan_dft_1d(plan, n_x, x, x, sgn, FFTW_ESTIMATE)
+	CALL dfftw_execute_dft(plan, x, x)
+	CALL dfftw_destroy_plan(plan)
+
 END SUBROUTINE fft
 
 ! Hamiltonian operator
 SUBROUTINE Hamiltonian(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
-		n_indices, s_hop, n_hop, wf_out)
+					   n_indices, s_hop, n_hop, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf, n_indptr, n_indices, n_hop
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: wf_in
-	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
-	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: s_hop
+	INTEGER, INTENT(IN) :: n_wf, n_indptr, n_indices, n_hop
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
+	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
 
 	! output
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf_out
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
-	! declare vars
-	INTEGER :: i, j, k, j_start, j_end
-
-	wf_out = 0.0d0
-
-	!$OMP parallel do private (j,k)
-	! Nota bene: fortran indexing is off by 1
-	DO i = 1, n_wf
-		j_start = s_indptr(i)
-		j_end = s_indptr(i + 1)
-		DO j = j_start, j_end - 1
-			k = s_indices(j + 1)
-			wf_out(i) = wf_out(i) + s_hop(j + 1)* wf_in(k + 1)
-		END DO
-	END DO
-	!$OMP end parallel do
+	!use Sparse BLAS in MKL to calculate the production
+	CALL mkl_cspblas_zcsrgemv('N', n_wf, s_hop, s_indptr, s_indices, &
+							  wf_in, wf_out)
 
 END SUBROUTINE Hamiltonian
 
@@ -101,46 +65,45 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf, n_Bes, n_indptr, n_indices, n_hop
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: wf_t
-	REAL(8), INTENT(in), DIMENSION(n_Bes) :: Bes
-	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
-	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: s_hop
+	INTEGER, INTENT(IN) :: n_wf, n_Bes, n_indptr, n_indices, n_hop
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_t
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_Bes) :: Bes
+	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
 
 	! declare vars
 	INTEGER :: i, k
-	REAL(8) :: sum_wf
-	COMPLEX(8), DIMENSION(n_wf), TARGET :: Tcheb0, Tcheb1, Tcheb2
-	COMPLEX(8), DIMENSION(:), POINTER :: p0, p1, p2
+	COMPLEX(KIND=8), DIMENSION(n_wf), TARGET :: Tcheb0, Tcheb1, Tcheb2
+	COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
 
 	! output
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf_t1
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_t1
 
-	CALL Hamiltonian(wf_t, n_wf, s_indptr, &
-			n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb1)
+	CALL Hamiltonian(wf_t, n_wf, s_indptr, n_indptr, s_indices, &
+					 n_indices, s_hop, n_hop, Tcheb1)
 
-	!$OMP parallel do
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		Tcheb0(i) = wf_t(i)
 		Tcheb1(i) = -img * Tcheb1(i)
-		wf_t1(i) = Bes(1) * Tcheb0(i) + 2* Bes(2) * Tcheb1(i)
+		wf_t1(i) = Bes(1) * wf_t(i) + 2* Bes(2) * Tcheb1(i)
 	END DO
-	!$OMP end parallel do
+	!$OMP END PARALLEL DO
 
 	p0 => Tcheb0
 	p1 => Tcheb1
 	DO k=3, n_Bes
 		p2 => p0
-		CALL Hamiltonian(Tcheb1, n_wf, s_indptr, n_indptr, s_indices, &
+		CALL Hamiltonian(p1, n_wf, s_indptr, n_indptr, s_indices, &
 						 n_indices, s_hop, n_hop, Tcheb2)
 
-		!$OMP parallel do
+		!$OMP PARALLEL DO
 		DO i = 1, n_wf
 			p2(i) = p0(i) - 2 * img * Tcheb2(i)
 			wf_t1(i) = wf_t1(i) + 2 * Bes(k) * p2(i)
 		END DO
-		!$OMP end parallel do
+		!$OMP END PARALLEL DO
 		p0 => p1
 		p1 => p2
 	END DO
@@ -152,67 +115,54 @@ SUBROUTINE current_coefficient(hop, dr, n_hop, cur_coefs)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_hop
-	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: hop
-	REAL(8), INTENT(in), DIMENSION(n_hop) :: dr
-	COMPLEX(8), INTENT(out), DIMENSION(n_hop) :: cur_coefs
+	INTEGER, INTENT(IN) :: n_hop
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: hop
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_hop) :: dr
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_hop) :: cur_coefs
 
 	! declare vars
 	INTEGER :: i
 
-	!$OMP parallel do
+	!$OMP PARALLEL DO
 	DO i = 1, n_hop
 		cur_coefs(i) = img * hop(i) * dr(i)
 	END DO
-	!$OMP end parallel do
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE current_coefficient
 
 ! current operator
 SUBROUTINE current(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
-		n_indices, cur_coefs, n_cur_coefs, wf_out)
+				   n_indices, cur_coefs, n_cur_coefs, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf, n_indptr, n_indices, n_cur_coefs
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: wf_in
-	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
-	COMPLEX(8), INTENT(in), DIMENSION(n_cur_coefs) :: cur_coefs
+	INTEGER, INTENT(IN) :: n_wf, n_indptr, n_indices, n_cur_coefs
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
+	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_cur_coefs) :: cur_coefs
 
 	! output
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf_out
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
-	! declare vars
-	INTEGER :: i, j, k, j_start, j_end
-
-	wf_out = 0.0d0
-
-	!$OMP parallel do private (j, k)
-	! Nota bene: fortran indexing is off by 1
-	DO i = 1, n_wf
-		j_start = s_indptr(i)
-		j_end = s_indptr(i + 1)
-		DO j = j_start, j_end - 1
-			k = s_indices(j + 1)
-			wf_out(i) = wf_out(i) + cur_coefs(j + 1)* wf_in(k + 1)
-		END DO
-	END DO
-	!$OMP end parallel do
+	!use Sparse BLAS in MKL to calculate the production
+	CALL mkl_cspblas_zcsrgemv('N', n_wf, cur_coefs, s_indptr, s_indices, &
+							  wf_in, wf_out)
 
 END SUBROUTINE current
 
 ! The actual Fermi distribution
-REAL(8) FUNCTION Fermi_dist(beta,Ef,energy,eps)
+REAL(KIND=8) FUNCTION Fermi_dist(beta,Ef,energy,eps)
 
 	IMPLICIT NONE
-	REAL(8) :: eps, beta, Ef, energy, x
+	REAL(KIND=8) :: eps, beta, Ef, energy, x
 
 	IF (energy >= Ef) THEN
-		x = 1. * EXP(beta * (Ef - energy))
+		x = EXP(beta * (Ef - energy))
 		Fermi_dist = x / (1 + x)
 	ELSE
-		x = 1. * EXP(beta * (energy - Ef))
+		x = EXP(beta * (energy - Ef))
 		Fermi_dist = 1 / (1 + x)
 	END IF
 
@@ -228,14 +178,14 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 
 	! declarations
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: nr_Fermi
-	LOGICAL, INTENT(in) :: one_minus_Fermi ! if true: compute coeffs for
+	INTEGER, INTENT(IN) :: nr_Fermi
+	LOGICAL, INTENT(IN) :: one_minus_Fermi ! IF true: compute coeffs for
 	! one minus Fermi operator
-	REAL(8), INTENT(in) :: beta, mu, eps
-	COMPLEX(8), DIMENSION(nr_Fermi) :: cheb_coef_complex
-	REAL(8), INTENT(out), DIMENSION(nr_Fermi) :: cheb_coef
-	INTEGER, INTENT(out) :: n_cheb
-	REAL(8) :: r0, compare, x, prec, energy
+	REAL(KIND=8), INTENT(IN) :: beta, mu, eps
+	COMPLEX(KIND=8), DIMENSION(nr_Fermi) :: cheb_coef_complex
+	REAL(KIND=8), INTENT(OUT), DIMENSION(nr_Fermi) :: cheb_coef
+	INTEGER, INTENT(OUT) :: n_cheb
+	REAL(KIND=8) :: r0, compare, x, prec, energy
 	INTEGER :: i
 	r0 = 2 * pi / nr_Fermi
 
@@ -252,7 +202,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	END IF
 
 	! Fourier transform result
-	CALL fft(cheb_coef_complex, -1)
+	CALL fft(cheb_coef_complex, nr_Fermi, -1)
 
 	! Get number of nonzero elements
 	prec = -LOG10(eps)
@@ -280,67 +230,67 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf, n_cheb, n_indptr, n_indices, n_hop
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: wf_in
-	REAL(8), INTENT(in), DIMENSION(n_cheb) :: cheb_coef
-	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
-	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: s_hop
+	INTEGER, INTENT(IN) :: n_wf, n_cheb, n_indptr, n_indices, n_hop
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_cheb) :: cheb_coef
+	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
 
 	! declare vars
 	INTEGER :: i, k
-	REAL(8) :: sum_wf
-	COMPLEX(8), DIMENSION(n_wf), TARGET :: Tcheb0, Tcheb1, Tcheb2
-	COMPLEX(8), DIMENSION(:), POINTER :: p0, p1, p2
+	REAL(KIND=8) :: sum_wf
+	COMPLEX(KIND=8), DIMENSION(n_wf), TARGET :: Tcheb0, Tcheb1, Tcheb2
+	COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
 
 	! output
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf_out
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
 	CALL Hamiltonian(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
 					 n_indices, s_hop, n_hop, Tcheb1)
 
-	!$OMP parallel do
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		Tcheb0(i) = wf_in(i)
 		wf_out(i) = cheb_coef(1) * Tcheb0(i) + cheb_coef(2) * Tcheb1(i)
 	END DO
-	!$OMP end parallel do
+	!$OMP END PARALLEL DO
 
 	p0 => Tcheb0
 	p1 => Tcheb1
 	DO k=3, n_cheb
 		p2 => p0
 		CALL Hamiltonian(Tcheb1, n_wf, s_indptr, &
-						 n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
+			n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
-		!$OMP parallel do
+		!$OMP PARALLEL DO
 		DO i = 1, n_wf
 			p2(i) = 2 * Tcheb2(i) - p0(i)
 			wf_out(i) = wf_out(i) + cheb_coef(k) * p2(i)
 		END DO
-		!$OMP end parallel do
+		!$OMP END PARALLEL DO
 		p0 => p1
 		p1 => p2
 	END DO
 
 END SUBROUTINE fermi
 
-SUBROUTINE density_coef(n_wf, site_x, site_y, site_z, q_point, &
-						s_density_q, s_density_min_q)
+SUBROUTINE density_coef(n_wf, site_x, site_y, site_z, &
+						q_point, s_density_q, s_density_min_q)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf
-	REAL(8), INTENT(in), DIMENSION(n_wf) :: site_x, site_y, site_z
-	REAL(8), INTENT(in), DIMENSION(3) :: q_point
-	COMPLEX(8),INTENT(out),DIMENSION(n_wf)::s_density_q
-	COMPLEX(8),INTENT(out),DIMENSION(n_wf)::s_density_min_q
+	INTEGER, INTENT(IN) :: n_wf
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_wf) :: site_x, site_y, site_z
+	REAL(KIND=8), INTENT(IN), DIMENSION(3) :: q_point
+	COMPLEX(KIND=8),INTENT(OUT),DIMENSION(n_wf)::s_density_q
+	COMPLEX(KIND=8),INTENT(OUT),DIMENSION(n_wf)::s_density_min_q
 
 	! declare vars
 	INTEGER :: i,j
-	REAL(8) :: power
+	REAL(KIND=8) :: power
 
-	!$OMP parallel do private (power)
+	!$OMP PARALLEL DO PRIVATE (power)
 	DO i = 1, n_wf
 		power = q_point(1)*site_x(i) + &
 				q_point(2)*site_y(i) + &
@@ -348,7 +298,7 @@ SUBROUTINE density_coef(n_wf, site_x, site_y, site_z, q_point, &
 		s_density_q(i) = COS(power) + img*SIN(power)
 		s_density_min_q(i) = COS(power) - img*SIN(power)
 	END DO
-	!$OMP end parallel do
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE density_coef
 
@@ -357,23 +307,21 @@ SUBROUTINE density(wf_in, n_wf, s_density, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: s_density
-	COMPLEX(8), INTENT(in), DIMENSION(n_wf) :: wf_in
+	INTEGER, INTENT(IN) :: n_wf
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: s_density
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
 
 	! output
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf_out
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
 	! declare vars
 	INTEGER :: i
 
-	wf_out = 0.0d0
-
-	!$OMP parallel do
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		wf_out(i) = s_density(i) * wf_in(i)
 	END DO
-	!$OMP end parallel do
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE density
 
@@ -382,11 +330,11 @@ SUBROUTINE random_state(wf, n_wf, iseed)
 
 	! variables
 	IMPLICIT NONE
-	INTEGER, INTENT(in) :: n_wf, iseed
-	COMPLEX(8), INTENT(out), DIMENSION(n_wf) :: wf
+	INTEGER, INTENT(IN) :: n_wf, iseed
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf
 	INTEGER :: i, iseed0
-	REAL(8) :: f, g, wf_sum, abs_z_sq
-	COMPLEX(8) :: z
+	REAL(KIND=8) :: f, g, wf_sum, abs_z_sq
+	COMPLEX(KIND=8) :: z
 
 	! make random wf
 	iseed0=iseed*49741
@@ -396,13 +344,13 @@ SUBROUTINE random_state(wf, n_wf, iseed)
 	DO i = 1, n_wf
 		f=ranx(0)
 		g=ranx(0)
-		abs_z_sq = -1.0d0 * LOG(1.0d0 - f) ! dirichlet distribution
-		z = dsqrt(abs_z_sq)*EXP(img*2*pi*g) ! give random phase
+		abs_z_sq = -1.0D0 * LOG(1.0D0 - f) ! dirichlet distribution
+		z = DSQRT(abs_z_sq)*EXP(img*2*pi*g) ! give random phase
 		wf(i) = z
 		wf_sum = wf_sum + abs_z_sq
 	END DO
 	DO i = 1, n_wf
-		wf(i) = wf(i)/dsqrt(wf_sum)
+		wf(i) = wf(i)/DSQRT(wf_sum)
 	END DO
 
 CONTAINS
@@ -411,7 +359,7 @@ CONTAINS
 	FUNCTION ranx(idum)
 	INTEGER :: idum, n
 	INTEGER, ALLOCATABLE :: seed(:)
-	REAL*8 :: ranx
+	REAL(KIND=8) :: ranx
 	IF (idum>0) THEN
 		CALL random_SEED(size=n)
 		ALLOCATE(seed(n))
@@ -480,8 +428,8 @@ SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
 		END DO
 		!$OMP END PARALLEL DO
 
-		CALL Hamiltonian(n1, n_wf, s_indptr, n_indptr, s_indices, &
-						 n_indices, s_hop, n_hop, n2)
+		CALL Hamiltonian(n1, n_wf, s_indptr, &
+			n_indptr, s_indices, n_indices, s_hop, n_hop, n2)
 		coefa(i) = inner_prod(n1, n2, n_wf)
 
 		!$OMP PARALLEL DO
