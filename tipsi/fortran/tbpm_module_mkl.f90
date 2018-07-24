@@ -260,7 +260,7 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
 	p1 => Tcheb1
 	DO k=3, n_cheb
 		p2 => p0
-		CALL Hamiltonian(Tcheb1, n_wf, s_indptr, &
+		CALL Hamiltonian(p1, n_wf, s_indptr, &
 			n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
 		!$OMP PARALLEL DO

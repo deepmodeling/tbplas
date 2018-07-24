@@ -132,7 +132,7 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
 	p1 => Tcheb1
 	DO k=3, n_Bes
 		p2 => p0
-		CALL Hamiltonian(Tcheb1, n_wf, s_indptr, n_indptr, s_indices, &
+		CALL Hamiltonian(p1, n_wf, s_indptr, n_indptr, s_indices, &
 						 n_indices, s_hop, n_hop, Tcheb2)
 
 		!$OMP parallel do
@@ -310,7 +310,7 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
 	p1 => Tcheb1
 	DO k=3, n_cheb
 		p2 => p0
-		CALL Hamiltonian(Tcheb1, n_wf, s_indptr, &
+		CALL Hamiltonian(p1, n_wf, s_indptr, &
 						 n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
 
 		!$OMP parallel do
@@ -397,12 +397,12 @@ SUBROUTINE random_state(wf, n_wf, iseed)
 		f=ranx(0)
 		g=ranx(0)
 		abs_z_sq = -1.0d0 * LOG(1.0d0 - f) ! dirichlet distribution
-		z = dsqrt(abs_z_sq)*EXP(img*2*pi*g) ! give random phase
+		z = DSQRT(abs_z_sq)*EXP(img*2*pi*g) ! give random phase
 		wf(i) = z
 		wf_sum = wf_sum + abs_z_sq
 	END DO
 	DO i = 1, n_wf
-		wf(i) = wf(i)/dsqrt(wf_sum)
+		wf(i) = wf(i)/DSQRT(wf_sum)
 	END DO
 
 CONTAINS
@@ -413,16 +413,16 @@ CONTAINS
 	INTEGER, ALLOCATABLE :: seed(:)
 	REAL*8 :: ranx
 	IF (idum>0) THEN
-		CALL random_SEED(size=n)
+		CALL random_seed(size=n)
 		ALLOCATE(seed(n))
 		! is there a better way to create a seed array
 		! based on the input integer?
 		DO i=1, n
 			seed(i)=INT(MODULO(i * idum * 74231, 104717))
 		END DO
-		CALL random_SEED(put=seed)
+		CALL random_seed(put=seed)
 	END IF
-	CALL random_NUMBER(ranx)
+	CALL random_number(ranx)
 	END FUNCTION ranx
 
 END SUBROUTINE random_state
