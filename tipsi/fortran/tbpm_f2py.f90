@@ -750,10 +750,10 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 		DO i = 1, n_energies
 			QE_sum = 0
 			DO j = 1, n_wf
-				QE_sum = QE_sum + ABS(wf_QE(i, j))**2
+				QE_sum = QE_sum + ABS(wfq(i, j))**2
 			END DO
 			DO j = 1, n_wf
-				wf_QE(i, j) = wf_QE(i, j)/DSQRT(QE_sum)
+				wfq(i, j) = wfq(i, j)/DSQRT(QE_sum)
 			END DO
 		END DO
 
