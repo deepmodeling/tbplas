@@ -269,7 +269,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 		END IF
 	END DO
 	IF (n_cheb==0) THEN
-		PRINT *,"WARNING: not enough Fermi operator Cheb. coeficcients"
+		PRINT *,"WARNING: not enough Fermi operator Cheb. coefficients"
 	END IF
 
 END SUBROUTINE get_Fermi_cheb_coef
@@ -429,8 +429,8 @@ END SUBROUTINE random_state
 
 ! Haydock recursion method
 SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
-		s_indptr, n_indptr, s_indices, n_indices, &
-		s_hop, n_hop, coefa, coefb)
+					 s_indptr, n_indptr, s_indices, n_indices, &
+					 s_hop, n_hop, coefa, coefb)
 	IMPLICIT NONE
 	! deal with input
 	INTEGER, INTENT(IN) :: n_depth, n_indptr, n_indices
