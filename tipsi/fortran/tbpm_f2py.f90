@@ -571,7 +571,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			!$OMP PARALLEL DO PRIVATE (j)
 			DO i = 1, n_en_inds
 
-				en = energies(en_inds(i))
+				en = energies(en_inds(i) + 1)
 
 				DO j = 1, n_wf
 					wf_QE(i,j) = wf_QE(i,j) + &
@@ -605,7 +605,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 				PRINT*, "Getting DC conductivity for energy: ", &
 						i, " of ", n_en_inds
 			END IF
-			WRITE(28,*) "Energy ", i, en_inds(i), energies(en_inds(i))
+			WRITE(28,*) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
 
 			! get corresponding quasi-eigenstate
 			wfE(:) = wf_QE(i,:)/ABS(inner_prod(wf0(:),wf_QE(i,:), n_wf))
