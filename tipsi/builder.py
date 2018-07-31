@@ -868,8 +868,8 @@ class Sample:
                         r0[1] + rel_tag[1], \
                         r0[2] + rel_tag[2], \
                         rel_tag[3])
-                # check if tag in sample
-                if (tag1 in self.tag_to_index):
+                # if tag in sample, add
+                try:
                     i1 = self.tag_to_index[tag1]
                     indices.append(i1)
                     indptr[-1] += 1
@@ -877,12 +877,12 @@ class Sample:
                     dx.append(self.site_x[i1] - self.site_x[i0])
                     dy.append(self.site_y[i1] - self.site_y[i0])
                 # check pbc
-                else:
+                except KeyError:
                     r1 = tag1[0:3]
                     orb1 = tag1[3]
                     pbc_r, pbc_orb = self.bc_func(r1, orb1)
                     pbc_tag = pbc_r + (pbc_orb, )
-                    if (pbc_tag in self.tag_to_index):
+                    try:
                         i1 = self.tag_to_index[pbc_tag]
                         pos = self.lattice.site_pos(r1, orb1)
                         indices.append(i1)
@@ -890,6 +890,8 @@ class Sample:
                         hop.append(hopping)
                         dx.append(pos[0] - self.site_x[i0])
                         dy.append(pos[1] - self.site_y[i0])
+                    except KeyError:
+                        pass
 
         # return results
         if conn:
