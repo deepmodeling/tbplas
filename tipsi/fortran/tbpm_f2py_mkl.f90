@@ -21,9 +21,10 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 	CHARACTER*(*), INTENT(IN) :: output_filename
 
 	! declare vars
-	INTEGER :: i_sample,k, i, n_wf
+	INTEGER :: i_sample,k, i, n_wf, n_calls
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0, wf_t
 	COMPLEX(8) :: corrval
+	TYPE(SPARSE_MATRIX_T) :: H_csr
 
 	! output
 	COMPLEX(8), INTENT(OUT), DIMENSION(n_timestep) :: corr
@@ -31,6 +32,9 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 	! set some values
 	corr = 0.0d0
 	n_wf = n_indptr - 1
+	n_calls = n_ran_samples * n_timestep * (n_Bes - 1)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	OPEN(unit=27,file=output_filename)
 	WRITE(27,*) "Number of samples =", n_ran_samples
@@ -46,10 +50,8 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 
 		! make random state
 		CALL random_state(wf0, n_wf, seed*i_sample)
-		CALL cheb_wf_timestep(wf0, n_wf, Bes, n_Bes, &
-							  s_indptr, n_indptr, s_indices, n_indices, &
-							  s_hop, n_hop, wf_t)
-		corrval = DOT_PRODUCT(wf0, wf_t)
+		CALL cheb_wf_timestep(wf0, n_wf, Bes, n_Bes, 1, H_csr, wf_t)
+		corrval = zdotc(n_wf, wf0, 1, wf_t, 1)
 
 		WRITE(27,*) 1, REAL(corrval), AIMAG(corrval)
 		corr(1) = corr(1) + corrval / n_ran_samples
@@ -60,10 +62,8 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 				PRINT*, "Timestep ", k, " of ", n_timestep
 			END IF
 
-			CALL cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  s_hop, n_hop, wf_t)
-			corrval = DOT_PRODUCT(wf0, wf_t)
+			CALL cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, 1, H_csr, wf_t)
+			corrval = zdotc(n_wf, wf0, 1, wf_t, 1)
 
 			WRITE(27,*) k, REAL(corrval), AIMAG(corrval)
 			corr(k) = corr(k) + corrval / n_ran_samples
@@ -96,10 +96,11 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
 	CHARACTER*(*), INTENT(IN) :: output_filename
 
 	! declare vars
-	INTEGER :: k, i, n_wf, i_sample
+	INTEGER :: k, i, n_wf, i_sample, n_calls
 	COMPLEX(8), DIMENSION(n_siteind) :: wf_temp
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0, wf_t
 	COMPLEX(8) :: corrval
+	TYPE(SPARSE_MATRIX_T) :: H_csr
 
 	! output
 	COMPLEX(8), INTENT(OUT), DIMENSION(n_timestep) :: corr
@@ -107,6 +108,9 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
 	! set some values
 	corr = 0.0d0
 	n_wf = n_indptr - 1
+	n_calls = n_ran_samples * n_timestep * (n_Bes - 1)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	OPEN(unit=27,file=output_filename)
 	WRITE(27,*) "Number of samples =", n_ran_samples
@@ -125,20 +129,20 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
 		DO i = 1, n_siteind
 			wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
 		END DO
-		DO i = 1, n_wf
-			wf_t(i) = wf0(i)
-		END DO
+		CALL cheb_wf_timestep(wf0, n_wf, Bes, n_Bes, 1, H_csr, wf_t)
+		corrval = zdotc(n_wf, wf0, 1, wf_t, 1)
+
+		WRITE(27,*) 1, REAL(corrval), AIMAG(corrval)
+		corr(1) = corr(1) + corrval / n_ran_samples
 
 		! iterate over time, get correlation function
-		DO k = 1, n_timestep
+		DO k = 2, n_timestep
 			IF (MODULO(k,64) == 0) THEN
 				PRINT*, "Timestep ", k, " of ", n_timestep
 			END IF
 
-			CALL cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  s_hop, n_hop, wf_t)
-			corrval = DOT_PRODUCT(wf0, wf_t)
+			CALL cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, 1, H_csr, wf_t)
+			corrval = zdotc(n_wf, wf0, 1, wf_t, 1)
 
 			WRITE(27,*) k, REAL(corrval), AIMAG(corrval)
 			corr(k) = corr(k) + corrval / n_ran_samples
@@ -173,14 +177,15 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	CHARACTER*(*), INTENT(IN) :: output_filename
 
 	! declare vars
-	INTEGER :: i_sample, k, i, j, n_cheb, n_wf
+	INTEGER :: i_sample, k, i, j, n_cheb, n_wf, n_calls
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0,wf1,psi1_x,psi1_y,psi2
-	REAL(8), ALLOCATABLE :: coef(:)
+	REAL(8), DIMENSION(nr_Fermi), TARGET :: coef1, coef2
 	COMPLEX(8), DIMENSION(4) :: corrval
-	REAL(8), ALLOCATABLE :: coef_F(:) ! cheb coefs for Fermi operator
-	REAL(8), ALLOCATABLE :: coef_omF(:) ! cheb coefs one minus Fermi operator
+	REAL(8), POINTER :: coef_F(:) ! cheb coefs for Fermi operator
+	REAL(8), POINTER :: coef_omF(:) ! cheb coefs one minus Fermi operator
 	COMPLEX(8), DIMENSION(n_hop) :: sys_current_x ! coefs for x current
 	COMPLEX(8), DIMENSION(n_hop) :: sys_current_y ! coefs for y current
+	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
 
 	! output
 	COMPLEX(8), INTENT(OUT), DIMENSION(4, n_timestep) :: corr
@@ -196,35 +201,31 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	WRITE(27,*) "Number of timesteps =", n_timestep
 
 	! get current coefficients
-	CALL current_coefficient(s_hop, s_dx, n_hop, sys_current_x)
-	CALL current_coefficient(s_hop, s_dy, n_hop, sys_current_y)
-	sys_current_x = H_rescale * sys_current_x
-	sys_current_y = H_rescale * sys_current_y
+	n_calls = n_ran_samples * (1 + 2 * n_timestep)
+	CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, sys_current_x, n_hop, cur_csr_x)
+	CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, sys_current_y, n_hop, cur_csr_y)
 
 	! get Fermi cheb coefficients
-	ALLOCATE(coef(nr_Fermi))
-	coef = 0.0d0
-	CALL get_Fermi_cheb_coef(coef, n_cheb, nr_Fermi,&
+	CALL get_Fermi_cheb_coef(coef1, n_cheb, nr_Fermi, &
 							 beta, mu, .FALSE., Fermi_precision)
-	ALLOCATE(coef_F(n_cheb))
-	DO i=1, n_cheb
-		coef_F(i) = coef(i)
-	END DO
+	coef_F => coef1(1:n_cheb)
 
 	! get one minus Fermi cheb coefficients
-	coef = 0.0d0
-	CALL get_Fermi_cheb_coef(coef, n_cheb,&
-			nr_Fermi, beta, mu, .TRUE., Fermi_precision)
-	ALLOCATE(coef_omF(n_cheb))
-	DO i=1, n_cheb
-		coef_omF(i) = coef(i)
-	END DO
-	DEALLOCATE(coef)
+	CALL get_Fermi_cheb_coef(coef2, n_cheb, nr_Fermi, &
+							 beta, mu, .TRUE., Fermi_precision)
+	coef_omF => coef2(1:n_cheb)
+
+	n_calls = n_ran_samples * 3 * ((n_cheb-1) + (n_timestep-1)*(n_Bes-1))
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	PRINT*, "Calculating AC conductivity correlation function."
 
 	! Average over (n_sample) samples
-	corr = 0.0d0
 	DO i_sample=1, n_ran_samples
 
 		PRINT*, "Sample ", i_sample, " of ", n_ran_samples
@@ -232,33 +233,21 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 		! make random state and psi1, psi2
 		CALL random_state(wf0, n_wf, seed*i_sample)
-		CALL current(wf0, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_x, n_hop, psi1_x)
-		CALL current(wf0, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_y, n_hop, psi1_y)
-		CALL Fermi(psi1_x, n_wf, coef_omF, n_cheb, &
-			s_indptr, n_indptr, s_indices, n_indices, &
-			s_hop, n_hop, psi1_x)
-		CALL Fermi(psi1_y, n_wf, coef_omF, n_cheb, &
-			s_indptr, n_indptr, s_indices, n_indices, &
-			s_hop, n_hop, psi1_y)
-		CALL Fermi(wf0, n_wf, coef_F, n_cheb, &
-			s_indptr, n_indptr, s_indices, n_indices, &
-			s_hop, n_hop, psi2)
+		CALL current(wf0, n_wf, cur_csr_x, psi1_x)
+		CALL current(wf0, n_wf, cur_csr_y, psi1_y)
+		CALL Fermi(psi1_x, n_wf, coef_omF, n_cheb, H_csr, psi1_x)
+		CALL Fermi(psi1_y, n_wf, coef_omF, n_cheb, H_csr, psi1_y)
+		CALL Fermi(wf0, n_wf, coef_F, n_cheb, H_csr, psi2)
 
 		!get correlation functions in all directions
-		CALL current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_x, n_hop, wf1)
-		corrval(1) = DOT_PRODUCT(psi2, wf1)
-		CALL current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_y, n_hop, wf1)
-		corrval(2) = DOT_PRODUCT(psi2, wf1)
-		CALL current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_x, n_hop, wf1)
-		corrval(3) = DOT_PRODUCT(psi2, wf1)
-		CALL current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
-			n_indices, sys_current_y, n_hop, wf1)
-		corrval(4) = DOT_PRODUCT(psi2, wf1)
+		CALL current(psi1_x, n_wf, cur_csr_x, wf1)
+		corrval(1) = zdotc(n_wf, psi2, 1, wf1, 1)
+		CALL current(psi1_x, n_wf, cur_csr_y, wf1)
+		corrval(2) = zdotc(n_wf, psi2, 1, wf1, 1)
+		CALL current(psi1_y, n_wf, cur_csr_x, wf1)
+		corrval(3) = zdotc(n_wf, psi2, 1, wf1, 1)
+		CALL current(psi1_y, n_wf, cur_csr_y, wf1)
+		corrval(4) = zdotc(n_wf, psi2, 1, wf1, 1)
 
 		! write to file
 		WRITE(27,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3,&
@@ -276,29 +265,19 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			END IF
 
 			! calculate time evolution
-			CALL cheb_wf_timestep(psi1_x, n_wf, Bes, n_Bes, &
-					s_indptr, n_indptr, s_indices, n_indices, &
-					s_hop, n_hop, psi1_x)
-			CALL cheb_wf_timestep(psi1_y, n_wf, Bes, n_Bes, &
-					s_indptr, n_indptr, s_indices, n_indices, &
-					s_hop, n_hop, psi1_y)
-			CALL cheb_wf_timestep(psi2, n_wf, Bes, n_Bes, &
-					s_indptr, n_indptr, s_indices, n_indices, &
-					s_hop, n_hop, psi2)
+			CALL cheb_wf_timestep(psi1_x, n_wf, Bes, n_Bes, 1, H_csr, psi1_x)
+			CALL cheb_wf_timestep(psi1_y, n_wf, Bes, n_Bes, 1, H_csr, psi1_y)
+			CALL cheb_wf_timestep(psi2, n_wf, Bes, n_Bes, 1, H_csr, psi2)
 
 			!get correlation functions in all directions
-			CALL current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
-					n_indices, sys_current_x, n_hop, wf1)
-			corrval(1) = DOT_PRODUCT(psi2, wf1)
-			CALL current(psi1_x, n_wf, s_indptr, n_indptr, s_indices, &
-					n_indices, sys_current_y, n_hop, wf1)
-			corrval(2) = DOT_PRODUCT(psi2, wf1)
-			CALL current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
-					n_indices, sys_current_x, n_hop, wf1)
-			corrval(3) = DOT_PRODUCT(psi2, wf1)
-			CALL current(psi1_y, n_wf, s_indptr, n_indptr, s_indices, &
-					n_indices, sys_current_y, n_hop, wf1)
-			corrval(4) = DOT_PRODUCT(psi2, wf1)
+			CALL current(psi1_x, n_wf, cur_csr_x, wf1)
+			corrval(1) = zdotc(n_wf, psi2, 1, wf1, 1)
+			CALL current(psi1_x, n_wf, cur_csr_y, wf1)
+			corrval(2) = zdotc(n_wf, psi2, 1, wf1, 1)
+			CALL current(psi1_y, n_wf, cur_csr_x, wf1)
+			corrval(3) = zdotc(n_wf, psi2, 1, wf1, 1)
+			CALL current(psi1_y, n_wf, cur_csr_y, wf1)
+			corrval(4) = zdotc(n_wf, psi2, 1, wf1, 1)
 
 			! write to file
 			WRITE(27,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3,&
@@ -351,37 +330,35 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	CHARACTER*(*), INTENT(IN) :: output_filename
 
 	! declare vars
-	INTEGER :: i_sample, k, i, j, n_cheb, i_q, n_wf
+	INTEGER :: i_sample, k, i, j, n_cheb, i_q, n_wf, n_calls
 	REAL(8) :: omega, eps, W, tau, dpi, dpr, corrval
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0, wf1, psi1, psi2
-	REAL(8), ALLOCATABLE :: coef(:) ! temp variable
-	REAL(8), ALLOCATABLE :: coef_F(:) ! cheb coefs for Fermi operator
-	REAL(8), ALLOCATABLE :: coef_omF(:) ! cheb coefs one minus Fermi operator
-	COMPLEX(8), DIMENSION(n_indptr - 1 ) :: s_density_q, s_density_min_q ! coefs for density
+	REAL(8), DIMENSION(nr_Fermi), TARGET :: coef1, coef2
+	REAL(8), POINTER :: coef_F(:) ! cheb coefs for Fermi operator
+	REAL(8), POINTER :: coef_omF(:) ! cheb coefs one minus Fermi operator
+	! coefs for density
+	COMPLEX(8), DIMENSION(n_indptr - 1 ) :: s_density_q, s_density_min_q
+	TYPE(SPARSE_MATRIX_T) :: H_csr
 
+	! output
 	REAL(8), INTENT(OUT), DIMENSION(n_q_points, n_timestep) :: corr
+
+	! set some values
 	n_wf = n_indptr - 1
 	corr = 0.0d0
+	n_calls = n_ran_samples * 2 * ((n_cheb-1) + (n_timestep-1)*(n_Bes-1))
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	! get Fermi cheb coefficients
-	ALLOCATE(coef(nr_Fermi))
-	coef = 0.0d0
-	CALL get_Fermi_cheb_coef(coef,n_cheb,nr_Fermi,&
-			beta,mu,.FALSE.,Fermi_precision)
-	ALLOCATE(coef_F(n_cheb))
-	DO i=1, n_cheb
-		coef_F(i) = coef(i)
-	END DO
+	CALL get_Fermi_cheb_coef(coef1, n_cheb, nr_Fermi, &
+							 beta, mu, .FALSE., Fermi_precision)
+	coef_F => coef1(1:n_cheb)
 
 	! get one minus Fermi cheb coefficients
-	coef = 0.0d0
-	CALL get_Fermi_cheb_coef(coef,n_cheb,&
-		nr_Fermi,beta,mu,.TRUE.,Fermi_precision)
-	ALLOCATE(coef_omF(n_cheb))
-	DO i=1, n_cheb
-		coef_omF(i) = coef(i)
-	END DO
-	DEALLOCATE(coef)
+	CALL get_Fermi_cheb_coef(coef2, n_cheb, nr_Fermi, &
+							 beta, mu, .TRUE., Fermi_precision)
+	coef_omF => coef2(1:n_cheb)
 
 	OPEN(unit=27,file=output_filename)
 	WRITE(27,*) "Number of qpoints =", n_q_points
@@ -399,7 +376,7 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 		!calculate the coefficients for the density operator
 		!exp(i* q dot r)
 		CALL density_coef(n_wf, s_site_x, s_site_y, s_site_z, &
-			q_points(i_q,:), s_density_q, s_density_min_q)
+						  q_points(i_q,:), s_density_q, s_density_min_q)
 
 		! Average over (n_ran_samples) samples
 		DO i_sample=1, n_ran_samples
@@ -411,18 +388,14 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			! call density(-q)*wf0, resulting in psi1
 			CALL density(wf0, n_wf, s_density_min_q, psi1)
 			! call fermi with 1-fermi coefficients for psi1
-			CALL Fermi(psi1, n_wf, coef_omF, n_cheb, &
-				s_indptr, n_indptr, s_indices, n_indices, &
-				s_hop, n_hop, psi1)
+			CALL Fermi(psi1, n_wf, coef_omF, n_cheb, H_csr, psi1)
 			! call fermi with fermi coefficients for psi2
-			CALL Fermi(wf0, n_wf, coef_F, n_cheb, &
-				s_indptr, n_indptr, s_indices, n_indices, &
-				s_hop, n_hop, psi2)
+			CALL Fermi(wf0, n_wf, coef_F, n_cheb, H_csr, psi2)
 			! call density(q)*psi1, resulting in wf1
 			CALL density(psi1, n_wf, s_density_q, wf1)
 
 			! get correlation and store
-			corrval = AIMAG(DOT_PRODUCT(psi2, wf1))
+			corrval = AIMAG(zdotc(n_wf, psi2, 1, wf1, 1))
 			WRITE(27,*) 1, corrval
 			corr(i_q, 1) = corr(i_q, 1) + corrval / n_ran_samples
 
@@ -433,16 +406,12 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			END IF
 
 			! call time and density operators
-			CALL cheb_wf_timestep(psi1, n_wf, Bes, n_Bes, &
-					s_indptr, n_indptr, s_indices, n_indices, &
-					s_hop, n_hop, psi1)
-			CALL cheb_wf_timestep(psi2, n_wf, Bes, n_Bes, &
-					s_indptr, n_indptr, s_indices, n_indices, &
-					s_hop, n_hop, psi2)
+			CALL cheb_wf_timestep(psi1, n_wf, Bes, n_Bes, 1, H_csr, psi1)
+			CALL cheb_wf_timestep(psi2, n_wf, Bes, n_Bes, 1, H_csr, psi2)
 			CALL density(psi1, n_wf, s_density_q, wf1)
 
 			! get correlation and store
-			corrval = AIMAG(DOT_PRODUCT(psi2, wf1))
+			corrval = AIMAG(zdotc(n_wf, psi2, 1, wf1, 1))
 			WRITE(27,*) k, corrval
 			corr(i_q, k) = corr(i_q, k) + corrval / n_ran_samples
 
@@ -483,7 +452,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	CHARACTER*(*), INTENT(IN) :: output_filename_dc
 
 	! declare vars
-	INTEGER :: i_sample,i, j, k, l, t, n_wf
+	INTEGER :: i_sample,i, j, k, l, t, n_wf, n_calls
 	REAL(8) :: W, QE_sum, en
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0,wf_t_pos,wf_t_neg,wfE
 	COMPLEX(8), DIMENSION(n_en_inds, n_indptr - 1) :: wf_QE
@@ -494,6 +463,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	COMPLEX(8), DIMENSION(n_hop) :: sys_current_y ! coefs for y current
 	COMPLEX(8) :: dos_corrval
 	COMPLEX(8), DIMENSION(2) :: dc_corrval
+	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
 
 	! output
 	COMPLEX(8), INTENT(OUT), DIMENSION(n_timestep) :: dos_corr
@@ -504,6 +474,9 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	n_wf = n_indptr - 1
 	dos_corr = 0.0d0
 	dc_corr = 0.0d0
+	n_calls = n_ran_samples*2*(n_timestep+n_en_inds*(n_timestep-1))*(n_Bes-1)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	! prepare output files
 	OPEN(unit=27,file=output_filename_dos)
@@ -516,10 +489,13 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	WRITE(28,*) "Number of timesteps =", n_timestep
 
 	! get current coefficients
-	CALL current_coefficient(s_hop, s_dx, n_hop, sys_current_x)
-	CALL current_coefficient(s_hop, s_dy, n_hop, sys_current_y)
-	sys_current_x = H_rescale * sys_current_x
-	sys_current_y = H_rescale * sys_current_y
+	n_calls = n_ran_samples * 4 * n_en_inds
+	! CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
+	! CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+	! 					 n_indices, sys_current_x, n_hop, cur_csr_x)
+	CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, sys_current_y, n_hop, cur_csr_y)
 
 	PRINT*, "Calculating DC conductivity correlation function."
 
@@ -555,14 +531,12 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 			! time evolution
 			CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  s_hop, n_hop, wf_t_pos)
+								  1, H_csr, wf_t_pos)
 			CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  -s_hop, n_hop, wf_t_neg)
+								  -1, H_csr, wf_t_neg)
 
 			! get dos correlation
-			dos_corrval = DOT_PRODUCT(wf0, wf_t_pos)
+			dos_corrval = zdotc(n_wf, wf0, 1, wf_t_pos, 1)
 			dos_corr(k) = dos_corr(k) + dos_corrval/n_ran_samples
 			WRITE(27,*) k, REAL(dos_corrval), AIMAG(dos_corrval)
 
@@ -608,21 +582,17 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			WRITE(28,*) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
 
 			! get corresponding quasi-eigenstate
-			wfE(:) = wf_QE(i,:)/ABS(DOT_PRODUCT(wf0(:),wf_QE(i,:)))
+			wfE(:) = wf_QE(i,:)/ABS(zdotc(n_wf, wf0(:), 1, wf_QE(i,:), 1))
 
 			! make psi1, psi2
-			CALL current(wf0, n_wf, s_indptr, n_indptr, s_indices, n_indices, &
-						 sys_current_y, n_hop, wf0_J(1,:))
-			CALL current(wf0, n_wf, s_indptr, n_indptr, s_indices, n_indices, &
-						 sys_current_y, n_hop, wf0_J(2,:))
-			CALL current(wfE, n_wf, s_indptr, n_indptr, s_indices, n_indices, &
-						 sys_current_y, n_hop, wfE_J(1,:))
-			CALL current(wfE, n_wf, s_indptr, n_indptr, s_indices, n_indices, &
-						 sys_current_y, n_hop, wfE_J(2,:))
+			CALL current(wf0, n_wf, cur_csr_y, wf0_J(1,:))
+			CALL current(wf0, n_wf, cur_csr_y, wf0_J(2,:))
+			CALL current(wfE, n_wf, cur_csr_y, wfE_J(1,:))
+			CALL current(wfE, n_wf, cur_csr_y, wfE_J(2,:))
 
 			! get correlation values
-			dc_corrval(1) = DOT_PRODUCT(wf0_J(1,:),wfE_J(1,:))
-			dc_corrval(2) = DOT_PRODUCT(wf0_J(2,:),wfE_J(2,:))
+			dc_corrval(1) = zdotc(n_wf, wf0_J(1,:), 1, wfE_J(1,:), 1)
+			dc_corrval(2) = zdotc(n_wf, wf0_J(2,:), 1, wfE_J(2,:), 1)
 
 			! write to file
 			WRITE(28,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)")&
@@ -638,15 +608,13 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 			DO k = 2, n_timestep
 			! NEGATIVE time evolution of QE state
 			CALL cheb_wf_timestep(wfE_J(1,:), n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  -s_hop, n_hop, wfE_J(1,:))
+								  -1, H_csr, wfE_J(1,:))
 			CALL cheb_wf_timestep(wfE_J(2,:), n_wf, Bes, n_Bes, &
-								  s_indptr, n_indptr, s_indices, n_indices, &
-								  -s_hop, n_hop, wfE_J(2,:))
+								  -1, H_csr, wfE_J(2,:))
 
 			! get correlation values
-			dc_corrval(1) = DOT_PRODUCT(wf0_J(1,:),wfE_J(1,:))
-			dc_corrval(2) = DOT_PRODUCT(wf0_J(2,:),wfE_J(2,:))
+			dc_corrval(1) = zdotc(n_wf, wf0_J(1,:), 1, wfE_J(1,:), 1)
+			dc_corrval(2) = zdotc(n_wf, wf0_J(2,:), 1, wfE_J(2,:), 1)
 
 			! write to file
 			WRITE(28,"(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)")&
@@ -686,16 +654,19 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 	REAL(8), INTENT(IN), DIMENSION(n_energies) :: energies
 
 	! declare vars
-	INTEGER :: i, j, k, l, t, n_wf, i_sample
+	INTEGER :: i, j, k, l, t, n_wf, i_sample, n_calls
 	REAL(8) :: W, QE_sum
 	COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg
 	COMPLEX(8), DIMENSION(n_energies,n_indptr-1) :: wfq
+	TYPE(SPARSE_MATRIX_T) :: H_csr
 
 	! output
 	REAL(8), INTENT(OUT), DIMENSION(n_energies, n_indptr - 1) :: wf_QE
 	n_wf = n_indptr - 1
-
 	wf_QE = 0D0
+	n_calls = n_ran_samples * 2 * n_timestep * (n_Bes - 1)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 
 	PRINT*, "Calculating quasi-eigenstates."
 
@@ -725,11 +696,9 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
             END IF
 
             CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, n_Bes, &
-                s_indptr, n_indptr, s_indices, n_indices, &
-                s_hop, n_hop, wf_t_pos)
+								  1, H_csr, wf_t_pos)
             CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, n_Bes, &
-                s_indptr, n_indptr, s_indices, n_indices, &
-                -s_hop, n_hop, wf_t_neg)
+                				  -1, H_csr, wf_t_neg)
 
             W = 0.5*(1+cos(pi*k/n_timestep)) ! Hanning window
 
@@ -786,21 +755,27 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
 
 	! declare variables
 	COMPLEX(KIND=8) :: g00
-	INTEGER :: i
+	INTEGER :: i, n_wf
 	COMPLEX(KIND=8), DIMENSION(n_depth) :: coefa
 	REAL(KIND=8), DIMENSION(n_depth) :: coefb
+	TYPE(SPARSE_MATRIX_T) :: H_csr
 
 	! output
 	REAL(KIND=8), INTENT(OUT), DIMENSION(-n_timestep:n_timestep) :: energy
 	REAL(KIND=8), INTENT(OUT), DIMENSION(-n_timestep:n_timestep) :: ldos
 
+	n_wf = n_indptr - 1
+	CALL make_csr_matrix(n_wf, n_depth, s_indptr, n_indptr, s_indices, &
+						 n_indices, s_hop, n_hop, H_csr)
 	energy = (/(0.5*i*E_range/n_timestep, i = -n_timestep, n_timestep)/)
-	CALL recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
-				   s_indptr, n_indptr, s_indices, n_indices, &
-				   s_hop, n_hop, coefa, coefb)
 
+	CALL recursion(site_indices, n_siteind, n_wf, wf_weights, n_wfw, &
+				   n_depth, H_csr, coefa, coefb)
+
+	!$OMP PARALLEL DO PRIVATE(g00)
 	DO i = -n_timestep, n_timestep
 		CALL green_function(energy(i), delta, coefa, coefb, n_depth, g00)
 		ldos(i) = -1D0 / pi * AIMAG(g00)
 	END DO
+	!$OMP END PARALLEL DO
 END SUBROUTINE ldos_haydock

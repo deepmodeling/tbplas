@@ -2,26 +2,24 @@
 ! MODULE with helper functions for tbpm_f2py
 ! ------------------------------------------
 
+INCLUDE 'mkl_spblas.f90'
+
 MODULE tbpm_mod
 
+	USE mkl_spblas
 	IMPLICIT NONE
 	REAL(KIND=8), PARAMETER :: pi=3.141592653589793238460D0
 	COMPLEX(KIND=8), PARAMETER :: img = CMPLX(0.0D0, 1.0D0, KIND=8)
-
-CONTAINS
-
-! Scalar product
-COMPLEX(KIND=8) FUNCTION inner_prod(A, B, N)
-
-	IMPLICIT NONE
-	INTEGER, INTENT(IN) :: N
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(N) :: A, B
+	COMPLEX(KIND=8), PARAMETER :: zero_cmp = CMPLX(0D0, 0D0, KIND=8)
+	COMPLEX(KIND=8), PARAMETER :: one_cmp = CMPLX(1D0, 0D0, KIND=8)
 	COMPLEX(KIND=8), EXTERNAL :: zdotc
 
-	! use BLAS to calculate the inner product
-	inner_prod = zdotc(N, A, 1, B, 1)
+	TYPE(MATRIX_DESCR), PARAMETER :: H_descr = &
+		MATRIX_DESCR(type = SPARSE_MATRIX_TYPE_GENERAL, &
+					 mode = SPARSE_FILL_MODE_FULL, &
+					 diag = SPARSE_DIAG_NON_UNIT)
 
-END FUNCTION inner_prod
+CONTAINS
 
 ! FFTW interface
 SUBROUTINE fft(x, n_x, sgn)
@@ -38,39 +36,68 @@ SUBROUTINE fft(x, n_x, sgn)
 
 END SUBROUTINE fft
 
+! Build csr matrix
+SUBROUTINE make_csr_matrix(n_wf, n_calls, s_indptr, n_indptr, s_indices, &
+						   n_indices, s_values, n_values, mat_csr)
+	IMPLICIT NONE
+	! deal with input
+	INTEGER, INTENT(IN) :: n_wf, n_calls, n_indptr, n_indices, n_values
+	INTEGER, INTENT(IN), DIMENSION(n_indptr), TARGET :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_values) :: s_values
+
+	! declare vars
+	INTEGER :: stat
+	INTEGER, DIMENSION(:), POINTER :: rows_start, rows_end
+
+	! output
+	TYPE(SPARSE_MATRIX_T), INTENT(OUT) :: mat_csr
+
+	rows_start => s_indptr(1:n_indptr-1)
+	rows_end => s_indptr(2:n_indptr)
+
+	stat = mkl_sparse_z_create_csr(mat_csr, SPARSE_INDEX_BASE_ZERO, n_wf,n_wf,&
+								   rows_start, rows_end, s_indices, s_values)
+	! set optimizations
+	stat = mkl_sparse_set_mv_hint(mat_csr, SPARSE_OPERATION_NON_TRANSPOSE, &
+								  H_descr, n_calls)
+	stat = mkl_sparse_set_memory_hint(mat_csr, SPARSE_MEMORY_AGGRESSIVE)
+	stat = mkl_sparse_optimize(mat_csr)
+
+END SUBROUTINE make_csr_matrix
+
 ! Hamiltonian operator
-SUBROUTINE Hamiltonian(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
-					   n_indices, s_hop, n_hop, wf_out)
+SUBROUTINE Hamiltonian(wf_in, n_wf, sgn, H_csr, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(IN) :: n_wf, n_indptr, n_indices, n_hop
+	INTEGER, INTENT(IN) :: n_wf, sgn
 	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
-	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
+
+	! the status
+	INTEGER :: stat
+	COMPLEX(KIND=8) :: alpha
 
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
-	!use Sparse BLAS in MKL to calculate the production
-	CALL mkl_cspblas_zcsrgemv('N', n_wf, s_hop, s_indptr, s_indices, &
-							  wf_in, wf_out)
+	alpha = sgn * one_cmp
+	!use Sparse BLAS in MKL to calculate the product
+	stat = mkl_sparse_z_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, H_csr, &
+						   H_descr, wf_in, zero_cmp, wf_out)
 
 END SUBROUTINE Hamiltonian
 
 ! Apply timestep using Chebyshev decomposition
-SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
-							s_indices, n_indices, s_hop, n_hop, wf_t1)
+SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, sgn, H_csr, wf_t1)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(IN) :: n_wf, n_Bes, n_indptr, n_indices, n_hop
+	INTEGER, INTENT(IN) :: n_wf, n_Bes, sgn
 	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_t
 	REAL(KIND=8), INTENT(IN), DIMENSION(n_Bes) :: Bes
-	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
 
 	! declare vars
 	INTEGER :: i, k
@@ -79,15 +106,13 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
 
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_t1
-
-	CALL Hamiltonian(wf_t, n_wf, s_indptr, n_indptr, s_indices, &
-					 n_indices, s_hop, n_hop, Tcheb1)
+	CALL Hamiltonian(wf_t, n_wf, sgn, H_csr, Tcheb1)
 
 	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		Tcheb0(i) = wf_t(i)
 		Tcheb1(i) = -img * Tcheb1(i)
-		wf_t1(i) = Bes(1) * wf_t(i) + 2* Bes(2) * Tcheb1(i)
+		wf_t1(i) = Bes(1) * wf_t(i) + 2 * Bes(2) * Tcheb1(i)
 	END DO
 	!$OMP END PARALLEL DO
 
@@ -95,8 +120,7 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
 	p1 => Tcheb1
 	DO k=3, n_Bes
 		p2 => p0
-		CALL Hamiltonian(p1, n_wf, s_indptr, n_indptr, s_indices, &
-						 n_indices, s_hop, n_hop, Tcheb2)
+		CALL Hamiltonian(p1, n_wf, sgn, H_csr, Tcheb2)
 
 		!$OMP PARALLEL DO
 		DO i = 1, n_wf
@@ -111,44 +135,49 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, n_Bes, s_indptr, n_indptr, &
 END SUBROUTINE cheb_wf_timestep
 
 ! get coefficients of current operator
-SUBROUTINE current_coefficient(hop, dr, n_hop, cur_coefs)
+SUBROUTINE current_coefficient(hop, dr, n_hop, H_rescale, cur_coefs)
 
 	! deal with input
 	IMPLICIT NONE
 	INTEGER, INTENT(IN) :: n_hop
+	REAL(KIND=8), INTENT(IN) :: H_rescale
 	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: hop
 	REAL(KIND=8), INTENT(IN), DIMENSION(n_hop) :: dr
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_hop) :: cur_coefs
 
 	! declare vars
 	INTEGER :: i
+	COMPLEX(KIND=8) :: alpha
+
+	alpha=CMPLX(0D0, H_rescale, KIND=8)
+	! CALL zhbmv('U', n_hop, 0, alpha, hop, 1, dr, 1, 0D0, cur_coefs, 1)
 
 	!$OMP PARALLEL DO
 	DO i = 1, n_hop
-		cur_coefs(i) = img * hop(i) * dr(i)
+		cur_coefs(i) = alpha * hop(i) * dr(i)
 	END DO
 	!$OMP END PARALLEL DO
 
 END SUBROUTINE current_coefficient
 
 ! current operator
-SUBROUTINE current(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
-				   n_indices, cur_coefs, n_cur_coefs, wf_out)
+SUBROUTINE current(wf_in, n_wf, cur_csr, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(IN) :: n_wf, n_indptr, n_indices, n_cur_coefs
+	INTEGER, INTENT(IN) :: n_wf
 	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
-	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_cur_coefs) :: cur_coefs
+	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: cur_csr
+
+	! the status
+	INTEGER :: stat
 
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
-	!use Sparse BLAS in MKL to calculate the production
-	CALL mkl_cspblas_zcsrgemv('N', n_wf, cur_coefs, s_indptr, s_indices, &
-							  wf_in, wf_out)
+	!use Sparse BLAS in MKL to calculate the product
+	stat = mkl_sparse_z_mv(SPARSE_OPERATION_NON_TRANSPOSE, one_cmp, cur_csr, &
+						   H_descr, wf_in, zero_cmp, wf_out)
 
 END SUBROUTINE current
 
@@ -192,7 +221,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
-			cheb_coef_complex(i) = 1. - Fermi_dist(beta,mu,energy,eps)
+			cheb_coef_complex(i) = 1D0 - Fermi_dist(beta,mu,energy,eps)
 		END DO
 	ELSE ! compute coeffs for Fermi operator
 		DO i=1, nr_Fermi
@@ -225,17 +254,14 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 END SUBROUTINE get_Fermi_cheb_coef
 
 ! Fermi-Dirac distribution operator
-SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
-				 s_indices, n_indices, s_hop, n_hop, wf_out)
+SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, H_csr, wf_out)
 
 	! deal with input
 	IMPLICIT NONE
-	INTEGER, INTENT(IN) :: n_wf, n_cheb, n_indptr, n_indices, n_hop
+	INTEGER, INTENT(IN) :: n_wf, n_cheb
 	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf_in
 	REAL(KIND=8), INTENT(IN), DIMENSION(n_cheb) :: cheb_coef
-	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
 
 	! declare vars
 	INTEGER :: i, k
@@ -246,8 +272,7 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_wf) :: wf_out
 
-	CALL Hamiltonian(wf_in, n_wf, s_indptr, n_indptr, s_indices, &
-					 n_indices, s_hop, n_hop, Tcheb1)
+	CALL Hamiltonian(wf_in, n_wf, 1, H_csr, Tcheb1)
 
 	!$OMP PARALLEL DO
 	DO i = 1, n_wf
@@ -260,8 +285,7 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, n_cheb, s_indptr, n_indptr, &
 	p1 => Tcheb1
 	DO k=3, n_cheb
 		p2 => p0
-		CALL Hamiltonian(p1, n_wf, s_indptr, &
-			n_indptr, s_indices, n_indices, s_hop, n_hop, Tcheb2)
+		CALL Hamiltonian(p1, n_wf, 1, H_csr, Tcheb2)
 
 		!$OMP PARALLEL DO
 		DO i = 1, n_wf
@@ -317,11 +341,13 @@ SUBROUTINE density(wf_in, n_wf, s_density, wf_out)
 	! declare vars
 	INTEGER :: i
 
-	!$OMP PARALLEL DO
-	DO i = 1, n_wf
-		wf_out(i) = s_density(i) * wf_in(i)
-	END DO
-	!$OMP END PARALLEL DO
+	CALL vzmul(n_wf, s_density, wf_in, wf_out)
+
+	! !$OMP PARALLEL DO
+	! DO i = 1, n_wf
+	! 	wf_out(i) = s_density(i) * wf_in(i)
+	! END DO
+	! !$OMP END PARALLEL DO
 
 END SUBROUTINE density
 
@@ -361,44 +387,39 @@ CONTAINS
 	INTEGER, ALLOCATABLE :: seed(:)
 	REAL(KIND=8) :: ranx
 	IF (idum>0) THEN
-		CALL random_SEED(size=n)
+		CALL RANDOM_SEED(size=n)
 		ALLOCATE(seed(n))
 		! is there a better way to create a seed array
 		! based on the input integer?
 		DO i=1, n
 			seed(i)=INT(MODULO(i * idum * 74231, 104717))
 		END DO
-		CALL random_SEED(put=seed)
+		CALL RANDOM_SEED(put=seed)
 	END IF
-	CALL random_NUMBER(ranx)
+	CALL RANDOM_NUMBER(ranx)
 	END FUNCTION ranx
 
 END SUBROUTINE random_state
 
 ! Haydock recursion method
-SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
-					 s_indptr, n_indptr, s_indices, n_indices, &
-					 s_hop, n_hop, coefa, coefb)
+SUBROUTINE recursion(site_indices, n_siteind, n_wf, wf_weights, n_wfw, &
+					 n_depth, H_csr, coefa, coefb)
 	IMPLICIT NONE
 	! deal with input
-	INTEGER, INTENT(IN) :: n_depth, n_indptr, n_indices
-	INTEGER, INTENT(IN) :: n_hop, n_siteind, n_wfw
+	INTEGER, INTENT(IN) :: n_wf, n_depth, n_siteind, n_wfw
 	INTEGER, INTENT(IN), DIMENSION(n_siteind) :: site_indices
-	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
 	REAL(KIND=8), INTENT(IN), DIMENSION(n_wfw) :: wf_weights
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
 
 	! declare variables
-	INTEGER :: i, j, n_wf
-	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: n0, n1, n2
+	INTEGER :: i, j
+	COMPLEX(KIND=8), DIMENSION(n_wf) :: n0, n1, n2
 	COMPLEX(KIND=8), DIMENSION(n_siteind) :: wf_temp
 
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_depth) :: coefa
 	REAL(KIND=8), INTENT(OUT), DIMENSION(n_depth) :: coefb
 
-	n_wf = n_indptr - 1
 	! make LDOS state
 	n1 = 0D0
 	wf_temp = 1D0 / DSQRT(DBLE(n_siteind))
@@ -407,9 +428,8 @@ SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
 	END DO
 
 	! get a1
-	CALL Hamiltonian(n1, n_wf, s_indptr, n_indptr, s_indices, &
-					 n_indices, s_hop, n_hop, n2)
-	coefa(1) = inner_prod(n1, n2, n_wf)
+	CALL Hamiltonian(n1, n_wf, 1, H_csr, n2)
+	coefa(1) = zdotc(n_wf, n1, 1, n2, 1)
 
 	!$OMP PARALLEL DO
 	DO j = 1, n_wf
@@ -417,7 +437,7 @@ SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
 	END DO
 	!$OMP END PARALLEL DO
 
-	coefb(1) = DSQRT(DBLE(inner_prod(n2, n2, n_wf)))
+	coefb(1) = DSQRT(DBLE(zdotc(n_wf, n2, 1, n2, 1)))
 
 	! recursion
 	DO i = 2, n_depth
@@ -428,9 +448,8 @@ SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
 		END DO
 		!$OMP END PARALLEL DO
 
-		CALL Hamiltonian(n1, n_wf, s_indptr, &
-			n_indptr, s_indices, n_indices, s_hop, n_hop, n2)
-		coefa(i) = inner_prod(n1, n2, n_wf)
+		CALL Hamiltonian(n1, n_wf, 1, H_csr, n2)
+		coefa(i) = zdotc(n_wf, n1, 1, n2, 1)
 
 		!$OMP PARALLEL DO
 		DO j = 1, n_wf
@@ -438,7 +457,7 @@ SUBROUTINE recursion(site_indices, n_siteind, wf_weights, n_wfw, n_depth, &
 		END DO
 		!$OMP END PARALLEL DO
 
-		coefb(i) = DSQRT(DBLE(inner_prod(n2, n2, n_wf)))
+		coefb(i) = DSQRT(DBLE(zdotc(n_wf, n2, 1, n2, 1)))
 	END DO
 END SUBROUTINE recursion
 
