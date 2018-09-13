@@ -106,9 +106,9 @@ class Config():
         Wave function weights for LDOS calculation.
         Default: equal weights for all sites.
     LDOS['delta'] : float
-        Parameter of infinitesimal. Default value: 0.1.
+        Parameter of infinitesimal. Default value: 0.01.
     LDOS['recursion_depth'] : int
-        Recursion depth of Haydock method. Default value: 10000
+        Recursion depth of Haydock method. Default value: 2000
     dyn_pol['background_dielectric_constant'] : float
         Background dielectric constant. Default value: 23.6.
     dyn_pol['coulomb_constant'] : float
@@ -186,8 +186,8 @@ class Config():
         # LDOS
         self.LDOS['site_indices'] = 0
         self.LDOS['wf_weights'] = False
-        self.LDOS['delta'] = 0.1
-        self.LDOS['recursion_depth'] = 10000
+        self.LDOS['delta'] = 0.01
+        self.LDOS['recursion_depth'] = 2000
 
         # DC conductivity
         self.DC_conductivity['energy_limits'] = (-0.5, 0.5)
