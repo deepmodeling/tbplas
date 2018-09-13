@@ -920,11 +920,13 @@ class Sample:
             hopping information
         """
 
+        sparse_hop_dict = hop_dict.sparse()
+
         if self.nr_processes == 1:  # no multiprocessing
 
             # apply hopping dictionary
             data = self.__get_hoppings(self.index_to_tag, \
-                                       hop_dict.sparse())
+                                       sparse_hop_dict)
             self.indices = data[0]
             self.indptr = data[1]
             self.hop = data[2]
@@ -943,7 +945,7 @@ class Sample:
             for i, tags in enumerate(sites_div):
                 pipe = pipes[i]
                 processes[i] = mp.Process(target=self.__get_hoppings, \
-                                          args=(tags, hop_dict.sparse(), pipe[1]))
+                                          args=(tags, sparse_hop_dict, pipe[1]))
                 processes[i].start()
 
             # collect results
