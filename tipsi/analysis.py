@@ -404,7 +404,7 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
     energies = energies_DOS[QE_indices]
     dc_prefactor = config.sample['nr_orbitals'] \
                    / config.sample['area_unit_cell']
-    
+
     # get DC conductivity
     DC = np.zeros((2, n_energies))
     DC_int = np.zeros((2, n_energies, tnr))
@@ -421,9 +421,47 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
                 dcval += add_dcv
                 DC_int[i, j, k] = dc_prefactor * t_step * dosval * dcval
             DC[i, j] = np.amax(DC_int[i, j, :])
-    
+
     # correct for spin
     if config.generic['correct_spin']:
         DC = 2. * DC
 
     return energies, DC
+
+
+def get_ldos_haydock(sample, config):
+    """Get local density of states using Haydock recursion method
+
+    Parameters
+    ----------
+    sample : Sample object
+        Sample information
+    config : Config object
+        Parameters, LDOS['site_indices'], LDOS['delta'],
+        sample['energy_range'], LDOS['recursion_depth'],
+        generic['nr_time_steps'], output['corr_LDOS'] are used
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    LDOS : list of complex floats
+        LDOS value to corresponding energies_DOS
+    """
+
+    from .fortran import f2py as fortran_f2py
+
+    # get wf_weights:
+    if not config.LDOS['wf_weights']:
+        N = len(config.LDOS['site_indices'])
+        wf_weights = [1 for i in range(N)]
+    else:
+        wf_weights = config.LDOS['wf_weights']
+
+    energies, LDOS = fortran_f2py.ldos_haydock(
+        config.LDOS['site_indices'], wf_weights, config.LDOS['delta'], \
+        config.sample['energy_range'], sample.indptr, sample.indices, \
+        sample.hop, sample.rescale, config.generic['seed'], \
+        config.LDOS['recursion_depth'], config.generic['nr_time_steps'], \
+        config.generic['nr_random_samples'], config.output['corr_LDOS'])
+    return energies, LDOS

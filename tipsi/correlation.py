@@ -27,7 +27,7 @@ import numpy as np
 import scipy.special as spec
 
 # fortran tbpm
-from .fortran import tbpm_f2py as fortran_tbpm
+from .fortran import f2py as fortran_f2py
 
 
 def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
@@ -89,7 +89,7 @@ def corr_DOS(sample, config):
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
-    corr_DOS = fortran_tbpm.tbpm_dos(Bes, \
+    corr_DOS = fortran_f2py.tbpm_dos(Bes, \
         sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], config.output['corr_DOS'])
@@ -127,7 +127,7 @@ def corr_LDOS(sample, config):
         wf_weights = config.LDOS['wf_weights']
 
     # pass to FORTRAN
-    corr_LDOS = fortran_tbpm.tbpm_ldos(config.LDOS['site_indices'], \
+    corr_LDOS = fortran_f2py.tbpm_ldos(config.LDOS['site_indices'], \
         wf_weights, Bes, sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], config.output['corr_LDOS'])
@@ -163,7 +163,7 @@ def corr_AC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_AC = fortran_tbpm.tbpm_accond(Bes, beta_re, mu_re, \
+    corr_AC = fortran_f2py.tbpm_accond(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
         sample.rescale, sample.dx, sample.dy, \
         config.generic['seed'], config.generic['nr_time_steps'], \
@@ -201,7 +201,7 @@ def corr_dyn_pol(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_dyn_pol = fortran_tbpm.tbpm_dyn_pol(Bes, beta_re, mu_re, \
+    corr_dyn_pol = fortran_f2py.tbpm_dyn_pol(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
         sample.rescale, sample.dx, sample.dy, \
         sample.site_x, sample.site_y, sample.site_z, \
@@ -248,7 +248,7 @@ def corr_DC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_DOS, corr_DC = fortran_tbpm.tbpm_dccond(Bes, beta_re, mu_re, \
+    corr_DOS, corr_DC = fortran_f2py.tbpm_dccond(Bes, beta_re, mu_re, \
         sample.indptr, sample.indices, sample.hop, \
         sample.rescale, sample.dx, sample.dy, \
         config.generic['seed'], config.generic['nr_time_steps'], \
@@ -283,44 +283,10 @@ def quasi_eigenstates(sample, config):
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
-    states = fortran_tbpm.tbpm_eigenstates(Bes, \
+    states = fortran_f2py.tbpm_eigenstates(Bes, \
         sample.indptr, sample.indices, sample.hop, \
         config.generic['seed'], config.generic['nr_time_steps'], \
         config.generic['nr_random_samples'], t_step, \
         config.quasi_eigenstates['energies'])
 
     return states
-
-
-def get_ldos_haydock(sample, config):
-    """Get local density of states using Haydock recursion method
-
-    Parameters
-    ----------
-    sample : Sample object
-        Sample information
-    config : Config object
-        Parameters, LDOS['site_indices'], LDOS['delta'],
-        sample['energy_range'], LDOS['recursion_depth'],
-        generic['nr_time_steps'], output['corr_LDOS'] are used
-
-    Returns
-    ----------
-    energies : list of floats
-        energy list with rank (2*nr_time_steps+1)
-    LDOS : list of complex floats
-        LDOS value to corresponding energies_DOS
-    """
-    hop = sample.hop * sample.rescale
-    # get wf_weights:
-    if not config.LDOS['wf_weights']:
-        N = len(config.LDOS['site_indices'])
-        wf_weights = [1 for i in range(N)]
-    else:
-        wf_weights = config.LDOS['wf_weights']
-
-    energies, LDOS = fortran_tbpm.ldos_haydock(config.LDOS['site_indices'], \
-        wf_weights, config.LDOS['delta'], config.sample['energy_range'], \
-        sample.indptr, sample.indices, hop, config.LDOS['recursion_depth'], \
-        config.generic['nr_time_steps'], config.output['corr_LDOS'])
-    return energies, LDOS

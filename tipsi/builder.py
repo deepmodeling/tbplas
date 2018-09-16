@@ -835,7 +835,7 @@ class Sample:
             # return results normally
             return site_r
 
-    def __get_hoppings(self, tags, sparse_hop_dict, conn=False):
+    def __get_hoppings(self, tags, conn=False):
         """Private method for getting hopping data for list of tags.
 
         Sends indices, indptr, hop, dx, dy lists through conn Pipe.
@@ -844,8 +844,6 @@ class Sample:
         ----------
         tags : list of 4-tuples
             site tags
-        sparse_hop_dict : dict
-            sparse hopping dictionary
         conn : multiprocessing.Pipe object
             Pipe through which to send data. If False,
             no pipe is used; data is returned normally."""
@@ -863,7 +861,7 @@ class Sample:
             orb0 = tag0[3]
             i0 = self.tag_to_index[tag0]
             indptr.append(indptr[-1])
-            for rel_tag, hopping in sparse_hop_dict[orb0].items():
+            for rel_tag, hopping in self.sparse_hop_dict[orb0].items():
                 tag1 = (r0[0] + rel_tag[0], \
                         r0[1] + rel_tag[1], \
                         r0[2] + rel_tag[2], \
@@ -920,13 +918,12 @@ class Sample:
             hopping information
         """
 
-        sparse_hop_dict = hop_dict.sparse()
+        self.sparse_hop_dict = hop_dict.sparse()  # use shared memory
 
         if self.nr_processes == 1:  # no multiprocessing
 
             # apply hopping dictionary
-            data = self.__get_hoppings(self.index_to_tag, \
-                                       sparse_hop_dict)
+            data = self.__get_hoppings(self.index_to_tag)
             self.indices = data[0]
             self.indptr = data[1]
             self.hop = data[2]
@@ -945,7 +942,7 @@ class Sample:
             for i, tags in enumerate(sites_div):
                 pipe = pipes[i]
                 processes[i] = mp.Process(target=self.__get_hoppings, \
-                                          args=(tags, sparse_hop_dict, pipe[1]))
+                                          args=(tags, pipe[1]))
                 processes[i].start()
 
             # collect results
@@ -960,6 +957,7 @@ class Sample:
                         scan[i] = False
                         pipe[0].close()
                         processes[i].join()
+            del self.sparse_hop_dict  # free memory
 
             # put data in class attribute arrays
             self.indptr = [0]

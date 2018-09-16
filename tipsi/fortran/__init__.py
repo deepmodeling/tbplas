@@ -1,4 +1,1 @@
-import numpy as np
-
-
-__all__ = ['tbpm_f2py']
+__all__ = ['f2py']
