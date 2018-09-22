@@ -46,6 +46,7 @@ SUBROUTINE csr_mv(vec_in, n_vec, value, mat_csr, vec_out)
 	! declare vars
 	INTEGER :: i, j, j_start, j_end, k
 
+	vec_out = 0D0
 	!$OMP PARALLEL DO PRIVATE(j,k)
 	! Nota bene: fortran indexing is off by 1
 	DO i = 1, n_vec
@@ -54,7 +55,7 @@ SUBROUTINE csr_mv(vec_in, n_vec, value, mat_csr, vec_out)
 		DO j = j_start, j_end - 1
 			k = mat_csr%indices(j + 1)
 			vec_out(i) = vec_out(i) &
-					   + value * mat_csr%values(j + 1) * vec_in(k + 1)
+						+ value * mat_csr%values(j + 1) * vec_in(k + 1)
 		END DO
 	END DO
 	!$OMP END PARALLEL DO

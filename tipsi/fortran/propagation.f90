@@ -102,8 +102,7 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, H_csr, wf_out)
 END SUBROUTINE Fermi
 
 ! Get Haydock coefficients using Haydock recursion method
-SUBROUTINE Haydock_coef(wf0, n_wf, wf_weights, n_depth, &
-						H_csr, H_rescale, coefa, coefb)
+SUBROUTINE Haydock_coef(n1, n_wf, n_depth, H_csr, H_rescale, coefa, coefb)
 
 	USE math, ONLY: inner_prod
 	USE csr
@@ -111,8 +110,7 @@ SUBROUTINE Haydock_coef(wf0, n_wf, wf_weights, n_depth, &
 	! input
 	INTEGER, INTENT(IN) :: n_wf, n_depth
 	REAL(KIND=8), INTENT(IN) :: H_rescale
-	REAL(KIND=8), INTENT(IN), DIMENSION(:) :: wf_weights
-	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_wf) :: wf0
+	COMPLEX(KIND=8), INTENT(INOUT), DIMENSION(n_wf) :: n1
 	TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
 	! output
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_depth) :: coefa
@@ -120,15 +118,14 @@ SUBROUTINE Haydock_coef(wf0, n_wf, wf_weights, n_depth, &
 
 	! declare variables
 	INTEGER :: i, j
-	COMPLEX(KIND=8), DIMENSION(n_wf) :: n0, n1, n2
+	COMPLEX(KIND=8), DIMENSION(n_wf) :: n0, n2
 
 	! get a1
-	CALL csr_mv(wf0, n_wf, H_rescale, H_csr, n2)
-	coefa(1) = inner_prod(wf0, n2)
+	CALL csr_mv(n1, n_wf, H_rescale, H_csr, n2)
+	coefa(1) = inner_prod(n1, n2)
 
 	!$OMP PARALLEL DO
 	DO j = 1, n_wf
-		n1(j) = wf0(j)
 		n2(j) = n2(j) - coefa(1) * n1(j)
 	END DO
 	!$OMP END PARALLEL DO

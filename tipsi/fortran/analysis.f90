@@ -55,8 +55,7 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
 			wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
 		END DO
 
-		CALL Haydock_coef(wf0, n_wf, wf_weights, n_depth, &
-						  H_csr, H_rescale, a, b)
+		CALL Haydock_coef(wf0, n_wf, n_depth, H_csr, H_rescale, a, b)
 		coefa = coefa + a / n_ran_samples
 		coefb = coefb + b / n_ran_samples
 	END DO

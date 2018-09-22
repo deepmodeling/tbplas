@@ -24,7 +24,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_timestep) :: corr
 
 	! declare vars
-	INTEGER :: i_sample,k, i, n_wf, n_calls
+	INTEGER :: i_sample,k, n_wf, n_calls
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t
 	COMPLEX(KIND=8) :: corrval
 	TYPE(SPARSE_MATRIX_T) :: H_csr
@@ -184,7 +184,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	! corr has 4 elements, respectively: corr_xx, corr_xy, corr_yx, corr_yy
 
 	! declare vars
-	INTEGER :: i_sample, k, i, n_cheb, n_wf, n_calls
+	INTEGER :: i_sample, k, n_cheb, n_wf, n_calls
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf1
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: psi1_x, psi1_y, psi2
 	REAL(KIND=8), DIMENSION(nr_Fermi), TARGET :: coef1, coef2
@@ -338,8 +338,8 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	REAL(KIND=8), INTENT(OUT), DIMENSION(n_q_points, n_timestep) :: corr
 
 	! declare vars
-	INTEGER :: i_sample, k, i, j, n_cheb, i_q, n_wf, n_calls
-	REAL(KIND=8) :: omega, eps, W, tau, dpi, dpr, corrval
+	INTEGER :: i_sample, k, n_cheb1, n_cheb2, i_q, n_wf, n_calls
+	REAL(KIND=8) :: corrval
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf1, psi1, psi2
 	REAL(KIND=8), DIMENSION(nr_Fermi), TARGET :: coef1, coef2
 	! cheb coefs for Fermi operator and one minus Fermi operator
@@ -351,18 +351,19 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	! set some values
 	n_wf = n_indptr - 1
 	corr = 0D0
-	n_calls = n_ran_samples * 2 * ((n_cheb-1) + (n_timestep-1)*(n_Bes-1))
-	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
 
 	! get Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef1, n_cheb, nr_Fermi, &
+	CALL get_Fermi_cheb_coef(coef1, n_cheb1, nr_Fermi, &
 							 beta, mu, .FALSE., Fermi_precision)
-	coef_F => coef1(1:n_cheb)
+	coef_F => coef1(1:n_cheb1)
 
 	! get one minus Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef2, n_cheb, nr_Fermi, &
+	CALL get_Fermi_cheb_coef(coef2, n_cheb2, nr_Fermi, &
 							 beta, mu, .TRUE., Fermi_precision)
-	coef_omF => coef2(1:n_cheb)
+	coef_omF => coef2(1:n_cheb2)
+
+	n_calls = n_ran_samples * (n_cheb1+n_cheb2-1)+2*((n_timestep-1)*(n_Bes-1))
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
 
 	OPEN(unit=27,file=output_filename)
 	WRITE(27,*) "Number of qpoints =", n_q_points

@@ -52,6 +52,7 @@ SUBROUTINE random_state(wf, n_wf, iseed)
 
 	CALL init_seed(iseed0)
 
+	sum_wf_sq = 0D0
 	!$OMP PARALLEL DO PRIVATE(f, g, abs_z_sq) ORDERED REDUCTION(+: sum_wf_sq)
 	DO i = 1, n_wf
 		!$OMP ORDERED

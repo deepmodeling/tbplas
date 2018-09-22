@@ -48,10 +48,10 @@ PURE FUNCTION Fermi_dist(beta, Ef, energy, eps)
 	REAL(KIND=8) :: x
 
 	IF (energy >= Ef) THEN
-		x = 1. * EXP(beta * (Ef - energy))
+		x = EXP(beta * (Ef - energy))
 		Fermi_dist = x / (1 + x)
 	ELSE
-		x = 1. * EXP(beta * (energy - Ef))
+		x = EXP(beta * (energy - Ef))
 		Fermi_dist = 1 / (1 + x)
 	END IF
 
@@ -78,7 +78,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 
 	! declare vars
 	INTEGER :: i
-	REAL(KIND=8) :: r0, compare, x, prec, energy
+	REAL(KIND=8) :: r0, compare, prec, energy
 	COMPLEX(KIND=8), DIMENSION(nr_Fermi) :: cheb_coef_complex
 
 	r0 = 2 * pi / nr_Fermi

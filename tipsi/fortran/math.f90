@@ -59,7 +59,7 @@ PURE FUNCTION dot_self_r(vec)
 	! output
 	REAL(KIND=8) :: dot_self_r
 
-	dot_self_r = DBLE(DOT_PRODUCT(vec, vec))
+	dot_self_r = DOT_PRODUCT(vec, vec)
 
 END FUNCTION dot_self_r
 

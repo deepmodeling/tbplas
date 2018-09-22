@@ -686,7 +686,7 @@ class Sample:
     """
 
     def __init__(self, lattice, site_set = [], bc_func = bc_default, \
-                 nr_processes = 1, read_from_file = False):
+                 nr_processes = 1, conductivity = True, read_from_file = False):
         """Index site_set and store site locations.
 
         Parameters
@@ -699,6 +699,8 @@ class Sample:
             function for boundary conditions
         nr_processes : integer, optional
             number of parallel processes
+        conductivity : boolean, optional
+            choose to calculate dx, dy or not. Default: True
         read_from_file : string, optional
             Filename, in case we read a Sample from file. Default: False.
         """
@@ -709,6 +711,7 @@ class Sample:
             # init input
             self.lattice = lattice
             self.bc_func = bc_func
+            self.conductivity = conductivity
             self.nr_processes = nr_processes
 
             # open file
@@ -730,8 +733,9 @@ class Sample:
             self.indices = f["sample/indices"][:]
             self.indptr = f["sample/indptr"][:]
             self.hop = f["sample/hop"][:]
-            self.dx = f["sample/dx"][:]
-            self.dy = f["sample/dy"][:]
+            if conductivity:
+                self.dx = f["sample/dx"][:]
+                self.dy = f["sample/dy"][:]
             return
 
         # if not read_from_file, declare attributes
@@ -742,8 +746,10 @@ class Sample:
         self.indices = np.array([])
         self.indptr = np.array([0])
         self.hop = np.array([])
-        self.dx = np.array([])
-        self.dy = np.array([])
+        self.conductivity = conductivity
+        if conductivity:
+            self.dx = np.array([])
+            self.dy = np.array([])
 
         # indexing
         self.index_to_tag = list(site_set.sites)
@@ -846,14 +852,16 @@ class Sample:
             site tags
         conn : multiprocessing.Pipe object
             Pipe through which to send data. If False,
-            no pipe is used; data is returned normally."""
+            no pipe is used; data is returned normally.
+        """
 
         # declare arrays
         indices = []
         indptr = [0]
         hop = []
-        dx = []
-        dy = []
+        if self.conductivity:
+            dx = []
+            dy = []
 
         # iterate over all sites
         for tag0 in tags:
@@ -872,8 +880,9 @@ class Sample:
                     indices.append(i1)
                     indptr[-1] += 1
                     hop.append(hopping)
-                    dx.append(self.site_x[i1] - self.site_x[i0])
-                    dy.append(self.site_y[i1] - self.site_y[i0])
+                    if self.conductivity:
+                        dx.append(self.site_x[i1] - self.site_x[i0])
+                        dy.append(self.site_y[i1] - self.site_y[i0])
                 # check pbc
                 except KeyError:
                     r1 = tag1[0:3]
@@ -882,32 +891,54 @@ class Sample:
                     pbc_tag = pbc_r + (pbc_orb, )
                     try:
                         i1 = self.tag_to_index[pbc_tag]
-                        pos = self.lattice.site_pos(r1, orb1)
                         indices.append(i1)
                         indptr[-1] += 1
                         hop.append(hopping)
-                        dx.append(pos[0] - self.site_x[i0])
-                        dy.append(pos[1] - self.site_y[i0])
+                        if self.conductivity:
+                            pos = self.lattice.site_pos(r1, orb1)
+                            dx.append(pos[0] - self.site_x[i0])
+                            dy.append(pos[1] - self.site_y[i0])
                     except KeyError:
                         pass
 
-        # return results
-        if conn:
-            # send results through Pipe
-            conn.send([
-                np.array(indices, dtype=int),
-                np.array(indptr, dtype=int),
-                np.array(hop, dtype=complex),
-                np.array(dx, dtype=float),
-                np.array(dy, dtype=float)
-            ])
-            conn.close()
-            return
+        if self.conductivity:
+            # return results
+            if conn:
+                # send results through Pipe
+                conn.send([
+                    np.array(indices, dtype=int),
+                    np.array(indptr, dtype=int),
+                    np.array(hop, dtype=complex),
+                    np.array(dx, dtype=float),
+                    np.array(dy, dtype=float)
+                ])
+                conn.close()
+                return
+            else:
+                # return results normally
+                return (np.array(indices, dtype=int), \
+                        np.array(indptr, dtype=int), \
+                        np.array(hop, dtype=complex), \
+                        np.array(dx, dtype=float), \
+                        np.array(dy, dtype=float)
+                       )
+
         else:
-            # return results normally
-            return (np.array(indices, dtype=int), np.array(indptr, dtype=int),
-                    np.array(hop, dtype=complex), np.array(dx, dtype=float),
-                    np.array(dy, dtype=float))
+            # return results
+            if conn:
+                # send results through Pipe
+                conn.send([
+                    np.array(indices, dtype=int),
+                    np.array(indptr, dtype=int),
+                    np.array(hop, dtype=complex)
+                ])
+                conn.close()
+                return
+            else:
+                # return results normally
+                return (np.array(indices, dtype=int),
+                        np.array(indptr, dtype=int),
+                        np.array(hop, dtype=complex))
 
     def add_hop_dict(self, hop_dict):
         """Apply hopping dictionary.
@@ -927,8 +958,9 @@ class Sample:
             self.indices = data[0]
             self.indptr = data[1]
             self.hop = data[2]
-            self.dx = data[3]
-            self.dy = data[4]
+            if self.conductivity:
+                self.dx = data[3]
+                self.dy = data[4]
 
         else:  # use multiprocessing
 
@@ -963,20 +995,23 @@ class Sample:
             self.indptr = [0]
             indices = []
             hop = []
-            dx = []
-            dy = []
+            if self.conductivity:
+                dx = []
+                dy = []
             for i in range(N):
                 self.indptr = np.concatenate(
                     (self.indptr, np.array(data[i][1][1:]) + self.indptr[-1]))
                 indices = itertools.chain(indices, data[i][0])
                 hop = itertools.chain(hop, data[i][2])
-                dx = itertools.chain(dx, data[i][3])
-                dy = itertools.chain(dy, data[i][4])
+                if self.conductivity:
+                    dx = itertools.chain(dx, data[i][3])
+                    dy = itertools.chain(dy, data[i][4])
             del data
             self.indices = np.fromiter(indices, dtype=int, count=-1)
             self.hop = np.fromiter(hop, dtype=complex, count=-1)
-            self.dx = np.fromiter(dx, dtype=float, count=-1)
-            self.dy = np.fromiter(dy, dtype=float, count=-1)
+            if self.conductivity:
+                self.dx = np.fromiter(dx, dtype=float, count=-1)
+                self.dy = np.fromiter(dy, dtype=float, count=-1)
 
     def delete_hopping(self, unit_cell_coord0, unit_cell_coord1, \
                        orbital0 = 0, orbital1 = 0):
