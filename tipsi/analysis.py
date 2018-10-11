@@ -403,11 +403,11 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
     n_energies = len(QE_indices)
     energies = energies_DOS[QE_indices]
     dc_prefactor = config.sample['nr_orbitals'] \
-                   / config.sample['area_unit_cell']
-    
+                   / config.sample['area_unit_cell'] \
+                   / (2 * np.pi)
+
     # get DC conductivity
     DC = np.zeros((2, n_energies))
-    DC_int = np.zeros((2, n_energies, tnr))
     for i in range(2):
         for j in range(n_energies):
 
@@ -415,13 +415,12 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
             dosval = DOS[QE_indices[j]]
             dcval = 0.
             for k in range(tnr):
-                W = window_DC(k, tnr)
+                W = window_DC(k + 1, tnr)
                 cexp = np.exp(-1j * k * t_step * en)
                 add_dcv = W * (cexp * corr_DC[i, j, k]).real
                 dcval += add_dcv
-                DC_int[i, j, k] = dc_prefactor * t_step * dosval * dcval
-            DC[i, j] = np.amax(DC_int[i, j, :])
-    
+            DC[i, j] = dc_prefactor * t_step * dosval * dcval
+
     # correct for spin
     if config.generic['correct_spin']:
         DC = 2. * DC
