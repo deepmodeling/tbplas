@@ -237,7 +237,11 @@ def read_corr_DC(filename):
     return corr_DC / n_samples
 
 
-def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
+def read_wannier90(lat_file,
+                   coord_file,
+                   ham_file,
+                   correct_file=False,
+                   cutoff_en=0.0):
     r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
@@ -330,7 +334,8 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
         unit_cell_coord_new = (x, y, z)
         orb0 = int(data[3]) - 1
         orb1 = int(data[4]) - 1
-        hop = float(data[5]) + 1j * float(data[6])
+        hop = 0 + 0j if np.abs(float(data[5])) < cutoff_en \
+              else float(data[5]) + 1j * float(data[6])
 
         # add hopping terms
         # if new (x,y,z), fill hop_dict with old one
