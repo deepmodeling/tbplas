@@ -78,7 +78,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 
 	! declare vars
 	INTEGER :: i
-	REAL(KIND=8) :: r0, compare, prec, energy
+	REAL(KIND=8) :: r0, energy
 	COMPLEX(KIND=8), DIMENSION(nr_Fermi) :: cheb_coef_complex
 
 	r0 = 2 * pi / nr_Fermi
@@ -86,12 +86,12 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
-			cheb_coef_complex(i) = 1D0 - Fermi_dist(beta,mu,energy,eps)
+			cheb_coef_complex(i) = 1D0 - Fermi_dist(beta, mu, energy, eps)
 		END DO
 	ELSE ! compute coeffs for Fermi operator
-		DO i=1, nr_Fermi
+		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
-			cheb_coef_complex(i) = Fermi_dist(beta,mu,energy,eps)
+			cheb_coef_complex(i) = Fermi_dist(beta, mu, energy, eps)
 		END DO
 	END IF
 
@@ -99,15 +99,12 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	CALL fft1d_inplace(cheb_coef_complex, -1)
 
 	! Get number of nonzero elements
-	prec = -LOG10(eps)
-	n_cheb = 0
+	n_cheb = nr_Fermi / 2
 	cheb_coef_complex = 2. * cheb_coef_complex / nr_Fermi
 	cheb_coef_complex(1) = cheb_coef_complex(1) / 2
-	compare = LOG10(MAXVAL(ABS(cheb_coef_complex(1:nr_Fermi))))-prec
 	cheb_coef = DBLE(cheb_coef_complex)
 	DO i = 1, nr_Fermi
-		IF((LOG10(ABS(cheb_coef(i)))<compare).AND.&
-		   (LOG10(ABS(cheb_coef(i+1)))<compare)) THEN
+		IF((ABS(cheb_coef(i)) < eps) .AND. (ABS(cheb_coef(i + 1)) < eps)) THEN
 			n_cheb = i
 			EXIT
 		END IF
