@@ -1055,8 +1055,9 @@ class Sample:
                 # delete hopping
                 self.indices = np.delete(self.indices, self.indptr[i0] + i)
                 self.hop = np.delete(self.hop, self.indptr[i0] + i)
-                self.dx = np.delete(self.dx, self.indptr[i0] + i)
-                self.dy = np.delete(self.dy, self.indptr[i0] + i)
+                if self.conductivity:
+                    self.dx = np.delete(self.dx, self.indptr[i0] + i)
+                    self.dy = np.delete(self.dy, self.indptr[i0] + i)
                 for i in range(i0 + 1, len(self.indptr)):
                     self.indptr[i] -= 1
                 return True
@@ -1127,15 +1128,17 @@ class Sample:
         # if not, add hopping value and distance values
         self.indices = np.insert(self.indices, self.indptr[i0], i1)
         self.hop = np.insert(self.hop, self.indptr[i0], hop)
-        self.dx = np.insert(self.dx, self.indptr[i0], dist_x)
-        self.dy = np.insert(self.dy, self.indptr[i0], dist_y)
+        if self.conductivity:
+            self.dx = np.insert(self.dx, self.indptr[i0], dist_x)
+            self.dy = np.insert(self.dy, self.indptr[i0], dist_y)
         for i in range(i0 + 1, len(self.indptr)):
             self.indptr[i] += 1
         # conjugate
         self.indices = np.insert(self.indices, self.indptr[i1], i0)
         self.hop = np.insert(self.hop, self.indptr[i1], hop)
-        self.dx = np.insert(self.dx, self.indptr[i1], dist_x)
-        self.dy = np.insert(self.dy, self.indptr[i1], dist_y)
+        if self.conductivity:
+            self.dx = np.insert(self.dx, self.indptr[i1], dist_x)
+            self.dy = np.insert(self.dy, self.indptr[i1], dist_y)
         for i in range(i1 + 1, len(self.indptr)):
             self.indptr[i] += 1
         return False
