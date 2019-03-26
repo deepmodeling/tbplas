@@ -26,6 +26,7 @@ SUBROUTINE fft1d_inplace(x, sgn)
 		e = 2.0 * pi / ncur
 		ncur = ncur / 2
 		IF ( ncur < 1 ) EXIT
+		!$OMP PARALLEL DO SIMD PRIVATE(i, itmp, ctmp)
 		DO j = 1, ncur
 			DO i = j, n, ntmp
 				itmp = i + ncur
@@ -34,6 +35,7 @@ SUBROUTINE fft1d_inplace(x, sgn)
 				x(itmp) = ctmp * EXP(CMPLX(0.0, sgn*e*(j-1), KIND=8))
 			END DO
 		END DO
+		!$OMP END PARALLEL DO SIMD
 	END DO
 	j = 1
 	DO i = 1, n - 1

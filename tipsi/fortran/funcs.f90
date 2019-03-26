@@ -24,7 +24,7 @@ SUBROUTINE current_coefficient(hop, dr, n_hop, value, cur_coefs)
 	INTEGER :: i
 	COMPLEX(KIND=8) :: alpha
 
-	alpha = CMPLX(value, 0D0, KIND=8)
+	alpha = CMPLX(0D0, value, KIND=8)
 
 	!$OMP PARALLEL DO SIMD
 	DO i = 1, n_hop
@@ -85,15 +85,19 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	r0 = 2 * pi / nr_Fermi
 
 	IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
+		!$OMP PARALLEL DO SIMD
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
 			cheb_coef_complex(i) = 1D0 - Fermi_dist(beta, mu, energy, eps)
 		END DO
+		!$OMP END PARALLEL DO SIMD
 	ELSE ! compute coeffs for Fermi operator
+		!$OMP PARALLEL DO SIMD
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
 			cheb_coef_complex(i) = Fermi_dist(beta, mu, energy, eps)
 		END DO
+		!$OMP END PARALLEL DO SIMD
 	END IF
 
 	! Fourier transform result

@@ -227,7 +227,7 @@ def analyze_corr_AC(config, corr_AC, window=window_exp):
             else:
                 acv = ac_prefactor * t_step * acv \
                       * (np.exp(-beta * omega) - 1) / omega
-            AC[j, i] = -acv  # make it positive
+            AC[j, i] = acv
 
     # correct for spin
     if config.generic['correct_spin']:
