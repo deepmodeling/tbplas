@@ -5,7 +5,6 @@
 MODULE funcs
 
 	IMPLICIT NONE
-	PRIVATE :: Fermi_dist
 
 CONTAINS
 
@@ -27,11 +26,11 @@ SUBROUTINE current_coefficient(hop, dr, n_hop, value, cur_coefs)
 
 	alpha = CMPLX(value, 0D0, KIND=8)
 
-	!$OMP PARALLEL DO
+	!$OMP PARALLEL DO SIMD
 	DO i = 1, n_hop
 		cur_coefs(i) = alpha * hop(i) * dr(i)
 	END DO
-	!$OMP END PARALLEL DO
+	!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE current_coefficient
 
@@ -66,6 +65,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 							   beta, mu, one_minus_Fermi, eps)
 
 	USE const
+	USE kpm, ONLY: jackson_kernel
 	USE fft, ONLY : fft1d_inplace
 	IMPLICIT NONE
 	! input
@@ -80,6 +80,7 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	INTEGER :: i
 	REAL(KIND=8) :: r0, energy
 	COMPLEX(KIND=8), DIMENSION(nr_Fermi) :: cheb_coef_complex
+	REAL(KIND=8), DIMENSION(nr_Fermi) :: kernel
 
 	r0 = 2 * pi / nr_Fermi
 
@@ -100,18 +101,22 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 
 	! Get number of nonzero elements
 	n_cheb = nr_Fermi / 2
-	cheb_coef_complex = 2. * cheb_coef_complex / nr_Fermi
-	cheb_coef_complex(1) = cheb_coef_complex(1) / 2
-	cheb_coef = DBLE(cheb_coef_complex)
-	DO i = 1, nr_Fermi
+
+	CALL jackson_kernel(kernel, n_cheb)
+
+	!$OMP PARALLEL DO SIMD
+	DO i = 1, n_cheb
+		cheb_coef(i) = kernel(i) * DBLE(cheb_coef_complex(i)) / n_cheb
+	END DO
+	!$OMP END PARALLEL DO SIMD
+	cheb_coef(1) = cheb_coef(1) / 2
+
+	DO i = 1, n_cheb
 		IF((ABS(cheb_coef(i)) < eps) .AND. (ABS(cheb_coef(i + 1)) < eps)) THEN
 			n_cheb = i
 			EXIT
 		END IF
 	END DO
-	IF (n_cheb == 0) THEN
-		PRINT *,"WARNING: not enough Fermi operator Cheb. coefficients"
-	END IF
 
 END SUBROUTINE get_Fermi_cheb_coef
 
@@ -131,7 +136,7 @@ SUBROUTINE density_coef(n_wf, site_x, site_y, site_z, q_point, &
 	INTEGER :: i
 	REAL(KIND=8) :: power
 
-	!$OMP PARALLEL DO PRIVATE(power)
+	!$OMP PARALLEL DO SIMD PRIVATE(power)
 	DO i = 1, n_wf
 		power = q_point(1)*site_x(i) + &
 				q_point(2)*site_y(i) + &
@@ -139,7 +144,7 @@ SUBROUTINE density_coef(n_wf, site_x, site_y, site_z, q_point, &
 		s_density_q(i) = CMPLX(COS(power), SIN(power), KIND=8)
 		s_density_min_q(i) = CMPLX(COS(power), -SIN(power), KIND=8)
 	END DO
-	!$OMP END PARALLEL DO
+	!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE density_coef
 
@@ -156,11 +161,11 @@ SUBROUTINE density(wf_in, n_wf, s_density, wf_out)
 	! declare vars
 	INTEGER :: i
 
-	!$OMP PARALLEL DO
+	!$OMP PARALLEL DO SIMD
 	DO i = 1, n_wf
 		wf_out(i) = s_density(i) * wf_in(i)
 	END DO
-	!$OMP END PARALLEL DO
+	!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE density
 

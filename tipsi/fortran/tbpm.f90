@@ -548,7 +548,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 			W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
-			!$OMP PARALLEL DO PRIVATE(j)
+			!$OMP PARALLEL DO SIMD PRIVATE(j)
 			DO i = 1, n_en_inds
 
 				en = energies(en_inds(i) + 1)
@@ -560,7 +560,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 								 EXP(-img*en*k*t_step)*wf_t_neg(j)*W
 				END DO
 			END DO
-			!$OMP END PARALLEL DO
+			!$OMP END PARALLEL DO SIMD
 		END DO
 
 		! Normalise
@@ -709,7 +709,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 
             W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
-            !$OMP PARALLEL DO PRIVATE (j)
+            !$OMP PARALLEL DO SIMD PRIVATE (j)
             DO i = 1, n_energies
                 DO j = 1, n_wf
                     wfq(i,j) = wfq(i,j)+&
@@ -718,7 +718,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
                         	   EXP(-img*energies(i)*k*t_step)*wf_t_neg(j)*W
                 END DO
             END DO
-            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO SIMD
 
 		END DO
 
@@ -742,3 +742,182 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 	END DO
 
 END SUBROUTINE tbpm_eigenstates
+
+
+! USE the Kubo-Bastin formula to calculate the Hall conductivity
+! based on PRL 114, 116602 (2015)
+! This is a version with only XX (iTypeDC==1) or XY (iTypeDC==2)
+SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
+					 s_hop, n_hop, H_rescale, s_dx, n_dx, s_dy, n_dy, &
+					 n_ran_samples, energies, n_energies, beta, prefactor, &
+					 n_kernel, iTypeDC, NE_Integral, fermi_precision, &
+					 corr_mu_avg)
+
+	USE math, ONLY: inner_prod
+	USE random
+	USE csr
+	USE propagation, ONLY: cheb_wf_timestep
+	USE funcs
+	USE kpm
+    IMPLICIT NONE
+
+    ! deal with input
+    INTEGER, INTENT(in) :: iTypeDC, n_energies
+    INTEGER, INTENT(in) :: seed, n_ran_samples
+    INTEGER, INTENT(in) :: n_kernel, NE_Integral
+    INTEGER, INTENT(in) :: n_indptr, n_indices, n_hop, n_dx, n_dy
+    REAL(8), INTENT(in) :: prefactor, beta, fermi_precision, H_rescale
+	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
+	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: s_hop
+	REAL(8), INTENT(in), DIMENSION(n_dx) :: s_dx
+	REAL(8), INTENT(in), DIMENSION(n_dy) :: s_dy
+    REAL(8), INTENT(in), DIMENSION(n_energies) :: energies
+    COMPLEX(8), DIMENSION(n_hop) :: sys_current_x
+    COMPLEX(8), DIMENSION(n_hop) :: sys_current_y
+
+    !declare vars
+    INTEGER :: i, j, k, i_sample, mu_min, mu_max, NE, n_wf, n_calls
+
+    REAL(8):: WaveFunctionNorm
+    COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0,wf1,wf1X,wf1X0,wf1X1,wf_in
+    COMPLEX(8):: wf_DimKern(1:(n_indptr - 1),0:n_kernel)
+    COMPLEX(8),DIMENSION(n_kernel,n_kernel)::corr_mu
+
+    REAL(8):: a,r0,x,y,energy,mu2
+    COMPLEX(8) :: ca,cb,COMPLEXa,COMPLEXb,dcx
+    REAL(8),DIMENSION(n_kernel):: KernelFunction,ChebPol
+    COMPLEX(8),DIMENSION(n_kernel):: sum_temp
+    COMPLEX(8),DIMENSION(n_kernel,n_kernel)::Gamma_mn
+    !COMPLEX(8),ALLOCATABLE:: en_integral(:),sum_gamma_mu(:)
+	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
+
+    ! output
+    !REAL(8),intent(out),DIMENSION(n_energies) :: cond
+    COMPLEX(8),intent(out),DIMENSION(0:n_kernel,0:n_kernel)::corr_mu_avg
+
+    n_wf = n_indptr - 1
+	! write(*,*) 'go into subroutine current_coefficient now'
+	n_calls = n_ran_samples * (n_kernel + 1)
+	CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, &
+						 sys_current_x, cur_csr_x)
+	if (iTypeDC==2) then
+		n_calls = n_ran_samples * n_kernel
+		CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
+		CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, &
+							 sys_current_y, cur_csr_y)
+	end if
+
+	n_calls = n_ran_samples * (2 * n_kernel - 1)
+    CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
+
+
+    corr_mu=0.
+    corr_mu_avg=0.
+
+    ! iterate over random states
+    do i_sample=1, n_ran_samples
+        ! get random state
+        call random_state(wf_in, n_wf, seed*i_sample)
+
+        do j=1, n_kernel
+            if (mod(j,250)==0) then
+                PRINT *, "Currently at j = ", j
+            end if
+
+            if (j==1) then
+                wf_DimKern(:,j)=wf_in
+            else
+                call csr_mv(wf_DimKern(:,j-1), n_wf, 1D0, H_csr, &
+                    		wf_DimKern(:,j))
+            end if
+
+            !calculate the chebyshev polynomial and replace wf_ 0, 1
+            if (j>2) then
+                call get_ChebPol_n_wfthOrder( &
+                    n_wf, wf_DimKern(:,j-2), wf_DimKern(:,j-1), &
+                    wf_DimKern(:,j))
+            end if
+
+            ! if (j==n_kernel .or. j==n_kernel/2 .or. &
+            !     j==n_kernel/4 .or. j==n_kernel*3/4 .or. j==1) then
+            !     WaveFunctionNorm=abs(inner_prod(wf_DimKern(:,j),&
+            !         wf_DimKern(:,j)))
+            !     if (WaveFunctionNorm>H_rescale .or. WaveFunctionNorm<0.) then
+            !         PRINT *, "WaveFunctionNorm=", WaveFunctionNorm
+            !         PRINT *, "Error: hoprescale too small..."
+            !         stop
+            !     end if
+            ! end if
+
+        end do
+
+        if (iTypeDC==1) then
+            do j=1, n_kernel
+                call csr_mv(wf_DimKern(:,j), n_wf, 1D0, cur_csr_x, &
+							wf_DimKern(:,j))
+            end do
+        else if (iTypeDC==2) then
+            do j=1, n_kernel
+                call csr_mv(wf_DimKern(:,j), n_wf, 1D0, cur_csr_y, &
+							wf_DimKern(:,j))
+            end do
+        end if
+
+        ! calculate correlation matrix
+        do i=1, n_kernel
+            if (mod(i,256)==0) then
+                PRINT *, "Currently at i = ", i
+            end if
+            if (i==1) then
+                call csr_mv(wf_in, n_wf, 1D0, cur_csr_x, wf1X)
+                wf1X0=wf1X
+            else if (i==2) then
+                call csr_mv(wf1X0, n_wf, 1D0, H_csr, wf1X)
+                wf1X1=wf1X
+            else
+                call csr_mv(wf1X1, n_wf, 1D0, H_csr, wf1X)
+                ! calculate the chebyshev polynomial and replace wf_ 0, 1
+                call get_ChebPol_wf(n_wf,wf1X0,wf1X1,wf1X)
+
+            end if
+
+        ! calculate the matrix elements of the correction function
+
+            !$OMP PARALLEL DO
+            do j=1, n_kernel
+                corr_mu(i,j)=inner_prod(wf1X, wf_DimKern(:,j))
+            end do
+            !$OMP END PARALLEL DO
+
+        end do
+
+
+        !$OMP PARALLEL DO SIMD
+        do j=1, n_kernel
+            do i=1, n_kernel
+                corr_mu_avg(i,j)=corr_mu_avg(i,j)+corr_mu(i,j)
+            end do
+        end do
+        !$OMP END PARALLEL DO SIMD
+
+    end do
+
+    if (n_ran_samples>1) then
+        !$OMP PARALLEL DO SIMD
+        do j=1, n_kernel
+            do i=1, n_kernel
+                corr_mu_avg(i,j)=corr_mu_avg(i,j)/n_ran_samples
+            end do
+        end do
+        !$OMP END PARALLEL DO SIMD
+    end if
+
+
+    !call cond_from_trace(corr_mu_avg, n_kernel, n_kernel, energies, n_energies, &
+    !        NE_integral, H_rescale, beta, fermi_precision, prefactor, &
+    !        cond)
+
+
+END SUBROUTINE tbpm_kbdc

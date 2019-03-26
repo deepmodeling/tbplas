@@ -116,8 +116,17 @@ class Config():
     dyn_pol['q_points'] : (n_q_points, 3) list of floats
         List of q-points. Default value: [[0.1, 0., 0.]].
     DC_conductivity['energy_limits'] : 2-tuple of floats
-        Minimum and maximum of energy window for dc conductivity.
+        Minimum and maximum of energy window for DC conductivity.
         Default value: [-0.5, 0.5].
+    dckb['energies'] : list of floats
+        List of chemical potentials to calculate Hall conductivity.
+        It must be in [-1, 1], unit is H_rescale.
+    dckb['n_kernel'] : int
+        Number of kernels in Kernel Polynomial Method(KPM). Default value: 2048
+    dckb['direction'] : int
+        1 gives XX, 2 gives XY conductivity. Default value: 1
+    dckb['ne_integral'] : int
+        Number of integral. Default value: 2048
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
     output['timestamp'] : int
@@ -162,6 +171,7 @@ class Config():
         self.DC_conductivity = {}
         self.quasi_eigenstates = {}
         self.output = {}
+        self.dckb = {}
 
         # sample parameters
         if sample:
@@ -199,6 +209,12 @@ class Config():
         self.dyn_pol['q_points'] = [[1., 0., 0.]]
         self.dyn_pol['coulomb_constant'] = 1.0
         self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
+
+        #dckb, Hall conductivity
+        self.dckb['energies'] = [i * 0.01 - 0.2 for i in range(0, 41)]
+        self.dckb['n_kernel'] = 2048
+        self.dckb['direction'] = 1  #1 gives XX, 2 gives XY conductivity
+        self.dckb['ne_integral'] = 2048
 
         # output settings
         if not read_from_file:
@@ -252,3 +268,6 @@ class Config():
         td = create_dir(directory)
         with open(td + prefix + filename, 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def dckb_prefactor(self):
+        return 16.0 * self.sample['nr_orbitals'] / self.sample['area_unit_cell']

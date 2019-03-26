@@ -12,6 +12,6 @@ f2py3 --compiler=intelem --fcompiler=intelem \
    -L/vol/opt/intelcompilers/intel-2014/composerxe/lib/intel64 \
    -liomp5 -lifcoremt \
    -c f2py.pyf const.f90 math.f90 csr.f90 fft.f90 \
-      random.f90 propagation.f90 funcs.f90 tbpm.f90 analysis.f90
+      random.f90 propagation.f90 kpm.f90 funcs.f90 tbpm.f90 analysis.f90
 
 rm -f f2py.pyf

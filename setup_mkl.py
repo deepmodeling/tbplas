@@ -15,7 +15,8 @@ os.system("f2py -h f2py.pyf -m f2py " + fpath + "{analysis,tbpm}.f90 \
           --overwrite-signature")
 
 f90files = ['const.f90', 'math_blas.f90', 'csr_mkl.f90', 'fftw.f90', \
-    'random.f90', 'propagation.f90', 'funcs.f90', 'tbpm.f90', 'analysis.f90']
+    'random.f90', 'propagation.f90', 'kpm.f90', 'funcs.f90', 'tbpm.f90', \
+    'analysis.f90']
 
 sourcefiles = ['f2py.pyf']
 for file in f90files:
