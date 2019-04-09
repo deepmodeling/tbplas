@@ -467,7 +467,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 	! declare vars
 	INTEGER :: i_sample, i, j, k, l, t, n_wf, n_calls
-	REAL(KIND=8) :: W, QE_sum, en
+	REAL(KIND=8) :: W, QE_sum
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg, wfE
 	COMPLEX(KIND=8), DIMENSION(n_en_inds, n_indptr - 1) :: wf_QE
 	COMPLEX(KIND=8), DIMENSION(2, n_indptr - 1) :: wf0_J, wfE_J, wfE_J_t
@@ -475,7 +475,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: coef_F, coef_omF
 	! coefs for x or y current
 	COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_x, sys_current_y
-	COMPLEX(KIND=8) :: dos_corrval
+	COMPLEX(KIND=8) :: dos_corrval, P
 	COMPLEX(KIND=8), DIMENSION(2) :: dc_corrval
 	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
 
@@ -521,15 +521,21 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 		! ------------
 
 		! initial values for wf_t and wf_QE
-		DO i = 1, n_wf
-			wf_t_pos(i) = wf0(i)
-			wf_t_neg(i) = wf0(i)
-		END DO
+		!$OMP PARALLEL DO SIMD
+        DO i = 1, n_wf
+            wf_t_pos(i) = wf0(i)
+            wf_t_neg(i) = wf0(i)
+        END DO
+		!$OMP END PARALLEL DO SIMD
+		!$OMP PARALLEL DO PRIVATE(j)
 		DO i = 1, n_en_inds
+			!$OMP DO SIMD
 			DO j = 1, n_wf
 				wf_QE(i, j) = wf0(j)
 			END DO
+			!$OMP END DO SIMD
 		END DO
+		!$OMP PARALLEL DO
 
 		! Iterate over time, get Fourier transform
 		DO k = 1, n_timestep
@@ -548,17 +554,16 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 			W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
-			!$OMP PARALLEL DO SIMD PRIVATE(j)
+			!$OMP PARALLEL DO SIMD PRIVATE(P, j)
 			DO i = 1, n_en_inds
 
-				en = energies(en_inds(i) + 1)
-
+				P = EXP(img * energies(en_inds(i) + 1) * k * t_step)
+				!$OMP DO SIMD
 				DO j = 1, n_wf
-					wf_QE(i,j) = wf_QE(i,j) + &
-								 EXP(img*en*k*t_step)*wf_t_pos(j)*W
-					wf_QE(i,j) = wf_QE(i,j) + &
-								 EXP(-img*en*k*t_step)*wf_t_neg(j)*W
+					wf_QE(i,j) = wf_QE(i,j) + P * wf_t_pos(j) * W
+					wf_QE(i,j) = wf_QE(i,j) + CONJG(P) * wf_t_neg(j) * W
 				END DO
+				!$OMP END DO SIMD
 			END DO
 			!$OMP END PARALLEL DO SIMD
 		END DO
@@ -668,6 +673,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 	! declare vars
 	INTEGER :: i, j, k, l, t, n_wf, i_sample, n_calls
 	REAL(KIND=8) :: W, QE_sum
+	COMPLEX(KIND=8) :: P
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg
 	COMPLEX(KIND=8), DIMENSION(n_energies, n_indptr - 1) :: wfq
 	TYPE(SPARSE_MATRIX_T) :: H_csr
@@ -687,15 +693,21 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
         CALL random_state(wf0, n_wf, seed*i_sample)
 
         ! initial values for wf_t and wf_QE
+		!$OMP PARALLEL DO SIMD
         DO i = 1, n_wf
             wf_t_pos(i) = wf0(i)
             wf_t_neg(i) = wf0(i)
         END DO
+		!$OMP END PARALLEL DO SIMD
+		!$OMP PARALLEL DO PRIVATE(j)
 		DO i = 1, n_energies
+			!$OMP DO SIMD
 			DO j = 1, n_wf
 				wfq(i, j) = wf0(j)
 			END DO
+			!$OMP END DO SIMD
 		END DO
+		!$OMP PARALLEL DO
 
 		! Iterate over time, get Fourier transform
         DO k = 1, n_timestep
@@ -709,16 +721,17 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 
             W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
-            !$OMP PARALLEL DO SIMD PRIVATE (j)
+            !$OMP PARALLEL DO PRIVATE (P, j)
             DO i = 1, n_energies
+				P = EXP(img * energies(i) * k * t_step)
+				!$OMP DO SIMD
                 DO j = 1, n_wf
-                    wfq(i,j) = wfq(i,j)+&
-                        	   EXP(img*energies(i)*k*t_step)*wf_t_pos(j)*W
-                    wfq(i,j) = wfq(i,j)+&
-                        	   EXP(-img*energies(i)*k*t_step)*wf_t_neg(j)*W
+                    wfq(i,j) = wfq(i,j)+ P * wf_t_pos(j) * W
+                    wfq(i,j) = wfq(i,j)+ CONJG(P) * wf_t_neg(j) * W
                 END DO
+				!$OMP END DO SIMD
             END DO
-            !$OMP END PARALLEL DO SIMD
+            !$OMP END PARALLEL DO
 
 		END DO
 
@@ -822,7 +835,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
         call random_state(wf_in, n_wf, seed*i_sample)
 
         do j=1, n_kernel
-            if (mod(j,250)==0) then
+            if (mod(j,256)==0) then
                 PRINT *, "Currently at j = ", j
             end if
 
@@ -885,33 +898,37 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
         ! calculate the matrix elements of the correction function
 
-            !$OMP PARALLEL DO
+            !$OMP PARALLEL DO SIMD
             do j=1, n_kernel
                 corr_mu(i,j)=inner_prod(wf1X, wf_DimKern(:,j))
             end do
-            !$OMP END PARALLEL DO
+            !$OMP END PARALLEL DO SIMD
 
         end do
 
 
-        !$OMP PARALLEL DO SIMD
+        !$OMP PARALLEL DO PRIVATE(i)
         do j=1, n_kernel
+			!$OMP DO SIMD
             do i=1, n_kernel
                 corr_mu_avg(i,j)=corr_mu_avg(i,j)+corr_mu(i,j)
             end do
+			!$OMP END DO SIMD
         end do
-        !$OMP END PARALLEL DO SIMD
+        !$OMP END PARALLEL DO
 
     end do
 
     if (n_ran_samples>1) then
-        !$OMP PARALLEL DO SIMD
+        !$OMP PARALLEL DO PRIVATE(i)
         do j=1, n_kernel
+			!$OMP DO SIMD
             do i=1, n_kernel
                 corr_mu_avg(i,j)=corr_mu_avg(i,j)/n_ran_samples
             end do
+			!$OMP END DO SIMD
         end do
-        !$OMP END PARALLEL DO SIMD
+        !$OMP END PARALLEL DO
     end if
 
 

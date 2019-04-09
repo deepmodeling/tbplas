@@ -501,12 +501,12 @@ def get_dckb(sample, config):
     seed = config.generic['seed']
     print('init finish')
 
-    if config.dckb['output_correlation']:
-        output_int = 2
-        dckb_corr_filename = config.output['dckb_corr']
-    else:
-        output_int = 1
-        dckb_corr_filename = ''
+    # if config.dckb['output_correlation']:
+    #     output_int = 2
+    #     dckb_corr_filename = config.output['dckb_corr']
+    # else:
+    #     output_int = 1
+    #     dckb_corr_filename = ''
 
     from .fortran import f2py as fortran_f2py
     #import fortran.tbpm_dckb as fortran_dckb

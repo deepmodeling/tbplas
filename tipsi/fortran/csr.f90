@@ -52,11 +52,13 @@ SUBROUTINE csr_mv(vec_in, n_vec, value, mat_csr, vec_out)
 	DO i = 1, n_vec
 		j_start = mat_csr%indptr(i)
 		j_end = mat_csr%indptr(i + 1)
+		!$OMP DO SIMD
 		DO j = j_start, j_end - 1
 			k = mat_csr%indices(j + 1)
 			vec_out(i) = vec_out(i) &
 						+ value * mat_csr%values(j + 1) * vec_in(k + 1)
 		END DO
+		!$OMP END DO SIMD
 	END DO
 	!$OMP END PARALLEL DO
 

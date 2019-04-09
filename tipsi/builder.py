@@ -62,26 +62,26 @@ import scipy.linalg.lapack as spla
 # helper functions
 ################
 
-
-def bc_default(unit_cell_coords, orbital):
-    """Default (closed) boundary conditions.
-
-    Parameters
-    ----------
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-
-    Returns
-    ----------
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-    """
-
-    return unit_cell_coords, orbital
+# def bc_default(unit_cell_coords, orbital):
+#     """Default (closed) boundary conditions.
+#
+#     Parameters
+#     ----------
+#     unit_cell_coords : 3-tuple of integers
+#         unit cell coordinates
+#     orbital : integer
+#         orbital index
+#
+#     Returns
+#     ----------
+#     unit_cell_coords : 3-tuple of integers
+#         unit cell coordinates
+#     orbital : integer
+#         orbital index
+#     """
+#
+#     return unit_cell_coords, orbital
+bc_default = 'null'
 
 
 def grouper(in_list, n):

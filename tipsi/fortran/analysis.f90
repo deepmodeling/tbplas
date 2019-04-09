@@ -61,12 +61,12 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
 	END DO
 
 	PRINT *, "Calculating LDOS with Green's function."
-	!$OMP PARALLEL DO PRIVATE(g00)
+	!$OMP PARALLEL DO SIMD PRIVATE(g00)
 	DO i = -n_timestep, n_timestep
 		CALL green_function(energy(i), delta, coefa, coefb, n_depth, g00)
 		ldos(i) = -1D0 / pi * AIMAG(g00)
 	END DO
-	!$OMP END PARALLEL DO
+	!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE ldos_haydock
 
@@ -261,8 +261,8 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, energies, n_energies, &
 !~     open (17,file='cheb_mega_new.out')
     !let's calculate everything for different energies (between -1 and 1):
     do k=-NE,NE
-        if (MODULO(k,100) == 0) then
-            PRINT*,k
+        if (MODULO(k,256) == 0) then
+            PRINT*, (k + NE + 1) / 2
         end if
         call chebyshev_polynomial(energy_integral(k),n_kernel,cheb_x)
 
@@ -322,7 +322,7 @@ CONTAINS
 	    acosx=acos(x)
 	    c=dsqrt(1.-x*x)
 
-	!$OMP parallel do private(ca,cb,cc,cd)
+	!$OMP parallel do simd private(ca,cb,cc,cd,i)
 	    do j=0, n_kernel-1
 	        ca=dcmplx(cos(j*acosx),sin(j*acosx))
 	        cc=dcmplx(x,-j*c)
@@ -336,7 +336,7 @@ CONTAINS
 	!~             write(*,*) Gamma_mn(i,j)
 	        end do
 	    end do
-	!$OMP end parallel do
+	!$OMP end parallel do simd
 
 	END SUBROUTINE calculate_gamma_mn
 

@@ -85,14 +85,14 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 	r0 = 2 * pi / nr_Fermi
 
 	IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO SIMD PRIVATE(energy)
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
 			cheb_coef_complex(i) = 1D0 - Fermi_dist(beta, mu, energy, eps)
 		END DO
 		!$OMP END PARALLEL DO SIMD
 	ELSE ! compute coeffs for Fermi operator
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO SIMD PRIVATE(energy)
 		DO i = 1, nr_Fermi
 			energy = COS((i - 1) * r0)
 			cheb_coef_complex(i) = Fermi_dist(beta, mu, energy, eps)
@@ -108,11 +108,11 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 
 	CALL jackson_kernel(kernel, n_cheb)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO i = 1, n_cheb
 		cheb_coef(i) = kernel(i) * DBLE(cheb_coef_complex(i)) / n_cheb
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 	cheb_coef(1) = cheb_coef(1) / 2
 
 	DO i = 1, n_cheb
