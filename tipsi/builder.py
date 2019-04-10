@@ -62,26 +62,26 @@ import scipy.linalg.lapack as spla
 # helper functions
 ################
 
-# def bc_default(unit_cell_coords, orbital):
-#     """Default (closed) boundary conditions.
-#
-#     Parameters
-#     ----------
-#     unit_cell_coords : 3-tuple of integers
-#         unit cell coordinates
-#     orbital : integer
-#         orbital index
-#
-#     Returns
-#     ----------
-#     unit_cell_coords : 3-tuple of integers
-#         unit cell coordinates
-#     orbital : integer
-#         orbital index
-#     """
-#
-#     return unit_cell_coords, orbital
-bc_default = 'null'
+
+def bc_default(unit_cell_coords, orbital):
+    """Default (closed) boundary conditions.
+
+    Parameters
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+
+    Returns
+    ----------
+    unit_cell_coords : 3-tuple of integers
+        unit cell coordinates
+    orbital : integer
+        orbital index
+    """
+
+    return unit_cell_coords, orbital
 
 
 def grouper(in_list, n):
@@ -936,8 +936,8 @@ class Sample:
                 return
             else:
                 # return results normally
-                return (np.array(indices, dtype=int),
-                        np.array(indptr, dtype=int),
+                return (np.array(indices,
+                                 dtype=int), np.array(indptr, dtype=int),
                         np.array(hop, dtype=complex))
 
     def add_hop_dict(self, hop_dict):
@@ -1214,13 +1214,12 @@ class Sample:
         fig, ax = plt.subplots()
 
         # plot sites
-        plt.scatter(
-            self.site_x,
-            self.site_y,
-            s=0.5 * draw_size**2,
-            c='black',
-            zorder=2,
-            edgecolors='none')
+        plt.scatter(self.site_x,
+                    self.site_y,
+                    s=0.5 * draw_size**2,
+                    c='black',
+                    zorder=2,
+                    edgecolors='none')
 
         # put hoppings in LineCollection
         hops = []
@@ -1239,8 +1238,10 @@ class Sample:
                     hops.append([[self.site_x[i], self.site_y[i]],
                                  [self.site_x[j], self.site_y[j]]])
                     linews.append(draw_size * npla.norm(hop))
-        lines = mc.LineCollection(
-            hops, linewidths=linews, colors='grey', zorder=1)
+        lines = mc.LineCollection(hops,
+                                  linewidths=linews,
+                                  colors='grey',
+                                  zorder=1)
 
         # plot hoppings
         ax.add_collection(lines)
