@@ -241,7 +241,7 @@ def read_wannier90(lat_file,
                    coord_file,
                    ham_file,
                    correct_file=False,
-                   cutoff_en=0.0):
+                   en_cutoff=0.0):
     r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
@@ -258,6 +258,10 @@ def read_wannier90(lat_file,
     correct_file : string, optional
         correction terms for hoppings, available since Wannier90 2.1,
         usually named "\*_wsvec.dat"
+    en_cutoff : float, optional
+        cut-off energy that absolute value of hopping less than en_cutoff \
+        will be treated as 0
+        Default: 0 which means no cut-off
 
     Returns
     ----------
@@ -334,8 +338,9 @@ def read_wannier90(lat_file,
         unit_cell_coord_new = (x, y, z)
         orb0 = int(data[3]) - 1
         orb1 = int(data[4]) - 1
-        hop = 0 + 0j if np.abs(float(data[5])) < cutoff_en \
-              else float(data[5]) + 1j * float(data[6])
+        hop = float(data[5]) + 1j * float(data[6])
+        if np.abs(hop) < en_cutoff:
+            hop = 0 + 0j
 
         # add hopping terms
         # if new (x,y,z), fill hop_dict with old one

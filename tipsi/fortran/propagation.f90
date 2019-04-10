@@ -30,13 +30,13 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, value, H_csr, wf_t1)
 
 	CALL csr_mv(wf_t, n_wf, value, H_csr, Tcheb1)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		Tcheb0(i) = wf_t(i)
 		Tcheb1(i) = -img * Tcheb1(i)
 		wf_t1(i) = Bes(1) * Tcheb0(i) + 2 * Bes(2) * Tcheb1(i)
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 	p0 => Tcheb0
 	p1 => Tcheb1
@@ -44,12 +44,12 @@ SUBROUTINE cheb_wf_timestep(wf_t, n_wf, Bes, value, H_csr, wf_t1)
 		p2 => p0
 		CALL csr_mv(p1, n_wf, value, H_csr, Tcheb2)
 
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO
 		DO i = 1, n_wf
 			p2(i) = p0(i) - 2 * img * Tcheb2(i)
 			wf_t1(i) = wf_t1(i) + 2 * Bes(j) * p2(i)
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 		p0 => p1
 		p1 => p2
 	END DO
@@ -76,12 +76,12 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, H_csr, wf_out)
 
 	CALL csr_mv(wf_in, n_wf, 1D0, H_csr, Tcheb1)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		Tcheb0(i) = wf_in(i)
 		wf_out(i) = cheb_coef(1) * Tcheb0(i) + cheb_coef(2) * Tcheb1(i)
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 	p0 => Tcheb0
 	p1 => Tcheb1
@@ -89,12 +89,12 @@ SUBROUTINE Fermi(wf_in, n_wf, cheb_coef, H_csr, wf_out)
 		p2 => p0
 		CALL csr_mv(p1, n_wf, 1D0, H_csr, Tcheb2)
 
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO
 		DO i = 1, n_wf
 			p2(i) = 2 * Tcheb2(i) - p0(i)
 			wf_out(i) = wf_out(i) + cheb_coef(j) * p2(i)
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 		p0 => p1
 		p1 => p2
 	END DO
@@ -124,11 +124,11 @@ SUBROUTINE Haydock_coef(n1, n_wf, n_depth, H_csr, H_rescale, coefa, coefb)
 	CALL csr_mv(n1, n_wf, H_rescale, H_csr, n2)
 	coefa(1) = inner_prod(n1, n2)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO j = 1, n_wf
 		n2(j) = n2(j) - coefa(1) * n1(j)
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 	coefb(1) = DSQRT(inner_prod(n2))
 
@@ -139,21 +139,21 @@ SUBROUTINE Haydock_coef(n1, n_wf, n_depth, H_csr, H_rescale, coefa, coefb)
 			PRINT *, "    Depth    ", i, " of ", n_depth
 		END IF
 
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO
 		DO j = 1, n_wf
 			n0(j) = n1(j)
 			n1(j) = n2(j) / coefb(i-1)
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 
 		CALL csr_mv(n1, n_wf, H_rescale, H_csr, n2)
 		coefa(i) = inner_prod(n1, n2)
 
-		!$OMP PARALLEL DO SIMD
+		!$OMP PARALLEL DO
 		DO j = 1, n_wf
 			n2(j) = n2(j) - coefa(i) * n1(j) - coefb(i-1) * n0(j)
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 
 		coefb(i) = DSQRT(inner_prod(n2))
 	END DO

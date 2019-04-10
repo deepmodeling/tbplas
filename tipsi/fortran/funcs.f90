@@ -165,11 +165,11 @@ SUBROUTINE density(wf_in, n_wf, s_density, wf_out)
 	! declare vars
 	INTEGER :: i
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO i = 1, n_wf
 		wf_out(i) = s_density(i) * wf_in(i)
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE density
 
