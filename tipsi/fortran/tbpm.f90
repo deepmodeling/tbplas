@@ -701,7 +701,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 				wfq(i, j) = wf0(j)
 			END DO
 		END DO
-		!$OMP PARALLEL DO
+		!$OMP END PARALLEL DO
 
 		! Iterate over time, get Fourier transform
         DO k = 1, n_timestep

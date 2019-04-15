@@ -317,7 +317,6 @@ CONTAINS
 	    INTEGER:: i,j,k,n_kernel
 	    REAL(kind=8):: x,acosx,a,b,c,ChebyshevPolynomial(0:n_kernel-1)
 	    COMPLEX(kind=8):: Gamma_mn(0:n_kernel-1,0:n_kernel-1),ca,cb,cc,cd
-	    COMPLEX(kind=8):: COMPLEXi=(0.,1.)
 
 	    acosx=acos(x)
 	    c=dsqrt(1.-x*x)
