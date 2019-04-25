@@ -83,7 +83,8 @@ class Config():
     generic['Bessel_precision'] : float
         Bessel function precision cut-off. Default value: 1.0e-13
     generic['beta'] : float
-        Value for 1/kT. Default value: 11604.505/300 (room temperature, using eV)
+        Value for 1/kT.
+        Default value: 11604.505/300 (room temperature, using eV)
     generic['correct_spin'] : bool
         If True, results are corrected for spin. Default value: False.
     generic['Fermi_cheb_precision'] : float
@@ -210,10 +211,10 @@ class Config():
         self.dyn_pol['coulomb_constant'] = 1.0
         self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
 
-        #dckb, Hall conductivity
+        # dckb, Hall conductivity
         self.dckb['energies'] = [i * 0.01 - 0.2 for i in range(0, 41)]
         self.dckb['n_kernel'] = 2048
-        self.dckb['direction'] = 1  #1 gives XX, 2 gives XY conductivity
+        self.dckb['direction'] = 1  # 1 gives XX, 2 gives XY conductivity
         self.dckb['ne_integral'] = 2048
 
         # output settings
@@ -236,7 +237,7 @@ class Config():
             prefix for filenames, set to False for standard (timestamp) prefix
         """
 
-        if prefix == False:
+        if prefix is False:
             prefix = self.output['timestamp']
         if prefix != "":
             print("Output prefix: " + prefix)
@@ -260,14 +261,14 @@ class Config():
             output directory, set to False if you don't want to specify
             an output directory
         prefix : string, optional
-            prefix for filenames, , set to False for standard (timestamp) prefix
+            prefix for filenames, set to False for standard (timestamp) prefix
         """
 
-        if prefix == False:
+        if prefix is False:
             prefix = self.output['timestamp']
         td = create_dir(directory)
         with open(td + prefix + filename, 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def dckb_prefactor(self):
-        return 16.0 * self.sample['nr_orbitals'] / self.sample['area_unit_cell']
+        return 16 * self.sample['nr_orbitals'] / self.sample['area_unit_cell']

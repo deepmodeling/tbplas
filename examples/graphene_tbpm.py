@@ -3,13 +3,9 @@
 Graphene TBPM example.
 """
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
-sys.path.append("..")
 import tipsi
 from tipsi.materials import graphene
 

@@ -3,12 +3,9 @@
 Antimonene band structure example for tipsi.
 """
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
-sys.path.append("..")
 import tipsi
 from tipsi.materials import antimonene
 

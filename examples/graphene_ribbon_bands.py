@@ -3,13 +3,9 @@
 Graphene ribbon band structure example for tipsi.
 """
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
-sys.path.append("..")
 import tipsi
 from tipsi.materials import graphene
 
@@ -52,7 +48,7 @@ def main():
 
     # get ribbon band structure
     N = res_bands
-    kpoints = [[0., (i / N) * 2 * np.pi / a - np.pi / a, 0.] \
+    kpoints = [[0., (i / N) * 2 * np.pi / a - np.pi / a, 0.]
                for i in range(N + 1)]
     kvals = [(i / N) * 2 * np.pi / a for i in range(N + 1)]
     bands = sample.band_structure(kpoints)

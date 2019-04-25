@@ -27,12 +27,8 @@ Functions
 # numerics & math
 import numpy as np
 
-# this is ugly
-from .builder import *
-from .config import *
 
-def read_sample(filename, lattice = None, bc_func = bc_default, \
-                nr_processes = 1):
+def read_sample(filename, lattice=None, bc_func=bc_default, nr_processes=1):
     """Read Sample object from file
 
     Parameters
@@ -51,9 +47,9 @@ def read_sample(filename, lattice = None, bc_func = bc_default, \
     ----------
     Sample object
     """
-    return Sample(lattice, bc_func = bc_func, \
-                  nr_processes = nr_processes, \
-                  read_from_file = filename)
+    return Sample(lattice, bc_func=bc_func,
+                  nr_processes=nr_processes,
+                  read_from_file=filename)
 
 
 def read_config(filename):

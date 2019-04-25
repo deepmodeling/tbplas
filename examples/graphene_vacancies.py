@@ -3,14 +3,10 @@
 Graphene with vacancies example.
 """
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-import sys
-sys.path.append("..")
 import tipsi
 from tipsi.materials import graphene
 
@@ -48,8 +44,7 @@ def main():
                     site_set.add_site(uc, i)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, \
-        pbc_wrap, nr_processes)
+    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hops)

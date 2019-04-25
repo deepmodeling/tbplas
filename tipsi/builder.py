@@ -180,8 +180,8 @@ def interpolate_k_points(k_points, resolution):
         kp1 = k_points[i + 1]
         for j in range(resolution):
             rat = 1. * j / resolution
-            momenta.append([kp0[0] + (kp1[0] - kp0[0]) * rat, \
-                            kp0[1] + (kp1[1] - kp0[1]) * rat, \
+            momenta.append([kp0[0] + (kp1[0] - kp0[0]) * rat,
+                            kp0[1] + (kp1[1] - kp0[1]) * rat,
                             kp0[2] + (kp1[2] - kp0[2]) * rat])
     momenta.append(k_points[-1])
 
@@ -262,9 +262,9 @@ def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
 
     # rescale lattice
     one_plus_eps = np.diag([1., 1., 1.]) + strain_tensor
-    vectors_new = [np.dot(one_plus_eps, vector) \
+    vectors_new = [np.dot(one_plus_eps, vector)
                    for vector in lattice_old.vectors]
-    orbital_coords_new = [np.dot(one_plus_eps, coord) \
+    orbital_coords_new = [np.dot(one_plus_eps, coord)
                           for coord in lattice_old.orbital_coords]
     lattice_new = Lattice(vectors_new, orbital_coords_new)
 
@@ -275,10 +275,10 @@ def uniform_strain(lattice_old, hop_dict_old, strain_tensor, beta):
         for i in range(hop.shape[0]):
             for j in range(hop.shape[1]):
                 hopval = hop[i, j]
-                r_old = npla.norm(lattice_old.site_pos(uc, j) \
-                                  - lattice_old.site_pos((0,0,0), i))
-                r_new = npla.norm(lattice_new.site_pos(uc, j) \
-                                  - lattice_new.site_pos((0,0,0), i))
+                r_old = npla.norm(lattice_old.site_pos(uc, j)
+                                  - lattice_old.site_pos((0, 0, 0), i))
+                r_new = npla.norm(lattice_new.site_pos(uc, j)
+                                  - lattice_new.site_pos((0, 0, 0), i))
                 if r_old != 0.0:
                     hopval_new = hopval * np.exp(-beta * (r_new / r_old - 1.))
                     hop_dict_new.set_element(uc, (i, j), hopval_new)
@@ -327,9 +327,10 @@ def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
     # extend lattice
     orbital_coords_new = lattice_old.orbital_coords
     for i in range(1, amount):
-        orbital_coords_new = np.append(orbital_coords_new, \
-            lattice_old.orbital_coords + i * lattice_old.vectors[d], \
-            axis = 0)
+        orbital_coords_new = np.append(orbital_coords_new,
+                                       lattice_old.orbital_coords +
+                                       i * lattice_old.vectors[d],
+                                       axis=0)
     vectors_new = lattice_old.vectors.copy()
     vectors_new[d] *= amount
     lattice_new = Lattice(vectors_new, orbital_coords_new)
@@ -345,7 +346,7 @@ def extend_unit_cell(lattice_old, hop_dict_old, direction, amount):
                     uc_transpose[d] += k
                     uc_new, orb1 = extend_coords(tuple(uc_transpose), j)
                     if uc_new not in hop_dict_new.dict.keys():
-                        hop_dict_new.empty(uc_new, (hop.shape[0] * amount, \
+                        hop_dict_new.empty(uc_new, (hop.shape[0] * amount,
                                                     hop.shape[1] * amount))
                     hopval = hop[i, j]
                     orb0 = i + k * nr_orb_old
@@ -489,7 +490,7 @@ class HopDict:
         # get maximum orbital index
         max_orb = 0
         for rel_unit_cell, hopping in self.dict.items():
-            max_orb = np.amax(hopping.shape + (max_orb, ))
+            max_orb = np.amax(hopping.shape + (max_orb,))
 
         # declare sparse dict
         sparse_dict = [{} for i in range(max_orb)]
@@ -500,7 +501,7 @@ class HopDict:
                 for i1 in range(hopping.shape[0]):
                     hop = hopping[i0, i1]
                     if (hop != 0j):
-                        sparse_dict[i0][rel_unit_cell + (i1, )] = hop
+                        sparse_dict[i0][rel_unit_cell + (i1,)] = hop
 
         return sparse_dict
 
@@ -557,7 +558,7 @@ class Lattice:
         """
 
         return self.orbital_coords[orbital] \
-               + np.dot(self.vectorsT, unit_cell_coords)
+            + np.dot(self.vectorsT, unit_cell_coords)
 
     def area_unit_cell(self):
         """Get unit cell area.
@@ -597,8 +598,10 @@ class Lattice:
 
         vec = self.vectors
         div = np.inner(vec[0], np.cross(vec[1], vec[2]))
-        rec = [2.0 * np.pi * np.cross(vec[(i + 1) % 3], vec[(i + 2) % 3]) / div \
-               for i in range(3)]
+        rec = [
+            2.0 * np.pi * np.cross(vec[(i + 1) % 3], vec[(i + 2) % 3]) / div
+            for i in range(3)
+        ]
         return np.array(rec)
 
 
@@ -631,7 +634,7 @@ class SiteSet:
         """
 
         # add site tag to self.sites
-        self.sites[unit_cell_coords + (orbital, )] = None
+        self.sites[unit_cell_coords + (orbital,)] = None
 
     def delete_site(self, unit_cell_coords, orbital):
         """Delete orbital from sample.
@@ -645,7 +648,7 @@ class SiteSet:
         """
 
         # delete site tag from self.sites
-        self.sites.pop(unit_cell_coords + (orbital, ), None)
+        self.sites.pop(unit_cell_coords + (orbital,), None)
 
 
 class Sample:
@@ -685,8 +688,8 @@ class Sample:
         y-distances of hoppings
     """
 
-    def __init__(self, lattice, site_set = [], bc_func = bc_default, \
-                 nr_processes = 1, conductivity = True, read_from_file = False):
+    def __init__(self, lattice, site_set=[], bc_func=bc_default,
+                 nr_processes=1, conductivity=True, read_from_file=False):
         """Index site_set and store site locations.
 
         Parameters
@@ -723,9 +726,9 @@ class Sample:
 
             # read data
             self.rescale = f["sample/rescale"][0]
-            self.index_to_tag = [tuple(tag) for tag in \
+            self.index_to_tag = [tuple(tag) for tag in
                                  f["sample/index_to_tag"][:]]
-            self.tag_to_index = {tag: i for i, tag in \
+            self.tag_to_index = {tag: i for i, tag in
                                  enumerate(self.index_to_tag)}
             self.site_x = f["sample/site_x"][:]
             self.site_y = f["sample/site_y"][:]
@@ -756,7 +759,7 @@ class Sample:
         self.index_to_tag.sort(
             key=lambda tag: tag
         )  # this will speed up FORTRAN / use itemgetter() instead?
-        self.tag_to_index = {tag: i for i, tag in \
+        self.tag_to_index = {tag: i for i, tag in
                              enumerate(self.index_to_tag)}
 
         if self.nr_processes == 1:  # no multiprocessing
@@ -778,7 +781,7 @@ class Sample:
             data = [None for i in range(N)]
             for i, tags in enumerate(sites_div):
                 pipe = pipes[i]
-                processes[i] = mp.Process(target=self.__get_locs, \
+                processes[i] = mp.Process(target=self.__get_locs,
                                           args=(tags, pipe[1]))
                 processes[i].start()
 
@@ -829,7 +832,7 @@ class Sample:
         site_r = np.zeros((3, len(tags)), dtype=float)
         # iterate over tags
         for i, tag in enumerate(tags):
-            #site_r[:,i] = self.get_loc(tag)
+            # site_r[:,i] = self.get_loc(tag)
             site_r[:, i] = self.lattice.site_pos(tag[0:3], tag[3])  # faster
         # return results
         if conn:
@@ -870,9 +873,9 @@ class Sample:
             i0 = self.tag_to_index[tag0]
             indptr.append(indptr[-1])
             for rel_tag, hopping in self.sparse_hop_dict[orb0].items():
-                tag1 = (r0[0] + rel_tag[0], \
-                        r0[1] + rel_tag[1], \
-                        r0[2] + rel_tag[2], \
+                tag1 = (r0[0] + rel_tag[0],
+                        r0[1] + rel_tag[1],
+                        r0[2] + rel_tag[2],
                         rel_tag[3])
                 # if tag in sample, add
                 try:
@@ -888,7 +891,7 @@ class Sample:
                     r1 = tag1[0:3]
                     orb1 = tag1[3]
                     pbc_r, pbc_orb = self.bc_func(r1, orb1)
-                    pbc_tag = pbc_r + (pbc_orb, )
+                    pbc_tag = pbc_r + (pbc_orb,)
                     try:
                         i1 = self.tag_to_index[pbc_tag]
                         indices.append(i1)
@@ -916,12 +919,12 @@ class Sample:
                 return
             else:
                 # return results normally
-                return (np.array(indices, dtype=int), \
-                        np.array(indptr, dtype=int), \
-                        np.array(hop, dtype=complex), \
-                        np.array(dx, dtype=float), \
+                return (np.array(indices, dtype=int),
+                        np.array(indptr, dtype=int),
+                        np.array(hop, dtype=complex),
+                        np.array(dx, dtype=float),
                         np.array(dy, dtype=float)
-                       )
+                        )
 
         else:
             # return results
@@ -936,8 +939,8 @@ class Sample:
                 return
             else:
                 # return results normally
-                return (np.array(indices,
-                                 dtype=int), np.array(indptr, dtype=int),
+                return (np.array(indices, dtype=int), np.array(indptr,
+                                                               dtype=int),
                         np.array(hop, dtype=complex))
 
     def add_hop_dict(self, hop_dict):
@@ -973,7 +976,7 @@ class Sample:
             data = [None for i in range(N)]
             for i, tags in enumerate(sites_div):
                 pipe = pipes[i]
-                processes[i] = mp.Process(target=self.__get_hoppings, \
+                processes[i] = mp.Process(target=self.__get_hoppings,
                                           args=(tags, pipe[1]))
                 processes[i].start()
 
@@ -1013,8 +1016,8 @@ class Sample:
                 self.dx = np.fromiter(dx, dtype=float, count=-1)
                 self.dy = np.fromiter(dy, dtype=float, count=-1)
 
-    def delete_hopping(self, unit_cell_coord0, unit_cell_coord1, \
-                       orbital0 = 0, orbital1 = 0):
+    def delete_hopping(self, unit_cell_coord0, unit_cell_coord1,
+                       orbital0=0, orbital1=0):
         """Delete hopping.
 
         Parameters
@@ -1036,14 +1039,14 @@ class Sample:
         """
 
         # get site tags and indices
-        tag0 = unit_cell_coord0 + (orbital0, )
+        tag0 = unit_cell_coord0 + (orbital0,)
         i0 = self.tag_to_index[tag0]
-        tag1 = unit_cell_coord1 + (orbital1, )
+        tag1 = unit_cell_coord1 + (orbital1,)
         if tag1 in self.tag_to_index:
             i1 = self.tag_to_index[tag1]
         else:
             pbc_r1, pbc_orb1 = self.bc_func(unit_cell_coord1, orbital1)
-            pbc_tag = pbc_r1 + (pbc_orb1, )
+            pbc_tag = pbc_r1 + (pbc_orb1,)
             if pbc_tag in self.tag_to_index:
                 i1 = self.tag_to_index[pbc_tag]
 
@@ -1065,8 +1068,8 @@ class Sample:
         # if not, there's nothing to delete
         return False
 
-    def set_hopping(self, hop, unit_cell_coord0, unit_cell_coord1, \
-                    orbital0 = 0, orbital1 = 0):
+    def set_hopping(self, hop, unit_cell_coord0, unit_cell_coord1,
+                    orbital0=0, orbital1=0):
         """Add or change hopping, automatically add conjugate.
 
         Parameters
@@ -1094,17 +1097,17 @@ class Sample:
         # take care of situation where H is empty when calling this method
 
         # get site tags, indices and distances
-        tag0 = unit_cell_coord0 + (orbital0, )
+        tag0 = unit_cell_coord0 + (orbital0,)
         i0 = self.tag_to_index[tag0]
         r0 = self.get_loc(tag0)
-        tag1 = unit_cell_coord1 + (orbital1, )
+        tag1 = unit_cell_coord1 + (orbital1,)
         r1 = self.get_loc(tag1)
         if tag1 in self.tag_to_index:
             i1 = self.tag_to_index[tag1]
             r1 = self.get_loc(tag1)
         else:
             pbc_r1, pbc_orb1 = self.bc_func(unit_cell_coord1, orbital1)
-            pbc_tag = pbc_r1 + (pbc_orb1, )
+            pbc_tag = pbc_r1 + (pbc_orb1,)
             if pbc_tag in self.tag_to_index:
                 i1 = self.tag_to_index[pbc_tag]
             else:
@@ -1163,11 +1166,11 @@ class Sample:
 
         # if user doesn't provide rescale value, calculate it
         # this is really show though
-        if value == False:
+        if value is False:
             value = 0.
             for i in range(len(self.indptr) - 1):
-                max_val = np.sum([np.absolute(self.hop[self.indptr[i] \
-                                                       :self.indptr[i+1]])])
+                max_val = np.sum(
+                    [np.absolute(self.hop[self.indptr[i]:self.indptr[i + 1]])])
                 value = np.amax((max_val, value))
 
         # store rescale, rescale H
@@ -1234,7 +1237,7 @@ class Sample:
                     linews.append(draw_size * npla.norm(hop))
             else:
                 site_i_coord = self.index_to_tag[i]
-                if site_i_coord == single_site_coord + (single_site_orbital, ):
+                if site_i_coord == single_site_coord + (single_site_orbital,):
                     hops.append([[self.site_x[i], self.site_y[i]],
                                  [self.site_x[j], self.site_y[j]]])
                     linews.append(draw_size * npla.norm(hop))
@@ -1266,7 +1269,7 @@ class Sample:
         grp = f.create_group("sample")
         grp.create_dataset("rescale", data=[self.rescale])
         grp.create_dataset("index_to_tag", data=self.index_to_tag)
-        #grp.create_dataset("tag_to_index", data=self.tag_to_index)
+        # grp.create_dataset("tag_to_index", data=self.tag_to_index)
         grp.create_dataset("site_x", data=self.site_x)
         grp.create_dataset("site_y", data=self.site_y)
         grp.create_dataset("site_z", data=self.site_z)
@@ -1293,8 +1296,8 @@ class Sample:
 
         # prepare
         tot_nr_orbitals = len(self.index_to_tag)
-        Hk = np.zeros((tot_nr_orbitals, tot_nr_orbitals), \
-                      dtype = complex)
+        Hk = np.zeros((tot_nr_orbitals, tot_nr_orbitals),
+                      dtype=complex)
 
         # fill Hk
         for i0 in range(tot_nr_orbitals):

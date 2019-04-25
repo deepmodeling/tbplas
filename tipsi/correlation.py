@@ -27,7 +27,7 @@ import numpy as np
 import scipy.special as spec
 
 # fortran tbpm
-from .fortran import f2py as fortran_f2py
+from .fortran import f2py
 
 
 def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
@@ -84,15 +84,17 @@ def corr_DOS(sample, config):
 
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
-    corr_DOS = fortran_f2py.tbpm_dos(Bes, \
-        sample.indptr, sample.indices, sample.hop, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], config.output['corr_DOS'])
+    corr_DOS = f2py.tbpm_dos(Bes,
+                             sample.indptr, sample.indices, sample.hop,
+                             config.generic['seed'],
+                             config.generic['nr_time_steps'],
+                             config.generic['nr_random_samples'],
+                             config.output['corr_DOS'])
 
     return corr_DOS
 
@@ -115,8 +117,8 @@ def corr_LDOS(sample, config):
 
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
     # get wf_weights:
@@ -127,10 +129,13 @@ def corr_LDOS(sample, config):
         wf_weights = config.LDOS['wf_weights']
 
     # pass to FORTRAN
-    corr_LDOS = fortran_f2py.tbpm_ldos(config.LDOS['site_indices'], \
-        wf_weights, Bes, sample.indptr, sample.indices, sample.hop, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], config.output['corr_LDOS'])
+    corr_LDOS = f2py.tbpm_ldos(config.LDOS['site_indices'], wf_weights,
+                               Bes, sample.indptr, sample.indices,
+                               sample.hop,
+                               config.generic['seed'],
+                               config.generic['nr_time_steps'],
+                               config.generic['nr_random_samples'],
+                               config.output['corr_LDOS'])
 
     return corr_LDOS
 
@@ -154,8 +159,8 @@ def corr_AC(sample, config):
 
     # get Bessel functions
     t_step = np.pi / config.sample['energy_range']
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
     # get rescaled simulation parameters
@@ -163,13 +168,16 @@ def corr_AC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_AC = fortran_f2py.tbpm_accond(Bes, beta_re, mu_re, \
-        sample.indptr, sample.indices, sample.hop, \
-        sample.rescale, sample.dx, sample.dy, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], \
-        config.generic['nr_Fermi_fft_steps'], \
-        config.generic['Fermi_cheb_precision'], config.output['corr_AC'])
+    corr_AC = f2py.tbpm_accond(Bes, beta_re, mu_re,
+                               sample.indptr, sample.indices,
+                               sample.hop,
+                               sample.rescale, sample.dx, sample.dy,
+                               config.generic['seed'],
+                               config.generic['nr_time_steps'],
+                               config.generic['nr_random_samples'],
+                               config.generic['nr_Fermi_fft_steps'],
+                               config.generic['Fermi_cheb_precision'],
+                               config.output['corr_AC'])
 
     return corr_AC
 
@@ -192,8 +200,8 @@ def corr_dyn_pol(sample, config):
 
     # get Bessel functions
     t_step = np.pi / config.sample['energy_range']
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
     # get rescaled simulation parameters
@@ -201,15 +209,19 @@ def corr_dyn_pol(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_dyn_pol = fortran_f2py.tbpm_dyn_pol(Bes, beta_re, mu_re, \
-        sample.indptr, sample.indices, sample.hop, \
-        sample.rescale, sample.dx, sample.dy, \
-        sample.site_x, sample.site_y, sample.site_z, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], \
-        config.generic['nr_Fermi_fft_steps'], \
-        config.generic['Fermi_cheb_precision'], \
-        config.dyn_pol['q_points'], config.output['corr_dyn_pol'])
+    corr_dyn_pol = f2py.tbpm_dyn_pol(Bes, beta_re, mu_re,
+                                     sample.indptr, sample.indices,
+                                     sample.hop, sample.rescale,
+                                     sample.dx, sample.dy,
+                                     sample.site_x, sample.site_y,
+                                     sample.site_z,
+                                     config.generic['seed'],
+                                     config.generic['nr_time_steps'],
+                                     config.generic['nr_random_samples'],
+                                     config.generic['nr_Fermi_fft_steps'],
+                                     config.generic['Fermi_cheb_precision'],
+                                     config.dyn_pol['q_points'],
+                                     config.output['corr_dyn_pol'])
 
     return corr_dyn_pol
 
@@ -236,11 +248,11 @@ def corr_DC(sample, config):
     tnr = config.generic['nr_time_steps']
     en_range = config.sample['energy_range']
     t_step = 2 * np.pi / en_range
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
-    energies_DOS = np.array([0.5 * i * en_range / tnr - en_range / 2. \
-                for i in range(tnr * 2)])
+    energies_DOS = np.array([0.5 * i * en_range / tnr - en_range / 2.
+                             for i in range(tnr * 2)])
     lims = config.DC_conductivity['energy_limits']
     QE_indices = np.where((energies_DOS >= lims[0]) &
                           (energies_DOS <= lims[1]))[0]
@@ -248,13 +260,16 @@ def corr_DC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
-    corr_DOS, corr_DC = fortran_f2py.tbpm_dccond(Bes, beta_re, mu_re, \
-        sample.indptr, sample.indices, sample.hop, \
-        sample.rescale, sample.dx, sample.dy, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], t_step, \
-        energies_DOS, QE_indices, \
-        config.output['corr_DOS'], config.output['corr_DC'])
+    corr_DOS, corr_DC = f2py.tbpm_dccond(Bes, beta_re, mu_re,
+                                         sample.indptr, sample.indices,
+                                         sample.hop,
+                                         sample.rescale, sample.dx, sample.dy,
+                                         config.generic['seed'],
+                                         config.generic['nr_time_steps'],
+                                         config.generic['nr_random_samples'],
+                                         t_step, energies_DOS, QE_indices,
+                                         config.output['corr_DOS'],
+                                         config.output['corr_DC'])
 
     return corr_DOS, corr_DC
 
@@ -278,15 +293,16 @@ def quasi_eigenstates(sample, config):
 
     # get Bessel functions
     t_step = 2 * np.pi / config.sample['energy_range']
-    Bes = Bessel(t_step, sample.rescale, \
-                 config.generic['Bessel_precision'], \
+    Bes = Bessel(t_step, sample.rescale,
+                 config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
-    states = fortran_f2py.tbpm_eigenstates(Bes, \
-        sample.indptr, sample.indices, sample.hop, \
-        config.generic['seed'], config.generic['nr_time_steps'], \
-        config.generic['nr_random_samples'], t_step, \
-        config.quasi_eigenstates['energies'])
+    states = f2py.tbpm_eigenstates(Bes,
+                                   sample.indptr, sample.indices, sample.hop,
+                                   config.generic['seed'],
+                                   config.generic['nr_time_steps'],
+                                   config.generic['nr_random_samples'], t_step,
+                                   config.quasi_eigenstates['energies'])
 
     return states
