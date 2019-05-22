@@ -27,6 +27,9 @@ Functions
 # numerics & math
 import numpy as np
 
+from .builder import *
+from .config import *
+
 
 def read_sample(filename, lattice=None, bc_func=bc_default, nr_processes=1):
     """Read Sample object from file

@@ -38,6 +38,11 @@ from scipy.signal import hilbert
 ################
 
 
+# no window
+def window_default(i, N):
+    return 1.
+
+
 # Hanning window
 def window_Hanning(i, N):
     """Hanning window.
@@ -307,7 +312,7 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol,
                 tau = k * t_step
                 dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
                     * np.exp(1j * omega * tau)
-            dyn_pol[i_q, i] = dyn_pol_prefactor * t_step * dpv
+            dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
 
     # correct for spin
     if config.generic['correct_spin']:
