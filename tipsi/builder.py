@@ -139,14 +139,12 @@ def hop_dict_ft(hop_dict, lattice, momentum):
 
     # iterate over orbitals
     for orb0 in range(nr_orbitals):
-        r0 = lattice.site_pos((0, 0, 0), orb0)
         # iterate over HopDict items
         for tag, hop in sparse_hop_dict[orb0].items():
             # transform and add to Hk
             x, y, z, orb1 = tag
-            r1 = lattice.site_pos((x, y, z), orb1)
-            dr = np.subtract(r1, r0)
-            r_dot_k = np.dot(momentum, dr)
+            R = np.dot(lattice.vectorsT, [x, y, z])
+            r_dot_k = np.dot(momentum, R)
             Hk[orb0, orb1] += np.exp(1j * r_dot_k) * hop
 
     return Hk
@@ -720,7 +718,7 @@ class Sample:
             # open file
             try:
                 f = h5py.File(read_from_file, 'r')
-            except:
+            except OSError:
                 print("Cannot find file to read!")
                 return
 
