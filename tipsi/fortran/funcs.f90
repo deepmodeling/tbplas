@@ -54,9 +54,9 @@ PURE FUNCTION Fermi_dist(beta, Ef, energy, eps)
 		Fermi_dist = 1 / (1 + x)
 	END IF
 
-	IF (Fermi_dist < eps) THEN
-		Fermi_dist = 0
-	END IF
+	! IF (Fermi_dist < eps) THEN
+	! 	Fermi_dist = 0
+	! END IF
 
 END FUNCTION Fermi_dist
 
@@ -113,7 +113,6 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
 		cheb_coef(i) = kernel(i) * DBLE(cheb_coef_complex(i)) / n_cheb
 	END DO
 	!$OMP END PARALLEL DO
-	cheb_coef(1) = cheb_coef(1) / 2
 
 	DO i = 1, n_cheb
 		IF((ABS(cheb_coef(i)) < eps) .AND. (ABS(cheb_coef(i + 1)) < eps)) THEN

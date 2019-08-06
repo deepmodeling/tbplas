@@ -214,13 +214,13 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 						 sys_current_y, cur_csr_y)
 
 	! get Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef1, n_cheb, nr_Fermi, &
-							 beta, mu, .FALSE., Fermi_precision)
+	CALL get_Fermi_cheb_coef(coef1, n_cheb, nr_Fermi, beta, &
+							 mu, .FALSE., Fermi_precision)
 	coef_F => coef1(1:n_cheb)
 
 	! get one minus Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef2, n_cheb, nr_Fermi, &
-							 beta, mu, .TRUE., Fermi_precision)
+	CALL get_Fermi_cheb_coef(coef2, n_cheb, nr_Fermi, beta, &
+							 mu, .TRUE., Fermi_precision)
 	coef_omF => coef2(1:n_cheb)
 
 	n_calls = n_ran_samples * 3 * ((n_cheb-1) + (n_timestep-1) * (n_Bes-1))
@@ -353,13 +353,13 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 	corr = 0D0
 
 	! get Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef1, n_cheb1, nr_Fermi, &
-							 beta, mu, .FALSE., Fermi_precision)
+	CALL get_Fermi_cheb_coef(coef1, n_cheb1, nr_Fermi, beta, &
+							 mu, .FALSE., Fermi_precision)
 	coef_F => coef1(1:n_cheb1)
 
 	! get one minus Fermi cheb coefficients
-	CALL get_Fermi_cheb_coef(coef2, n_cheb2, nr_Fermi, &
-							 beta, mu, .TRUE., Fermi_precision)
+	CALL get_Fermi_cheb_coef(coef2, n_cheb2, nr_Fermi, beta, &
+							 mu, .TRUE., Fermi_precision)
 	coef_omF => coef2(1:n_cheb2)
 
 	n_calls = n_ran_samples * (n_cheb1+n_cheb2-1)+2*((n_timestep-1)*(n_Bes-1))
@@ -522,10 +522,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
 		! initial values for wf_t and wf_QE
 		!$OMP PARALLEL DO
-        DO i = 1, n_wf
-            wf_t_pos(i) = wf0(i)
-            wf_t_neg(i) = wf0(i)
-        END DO
+		DO i = 1, n_wf
+			wf_t_pos(i) = wf0(i)
+			wf_t_neg(i) = wf0(i)
+		END DO
 		!$OMP END PARALLEL DO
 		!$OMP PARALLEL DO PRIVATE(j)
 		DO i = 1, n_en_inds
@@ -686,14 +686,14 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 
 		PRINT *, "  Calculating for sample ", i_sample, " of ", n_ran_samples
 		! make random state
-        CALL random_state(wf0, n_wf, seed*i_sample)
+		CALL random_state(wf0, n_wf, seed*i_sample)
 
-        ! initial values for wf_t and wf_QE
+		! initial values for wf_t and wf_QE
 		!$OMP PARALLEL DO
-        DO i = 1, n_wf
-            wf_t_pos(i) = wf0(i)
-            wf_t_neg(i) = wf0(i)
-        END DO
+		DO i = 1, n_wf
+			wf_t_pos(i) = wf0(i)
+			wf_t_neg(i) = wf0(i)
+		END DO
 		!$OMP END PARALLEL DO
 		!$OMP PARALLEL DO PRIVATE(j)
 		DO i = 1, n_energies
@@ -704,26 +704,26 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 		!$OMP END PARALLEL DO
 
 		! Iterate over time, get Fourier transform
-        DO k = 1, n_timestep
+		DO k = 1, n_timestep
 
-            IF (MODULO(k,64) == 0) THEN
-                PRINT *, "    Timestep ", k, " of ", n_timestep
-            END IF
+			IF (MODULO(k,64) == 0) THEN
+				PRINT *, "    Timestep ", k, " of ", n_timestep
+			END IF
 
-            CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, 1D0, H_csr, wf_t_pos)
-            CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, -1D0, H_csr, wf_t_neg)
+			CALL cheb_wf_timestep(wf_t_pos, n_wf, Bes, 1D0, H_csr, wf_t_pos)
+			CALL cheb_wf_timestep(wf_t_neg, n_wf, Bes, -1D0, H_csr, wf_t_neg)
 
-            W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
+			W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
-            !$OMP PARALLEL DO PRIVATE (P, j)
-            DO i = 1, n_energies
+			!$OMP PARALLEL DO PRIVATE (P, j)
+			DO i = 1, n_energies
 				P = EXP(img * energies(i) * k * t_step)
-                DO j = 1, n_wf
-                    wfq(i,j) = wfq(i,j)+ P * wf_t_pos(j) * W
-                    wfq(i,j) = wfq(i,j)+ CONJG(P) * wf_t_neg(j) * W
-                END DO
-            END DO
-            !$OMP END PARALLEL DO
+				DO j = 1, n_wf
+					wfq(i,j) = wfq(i,j)+ P * wf_t_pos(j) * W
+					wfq(i,j) = wfq(i,j)+ CONJG(P) * wf_t_neg(j) * W
+				END DO
+			END DO
+			!$OMP END PARALLEL DO
 
 		END DO
 
@@ -754,9 +754,7 @@ END SUBROUTINE tbpm_eigenstates
 ! This is a version with only XX (iTypeDC==1) or XY (iTypeDC==2)
 SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 					 s_hop, n_hop, H_rescale, s_dx, n_dx, s_dy, n_dy, &
-					 n_ran_samples, energies, n_energies, beta, prefactor, &
-					 n_kernel, iTypeDC, NE_Integral, fermi_precision, &
-					 corr_mu_avg)
+					 n_ran_samples, n_kernel, iTypeDC, corr_mu_avg)
 
 	USE math, ONLY: inner_prod
 	USE random
@@ -764,165 +762,137 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 	USE propagation, ONLY: cheb_wf_timestep
 	USE funcs
 	USE kpm
-    IMPLICIT NONE
+	IMPLICIT NONE
 
-    ! deal with input
-    INTEGER, INTENT(in) :: iTypeDC, n_energies
-    INTEGER, INTENT(in) :: seed, n_ran_samples
-    INTEGER, INTENT(in) :: n_kernel, NE_Integral
-    INTEGER, INTENT(in) :: n_indptr, n_indices, n_hop, n_dx, n_dy
-    REAL(8), INTENT(in) :: prefactor, beta, fermi_precision, H_rescale
-	INTEGER, INTENT(in), DIMENSION(n_indptr) :: s_indptr
-	INTEGER, INTENT(in), DIMENSION(n_indices) :: s_indices
-	COMPLEX(8), INTENT(in), DIMENSION(n_hop) :: s_hop
-	REAL(8), INTENT(in), DIMENSION(n_dx) :: s_dx
-	REAL(8), INTENT(in), DIMENSION(n_dy) :: s_dy
-    REAL(8), INTENT(in), DIMENSION(n_energies) :: energies
-    COMPLEX(8), DIMENSION(n_hop) :: sys_current_x
-    COMPLEX(8), DIMENSION(n_hop) :: sys_current_y
+	! deal with input
+	INTEGER, INTENT(IN) :: iTypeDC, seed, n_ran_samples, n_kernel
+	INTEGER, INTENT(IN) :: n_indptr, n_indices, n_hop, n_dx, n_dy
+	REAL(KIND=8), INTENT(IN) :: H_rescale
+	INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
+	INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
+	COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_dx) :: s_dx
+	REAL(KIND=8), INTENT(IN), DIMENSION(n_dy) :: s_dy
+	! output
+	COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_kernel, n_kernel) :: corr_mu_avg
 
-    !declare vars
-    INTEGER :: i, j, k, i_sample, mu_min, mu_max, NE, n_wf, n_calls
-
-    REAL(8):: WaveFunctionNorm
-    COMPLEX(8), DIMENSION(n_indptr - 1) :: wf0,wf1,wf1X,wf1X0,wf1X1,wf_in
-    COMPLEX(8):: wf_DimKern(1:(n_indptr - 1),0:n_kernel)
-    COMPLEX(8),DIMENSION(n_kernel,n_kernel)::corr_mu
-
-    REAL(8):: a,r0,x,y,energy,mu2
-    COMPLEX(8) :: ca,cb,COMPLEXa,COMPLEXb,dcx
-    REAL(8),DIMENSION(n_kernel):: KernelFunction,ChebPol
-    COMPLEX(8),DIMENSION(n_kernel):: sum_temp
-    COMPLEX(8),DIMENSION(n_kernel,n_kernel)::Gamma_mn
-    !COMPLEX(8),ALLOCATABLE:: en_integral(:),sum_gamma_mu(:)
+	!declare vars
+	INTEGER :: i, j, k, i_sample, n_wf, n_calls
+	REAL(KIND=8), DIMENSION(n_kernel) :: g
+	COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf_in
+	COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_x
+	COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_y
+	COMPLEX(KIND=8), DIMENSION(n_indptr - 1), TARGET :: wf0, wf1, wf2
+	COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
+	COMPLEX(KIND=8), DIMENSION(n_indptr-1, n_kernel) :: wf_DimKern
+	COMPLEX(KIND=8), DIMENSION(n_kernel, n_kernel) :: corr_mu
 	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
 
-    ! output
-    !REAL(8),intent(out),DIMENSION(n_energies) :: cond
-    COMPLEX(8),intent(out),DIMENSION(0:n_kernel,0:n_kernel)::corr_mu_avg
-
-    n_wf = n_indptr - 1
+	n_wf = n_indptr - 1
 	! write(*,*) 'go into subroutine current_coefficient now'
-	n_calls = n_ran_samples * (n_kernel + 1)
+	n_calls = n_ran_samples
 	CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
 	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, &
 						 sys_current_x, cur_csr_x)
-	if (iTypeDC==2) then
-		n_calls = n_ran_samples * n_kernel
+	IF (iTypeDC == 2) THEN
+		n_calls = n_ran_samples
 		CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
 		CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, &
 							 sys_current_y, cur_csr_y)
-	end if
+	END IF
 
-	n_calls = n_ran_samples * (2 * n_kernel - 1)
-    CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
+	n_calls = n_ran_samples * (iTypeDC * (n_kernel - 1))
+	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
 
+	corr_mu_avg=0D0
 
-    corr_mu=0.
-    corr_mu_avg=0.
+	CALL jackson_kernel(g, n_kernel)
 
-    ! iterate over random states
-    do i_sample=1, n_ran_samples
-        ! get random state
-        call random_state(wf_in, n_wf, seed*i_sample)
+	! iterate over random states
+	DO i_sample=1, n_ran_samples
+		! get random state
+		CALL random_state(wf_in, n_wf, seed*i_sample)
 
-        do j=1, n_kernel
-            if (mod(j,256)==0) then
-                PRINT *, "Currently at j = ", j
-            end if
+		wf_DimKern(:, 1) = wf_in
+		CALL csr_mv(wf_DimKern(:, 1), n_wf, 1D0, H_csr, wf_DimKern(:, 2))
 
-            if (j==1) then
-                wf_DimKern(:,j)=wf_in
-            else
-                call csr_mv(wf_DimKern(:,j-1), n_wf, 1D0, H_csr, &
-                    		wf_DimKern(:,j))
-            end if
+		DO j = 3, n_kernel
+			IF (MOD(j, 256) == 0) THEN
+				PRINT *, "Currently at j = ", j
+			END IF
 
-            !calculate the chebyshev polynomial and replace wf_ 0, 1
-            if (j>2) then
-                call get_ChebPol_n_wfthOrder( &
-                    n_wf, wf_DimKern(:,j-2), wf_DimKern(:,j-1), &
-                    wf_DimKern(:,j))
-            end if
+			CALL csr_mv(wf_DimKern(:, j-1), n_wf, 1D0, H_csr, wf_DimKern(:, j))
 
-            ! if (j==n_kernel .or. j==n_kernel/2 .or. &
-            !     j==n_kernel/4 .or. j==n_kernel*3/4 .or. j==1) then
-            !     WaveFunctionNorm=abs(inner_prod(wf_DimKern(:,j),&
-            !         wf_DimKern(:,j)))
-            !     if (WaveFunctionNorm>H_rescale .or. WaveFunctionNorm<0.) then
-            !         PRINT *, "WaveFunctionNorm=", WaveFunctionNorm
-            !         PRINT *, "Error: hoprescale too small..."
-            !         stop
-            !     end if
-            ! end if
+			!$OMP PARALLEL DO SIMD
+			DO k = 1, n_wf
+				wf_DimKern(k, j) = 2 * wf_DimKern(k, j) - wf_DimKern(k, j-2)
+			END DO
+			!$OMP END PARALLEL DO SIMD
+		END DO
 
-        end do
+		IF(iTypeDC == 1) THEN
+			DO j = 1, n_kernel
+				CALL csr_mv(wf_DimKern(:, j), n_wf, 1D0, cur_csr_x, &
+							wf_DimKern(:, j))
+			END DO
+		ELSE IF(iTypeDC == 2) THEN
+			DO j = 1, n_kernel
+				CALL csr_mv(wf_DimKern(:, j), n_wf, 1D0, cur_csr_y, &
+							wf_DimKern(:, j))
+			END DO
+		ELSE
+			PRINT*, "Error: wrong direction!"
+			STOP
+		END IF
 
-        if (iTypeDC==1) then
-            do j=1, n_kernel
-                call csr_mv(wf_DimKern(:,j), n_wf, 1D0, cur_csr_x, &
-							wf_DimKern(:,j))
-            end do
-        else if (iTypeDC==2) then
-            do j=1, n_kernel
-                call csr_mv(wf_DimKern(:,j), n_wf, 1D0, cur_csr_y, &
-							wf_DimKern(:,j))
-            end do
-        end if
+		! calculate correlation
+		! i = 1
+		CALL csr_mv(wf_in, n_wf, 1D0, cur_csr_x, wf0)
+		DO j = 1, n_kernel
+			corr_mu(1, j) = inner_prod(wf0, wf_DimKern(:, j))
+		END DO
 
-        ! calculate correlation matrix
-        do i=1, n_kernel
-            if (mod(i,256)==0) then
-                PRINT *, "Currently at i = ", i
-            end if
-            if (i==1) then
-                call csr_mv(wf_in, n_wf, 1D0, cur_csr_x, wf1X)
-                wf1X0=wf1X
-            else if (i==2) then
-                call csr_mv(wf1X0, n_wf, 1D0, H_csr, wf1X)
-                wf1X1=wf1X
-            else
-                call csr_mv(wf1X1, n_wf, 1D0, H_csr, wf1X)
-                ! calculate the chebyshev polynomial and replace wf_ 0, 1
-                call get_ChebPol_wf(n_wf,wf1X0,wf1X1,wf1X)
+		! i = 2
+		CALL csr_mv(wf0, n_wf, 1D0, H_csr, wf1)
+		DO j = 1, n_kernel
+			corr_mu(2, j) = inner_prod(wf1, wf_DimKern(:, j))
+		END DO
 
-            end if
+		p0 => wf0
+		p1 => wf1
+		DO i = 3, n_kernel
+			IF (MOD(i, 256) == 0) THEN
+				PRINT *, "Currently at i = ", i
+			END IF
 
-        ! calculate the matrix elements of the correction function
+			p2 => p0
+			CALL csr_mv(p1, n_wf, 1D0, H_csr, wf2)
 
-            !$OMP PARALLEL DO
-            do j=1, n_kernel
-                corr_mu(i,j)=inner_prod(wf1X, wf_DimKern(:,j))
-            end do
-            !$OMP END PARALLEL DO
+			!$OMP PARALLEL DO SIMD
+			DO k = 1, n_wf
+				p2(k) = 2 * wf2(k) - p0(k)
+			END DO
+			!$OMP END PARALLEL DO SIMD
 
-        end do
+			DO j = 1, n_kernel
+				corr_mu(i, j) = inner_prod(p2, wf_DimKern(:, j))
+			END DO
+			p0 => p1
+			p1 => p2
+		END DO
 
+		PRINT*, "Getting mu_mn"
+		! add Jackson kernel and get avg
+		!$OMP PARALLEL DO SIMD PRIVATE(i)
+		DO j = 1, n_kernel
+			DO i = 1, n_kernel
+				corr_mu_avg(i, j) = corr_mu_avg(i, j) &
+									+ g(i)*g(j)*corr_mu(i, j) / n_ran_samples
+			END DO
+		END DO
+		!$OMP END PARALLEL DO SIMD
 
-        !$OMP PARALLEL DO PRIVATE(i)
-        do j=1, n_kernel
-            do i=1, n_kernel
-                corr_mu_avg(i,j)=corr_mu_avg(i,j)+corr_mu(i,j)
-            end do
-        end do
-        !$OMP END PARALLEL DO
-
-    end do
-
-    if (n_ran_samples>1) then
-        !$OMP PARALLEL DO PRIVATE(i)
-        do j=1, n_kernel
-            do i=1, n_kernel
-                corr_mu_avg(i,j)=corr_mu_avg(i,j)/n_ran_samples
-            end do
-        end do
-        !$OMP END PARALLEL DO
-    end if
-
-
-    !call cond_from_trace(corr_mu_avg, n_kernel, n_kernel, energies, n_energies, &
-    !        NE_integral, H_rescale, beta, fermi_precision, prefactor, &
-    !        cond)
+	END DO
 
 
 END SUBROUTINE tbpm_kbdc
