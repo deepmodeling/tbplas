@@ -92,30 +92,28 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, &
 	INTEGER :: i, j, k, NE_integral
 	REAL(KIND=8), DIMENSION(4*n_kernel-1) :: energy
 	COMPLEX(KIND=8), DIMENSION(n_kernel, n_kernel) :: Gamma_mn
-	REAL(KIND=8), DIMENSION(4*n_kernel-1), TARGET :: sum_gamma_mu
-	REAL(KIND=8) :: dcx, fd, en, div, dE
-	REAL(KIND=8), POINTER :: sum
+	REAL(KIND=8), DIMENSION(4*n_kernel-1) :: sum_gamma_mu
+	REAL(KIND=8) :: dcx, fd, en, div, dE, sum
 
 	cond = 0D0
 	! NE_integral = 2 * n_kernel - 1
 	NE_integral = 4 * n_kernel - 1
 	dE = PI / (NE_integral+1)
 
-	sum_gamma_mu = 0D0
-
 	PRINT*, "Calculating sum"
 	DO k = 1, NE_integral
 		energy(k) = k * dE
 		CALL get_gamma_mn(energy(k), n_kernel, Gamma_mn)
 
-		sum => sum_gamma_mu(k)
-		!!$OMP PARALLEL DO PRIVATE(i) REDUCTION(+: sum)
+		sum = 0D0
+		!$OMP PARALLEL DO PRIVATE(i) REDUCTION(+: sum)
 		DO j = 1, n_kernel
 			DO i = 1, n_kernel
 				sum = sum + DBLE(Gamma_mn(i,j) * mu_mn(i,j))
 			END DO
 		END DO
-		!!$OMP END PARALLEL DO
+		!$OMP END PARALLEL DO
+		sum_gamma_mu(k) = sum
 	END DO
 
 	PRINT*,"Final integral"
