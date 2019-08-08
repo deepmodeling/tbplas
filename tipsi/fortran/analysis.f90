@@ -96,7 +96,7 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
 	REAL(KIND=8) :: dcx, fd, en, div, dE, sum
 
 	cond = 0D0
-	dE = PI / (NE_integral)
+	dE = PI / NE_integral
 	NE = NE_integral - 1
 
 	PRINT*, "  Calculating sum"
@@ -119,14 +119,14 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
 	DO i = 1, n_mu
 		dcx = 0D0
 
-		!$OMP PARALLEL DO SIMD PRIVATE(en, div, fd) REDUCTION(+: dcx)
+		!$OMP PARALLEL DO PRIVATE(en, div, fd) REDUCTION(+: dcx)
 		DO k = 1, NE
 			div = DSIN(energy(k))**3
 			en = DCOS(energy(k)) * H_rescale
 			fd = Fermi_dist(beta, mu(i), en, fermi_precision)
 			dcx = dcx + sum_gamma_mu(k) * fd * dE / div
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 
 		cond(i) = dcx * prefactor / H_rescale / H_rescale
 	END DO

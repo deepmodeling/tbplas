@@ -21,11 +21,11 @@ SUBROUTINE jackson_kernel(g_J, n_kernel)
     q = PI / n_kernel
     cotq = DCOS(q) / DSIN(q)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
     DO k = 1, n_kernel - 1
         g_J(k) = ((n_kernel - k) * DCOS(q*k) + cotq * DSIN(q*k)) / n_kernel
     END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE jackson_kernel
 
@@ -48,7 +48,7 @@ SUBROUTINE get_gamma_mn(x, n_kernel, Gamma_mn)
 
 	!$OMP PARALLEL DO PRIVATE(i)
 	DO j = 0, n_kernel-1
-		DO i=0, n_kernel-1
+		DO i = 0, n_kernel-1
 			Gamma_mn(i, j) = DCMPLX(cx, -j*sx) * DCOS(i*x) * EXP(img*j*x) &
 						   + DCMPLX(cx, i*sx) * DCOS(j*x) * EXP(-img*i*x)
 		END DO

@@ -801,7 +801,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 							 sys_current_y, cur_csr_y)
 	END IF
 
-	n_calls = n_ran_samples * (iTypeDC * (n_kernel - 1))
+	n_calls = n_ran_samples * (2 * (n_kernel - 1))
 	CALL make_csr_matrix(n_wf, n_calls, s_indptr, s_indices, s_hop, H_csr)
 
 	corr_mu_avg=0D0
@@ -824,11 +824,11 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
 			CALL csr_mv(wf_DimKern(:, j-1), n_wf, 1D0, H_csr, wf_DimKern(:, j))
 
-			!$OMP PARALLEL DO SIMD
+			!$OMP PARALLEL DO
 			DO k = 1, n_wf
 				wf_DimKern(k, j) = 2 * wf_DimKern(k, j) - wf_DimKern(k, j-2)
 			END DO
-			!$OMP END PARALLEL DO SIMD
+			!$OMP END PARALLEL DO
 		END DO
 
 		IF(iTypeDC == 1) THEN
@@ -869,11 +869,11 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 			p2 => p0
 			CALL csr_mv(p1, n_wf, 1D0, H_csr, wf2)
 
-			!$OMP PARALLEL DO SIMD
+			!$OMP PARALLEL DO
 			DO k = 1, n_wf
 				p2(k) = 2 * wf2(k) - p0(k)
 			END DO
-			!$OMP END PARALLEL DO SIMD
+			!$OMP END PARALLEL DO
 
 			DO j = 1, n_kernel
 				corr_mu(i, j) = inner_prod(p2, wf_DimKern(:, j))
@@ -883,14 +883,14 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 		END DO
 
 		! add Jackson kernel and get avg
-		!$OMP PARALLEL DO SIMD PRIVATE(i)
+		!$OMP PARALLEL DO PRIVATE(i)
 		DO j = 1, n_kernel
 			DO i = 1, n_kernel
 				corr_mu_avg(i, j) = corr_mu_avg(i, j) &
 									+ g(i)*g(j)*corr_mu(i, j) / n_ran_samples
 			END DO
 		END DO
-		!$OMP END PARALLEL DO SIMD
+		!$OMP END PARALLEL DO
 
 	END DO
 
