@@ -501,7 +501,7 @@ def get_dckb(sample, config):
     energies = config.dckb['energies']
     n_kernel = config.dckb['n_kernel']
     direction = config.dckb['direction']
-    # ne_integral = config.dckb['ne_integral']
+    ne_integral = config.dckb['ne_integral']
     beta = config.generic['beta']
     fermi_precision = config.generic['Fermi_cheb_precision']
     kbdc_prefactor = config.dckb_prefactor()
@@ -537,7 +537,7 @@ def get_dckb(sample, config):
     print('kbdc_prefactor:', kbdc_prefactor)
     print('n_kernel', n_kernel)
     print('direction', direction)
-    # print('ne_integral', ne_integral)
+    print('ne_integral', ne_integral)
     print('fermi_precision', fermi_precision)
     mu_mn = fortran_f2py.tbpm_kbdc(
         seed, sample.indptr, sample.indices, sample.hop, sample.rescale,
@@ -545,8 +545,8 @@ def get_dckb(sample, config):
     print('finish tbpm_kbdc mu_mn')
 
     conductivity = fortran_f2py.cond_from_trace(
-        mu_mn, energies, sample.rescale, beta, fermi_precision,
-        kbdc_prefactor)
+        mu_mn, energies, sample.rescale, beta, ne_integral,
+        fermi_precision, kbdc_prefactor)
     print('finish cond_from_trace')
 
     return energies, conductivity

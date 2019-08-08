@@ -126,6 +126,8 @@ class Config():
         Number of kernels in Kernel Polynomial Method(KPM). Default value: 2048
     dckb['direction'] : int
         1 gives XX, 2 gives XY conductivity. Default value: 1
+    dckb['ne_integral'] : int
+        Number of integral steps. Default value: 2048
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
     output['timestamp'] : int
@@ -213,7 +215,7 @@ class Config():
         self.dckb['energies'] = [i * 0.01 - 0.2 for i in range(0, 41)]
         self.dckb['n_kernel'] = 2048
         self.dckb['direction'] = 1  # 1 gives XX, 2 gives XY conductivity
-        # self.dckb['ne_integral'] = 2048
+        self.dckb['ne_integral'] = 2048
 
         # output settings
         if not read_from_file:

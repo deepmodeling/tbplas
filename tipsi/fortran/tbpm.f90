@@ -810,6 +810,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
 	! iterate over random states
 	DO i_sample=1, n_ran_samples
+		PRINT*, "  Calculating for sample ", i_sample, " of ", n_ran_samples
 		! get random state
 		CALL random_state(wf_in, n_wf, seed*i_sample)
 
@@ -818,7 +819,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
 		DO j = 3, n_kernel
 			IF (MOD(j, 256) == 0) THEN
-				PRINT *, "Currently at j = ", j
+				PRINT *, "    Currently at j = ", j
 			END IF
 
 			CALL csr_mv(wf_DimKern(:, j-1), n_wf, 1D0, H_csr, wf_DimKern(:, j))
@@ -862,7 +863,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 		p1 => wf1
 		DO i = 3, n_kernel
 			IF (MOD(i, 256) == 0) THEN
-				PRINT *, "Currently at i = ", i
+				PRINT *, "    Currently at i = ", i
 			END IF
 
 			p2 => p0
@@ -881,7 +882,6 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 			p1 => p2
 		END DO
 
-		PRINT*, "Getting mu_mn"
 		! add Jackson kernel and get avg
 		!$OMP PARALLEL DO SIMD PRIVATE(i)
 		DO j = 1, n_kernel
