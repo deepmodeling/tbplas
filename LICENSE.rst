@@ -1,4 +1,4 @@
-Copyright 2018 E.N.W. van Veen (RU), G.J. Slotman (RU), S. Yuan (WHU)
+Copyright 2017 -- 2019 E.N.W. van Veen (RU), G.J. Slotman (RU), K.X. Huang (WHU), S. Yuan (WHU)
 
 (RU: Radboud University, Nijmegen, The Netherlands)
 
