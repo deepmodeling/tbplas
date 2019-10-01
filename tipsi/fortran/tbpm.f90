@@ -814,7 +814,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 		! get random state
 		CALL random_state(wf_in, n_wf, seed*i_sample)
 
-		wf_DimKern(:, 1) = wf_in
+		wf_DimKern(:, 1) = wf_in(:)
 		CALL csr_mv(wf_DimKern(:, 1), n_wf, 1D0, H_csr, wf_DimKern(:, 2))
 
 		DO j = 3, n_kernel
@@ -824,11 +824,11 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
 			CALL csr_mv(wf_DimKern(:, j-1), n_wf, 1D0, H_csr, wf_DimKern(:, j))
 
-			!$OMP PARALLEL DO
+			!$OMP PARALLEL DO SIMD
 			DO k = 1, n_wf
 				wf_DimKern(k, j) = 2 * wf_DimKern(k, j) - wf_DimKern(k, j-2)
 			END DO
-			!$OMP END PARALLEL DO
+			!$OMP END PARALLEL DO SIMD
 		END DO
 
 		IF(iTypeDC == 1) THEN

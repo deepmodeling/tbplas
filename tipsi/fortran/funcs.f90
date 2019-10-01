@@ -26,11 +26,11 @@ SUBROUTINE current_coefficient(hop, dr, n_hop, value, cur_coefs)
 
 	alpha = CMPLX(0D0, value, KIND=8)
 
-	!$OMP PARALLEL DO SIMD
+	!$OMP PARALLEL DO
 	DO i = 1, n_hop
 		cur_coefs(i) = alpha * hop(i) * dr(i)
 	END DO
-	!$OMP END PARALLEL DO SIMD
+	!$OMP END PARALLEL DO
 
 END SUBROUTINE current_coefficient
 
