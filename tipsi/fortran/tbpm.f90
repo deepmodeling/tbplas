@@ -784,7 +784,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 	COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_y
 	COMPLEX(KIND=8), DIMENSION(n_indptr - 1), TARGET :: wf0, wf1, wf2
 	COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
-	COMPLEX(KIND=8), DIMENSION(n_indptr-1, n_kernel) :: wf_DimKern
+	COMPLEX(KIND=8), DIMENSION(n_indptr-1, n_kernel) :: wf_DimKern, wf_DimKern_1
 	COMPLEX(KIND=8), DIMENSION(n_kernel, n_kernel) :: corr_mu
 	TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
 
@@ -836,9 +836,14 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 				CALL csr_mv(wf_DimKern(:, j), n_wf, 1D0, cur_csr_x, &
 							wf_DimKern(:, j))
 			END DO
+			
+
 		ELSE IF(iTypeDC == 2) THEN
-			DO j = 1, n_kernel
-				CALL csr_mv(wf_DimKern(:, j), n_wf, 1D0, cur_csr_y, &
+		
+			wf_DimKern_1=wf_DimKern
+
+			DO j = 1, n_kernel				
+				CALL csr_mv(wf_DimKern_1(:, j), n_wf, 1D0, cur_csr_y, &
 							wf_DimKern(:, j))
 			END DO
 		ELSE
