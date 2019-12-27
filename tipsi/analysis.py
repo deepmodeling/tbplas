@@ -474,7 +474,7 @@ def get_ldos_haydock(sample, config):
     return energies, LDOS
 
 
-def get_dckb(sample, config):
+def get_dckb(config, mu_Hall):
     """Get Hall conductivity
 
     Parameters
@@ -494,59 +494,13 @@ def get_dckb(sample, config):
     """
 
     print(" -- Getting DC with Kubo-Bastin")
-    # get parameters
-    # en_range = config.sample['energy_range']
-    # t_step = 2 * np.pi / en_range
-    rannr = config.generic['nr_random_samples']
-    energies = config.dckb['energies']
-    n_kernel = config.dckb['n_kernel']
-    direction = config.dckb['direction']
-    ne_integral = config.dckb['ne_integral']
-    beta = config.generic['beta']
-    fermi_precision = config.generic['Fermi_cheb_precision']
-    kbdc_prefactor = config.dckb_prefactor()
-    seed = config.generic['seed']
-    print('init finish')
-
-    # if config.dckb['output_correlation']:
-    #     output_int = 2
-    #     dckb_corr_filename = config.output['dckb_corr']
-    # else:
-    #     output_int = 1
-    #     dckb_corr_filename = ''
 
     from .fortran import f2py as fortran_f2py
-    # import fortran.tbpm_dckb as fortran_dckb
-    # print("len(sys._t)",len(sys._t))
-    # print("len(sys_d)",len(sys._d[0,:]))
-    # N_hop=len(sys._d[0,:])
-    # sys_d_test=np.zeros((2, N_hop))
-    # sys_d_test[0,:]=sys._d[0,:]
-    # sys_d_test[1,:]=sys._d[1,:]
-    print('start tbpm_kbdc')
-    print('seed:', seed)
-    # print('sample.indptr:', sample.indptr)
-    # print('sample.indices:', sample.indices)
-    # print('sample.hop:', sample.hop)
-    print('sample.rescale', sample.rescale)
-    # print('sample.dx', sample.dx)
-    # print('sample.dy', sample.dy)
-    print('rannr', rannr)
-    # print('energies', energies)
-    print('beta:', beta)
-    print('kbdc_prefactor:', kbdc_prefactor)
-    print('n_kernel', n_kernel)
-    print('direction', direction)
-    print('ne_integral', ne_integral)
-    print('fermi_precision', fermi_precision)
-    mu_mn = fortran_f2py.tbpm_kbdc(
-        seed, sample.indptr, sample.indices, sample.hop, sample.rescale,
-        sample.dx, sample.dy, rannr, n_kernel, direction)
-    print('finish tbpm_kbdc mu_mn')
 
     conductivity = fortran_f2py.cond_from_trace(
-        mu_mn, energies, sample.rescale, beta, ne_integral,
-        fermi_precision, kbdc_prefactor)
+        mu_Hall, config.dckb['energies'], config.scmple['H_rescale'],
+        config.generic['beta'], config.dckb['ne_integral'],
+        config.generic['Fermi_cheb_precision'], config.dckb_prefactor())
     print('finish cond_from_trace')
 
-    return energies, conductivity
+    return config.dckb['energies'], conductivity

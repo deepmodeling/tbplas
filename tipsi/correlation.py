@@ -274,6 +274,45 @@ def corr_DC(sample, config):
     return corr_DOS, corr_DC
 
 
+def mu_Hall(sample, config):
+    """Get correlation for Hall conductivity
+
+    Parameters
+    ----------
+    sample: fortran_sample object
+        sample information
+    config : tbpm_config object
+        config parameters
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    mu_mn    : ???
+
+    """
+
+    # if config.dckb['output_correlation']:
+    #     output_int = 2
+    #     dckb_corr_filename = config.output['dckb_corr']
+    # else:
+    #     output_int = 1
+    #     dckb_corr_filename = ''
+
+    print(" -- Calculating mu_mn for Hall conductivity")
+
+    from .fortran import f2py as fortran_f2py
+
+    # call fortran function
+    mu_mn = fortran_f2py.tbpm_kbdc(
+        config.generic['seed'], sample.indptr, sample.indices, sample.hop,
+        sample.rescale, sample.dx, sample.dy,
+        config.generic['nr_random_samples'], config.dckb['n_kernel'],
+        config.dckb['direction'])
+
+    return mu_mn
+
+
 def quasi_eigenstates(sample, config):
     """Get quasi-eigenstates
 

@@ -78,6 +78,8 @@ class Config():
         Degrees of freedom per unit cell.
     sample['volume_unit_cell'] : float
         Volume of the unit cell.
+    scmple['H_rescale'] : float
+        rescale value for Hamiltonian
     generic['Bessel_max'] : int
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
@@ -181,6 +183,7 @@ class Config():
             self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
             self.sample['volume_unit_cell'] = sample.lattice.volume_unit_cell()
             self.sample['extended'] = sample.lattice.extended
+            self.sample['H_rescale'] = sample.rescale
 
         # generic standard values
         self.generic['Bessel_max'] = 100
