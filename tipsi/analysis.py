@@ -498,7 +498,7 @@ def get_dckb(config, mu_Hall):
     from .fortran import f2py as fortran_f2py
 
     conductivity = fortran_f2py.cond_from_trace(
-        mu_Hall, config.dckb['energies'], config.scmple['H_rescale'],
+        mu_Hall, config.dckb['energies'], config.sample['H_rescale'],
         config.generic['beta'], config.dckb['ne_integral'],
         config.generic['Fermi_cheb_precision'], config.dckb_prefactor())
     print('finish cond_from_trace')
