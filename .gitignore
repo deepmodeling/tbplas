@@ -49,3 +49,7 @@ testing
 # config files for local editer #
 #################################
 .vscode
+
+# preparation script before push #
+##################################
+generate_wrapper.sh

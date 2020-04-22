@@ -48,7 +48,7 @@ def create_dir(dir):
         try:
             if not os.path.isdir(dir):
                 os.mkdir(dir)
-            if td[-1] is not '/':
+            if td[-1] != '/':
                 td += '/'
         except:
             print('Cannot create output dir')

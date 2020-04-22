@@ -23,7 +23,6 @@ Dependences and requirements before compiling
     * Python 3
       Anaconda with Python 3 is recommended
       Plain CPython 3 has been tested
-      Pypy, Jython and other versions are not tested
 
 3. Dependencies for Python
   Compulsory:
@@ -34,13 +33,12 @@ Dependences and requirements before compiling
 Procedure of installation
 -------------------------
 
-1. Change the fortran compiler and libraries(MKL) in `setup.cfg`,
-   there is an example in file `setup.cfg.intel_mkl`.
+1. Change the fortran compiler and libraries(MKL) in `setup.cfg`.
+   You can use default intel compiler, add MKL library,
+   or use GNU compiler, but MKL is not recommended because it crashes now.
 
-2. Type and run the command below (without MKL):
+2. Type and run the command below:
     `python setup.py install --user`
-    or with MKL:
-    `python setup_mkl.py install --user`
 
 Now, you can use tipsi in python using `import tipsi`.
 
