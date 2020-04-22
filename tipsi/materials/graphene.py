@@ -1,5 +1,3 @@
-import sys
-sys.path.append("../..")
 import tipsi
 import numpy as np
 
@@ -244,8 +242,8 @@ def pbc_rectangle_zigzag(W, H, unit_cell_coords, orbital):
     # done
     return (x, y, z), orbital
 
-def sample(W = 500, H = 500, a = 0.24, t = 2.8, e = 0.0, \
-           nr_processes = 1):
+
+def sample(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
     """Diamond shaped graphene sample.
 
     Parameters
@@ -291,8 +289,8 @@ def sample(W = 500, H = 500, a = 0.24, t = 2.8, e = 0.0, \
     # done
     return sample
 
-def sample_rectangle(W = 500, H = 500, a = 0.24, t = 2.8, \
-                       e = 0.0, nr_processes = 1):
+
+def sample_rectangle(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
     """Rectangular graphene sample.
 
     Parameters

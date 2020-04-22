@@ -27,12 +27,11 @@ Functions
 # numerics & math
 import numpy as np
 
-# this is ugly
 from .builder import *
 from .config import *
 
-def read_sample(filename, lattice = None, bc_func = bc_default, \
-                nr_processes = 1):
+
+def read_sample(filename, lattice=None, bc_func=bc_default, nr_processes=1):
     """Read Sample object from file
 
     Parameters
@@ -51,9 +50,9 @@ def read_sample(filename, lattice = None, bc_func = bc_default, \
     ----------
     Sample object
     """
-    return Sample(lattice, bc_func = bc_func, \
-                  nr_processes = nr_processes, \
-                  read_from_file = filename)
+    return Sample(lattice, bc_func=bc_func,
+                  nr_processes=nr_processes,
+                  read_from_file=filename)
 
 
 def read_config(filename):
@@ -237,7 +236,11 @@ def read_corr_DC(filename):
     return corr_DC / n_samples
 
 
-def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
+def read_wannier90(lat_file,
+                   coord_file,
+                   ham_file,
+                   correct_file=False,
+                   en_cutoff=0.0):
     r"""Read Lattice and HopDict information from Wannier90 file
 
     Parameters
@@ -254,6 +257,10 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
     correct_file : string, optional
         correction terms for hoppings, available since Wannier90 2.1,
         usually named "\*_wsvec.dat"
+    en_cutoff : float, optional
+        cut-off energy that absolute value of hopping less than en_cutoff \
+        will be treated as 0
+        Default: 0 which means no cut-off
 
     Returns
     ----------
@@ -331,6 +338,8 @@ def read_wannier90(lat_file, coord_file, ham_file, correct_file=False):
         orb0 = int(data[3]) - 1
         orb1 = int(data[4]) - 1
         hop = float(data[5]) + 1j * float(data[6])
+        if np.abs(hop) < en_cutoff:
+            hop = 0 + 0j
 
         # add hopping terms
         # if new (x,y,z), fill hop_dict with old one

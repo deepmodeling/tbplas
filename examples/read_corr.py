@@ -3,13 +3,9 @@
 Read graphene TBPM correlation functions from sim_data folder.
 """
 
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
-sys.path.append("..")
 import tipsi
 
 

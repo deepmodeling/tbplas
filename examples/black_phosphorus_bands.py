@@ -3,15 +3,10 @@
 Black phosphorus band structure example for tipsi.
 """
 
-import matplotlib
-matplotlib.use('Agg')
+from tipsi.materials import black_phosphorus
+import tipsi
 import matplotlib.pyplot as plt
 import numpy as np
-
-import sys
-sys.path.append("..")
-import tipsi
-from tipsi.materials import black_phosphorus
 
 
 def main():

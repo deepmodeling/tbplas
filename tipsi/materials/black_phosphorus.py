@@ -1,10 +1,9 @@
-import sys
-sys.path.append("../..")
-import tipsi
 import numpy as np
+import tipsi
 
-def lattice(dist_nn = 0.22156, dist_nnb = 0.07159, theta = 48.395, \
-            thetaz = 108.657, dist_nz = 0.22378, dist_interz = 0.54923):
+
+def lattice(dist_nn=0.22156, dist_nnb=0.07159, theta=48.395,
+            thetaz=108.657, dist_nz=0.22378, dist_interz=0.54923):
     """Black phosphorus lattice.
 
     Parameters
@@ -64,12 +63,12 @@ def hop_dict():
 
     # initialize
     hop_dict = tipsi.HopDict()
-    rel_unit_cells = [(-1, 1, 0), (1, 1, 0), (-1, 1, 1), \
-        (-1, -1, 1), (1, 1, 1), (0, 0, 1), (-1, 0, 1), \
-        (1, -1, 0), (-1, -1, 0), (0, 1, 1), (1, 0, 0), \
-        (-2, 0, 1), (0, 0, 0), (0, -1, 0), (0, -1, 1), \
-        (-2, 0, 0), (-1, 0, 0), (0, 1, 0), (-2, -1, 0), \
-        (1, 0, 1), (-2, -1, 1)]
+    rel_unit_cells = [(-1, 1, 0), (1, 1, 0), (-1, 1, 1),
+                      (-1, -1, 1), (1, 1, 1), (0, 0, 1), (-1, 0, 1),
+                      (1, -1, 0), (-1, -1, 0), (0, 1, 1), (1, 0, 0),
+                      (-2, 0, 1), (0, 0, 0), (0, -1, 0), (0, -1, 1),
+                      (-2, 0, 0), (-1, 0, 0), (0, 1, 0), (-2, -1, 0),
+                      (1, 0, 1), (-2, -1, 1)]
     for uc in rel_unit_cells:
         hop_dict.empty(uc, (4, 4))
 

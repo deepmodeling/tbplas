@@ -1,4 +1,4 @@
 When using this software, please cite:
 
-E. Van Veen, G. Slotman, S. Yuan, 
+E. Van Veen, G. Slotman, K. Huang, S. Yuan,
 "Tipsi: a tight-binding propagation simulator" [unpublished]

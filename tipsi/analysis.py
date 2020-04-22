@@ -38,6 +38,11 @@ from scipy.signal import hilbert
 ################
 
 
+# no window
+def window_default(i, N):
+    return 1.
+
+
 # Hanning window
 def window_Hanning(i, N):
     """Hanning window.
@@ -127,7 +132,7 @@ def analyze_corr_DOS(config, corr_DOS, window=window_Hanning):
     # get useful things
     tnr = config.generic['nr_time_steps']
     en_range = config.sample['energy_range']
-    energies = [0.5 * i * en_range / tnr - en_range / 2. \
+    energies = [0.5 * i * en_range / tnr - en_range / 2.
                 for i in range(tnr * 2)]
     en_step = 0.5 * en_range / tnr
 
@@ -135,12 +140,12 @@ def analyze_corr_DOS(config, corr_DOS, window=window_Hanning):
     corr_negtime = np.zeros(tnr * 2, dtype=complex)
     corr_negtime[tnr - 1] = 1.
     corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) \
-                                * corr_DOS[tnr - 1]
+        * corr_DOS[tnr - 1]
     for i in range(tnr - 1):
         corr_negtime[tnr + i] = window(i, tnr) \
-                                * corr_DOS[i]
+            * corr_DOS[i]
         corr_negtime[tnr - i - 2] = window(i, tnr) \
-                                    * np.conjugate(corr_DOS[i])
+            * np.conjugate(corr_DOS[i])
 
     # Fourier transform
     corr_fft = np.fft.ifft(corr_negtime)
@@ -209,8 +214,8 @@ def analyze_corr_AC(config, corr_AC, window=window_exp):
     beta = config.generic['beta']
     omegas = [i * en_range / tnr for i in range(tnr)]
     ac_prefactor = 4. * config.sample['nr_orbitals'] \
-                        / config.sample['area_unit_cell'] \
-                        / config.sample['extended']
+        / config.sample['area_unit_cell'] \
+        / config.sample['extended']
 
     # get AC conductivity
     AC = np.zeros((4, tnr))
@@ -220,13 +225,13 @@ def analyze_corr_AC(config, corr_AC, window=window_exp):
             acv = 0.
             for k in range(tnr):
                 acv += 2. * window(k + 1, tnr) \
-                       * np.sin(omega * k * t_step) \
-                       * corr_AC[j,k].imag
+                    * np.sin(omega * k * t_step) \
+                    * corr_AC[j, k].imag
             if omega == 0.:
                 acv = 0.
             else:
                 acv = ac_prefactor * t_step * acv \
-                      * (np.exp(-beta * omega) - 1) / omega
+                    * (np.exp(-beta * omega) - 1) / omega
             AC[j, i] = acv
 
     # correct for spin
@@ -259,8 +264,9 @@ def AC_imag(AC_real):
         sigma[N - i] = AC_real[i]
     return np.imag(hilbert(sigma))[N:2 * N]
 
-def analyze_corr_dyn_pol(config, corr_dyn_pol, \
-                         window = window_exp_ten):
+
+def analyze_corr_dyn_pol(config, corr_dyn_pol,
+                         window=window_exp_ten):
     """Function for analyzing the dynamical polarization correlation function.
 
     Parameters
@@ -293,8 +299,8 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
     n_omegas = tnr
     # do we need to divide the prefac by 1.5??
     dyn_pol_prefactor = -2. * config.sample['nr_orbitals'] \
-                        / config.sample['area_unit_cell'] \
-                        / config.sample['extended']
+        / config.sample['area_unit_cell'] \
+        / config.sample['extended']
 
     # get dynamical polarization
     dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
@@ -305,8 +311,8 @@ def analyze_corr_dyn_pol(config, corr_dyn_pol, \
             for k in range(tnr):
                 tau = k * t_step
                 dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
-                       * np.exp(1j * omega * tau)
-            dyn_pol[i_q, i] = dyn_pol_prefactor * t_step * dpv
+                    * np.exp(1j * omega * tau)
+            dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
 
     # correct for spin
     if config.generic['correct_spin']:
@@ -343,12 +349,12 @@ def get_dielectric_function(config, dyn_pol):
     omegas = [i * en_range / tnr for i in range(tnr)]
     n_omegas = tnr
     epsilon_prefactor = config.dyn_pol['coulomb_constant'] \
-                        / config.dyn_pol['background_dielectric_constant'] \
-                        / config.sample['extended']
+        / config.dyn_pol['background_dielectric_constant'] \
+        / config.sample['extended']
 
     # declare arrays
     epsilon = np.ones((n_q_points, n_omegas)) \
-              + np.zeros((n_q_points, n_omegas)) * 0j
+        + np.zeros((n_q_points, n_omegas)) * 0j
     V0 = epsilon_prefactor * np.ones(n_q_points)
     V = np.zeros(n_q_points)
 
@@ -363,8 +369,9 @@ def get_dielectric_function(config, dyn_pol):
 
     return q_points, omegas, epsilon
 
-def analyze_corr_DC(config, corr_DOS, corr_DC, \
-                    window_DOS = window_Hanning, window_DC = window_exp):
+
+def analyze_corr_DC(config, corr_DOS, corr_DC,
+                    window_DOS=window_Hanning, window_DC=window_exp):
     """Function for analyzing the DC correlation function.
 
     Parameters
@@ -398,13 +405,12 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
     en_range = config.sample['energy_range']
     t_step = 2 * np.pi / en_range
     lims = config.DC_conductivity['energy_limits']
-    QE_indices = np.where((energies_DOS >= lims[0]) &
-                          (energies_DOS <= lims[1]))[0]
+    QE_indices = np.where(
+        (energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
     n_energies = len(QE_indices)
     energies = energies_DOS[QE_indices]
     dc_prefactor = config.sample['nr_orbitals'] \
-                   / config.sample['area_unit_cell'] \
-                   / (2 * np.pi)
+        / config.sample['area_unit_cell']
 
     # get DC conductivity
     DC = np.zeros((2, n_energies))
@@ -426,3 +432,73 @@ def analyze_corr_DC(config, corr_DOS, corr_DC, \
         DC = 2. * DC
 
     return energies, DC
+
+
+def get_ldos_haydock(sample, config):
+    """Get local density of states using Haydock recursion method
+
+    Parameters
+    ----------
+    sample : Sample object
+        Sample information
+    config : Config object
+        Parameters, LDOS['site_indices'], LDOS['delta'],
+        sample['energy_range'], LDOS['recursion_depth'],
+        generic['nr_time_steps'], output['corr_LDOS'] are used
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    LDOS : list of complex floats
+        LDOS value to corresponding energies_DOS
+    """
+
+    from .fortran import f2py as fortran_f2py
+
+    # get wf_weights:
+    if not config.LDOS['wf_weights']:
+        N = len(config.LDOS['site_indices'])
+        wf_weights = [1 for i in range(N)]
+    else:
+        wf_weights = config.LDOS['wf_weights']
+
+    energies, LDOS = fortran_f2py.ldos_haydock(
+        config.LDOS['site_indices'], wf_weights, config.LDOS['delta'],
+        config.sample['energy_range'], sample.indptr, sample.indices,
+        sample.hop, sample.rescale, config.generic['seed'],
+        config.LDOS['recursion_depth'], config.generic['nr_time_steps'],
+        config.generic['nr_random_samples'], config.output['corr_LDOS'])
+    return energies, LDOS
+
+
+def get_dckb(config, mu_Hall):
+    """Get Hall conductivity
+
+    Parameters
+    ----------
+    sample: fortran_sample object
+        sample information
+    config : tbpm_config object
+        config parameters
+
+    Returns
+    ----------
+    energies : list of floats
+        energy list with rank (2*nr_time_steps+1)
+    mu_mn:
+    conductivity:
+
+    """
+
+    print(" -- Getting DC with Kubo-Bastin")
+
+    from .fortran import f2py as fortran_f2py
+
+    conductivity = fortran_f2py.cond_from_trace(
+        mu_Hall, config.dckb['energies'], config.sample['H_rescale'],
+        config.generic['beta'], config.dckb['ne_integral'],
+        config.generic['Fermi_cheb_precision'], config.dckb_prefactor())
+    print('finish cond_from_trace')
+
+    return config.dckb['energies'], conductivity
