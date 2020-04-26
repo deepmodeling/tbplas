@@ -62,48 +62,8 @@ MODULE math
     PRIVATE :: dvdds_self, zvdds_self, zvdzs_self
 #ifdef BLAS
     ! declare BLAS functions
-    INTERFACE
-        FUNCTION ddot(n, X, incx, Y, incy)
-            IMPLICIT NONE
-            ! input
-            INTEGER, INTENT(IN) :: n, incx, incy
-            REAL(KIND=8), INTENT(IN), DIMENSION(:) :: X, Y
-            ! output
-            REAL(KIND=8) :: ddot
-        END FUNCTION ddot
-    END INTERFACE
-    INTERFACE
-        FUNCTION zdotc(n, X, incx, Y, incy)
-            IMPLICIT NONE
-            ! input
-            INTEGER, INTENT(IN) :: n, incx, incy
-            COMPLEX(KIND=8), INTENT(IN), DIMENSION(:) :: X, Y
-            ! output
-            COMPLEX(KIND=8) :: zdotc
-        END FUNCTION zdotc
-    END INTERFACE
-    INTERFACE
-        FUNCTION dnrm2(n, X, incx)
-            IMPLICIT NONE
-            ! input
-            INTEGER, INTENT(IN) :: n, incx
-            REAL(KIND=8), INTENT(IN), DIMENSION(:) :: X
-            ! output
-            REAL(KIND=8) :: dnrm2
-        END FUNCTION dnrm2
-    END INTERFACE
-    INTERFACE
-        FUNCTION dznrm2(n, X, incx)
-            IMPLICIT NONE
-            ! input
-            INTEGER, INTENT(IN) :: n, incx
-            COMPLEX(KIND=8), INTENT(IN), DIMENSION(:) :: X
-            ! output
-            REAL(KIND=8) :: dznrm2
-        END FUNCTION dznrm2
-    END INTERFACE
-
-    PRIVATE :: ddot, zdotc, dnrm2, dznrm2
+    REAL(KIND=8), EXTERNAL, PRIVATE :: ddot, dnrm2, dznrm2
+    COMPLEX(KIND=8), EXTERNAL, PRIVATE :: zdotc
 #endif
 
 CONTAINS
