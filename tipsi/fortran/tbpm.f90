@@ -71,8 +71,8 @@ END SUBROUTINE tbpm_dos
 
 
 ! Get LDOS
-SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
-                     Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
+SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
+                     s_indptr, n_indptr, s_indices, n_indices, &
                      s_hop, n_hop, seed, n_timestep, n_ran_samples, &
                      output_filename, corr)
     USE math, ONLY: inner_prod
@@ -82,10 +82,9 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_Bes, n_indptr, n_indices, n_hop
-    INTEGER, INTENT(IN) :: n_timestep, seed, n_siteind, n_wfw
+    INTEGER, INTENT(IN) :: n_timestep, seed, n_siteind
     INTEGER, INTENT(IN) :: n_ran_samples
     INTEGER, INTENT(IN), DIMENSION(n_siteind) :: site_indices
-    REAL(KIND=8), INTENT(IN), DIMENSION(n_wfw) :: wf_weights
     REAL(KIND=8), INTENT(IN), DIMENSION(n_Bes) :: Bes
     INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
     INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
@@ -96,7 +95,6 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
 
     ! declare vars
     INTEGER :: k, i, n_wf, i_sample
-    COMPLEX(KIND=8), DIMENSION(n_siteind) :: wf_temp
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t
     COMPLEX(KIND=8) :: corrval
     TYPE(SPARSE_MATRIX_T) :: H_csr
@@ -117,19 +115,14 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, wf_weights, n_wfw, &
         WRITE(27, *) "Sample =", i_sample
 
         ! make LDOS state
-        CALL random_state(wf_temp, n_siteind, seed*i_sample)
+        CALL random_state(wf_t, n_wf, seed*i_sample)
         wf0 = 0D0
-        DO i = 1, SIZE(site_indices)
-            wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
+        DO i = 1, n_siteind
+            wf0(site_indices(i) + 1) = wf_t(site_indices(i) + 1)
         END DO
-        wf_t = cheb_wf_timestep_fwd(H_csr, Bes, wf0)
-        corrval = inner_prod(wf0, wf_t)
-
-        WRITE(27, *) 1, REAL(corrval), AIMAG(corrval)
-        corr(1) = corr(1) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
-        DO k = 2, n_timestep
+        DO k = 1, n_timestep
             IF (MODULO(k, 64) == 0) THEN
                 PRINT *, "    Timestep ", k, " of ", n_timestep
             END IF

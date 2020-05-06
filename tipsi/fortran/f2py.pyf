@@ -3,7 +3,7 @@
 
 python module f2py ! in 
     interface  ! in :f2py
-        subroutine ldos_haydock(site_indices,n_siteind,wf_weights,n_wfw,delta,e_range,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,seed,n_depth,n_timestep,n_ran_samples,output_filename,energy,ldos) ! in :f2py:analysis.f90
+        subroutine ldos_haydock(site_indices,n_siteind,delta,e_range,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,seed,n_depth,n_timestep,n_ran_samples,output_filename,energy,ldos) ! in :f2py:analysis.f90
             use const
             use random, only: random_state
             use csr
@@ -11,8 +11,6 @@ python module f2py ! in
             use funcs, only: green_function
             integer dimension(n_siteind),intent(in) :: site_indices
             integer, optional,intent(in),check(len(site_indices)>=n_siteind),depend(site_indices) :: n_siteind=len(site_indices)
-            real(kind=8) dimension(n_wfw),intent(in) :: wf_weights
-            integer, optional,intent(in),check(len(wf_weights)>=n_wfw),depend(wf_weights) :: n_wfw=len(wf_weights)
             real(kind=8) intent(in) :: delta
             real(kind=8) intent(in) :: e_range
             integer dimension(n_indptr),intent(in) :: s_indptr
@@ -64,15 +62,13 @@ python module f2py ! in
             character*(*) intent(in) :: output_filename
             complex(kind=8) dimension(n_timestep),intent(out),depend(n_timestep) :: corr
         end subroutine tbpm_dos
-        subroutine tbpm_ldos(site_indices,n_siteind,wf_weights,n_wfw,bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_ldos(site_indices,n_siteind,bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr) ! in :f2py:tbpm.f90
             use math, only: inner_prod
             use random
             use csr
             use propagation
             integer dimension(n_siteind),intent(in) :: site_indices
             integer, optional,intent(in),check(len(site_indices)>=n_siteind),depend(site_indices) :: n_siteind=len(site_indices)
-            real(kind=8) dimension(n_wfw),intent(in) :: wf_weights
-            integer, optional,intent(in),check(len(wf_weights)>=n_wfw),depend(wf_weights) :: n_wfw=len(wf_weights)
             real(kind=8) dimension(n_bes),intent(in) :: bes
             integer, optional,intent(in),check(len(bes)>=n_bes),depend(bes) :: n_bes=len(bes)
             integer dimension(n_indptr),intent(in) :: s_indptr
@@ -155,7 +151,7 @@ python module f2py ! in
         end subroutine tbpm_dyn_pol
         subroutine tbpm_dccond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,en_inds,n_en_inds,output_filename_dos,output_filename_dc,dos_corr,dc_corr) ! in :f2py:tbpm.f90
             use const
-            use math, only: self_div,inner_prod,norm,copy,operator(.pdiv.)
+            use math
             use random
             use csr
             use propagation
@@ -190,7 +186,7 @@ python module f2py ! in
         end subroutine tbpm_dccond
         subroutine tbpm_eigenstates(bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,wf_qe) ! in :f2py:tbpm.f90
             use const
-            use math, only: self_div,copy,norm
+            use math
             use random
             use csr
             use propagation
@@ -211,7 +207,7 @@ python module f2py ! in
             real(kind=8) dimension(n_energies,n_indptr - 1),intent(out),depend(n_energies,n_indptr) :: wf_qe
         end subroutine tbpm_eigenstates
         subroutine tbpm_kbdc(seed,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,n_ran_samples,n_kernel,itypedc,corr_mu_avg) ! in :f2py:tbpm.f90
-            use math, only: copy,inner_prod,axpby
+            use math
             use random
             use csr
             use propagation

@@ -3,8 +3,8 @@
 ! ------------------------------------------------------
 
 ! Get LDOS using Haydock recursion method
-SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
-                        E_range, s_indptr, n_indptr, s_indices, n_indices, &
+SUBROUTINE ldos_haydock(site_indices, n_siteind, delta, E_range, &
+                        s_indptr, n_indptr, s_indices, n_indices, &
                         s_hop, n_hop, H_rescale, seed, n_depth, n_timestep, &
                         n_ran_samples, output_filename, energy, ldos)
     USE const
@@ -15,12 +15,11 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_siteind, n_indptr, n_indices, n_hop, seed
-    INTEGER, INTENT(IN) :: n_depth, n_timestep, n_wfw, n_ran_samples
+    INTEGER, INTENT(IN) :: n_depth, n_timestep, n_ran_samples
     INTEGER, INTENT(IN), DIMENSION(n_siteind) :: site_indices
     INTEGER, INTENT(IN), DIMENSION(n_indptr) :: s_indptr
     INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
     REAL(KIND=8), INTENT(IN) :: E_range, delta, H_rescale
-    REAL(KIND=8), INTENT(IN), DIMENSION(n_wfw) :: wf_weights
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
     ! output
@@ -50,7 +49,7 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, wf_weights, n_wfw, delta, &
         wf0 = 0D0
         CALL random_state(wf_temp, n_siteind, seed*i_sample)
         DO i = 1, n_siteind
-            wf0(site_indices(i) + 1) = wf_temp(i) * wf_weights(i)
+            wf0(site_indices(i) + 1) = wf_temp(i)
         END DO
 
         CALL Haydock_coef(wf0, n_depth, H_csr, H_rescale, a, b)

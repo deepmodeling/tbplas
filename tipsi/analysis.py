@@ -456,15 +456,8 @@ def get_ldos_haydock(sample, config):
 
     from .fortran import f2py as fortran_f2py
 
-    # get wf_weights:
-    if not config.LDOS['wf_weights']:
-        N = len(config.LDOS['site_indices'])
-        wf_weights = [1 for i in range(N)]
-    else:
-        wf_weights = config.LDOS['wf_weights']
-
     energies, LDOS = fortran_f2py.ldos_haydock(
-        config.LDOS['site_indices'], wf_weights, config.LDOS['delta'],
+        config.LDOS['site_indices'], config.LDOS['delta'],
         config.sample['energy_range'], sample.indptr, sample.indices,
         sample.hop, sample.rescale, config.generic['seed'],
         config.LDOS['recursion_depth'], config.generic['nr_time_steps'],

@@ -144,14 +144,13 @@ SUBROUTINE Haydock_coef(n1, n_depth, H_csr, H_rescale, coefa, coefb)
 
         p0 => p1
         p1 => p2
-        ! CALL self_div(p1, coefb(i-1)) ! p1(:) = p2(:) / coefb(i-1)
-        p1(:) = p2(:) / coefb(i-1)
+        CALL self_div(p1, coefb(i-1)) ! p1(:) = p2(:) / coefb(i-1)
 
         p2 => p3
         p2 = amv(H_rescale, H_csr, p1)
         coefa(i) = inner_prod(p1, p2)
 
-        CALL axpbypz(-coefa(i), p1, -coefb(i), p0, p2)
+        CALL axpbypz(-coefa(i), p1, -coefb(i-1), p0, p2)
         coefb(i) = norm(p2)
         p3 => p0
     END DO

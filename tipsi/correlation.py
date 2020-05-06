@@ -121,17 +121,9 @@ def corr_LDOS(sample, config):
                  config.generic['Bessel_precision'],
                  config.generic['Bessel_max'])
 
-    # get wf_weights:
-    if not config.LDOS['wf_weights']:
-        N = len(config.LDOS['site_indices'])
-        wf_weights = [1 for i in range(N)]
-    else:
-        wf_weights = config.LDOS['wf_weights']
-
     # pass to FORTRAN
-    corr_LDOS = f2py.tbpm_ldos(config.LDOS['site_indices'], wf_weights,
-                               Bes, sample.indptr, sample.indices,
-                               sample.hop,
+    corr_LDOS = f2py.tbpm_ldos(config.LDOS['site_indices'], Bes,
+                               sample.indptr, sample.indices, sample.hop,
                                config.generic['seed'],
                                config.generic['nr_time_steps'],
                                config.generic['nr_random_samples'],
