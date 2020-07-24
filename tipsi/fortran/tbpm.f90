@@ -91,7 +91,7 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
     ! output
-    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_timestep) :: corr
+    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
     ! declare vars
     INTEGER :: k, i, n_wf, i_sample
@@ -120,6 +120,7 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
         DO i = 1, n_siteind
             wf0(site_indices(i) + 1) = wf_t(site_indices(i) + 1)
         END DO
+        corr(0) = corr(0) + inner_prod(wf0, wf_t) / n_ran_samples
 
         ! iterate over time, get correlation function
         DO k = 1, n_timestep

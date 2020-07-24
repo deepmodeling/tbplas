@@ -137,19 +137,16 @@ def analyze_corr_DOS(config, corr_DOS, window=window_Hanning):
     en_step = 0.5 * en_range / tnr
 
     # Get negative time correlation
-    corr_negtime = np.zeros(tnr * 2, dtype=complex)
+    corr_negtime = np.empty(tnr * 2, dtype=complex)
     corr_negtime[tnr - 1] = 1.
-    corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) \
-        * corr_DOS[tnr - 1]
+    corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) * corr_DOS[tnr - 1]
     for i in range(tnr - 1):
-        corr_negtime[tnr + i] = window(i, tnr) \
-            * corr_DOS[i]
-        corr_negtime[tnr - i - 2] = window(i, tnr) \
-            * np.conjugate(corr_DOS[i])
+        corr_negtime[tnr + i] = window(i, tnr) * corr_DOS[i]
+        corr_negtime[tnr - i - 2] = window(i, tnr) * np.conjugate(corr_DOS[i])
 
     # Fourier transform
     corr_fft = np.fft.ifft(corr_negtime)
-    DOS = np.zeros(tnr * 2)
+    DOS = np.empty(tnr * 2)
     for i in range(tnr):
         DOS[i + tnr] = np.abs(corr_fft[i])
     for i in range(tnr, 2 * tnr):
@@ -183,7 +180,36 @@ def analyze_corr_LDOS(config, corr_LDOS, window=window_Hanning):
     LDOS : list of floats
         LDOS values corresponding to energies
     """
-    return analyze_corr_DOS(config, corr_LDOS, window)
+
+    # get useful things
+    tnr = config.generic['nr_time_steps']
+    en_range = config.sample['energy_range']
+    energies = [0.5 * i * en_range / tnr - en_range / 2.
+                for i in range(tnr * 2)]
+    en_step = 0.5 * en_range / tnr
+
+    # Get negative time correlation
+    corr_negtime = np.empty(tnr * 2, dtype=complex)
+    corr_negtime[tnr - 1] = corr_LDOS[0]
+    corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) * corr_LDOS[tnr]
+    for i in range(tnr - 1):
+        corr_negtime[tnr+i] = window(i, tnr) * corr_LDOS[i+1]
+        corr_negtime[tnr-i-2] = window(i, tnr) * np.conjugate(corr_LDOS[i+1])
+
+    # Fourier transform
+    corr_fft = np.fft.ifft(corr_negtime)
+    LDOS = np.empty(tnr * 2)
+    for i in range(tnr):
+        LDOS[i + tnr] = np.abs(corr_fft[i])
+    for i in range(tnr, 2 * tnr):
+        LDOS[i - tnr] = np.abs(corr_fft[i])
+
+    # Normalise and correct for spin
+    LDOS = LDOS / (np.sum(LDOS) * en_step)
+    if config.generic['correct_spin']:
+        LDOS = 2. * LDOS
+
+    return energies, LDOS
 
 
 def analyze_corr_AC(config, corr_AC, window=window_exp):

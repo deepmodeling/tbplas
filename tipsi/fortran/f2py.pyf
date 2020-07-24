@@ -81,7 +81,7 @@ python module f2py ! in
             integer intent(in) :: n_timestep
             integer intent(in) :: n_ran_samples
             character*(*) intent(in) :: output_filename
-            complex(kind=8) dimension(n_timestep),intent(out),depend(n_timestep) :: corr
+            complex(kind=8) dimension(n_timestep + 1),intent(out),depend(n_timestep) :: corr
         end subroutine tbpm_ldos
         subroutine tbpm_accond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,nr_fermi,fermi_precision,output_filename,corr) ! in :f2py:tbpm.f90
             use math, only: inner_prod
