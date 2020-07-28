@@ -99,11 +99,11 @@ def read_corr_DOS(filename):
 
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_DOS = np.zeros(n_timesteps, dtype=complex)
+    corr_DOS = np.zeros(n_timesteps + 1, dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
-        for j in range(n_timesteps+1):
+        for j in range(n_timesteps + 1):
             line = f.readline().split()
             corr_DOS[j] += float(line[1]) + 1j * float(line[2])
 
@@ -128,11 +128,11 @@ def read_corr_LDOS(filename):
 
     n_samples = int(f.readline().split()[-1])
     n_timesteps = int(f.readline().split()[-1])
-    corr_LDOS = np.zeros(n_timesteps, dtype=complex)
+    corr_LDOS = np.zeros(n_timesteps + 1, dtype=complex)
 
     for i in range(n_samples):
         temp_string = f.readline().split()
-        for j in range(n_timesteps+1):
+        for j in range(n_timesteps + 1):
             line = f.readline().split()
             corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
 
