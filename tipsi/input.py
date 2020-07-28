@@ -103,7 +103,7 @@ def read_corr_DOS(filename):
 
     for i in range(n_samples):
         temp_string = f.readline().split()
-        for j in range(n_timesteps):
+        for j in range(n_timesteps+1):
             line = f.readline().split()
             corr_DOS[j] += float(line[1]) + 1j * float(line[2])
 
@@ -132,7 +132,7 @@ def read_corr_LDOS(filename):
 
     for i in range(n_samples):
         temp_string = f.readline().split()
-        for j in range(n_timesteps):
+        for j in range(n_timesteps+1):
             line = f.readline().split()
             corr_LDOS[j] = float(line[1]) + 1j * float(line[2])
 

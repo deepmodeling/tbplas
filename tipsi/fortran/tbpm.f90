@@ -20,7 +20,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
     ! output
-    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_timestep) :: corr
+    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
     ! declare vars
     INTEGER :: i_sample, t, n_wf
@@ -46,6 +46,10 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
 
         ! make random state
         CALL random_state(wf0, n_wf, seed*i_sample)
+        corrval = inner_prod(wf0, wf0)
+        WRITE(27, *) 0, REAL(corrval), AIMAG(corrval)
+        corr(0) = corr(0) + corrval / n_ran_samples
+
         wf_t = cheb_wf_timestep_fwd(H_csr, Bes, wf0)
         corrval = inner_prod(wf0, wf_t)
 
@@ -120,7 +124,10 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
         DO i = 1, n_siteind
             wf0(site_indices(i) + 1) = wf_t(site_indices(i) + 1)
         END DO
-        corr(0) = corr(0) + inner_prod(wf0, wf_t) / n_ran_samples
+        corrval = inner_prod(wf0, wf_t)
+
+        WRITE(27, *) 0, REAL(corrval), AIMAG(corrval)
+        corr(0) = corr(0) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
         DO k = 1, n_timestep
