@@ -1,7 +1,7 @@
 !    -*- f90 -*-
 ! Note: the context of this file is case sensitive.
 
-python module f2py ! in 
+python module f2py ! in
     interface  ! in :f2py
         subroutine ldos_haydock(site_indices,n_siteind,delta,e_range,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,seed,n_depth,n_timestep,n_ran_samples,output_filename,energy,ldos) ! in :f2py:analysis.f90
             use const
@@ -60,7 +60,7 @@ python module f2py ! in
             integer intent(in) :: n_timestep
             integer intent(in) :: n_ran_samples
             character*(*) intent(in) :: output_filename
-            complex(kind=8) dimension(n_timestep),intent(out),depend(n_timestep) :: corr
+            complex(kind=8) dimension(n_timestep + 1),intent(out),depend(n_timestep) :: corr
         end subroutine tbpm_dos
         subroutine tbpm_ldos(site_indices,n_siteind,bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr) ! in :f2py:tbpm.f90
             use math, only: inner_prod
@@ -230,7 +230,7 @@ python module f2py ! in
             integer intent(in) :: itypedc
             complex(kind=8) dimension(n_kernel,n_kernel),intent(out),depend(n_kernel,n_kernel) :: corr_mu_avg
         end subroutine tbpm_kbdc
-    end interface 
+    end interface
 end python module f2py
 
 ! This file was auto-generated with f2py (version:2).
