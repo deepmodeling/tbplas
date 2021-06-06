@@ -94,7 +94,8 @@ def corr_DOS(sample, config):
                              config.generic['seed'],
                              config.generic['nr_time_steps'],
                              config.generic['nr_random_samples'],
-                             config.output['corr_DOS'])
+                             config.output['corr_DOS'],
+                             config.generic['rank'])
 
     return corr_DOS
 
@@ -127,7 +128,8 @@ def corr_LDOS(sample, config):
                                config.generic['seed'],
                                config.generic['nr_time_steps'],
                                config.generic['nr_random_samples'],
-                               config.output['corr_LDOS'])
+                               config.output['corr_LDOS'],
+                               config.generic['rank'])
 
     return corr_LDOS
 
@@ -169,7 +171,8 @@ def corr_AC(sample, config):
                                config.generic['nr_random_samples'],
                                config.generic['nr_Fermi_fft_steps'],
                                config.generic['Fermi_cheb_precision'],
-                               config.output['corr_AC'])
+                               config.output['corr_AC'],
+                               config.generic['rank'])
 
     return corr_AC
 
@@ -213,7 +216,8 @@ def corr_dyn_pol(sample, config):
                                      config.generic['nr_Fermi_fft_steps'],
                                      config.generic['Fermi_cheb_precision'],
                                      config.dyn_pol['q_points'],
-                                     config.output['corr_dyn_pol'])
+                                     config.output['corr_dyn_pol'],
+                                     config.generic['rank'])
 
     return corr_dyn_pol
 
@@ -261,7 +265,8 @@ def corr_DC(sample, config):
                                          config.generic['nr_random_samples'],
                                          t_step, energies_DOS, QE_indices,
                                          config.output['corr_DOS'],
-                                         config.output['corr_DC'])
+                                         config.output['corr_DC'],
+                                         config.generic['rank'])
 
     return corr_DOS, corr_DC
 
@@ -300,7 +305,8 @@ def mu_Hall(sample, config):
         config.generic['seed'], sample.indptr, sample.indices, sample.hop,
         sample.rescale, sample.dx, sample.dy,
         config.generic['nr_random_samples'], config.dckb['n_kernel'],
-        config.dckb['direction'])
+        config.dckb['direction'],
+        config.generic['rank'])
 
     return mu_mn
 
@@ -334,6 +340,7 @@ def quasi_eigenstates(sample, config):
                                    config.generic['seed'],
                                    config.generic['nr_time_steps'],
                                    config.generic['nr_random_samples'], t_step,
-                                   config.quasi_eigenstates['energies'])
+                                   config.quasi_eigenstates['energies'],
+                                   config.generic['rank'])
 
     return states

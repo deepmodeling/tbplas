@@ -43,7 +43,7 @@ python module f2py ! in
             real(kind=8) intent(in) :: prefactor
             real(kind=8) dimension(n_mu),intent(out),depend(n_mu) :: cond
         end subroutine cond_from_trace
-        subroutine tbpm_dos(bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_dos(bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr,rank) ! in :f2py:tbpm.f90
             use math, only: inner_prod
             use random
             use csr
@@ -61,8 +61,9 @@ python module f2py ! in
             integer intent(in) :: n_ran_samples
             character*(*) intent(in) :: output_filename
             complex(kind=8) dimension(n_timestep + 1),intent(out),depend(n_timestep) :: corr
+            integer intent(in) :: rank
         end subroutine tbpm_dos
-        subroutine tbpm_ldos(site_indices,n_siteind,bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_ldos(site_indices,n_siteind,bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,output_filename,corr,rank) ! in :f2py:tbpm.f90
             use math, only: inner_prod
             use random
             use csr
@@ -82,8 +83,9 @@ python module f2py ! in
             integer intent(in) :: n_ran_samples
             character*(*) intent(in) :: output_filename
             complex(kind=8) dimension(n_timestep + 1),intent(out),depend(n_timestep) :: corr
+            integer intent(in) :: rank
         end subroutine tbpm_ldos
-        subroutine tbpm_accond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,nr_fermi,fermi_precision,output_filename,corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_accond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,nr_fermi,fermi_precision,output_filename,corr,rank) ! in :f2py:tbpm.f90
             use math, only: inner_prod
             use random
             use csr
@@ -111,8 +113,9 @@ python module f2py ! in
             real(kind=8) intent(in) :: fermi_precision
             character*(*) intent(in) :: output_filename
             complex(kind=8) dimension(4,n_timestep),intent(out),depend(n_timestep) :: corr
+            integer intent(in) :: rank
         end subroutine tbpm_accond
-        subroutine tbpm_dyn_pol(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,s_site_x,n_site_x,s_site_y,n_site_y,s_site_z,n_site_z,seed,n_timestep,n_ran_samples,nr_fermi,fermi_precision,q_points,n_q_points,output_filename,corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_dyn_pol(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,s_site_x,n_site_x,s_site_y,n_site_y,s_site_z,n_site_z,seed,n_timestep,n_ran_samples,nr_fermi,fermi_precision,q_points,n_q_points,output_filename,corr,rank) ! in :f2py:tbpm.f90
             use math
             use random
             use csr
@@ -148,8 +151,9 @@ python module f2py ! in
             integer, optional,intent(in),check(shape(q_points,0)==n_q_points),depend(q_points) :: n_q_points=shape(q_points,0)
             character*(*) intent(in) :: output_filename
             real(kind=8) dimension(n_q_points,n_timestep),intent(out),depend(n_q_points,n_timestep) :: corr
+            integer intent(in) :: rank
         end subroutine tbpm_dyn_pol
-        subroutine tbpm_dccond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,en_inds,n_en_inds,output_filename_dos,output_filename_dc,dos_corr,dc_corr) ! in :f2py:tbpm.f90
+        subroutine tbpm_dccond(bes,n_bes,beta,mu,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,en_inds,n_en_inds,output_filename_dos,output_filename_dc,dos_corr,dc_corr,rank) ! in :f2py:tbpm.f90
             use const
             use math
             use random
@@ -183,8 +187,9 @@ python module f2py ! in
             character*(*) intent(in) :: output_filename_dc
             complex(kind=8) dimension(n_timestep),intent(out),depend(n_timestep) :: dos_corr
             complex(kind=8) dimension(2,n_energies,n_timestep),intent(out),depend(n_energies,n_timestep) :: dc_corr
+            integer intent(in) :: rank
         end subroutine tbpm_dccond
-        subroutine tbpm_eigenstates(bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,wf_qe) ! in :f2py:tbpm.f90
+        subroutine tbpm_eigenstates(bes,n_bes,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,seed,n_timestep,n_ran_samples,t_step,energies,n_energies,wf_qe,rank) ! in :f2py:tbpm.f90
             use const
             use math
             use random
@@ -205,8 +210,9 @@ python module f2py ! in
             real(kind=8) dimension(n_energies),intent(in) :: energies
             integer, optional,intent(in),check(len(energies)>=n_energies),depend(energies) :: n_energies=len(energies)
             real(kind=8) dimension(n_energies,n_indptr - 1),intent(out),depend(n_energies,n_indptr) :: wf_qe
+            integer intent(in) :: rank
         end subroutine tbpm_eigenstates
-        subroutine tbpm_kbdc(seed,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,n_ran_samples,n_kernel,itypedc,corr_mu_avg) ! in :f2py:tbpm.f90
+        subroutine tbpm_kbdc(seed,s_indptr,n_indptr,s_indices,n_indices,s_hop,n_hop,h_rescale,s_dx,n_dx,s_dy,n_dy,n_ran_samples,n_kernel,itypedc,corr_mu_avg,rank) ! in :f2py:tbpm.f90
             use math
             use random
             use csr
@@ -229,6 +235,7 @@ python module f2py ! in
             integer intent(in) :: n_kernel
             integer intent(in) :: itypedc
             complex(kind=8) dimension(n_kernel,n_kernel),intent(out),depend(n_kernel,n_kernel) :: corr_mu_avg
+            integer intent(in) :: rank
         end subroutine tbpm_kbdc
     end interface
 end python module f2py

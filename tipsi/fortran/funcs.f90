@@ -166,4 +166,24 @@ SUBROUTINE green_function(energy, delta, coefa, coefb, n_depth, g00)
     END DO
 END SUBROUTINE green_function
 
+! Checks the norm of time-dependent wave function during propagation
+subroutine check_norm(wf_t, norm_ref)
+    use ieee_arithmetic, only: ieee_is_nan, ieee_is_finite
+    use math, only: inner_prod
+    implicit none
+    complex(kind=8), dimension(:), intent(in) :: wf_t
+    complex(kind=8), intent(in) :: norm_ref
+    real(kind=8), parameter :: eps = 1.0D-9
+    real(kind=8) :: dnorm
+    dnorm = abs(inner_prod(wf_t, wf_t) - norm_ref)
+    if (ieee_is_nan(dnorm) .or. .not. ieee_is_finite(dnorm) .or. dnorm > eps) then
+        write (*,*) "================================================================================"
+        write (*,*) "=                                    ERROR                                     ="
+        write (*,*) "= Wave function norm gets broken during proparation. Try increasing 'rescale'  ="
+        write (*,*) "= in the input.                                                                ="
+        write (*,*) "================================================================================"
+        stop
+    end if
+end subroutine check_norm
+
 END MODULE funcs
