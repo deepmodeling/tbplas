@@ -32,11 +32,11 @@ Bugs fixed
   and shares the same subroutine as cheb_wf_timestep. An argument 'fwd' has
   been introduced to distinguish forward and backward propagation.
 
-* random:
-  Subroutine had not been thread-safe, which would lead to different results
-  with different number of OpenMP threads, especially for AC and DC
-  conductivity. Now the OpenMP instructions have been removed and the
-  subroutine is made serial, thus being thread-safe.
+* random.f90:
+  Subroutine 'random_state' had not been thread-safe, which would lead to
+  different results with different number of OpenMP threads, especially for
+  AC and DC conductivity. Now the OpenMP instructions have been removed and
+  the subroutine is made serial, thus being thread-safe.
 
 Changes
 -------
