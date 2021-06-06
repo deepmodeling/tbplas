@@ -51,18 +51,15 @@ SUBROUTINE random_state(wf, n_wf, iseed)
     CALL init_seed(iseed0)
 
     sum_wf_sq = 0D0
-    !$OMP PARALLEL DO PRIVATE(f, g, abs_z_sq) ORDERED REDUCTION(+: sum_wf_sq)
+    ! NOTE: openmp must be disabled for this section. Otherwise results will
+    ! be dependent on the number of threads.
     DO i = 1, n_wf
-        !$OMP ORDERED
         CALL RANDOM_NUMBER(f)
         CALL RANDOM_NUMBER(g)
-        !$OMP END ORDERED
-
         abs_z_sq = -1D0 * LOG(1D0 - f) ! exponential distribution
         wf(i) = SQRT(abs_z_sq) * EXP(CMPLX(0D0, 2*pi*g, KIND=8)) ! random phase
         sum_wf_sq = sum_wf_sq + abs_z_sq
     END DO
-    !$OMP END PARALLEL DO
 
     !$OMP PARALLEL DO
     DO i = 1, n_wf

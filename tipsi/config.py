@@ -1,11 +1,6 @@
 """config.py contains the class Config, which keeps track of
 parameters for the TBPM calculation.
 
-Functions
-----------
-    create_dir
-        Creates directory.
-
 Classes
 ----------
     Config
@@ -27,35 +22,6 @@ except ImportError:
     print("h5py functions not available.")
 import time
 import os
-
-
-def create_dir(dir):
-    """Function that creates a directory.
-
-    Parameters
-    ----------
-    dir : string
-        Name of directory; if False, no directory is created.
-
-    Returns
-    ----------
-    td : string
-        Path to directory.
-    """
-
-    if dir:
-        td = dir
-        try:
-            if not os.path.isdir(dir):
-                os.mkdir(dir)
-            if td[-1] != '/':
-                td += '/'
-        except:
-            print('Cannot create output dir')
-            td = ''
-    else:
-        td = ''
-    return td
 
 
 ################
@@ -103,6 +69,8 @@ class Config():
         Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wavefunction generation. Default value: 1337.
+    generic['rank'] : int
+        Rank of mpi process. Default value: 0.
     LDOS['site_indices'] : int
         Site indices for LDOS calculation.
     LDOS['wf_weights'] : int
@@ -132,9 +100,8 @@ class Config():
         Number of integral steps. Default value: 2048
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
-    output['timestamp'] : int
-        Timestamp generated at __init__ call to make output
-        files unique.
+    output['prefix'] : string
+        Prefix prepended to the output files. Default value: timestamp.
     output['corr_AC'] : string
         AC conductivity correlation output file.
         Default value: "sim_data/" + timestamp + "corr_AC.dat".
@@ -155,7 +122,8 @@ class Config():
     """
 
     # initialize
-    def __init__(self, sample=False, read_from_file=False):
+    def __init__(self, sample=False, read_from_file=False,
+                 directory=None, prefix=None):
         """Initialize.
 
         Parameters
@@ -164,6 +132,10 @@ class Config():
             Sample object of which to take sample parameters.
         read_from_file : bool
             set to True if you are reading a config object from file
+        directory: string
+            Directory for writing/reading files.
+        prefix: string
+            Prefix prepended to output files under directory.
         """
 
         # declare dicts
@@ -196,6 +168,7 @@ class Config():
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
         self.generic['seed'] = 1337
+        self.generic['rank'] = 0
 
         # LDOS
         self.LDOS['site_indices'] = 0
@@ -221,11 +194,12 @@ class Config():
         self.dckb['ne_integral'] = 2048
 
         # output settings
+        # TODO: what if read_from_file?
         if not read_from_file:
-            self.output['timestamp'] = str(int(time.time()))
-            self.set_output()
+            self.set_output(directory, prefix)
 
-    def set_output(self, directory='sim_data', prefix=False):
+
+    def set_output(self, directory=None, prefix=None):
         """Function to set data output options.
 
         This function will set self.output['directory'] and correlation
@@ -239,21 +213,27 @@ class Config():
         prefix : string, optional
             prefix for filenames, set to False for standard (timestamp) prefix
         """
+        # Update names of directory and files
+        if directory is not None:
+            self.output['directory'] = directory
+        else:
+            self.output['directory'] = 'sim_data'
+        if prefix is not None:
+            self.output['prefix'] = prefix
+        else:
+            self.output['prefix'] = str(int(time.time()))
+        full_prefix = "%s/%s" % (self.output['directory'], self.output['prefix'])
+        self.output['corr_DOS'] = '%scorr_DOS.dat' % full_prefix
+        self.output['corr_LDOS'] = '%scorr_LDOS.dat' % full_prefix
+        self.output['corr_AC'] = '%scorr_AC.dat' % full_prefix
+        self.output['corr_dyn_pol'] = '%scorr_dyn_pol.dat' % full_prefix
+        self.output['corr_DC'] = '%scorr_DC.dat' % full_prefix
 
-        if prefix is False:
-            prefix = self.output['timestamp']
-        if prefix != "":
-            print("Output prefix: " + prefix)
+        # Create directory if not exits
+        if not os.path.exists(self.output['directory']):
+            os.mkdir(self.output['directory'])
 
-        td = create_dir(directory)
-        self.output['directory'] = td
-        self.output['corr_DOS'] = td + prefix + 'corr_DOS' + '.dat'
-        self.output['corr_LDOS'] = td + prefix + 'corr_LDOS' + '.dat'
-        self.output['corr_AC'] = td + prefix + 'corr_AC' + '.dat'
-        self.output['corr_dyn_pol'] = td + prefix + 'corr_dyn_pol' + '.dat'
-        self.output['corr_DC'] = td + prefix + 'corr_DC' + '.dat'
-
-    def save(self, filename="config.pkl", directory='sim_data', prefix=False):
+    def save(self, filename="config.pkl", directory=None, prefix=None):
         """Function to save config parameters to a .pkl file.
 
         Parameters
@@ -266,11 +246,14 @@ class Config():
         prefix : string, optional
             prefix for filenames, set to False for standard (timestamp) prefix
         """
-
-        if prefix is False:
-            prefix = self.output['timestamp']
-        td = create_dir(directory)
-        with open(td + prefix + filename, 'wb') as f:
+        if directory is None:
+            directory = self.output['directory']
+        if prefix is None:
+            prefix = self.output['prefix']
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        pickle_name = "%s/%s%s" % (directory, prefix, filename)
+        with open(pickle_name, 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def dckb_prefactor(self):

@@ -394,6 +394,15 @@ def analyze_corr_DC(config, corr_DOS, corr_DC,
     """
 
     # get DOS
+    # NOTE: Here we need to call analyze_corr_DOS to obtain DOS, which is
+    # intended to analyze the result of corr_DOS by design. As can been seen
+    # in fortran/f2py.pyf, the result of corr_DOS and corr_LDOS has length of
+    # nr_time_steps+1, while that of corr_dccond has length of nr_time_steps.
+    # This is due to incomplete update of the source code to take LDOS in
+    # consideration. corr_DOS and corr_LDOS have been update, while other
+    # functions are not. So here we need to insert 1.0 to the head of corr_DOS
+    # returned by corr_dccond before calling analyze_corr_DOS. (kxhuang)
+    corr_DOS = np.insert(corr_DOS, 0, 1.0)
     energies_DOS, DOS = analyze_corr_DOS(config, corr_DOS, window_DOS)
     energies_DOS = np.array(energies_DOS)
     DOS = np.array(DOS)

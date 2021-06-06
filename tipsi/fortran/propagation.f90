@@ -8,8 +8,8 @@ MODULE propagation
 
 CONTAINS
 
-! Apply forward timestep using Chebyshev decomposition
-FUNCTION cheb_wf_timestep_fwd(H_csr, Bes, wf_in) RESULT(wf_out)
+! Apply forward/backward timestep using Chebyshev decomposition
+FUNCTION cheb_wf_timestep(H_csr, Bes, wf_in, fwd) RESULT(wf_out)
     USE const
     USE math
     USE csr
@@ -18,6 +18,7 @@ FUNCTION cheb_wf_timestep_fwd(H_csr, Bes, wf_in) RESULT(wf_out)
     TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
     REAL(KIND=8), INTENT(IN), DIMENSION(:) :: Bes
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(:) :: wf_in
+    LOGICAL, INTENT(IN) :: fwd
     ! output
     COMPLEX(KIND=8), DIMENSION(SIZE(wf_in)) :: wf_out
 
@@ -25,54 +26,27 @@ FUNCTION cheb_wf_timestep_fwd(H_csr, Bes, wf_in) RESULT(wf_out)
     INTEGER :: i
     COMPLEX(KIND=8), DIMENSION(SIZE(wf_in)), TARGET :: Tcheb0, Tcheb1
     COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
+    COMPLEX(KIND=8) :: img_dt
 
-    Tcheb0 = amv(-img, H_csr, wf_in)
-    Tcheb1 = amv(-2*img, H_csr, Tcheb0) .pAdd. wf_in(:)
+    if (fwd) then
+        img_dt = img
+    else
+        img_dt = -img
+    end if
+    Tcheb0 = amv(-img_dt, H_csr, wf_in)
+    Tcheb1 = amv(-2*img_dt, H_csr, Tcheb0) .pAdd. wf_in(:)
     wf_out = axpbypcz(Bes(1), wf_in, 2*Bes(2), Tcheb0, 2*Bes(3), Tcheb1)
 
     p0 => Tcheb0
     p1 => Tcheb1
     DO i = 4, SIZE(Bes)
         p2 => p0
-        CALL amxpy(-2*img, H_csr, p1, p0) ! p2 = -2*img * H_csr * p1 + p0
+        CALL amxpy(-2*img_dt, H_csr, p1, p0) ! p2 = -2*img_dt * H_csr * p1 + p0
         CALL axpy(2*Bes(i), p2, wf_out)   ! wf_out = wf_out + 2*Bes(i) * p2
         p0 => p1
         p1 => p2
     END DO
-END FUNCTION cheb_wf_timestep_fwd
-
-! Apply inverse timestep using Chebyshev decomposition
-FUNCTION cheb_wf_timestep_inv(H_csr, Bes, wf_in) RESULT(wf_out)
-    USE const, ONLY: img
-    USE math, ONLY: copy, axpy, axpbypcz, OPERATOR(.pAdd.), OPERATOR(.pMul.)
-    USE csr, ONLY: SPARSE_MATRIX_T, amv, amxpy
-    IMPLICIT NONE
-    ! input
-    TYPE(SPARSE_MATRIX_T), INTENT(IN) :: H_csr
-    REAL(KIND=8), INTENT(IN), DIMENSION(:) :: Bes
-    COMPLEX(KIND=8), INTENT(IN), DIMENSION(:) :: wf_in
-    ! output
-    COMPLEX(KIND=8), DIMENSION(SIZE(wf_in)) :: wf_out
-
-    ! declare vars
-    INTEGER :: i
-    COMPLEX(KIND=8), DIMENSION(SIZE(wf_in)), TARGET :: Tcheb0, Tcheb1
-    COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2
-
-    Tcheb0 = amv(img, H_csr, wf_in)
-    Tcheb1 = amv(2*img, H_csr, Tcheb0) .pAdd. wf_in(:)
-    wf_out = axpbypcz(Bes(1), wf_in, 2*Bes(2), Tcheb0, 2*Bes(3), Tcheb1)
-
-    p0 => Tcheb0
-    p1 => Tcheb1
-    DO i = 3, SIZE(Bes)
-        p2 => p0
-        CALL amxpy(2*img, H_csr, p1, p0) ! p2 = 2*img * H_csr * p1 + p0
-        CALL axpy(2*Bes(i), p2, wf_out)  ! wf_out = wf_out + 2*Bes(i) * p2
-        p0 => p1
-        p1 => p2
-    END DO
-END FUNCTION cheb_wf_timestep_inv
+END FUNCTION cheb_wf_timestep
 
 ! Fermi-Dirac distribution operator
 FUNCTION Fermi(H_csr, cheb_coef, wf_in) RESULT(wf_out)

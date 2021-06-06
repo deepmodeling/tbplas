@@ -5,11 +5,12 @@
 ! Get DOS
 SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
                     s_hop, n_hop, seed, n_timestep, n_ran_samples, &
-                    output_filename, corr)
+                    output_filename, corr, rank)
     USE math, ONLY: inner_prod
     USE random
     USE csr
     USE propagation
+    use funcs, only : check_norm
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_Bes, n_indptr, n_indices, n_hop
@@ -19,6 +20,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
+    INTEGER, INTENT(IN) :: rank
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
@@ -27,6 +29,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t
     COMPLEX(KIND=8) :: corrval
     TYPE(SPARSE_MATRIX_T) :: H_csr
+    complex(kind=8) :: norm_ref
 
     ! set some values
     corr = 0D0
@@ -37,32 +40,34 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
 
-    PRINT *, "Calculating DOS correlation function."
+    if (rank == 0) PRINT *, "Calculating DOS correlation function."
 
     ! Average over (n_ran_samples) samples
     DO i_sample = 1, n_ran_samples
-        PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
         WRITE(27, *) "Sample =", i_sample
 
         ! make random state
-        CALL random_state(wf0, n_wf, seed*i_sample)
+        CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
         corrval = inner_prod(wf0, wf0)
         WRITE(27, *) 0, REAL(corrval), AIMAG(corrval)
         corr(0) = corr(0) + corrval / n_ran_samples
 
-        wf_t = cheb_wf_timestep_fwd(H_csr, Bes, wf0)
+        wf_t = cheb_wf_timestep(H_csr, Bes, wf0, .true.)
         corrval = inner_prod(wf0, wf_t)
 
         WRITE(27, *) 1, REAL(corrval), AIMAG(corrval)
         corr(1) = corr(1) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
+        norm_ref = inner_prod(wf0, wf0)
         DO t = 2, n_timestep
             IF (MODULO(t, 64) == 0) THEN
-                PRINT *, "    Timestep ", t, " of ", n_timestep
+                if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
             END IF
+            if (t == 128) call check_norm(wf_t, norm_ref)
 
-            wf_t = cheb_wf_timestep_fwd(H_csr, Bes, wf_t)
+            wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
 
             WRITE(27, *) t, REAL(corrval), AIMAG(corrval)
@@ -78,11 +83,12 @@ END SUBROUTINE tbpm_dos
 SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
                      s_indptr, n_indptr, s_indices, n_indices, &
                      s_hop, n_hop, seed, n_timestep, n_ran_samples, &
-                     output_filename, corr)
+                     output_filename, corr, rank)
     USE math, ONLY: inner_prod
     USE random
     USE csr
     USE propagation
+    use funcs, only: check_norm
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_Bes, n_indptr, n_indices, n_hop
@@ -94,6 +100,7 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
+    INTEGER, INTENT(IN) :: rank
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
@@ -102,6 +109,7 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t
     COMPLEX(KIND=8) :: corrval
     TYPE(SPARSE_MATRIX_T) :: H_csr
+    COMPLEX(KIND=8) :: norm_ref
 
     ! set some values
     corr = 0D0
@@ -112,14 +120,14 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
 
-    PRINT *, "Calculating LDOS correlation function."
+    if (rank == 0) PRINT *, "Calculating LDOS correlation function."
 
     DO i_sample = 1, n_ran_samples
-        PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
         WRITE(27, *) "Sample =", i_sample
 
         ! make LDOS state
-        CALL random_state(wf_t, n_wf, seed*i_sample)
+        CALL random_state(wf_t, n_wf, seed*(i_sample+rank*n_ran_samples))
         wf0 = 0D0
         DO i = 1, n_siteind
             wf0(site_indices(i) + 1) = wf_t(site_indices(i) + 1)
@@ -130,12 +138,14 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
         corr(0) = corr(0) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
+        norm_ref = inner_prod(wf0, wf0)
         DO k = 1, n_timestep
             IF (MODULO(k, 64) == 0) THEN
-                PRINT *, "    Timestep ", k, " of ", n_timestep
+                if (rank == 0) PRINT *, "    Timestep ", k, " of ", n_timestep
             END IF
+            if (k == 128) call check_norm(wf_t, norm_ref)
 
-            wf_t = cheb_wf_timestep_fwd(H_csr, Bes, wf_t)
+            wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
 
             WRITE(27, *) k, REAL(corrval), AIMAG(corrval)
@@ -152,12 +162,13 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                        s_indices, n_indices, s_hop, n_hop, H_rescale, &
                        s_dx, n_dx, s_dy, n_dy, seed, n_timestep, &
                        n_ran_samples, nr_Fermi, Fermi_precision, &
-                       output_filename, corr)
+                       output_filename, corr, rank)
     USE math, ONLY: inner_prod
     USE random
     USE csr
     USE propagation
     USE funcs
+    use funcs, only: check_norm
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_Bes, n_indptr, n_indices, n_hop, n_dx, n_dy
@@ -171,6 +182,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     REAL(KIND=8), INTENT(IN), DIMENSION(n_dx) :: s_dx
     REAL(KIND=8), INTENT(IN), DIMENSION(n_dy) :: s_dy
     CHARACTER*(*), INTENT(IN) :: output_filename
+    INTEGER, INTENT(IN) :: rank
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(4, n_timestep) :: corr
     ! corr has 4 elements, respectively: corr_xx, corr_xy, corr_yx, corr_yy
@@ -186,6 +198,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     ! coefs for x or y current
     COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_x, sys_current_y
     TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
+    COMPLEX(KIND=8) :: norm_ref
 
     ! set some values
     corr = 0D0
@@ -213,16 +226,16 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
-    PRINT *, "Calculating AC conductivity correlation function."
+    if (rank == 0) PRINT *, "Calculating AC conductivity correlation function."
 
     ! Average over (n_sample) samples
     DO i_sample = 1, n_ran_samples
 
-        PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
         WRITE(27, *) "Sample =", i_sample
 
         ! make random state and psi1, psi2
-        CALL random_state(wf0, n_wf, seed*i_sample)
+        CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
         psi1_x = cur_csr_x * wf0
         psi1_y = cur_csr_y * wf0
         psi1_x = Fermi(H_csr, coef_omF, psi1_x)
@@ -249,15 +262,17 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             REAL(corrval(4)), AIMAG(corrval(4))
 
         ! iterate over time
+        norm_ref = inner_prod(psi2, psi2)
         DO t = 2, n_timestep
             IF (MODULO(t, 64) == 0) THEN
-                PRINT *, "    Timestep ", t, " of ", n_timestep
+                if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
             END IF
+            if (t == 128) call check_norm(psi2, norm_ref)
 
             ! calculate time evolution
-            psi1_x = cheb_wf_timestep_fwd(H_csr, Bes, psi1_x)
-            psi1_y = cheb_wf_timestep_fwd(H_csr, Bes, psi1_y)
-            psi2 = cheb_wf_timestep_fwd(H_csr, Bes, psi2)
+            psi1_x = cheb_wf_timestep(H_csr, Bes, psi1_x, .true.)
+            psi1_y = cheb_wf_timestep(H_csr, Bes, psi1_y, .true.)
+            psi2 = cheb_wf_timestep(H_csr, Bes, psi2, .true.)
 
             !get correlation functions in all directions
             wf1 = cur_csr_x * psi1_x
@@ -296,7 +311,7 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                         s_dx, n_dx, s_dy, n_dy, s_site_x, n_site_x, &
                         s_site_y, n_site_y, s_site_z, n_site_z, seed, &
                         n_timestep, n_ran_samples, nr_Fermi, Fermi_precision, &
-                        q_points, n_q_points, output_filename, corr)
+                        q_points, n_q_points, output_filename, corr, rank)
     USE math
     USE random
     USE csr
@@ -319,6 +334,7 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     REAL(KIND=8), INTENT(IN), DIMENSION(n_site_z) :: s_site_z
     REAL(KIND=8), INTENT(IN), DIMENSION(n_q_points, 3) :: q_points
     CHARACTER*(*), INTENT(IN) :: output_filename
+    INTEGER, INTENT(IN) :: rank
     ! output
     REAL(KIND=8), INTENT(OUT), DIMENSION(n_q_points, n_timestep) :: corr
 
@@ -332,6 +348,7 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     ! coefs for density
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: s_density_q, s_density_min_q
     TYPE(SPARSE_MATRIX_T) :: H_csr
+    COMPLEX(KIND=8) :: norm_ref
 
     ! set some values
     n_wf = n_indptr - 1
@@ -353,11 +370,11 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
 
-    PRINT *, "Calculating dynamical polarization correlation function."
+    if (rank == 0) PRINT *, "Calculating dynamical polarization correlation function."
 
     !loop over n qpoints
     DO i_q = 1, n_q_points
-        PRINT *, "q-point ", i_q, " of ", n_q_points
+        if (rank == 0) PRINT *, "q-point ", i_q, " of ", n_q_points
         WRITE(27, "(A9, ES24.14E3,ES24.14E3,ES24.14E3)") "qpoint= ", &
             q_points(i_q,1), q_points(i_q,2), q_points(i_q,3)
 
@@ -368,11 +385,11 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
         ! Average over (n_ran_samples) samples
         DO i_sample = 1, n_ran_samples
-            PRINT *, " Sample ", i_sample, " of ", n_ran_samples
+            ! PRINT *, " Sample ", i_sample, " of ", n_ran_samples
             WRITE(27, *) "Sample =", i_sample
 
             ! make random state and psi1, psi2
-            CALL random_state(wf0, n_wf, seed*i_sample)
+            CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
             ! call density(-q)*wf0, resulting in psi1
             psi1 = s_density_min_q .pMul. wf0
             ! call fermi with 1-fermi coefficients for psi1
@@ -388,14 +405,16 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             corr(i_q, 1) = corr(i_q, 1) + corrval / n_ran_samples
 
             ! iterate over tau
+            norm_ref = inner_prod(psi2, psi2)
             DO t = 2, n_timestep
             IF (MODULO(t, 64) == 0) THEN
-                PRINT *, "    Timestep ", t, " of ", n_timestep
+                if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
             END IF
+            if (t == 128) call check_norm(psi2, norm_ref)
 
             ! call time and density operators
-            psi1 = cheb_wf_timestep_fwd(H_csr, Bes, psi1)
-            psi2 = cheb_wf_timestep_fwd(H_csr, Bes, psi2)
+            psi1 = cheb_wf_timestep(H_csr, Bes, psi1, .true.)
+            psi2 = cheb_wf_timestep(H_csr, Bes, psi2, .true.)
             wf1 = s_density_q .pMul. psi1
 
             ! get correlation and store
@@ -418,7 +437,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                        n_timestep, n_ran_samples, t_step, &
                        energies, n_energies, en_inds, n_en_inds, &
                        output_filename_dos, output_filename_dc, &
-                       dos_corr, dc_corr)
+                       dos_corr, dc_corr, rank)
     USE const
     USE math
     USE random
@@ -441,6 +460,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     INTEGER, INTENT(IN), DIMENSION(n_en_inds) :: en_inds
     CHARACTER*(*), INTENT(IN) :: output_filename_dos
     CHARACTER*(*), INTENT(IN) :: output_filename_dc
+    INTEGER, INTENT(IN) :: rank
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_timestep) :: dos_corr
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(2,n_energies,n_timestep) :: dc_corr
@@ -450,13 +470,20 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     INTEGER :: i_sample, i, j, t, n_wf
     REAL(KIND=8) :: W, QE_sum
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg, wfE
-    COMPLEX(KIND=8), DIMENSION(n_en_inds, n_indptr - 1) :: wf_QE
-    COMPLEX(KIND=8), DIMENSION(2, n_indptr - 1) :: wf0_J, wfE_J
+    !=================================================================================
+    ! yhli: swtich wf_QE, wf0_j and wfE_j to column-major boosts the calculation by
+    ! approximately 5%.
+    !=================================================================================
+    ! COMPLEX(KIND=8), DIMENSION(n_en_inds, n_indptr - 1) :: wf_QE
+    ! COMPLEX(KIND=8), DIMENSION(2, n_indptr - 1) :: wf0_J, wfE_J
+    COMPLEX(KIND=8), DIMENSION(n_indptr - 1, n_en_inds) :: wf_QE
+    COMPLEX(KIND=8), DIMENSION(n_indptr - 1, 2) :: wf0_J, wfE_J
     ! coefs for current
     COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_y
     COMPLEX(KIND=8) :: dos_corrval, P
     COMPLEX(KIND=8), DIMENSION(2) :: dc_corrval
     TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_y
+    COMPLEX(KIND=8) :: norm_ref
 
     ! set some values
     n_wf = n_indptr - 1
@@ -478,16 +505,16 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
     cur_csr_y = make_csr_matrix(s_indptr, s_indices, sys_current_y)
 
-    PRINT *, "Calculating DC conductivity correlation function."
+    if (rank == 0) PRINT *, "Calculating DC conductivity correlation function."
 
     ! Average over (n_ran_samples) samples
     DO i_sample = 1, n_ran_samples
-        PRINT *, "Calculating for sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "Calculating for sample ", i_sample, " of ", n_ran_samples
         WRITE(27, *) "Sample =", i_sample
         WRITE(28, *) "Sample =", i_sample
 
         ! make random state
-        CALL random_state(wf0, n_wf, seed*i_sample)
+        CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
 
         ! ------------
         ! first, get DOS and quasi-eigenstates
@@ -497,18 +524,24 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         wf_t_pos = copy(wf0)
         wf_t_neg = copy(wf0)
         DO i = 1, n_en_inds
-            wf_QE(i, :) = copy(wf0)
+            ! wf_QE(i, :) = copy(wf0)
+            wf_QE(:, i) = copy(wf0)
         END DO
 
         ! Iterate over time, get Fourier transform
+        norm_ref = inner_prod(wf0, wf0)
         DO t = 1, n_timestep
             IF (MODULO(t, 64) == 0) THEN
-                PRINT *, "Getting DOS/QE for timestep ", t, " of ", n_timestep
+                if (rank == 0) PRINT *, "Getting DOS/QE for timestep ", t, " of ", n_timestep
             END IF
+            if (t == 128) then
+                call check_norm(wf_t_pos, norm_ref)
+                call check_norm(wf_t_neg, norm_ref)
+            endif
 
             ! time evolution
-            wf_t_pos = cheb_wf_timestep_fwd(H_csr, Bes, wf_t_pos)
-            wf_t_neg = cheb_wf_timestep_inv(H_csr, Bes, wf_t_neg)
+            wf_t_pos = cheb_wf_timestep(H_csr, Bes, wf_t_pos, .true.)
+            wf_t_neg = cheb_wf_timestep(H_csr, Bes, wf_t_neg, .false.)
 
             ! get dos correlation
             dos_corrval = inner_prod(wf0, wf_t_pos)
@@ -521,8 +554,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             DO i = 1, n_en_inds
                 P = EXP(img * energies(en_inds(i) + 1) * t * t_step)
                 DO j = 1, n_wf
-                    wf_QE(i, j) = wf_QE(i, j) + P * wf_t_pos(j) * W
-                    wf_QE(i, j) = wf_QE(i, j) + CONJG(P) * wf_t_neg(j) * W
+                    ! wf_QE(i, j) = wf_QE(i, j) + P * wf_t_pos(j) * W
+                    ! wf_QE(i, j) = wf_QE(i, j) + CONJG(P) * wf_t_neg(j) * W
+                    wf_QE(j, i) = wf_QE(j, i) + P * wf_t_pos(j) * W
+                    wf_QE(j, i) = wf_QE(j, i) + CONJG(P) * wf_t_neg(j) * W
                 END DO
             END DO
             !$OMP END PARALLEL DO SIMD
@@ -530,8 +565,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
         ! Normalise
         DO i = 1, n_en_inds
-            QE_sum = norm(wf_QE(i, :))
-            CALL self_div(wf_QE(i, :), QE_sum)
+            ! QE_sum = norm(wf_QE(i, :))
+            ! CALL self_div(wf_QE(i, :), QE_sum)
+            QE_sum = norm(wf_QE(:, i))
+            CALL self_div(wf_QE(:, i), QE_sum)
         END DO
 
         ! ------------
@@ -542,23 +579,30 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         DO i = 1, n_en_inds
             ! some output
             IF (MODULO(i, 8) == 0) THEN
-                PRINT *, "Getting DC conductivity for energy: ", &
+                if (rank == 0) PRINT *, "Getting DC conductivity for energy: ", &
                         i, " of ", n_en_inds
             END IF
             WRITE(28, *) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
 
             ! get corresponding quasi-eigenstate
-            wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
+            ! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
+            wfE(:) = wf_QE(:, i) .pDiv. ABS(inner_prod(wf0, wf_QE(:, i)))
 
             ! make psi1, psi2
-            wf0_J(1, :) = cur_csr_y * wf0
-            wf0_J(2, :) = copy(wf0_J(1, :))
-            wfE_J(1, :) = cur_csr_y * wfE
-            wfE_J(2, :) = copy(wfE_J(1, :))
+            ! wf0_J(1, :) = cur_csr_y * wf0
+            ! wf0_J(2, :) = copy(wf0_J(1, :))
+            ! wfE_J(1, :) = cur_csr_y * wfE
+            ! wfE_J(2, :) = copy(wfE_J(1, :))
+            wf0_J(:, 1) = cur_csr_y * wf0
+            wf0_J(:, 2) = copy(wf0_J(:, 1))
+            wfE_J(:, 1) = cur_csr_y * wfE
+            wfE_J(:, 2) = copy(wfE_J(:, 1))
 
             ! get correlation values
-            dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
-            dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
+            ! dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
+            ! dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
+            dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
+            dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
             ! write to file
             WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
@@ -573,12 +617,16 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             ! iterate over time
             DO t = 2, n_timestep
                 ! NEGATIVE time evolution of QE state
-                wfE_J(1, :) = cheb_wf_timestep_inv(H_csr, Bes, wfE_J(1, :))
-                wfE_J(2, :) = cheb_wf_timestep_inv(H_csr, Bes, wfE_J(2, :))
+                ! wfE_J(1, :) = cheb_wf_timestep(H_csr, Bes, wfE_J(1, :), .false.)
+                ! wfE_J(2, :) = cheb_wf_timestep(H_csr, Bes, wfE_J(2, :), .false.)
+                wfE_J(:, 1) = cheb_wf_timestep(H_csr, Bes, wfE_J(:, 1), .false.)
+                wfE_J(:, 2) = cheb_wf_timestep(H_csr, Bes, wfE_J(:, 2), .false.)
 
                 ! get correlation values
-                dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
-                dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
+                ! dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
+                ! dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
+                dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
+                dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
                 ! write to file
                 WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
@@ -602,12 +650,13 @@ END SUBROUTINE tbpm_dccond
 SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
                             s_indices, n_indices, s_hop, n_hop, &
                             seed, n_timestep, n_ran_samples, t_step, &
-                            energies, n_energies, wf_QE)
+                            energies, n_energies, wf_QE, rank)
     USE const
     USE math
     USE random
     USE csr
     USE propagation
+    use funcs, only: check_norm
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_Bes, n_indptr, n_indices, n_hop
@@ -618,6 +667,7 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
     INTEGER, INTENT(IN), DIMENSION(n_indices) :: s_indices
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     REAL(KIND=8), INTENT(IN), DIMENSION(n_energies) :: energies
+    INTEGER, INTENT(IN) :: rank
     ! output
     REAL(KIND=8), INTENT(OUT), DIMENSION(n_energies, n_indptr - 1) :: wf_QE
 
@@ -626,37 +676,50 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
     REAL(KIND=8) :: W, QE_sum
     COMPLEX(KIND=8) :: P
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1) :: wf0, wf_t_pos, wf_t_neg
-    COMPLEX(KIND=8), DIMENSION(n_energies, n_indptr - 1) :: wfq
+    !================================================================================
+    ! yhli: it seems that wfq corresponds to wf_QE, so they have the same dimension.
+    ! Switch it to column-major may improve its efficiency, while special care should
+    ! be taken when it is put in together with wf_QE.
+    !================================================================================
+    ! COMPLEX(KIND=8), DIMENSION(n_energies, n_indptr - 1) :: wfq
+    COMPLEX(KIND=8), DIMENSION(n_indptr - 1, n_energies) :: wfq
     TYPE(SPARSE_MATRIX_T) :: H_csr
+    COMPLEX(KIND=8) :: norm_ref
 
     n_wf = n_indptr - 1
     wf_QE = 0D0
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
-    PRINT *, "Calculating quasi-eigenstates."
+    if (rank == 0) PRINT *, "Calculating quasi-eigenstates."
 
     ! Average over (n_ran_samples) samples
     DO i_sample = 1, n_ran_samples
 
-        PRINT *, "  Calculating for sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "  Calculating for sample ", i_sample, " of ", n_ran_samples
         ! make random state
-        CALL random_state(wf0, n_wf, seed*i_sample)
+        CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
 
         ! initial values for wf_t and wf_QE
         wf_t_pos = copy(wf0)
         wf_t_neg = copy(wf0)
         DO i = 1, n_energies
-            wfq(i, :) = copy(wf0)
+            ! wfq(i, :) = copy(wf0)
+            wfq(:, i) = copy(wf0)
         END DO
 
         ! Iterate over time, get Fourier transform
+        norm_ref = inner_prod(wf0, wf0)
         DO k = 1, n_timestep
             IF (MODULO(k, 64) == 0) THEN
-                PRINT *, "    Timestep ", k, " of ", n_timestep
+                if (rank == 0) PRINT *, "    Timestep ", k, " of ", n_timestep
             END IF
+            if (k == 128) then
+                call check_norm(wf_t_pos, norm_ref)
+                call check_norm(wf_t_neg, norm_ref)
+            endif
 
-            wf_t_pos = cheb_wf_timestep_fwd(H_csr, Bes, wf_t_pos)
-            wf_t_neg = cheb_wf_timestep_inv(H_csr, Bes, wf_t_neg)
+            wf_t_pos = cheb_wf_timestep(H_csr, Bes, wf_t_pos, .true.)
+            wf_t_neg = cheb_wf_timestep(H_csr, Bes, wf_t_neg, .false.)
 
             W = 0.5 * (1 + COS(pi * k / n_timestep)) ! Hanning window
 
@@ -664,8 +727,10 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
             DO i = 1, n_energies
                 P = EXP(img * energies(i) * k * t_step)
                 DO j = 1, n_wf
-                    wfq(i, j) = wfq(i, j)+ P * wf_t_pos(j) * W
-                    wfq(i, j) = wfq(i, j)+ CONJG(P) * wf_t_neg(j) * W
+                    ! wfq(i, j) = wfq(i, j)+ P * wf_t_pos(j) * W
+                    ! wfq(i, j) = wfq(i, j)+ CONJG(P) * wf_t_neg(j) * W
+                    wfq(j, i) = wfq(j, i)+ P * wf_t_pos(j) * W
+                    wfq(j, i) = wfq(j, i)+ CONJG(P) * wf_t_neg(j) * W
                 END DO
             END DO
             !$OMP END PARALLEL DO
@@ -673,13 +738,17 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
 
         ! Normalise
         DO i = 1, n_energies
-            QE_sum = norm(wfq(i, :))
-            CALL self_div(wfq(i, :), QE_sum)
+            ! QE_sum = norm(wfq(i, :))
+            ! CALL self_div(wfq(i, :), QE_sum)
+            QE_sum = norm(wfq(:, i))
+            CALL self_div(wfq(:, i), QE_sum)
         END DO
 
         DO i = 1, n_energies
             DO j = 1, n_wf
-                wf_QE(i, j) = wf_QE(i, j) + ABS(wfq(i, j))**2 / n_ran_samples
+                ! See the documentation for vars for why it is ABS(wfq(j, i)).
+                ! wf_QE(i, j) = wf_QE(i, j) + ABS(wfq(i, j))**2 / n_ran_samples
+                wf_QE(i, j) = wf_QE(i, j) + ABS(wfq(j, i))**2 / n_ran_samples
             END DO
         END DO
 
@@ -692,7 +761,7 @@ END SUBROUTINE tbpm_eigenstates
 ! This is a version with only XX (iTypeDC==1) or XY (iTypeDC==2)
 SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
                      s_hop, n_hop, H_rescale, s_dx, n_dx, s_dy, n_dy, &
-                     n_ran_samples, n_kernel, iTypeDC, corr_mu_avg)
+                     n_ran_samples, n_kernel, iTypeDC, corr_mu_avg, rank)
     USE math
     USE random
     USE csr
@@ -710,6 +779,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     REAL(KIND=8), INTENT(IN), DIMENSION(n_dx) :: s_dx
     REAL(KIND=8), INTENT(IN), DIMENSION(n_dy) :: s_dy
+    INTEGER, INTENT(IN) :: rank
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_kernel, n_kernel) :: corr_mu_avg
 
@@ -742,16 +812,16 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
 
     ! iterate over random states
     DO i_sample = 1, n_ran_samples
-        PRINT*, "  Calculating for sample ", i_sample, " of ", n_ran_samples
+        if (rank == 0) PRINT *, "  Calculating for sample ", i_sample, " of ", n_ran_samples
         ! get random state
-        CALL random_state(wf_in, n_wf, seed*i_sample)
+        CALL random_state(wf_in, n_wf, seed*(i_sample+rank*n_ran_samples))
 
         wf_DimKern(:, 1) = copy(wf_in)
         wf_DimKern(:, 2) = H_csr * wf_DimKern(:, 1)
 
         DO j = 3, n_kernel
             IF (MOD(j, 256) == 0) THEN
-                PRINT *, "    Currently at j = ", j
+                if (rank == 0) PRINT *, "    Currently at j = ", j
             END IF
 
             wf_DimKern(:, j) = H_csr * wf_DimKern(:, j-1)
@@ -771,7 +841,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
                 wf_DimKern(:, j) = cur_csr_y * wf0
             END DO
         ELSE
-            PRINT*, "Error: wrong direction!"
+            if (rank == 0) PRINT*, "Error: wrong direction!"
             STOP
         END IF
 
@@ -792,7 +862,7 @@ SUBROUTINE tbpm_kbdc(seed, s_indptr, n_indptr, s_indices, n_indices, &
         p1 => wf1
         DO i = 3, n_kernel
             IF (MOD(i, 256) == 0) THEN
-                PRINT *, "    Currently at i = ", i
+                if (rank == 0) PRINT *, "    Currently at i = ", i
             END IF
 
             p2 => p0
