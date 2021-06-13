@@ -69,8 +69,10 @@ class MPIEnv(object):
 
     def print(self, text=""):
         """Print text on master process"""
+        # NOTE: flush=True is essential for some MPI implementations, e.g.
+        # MPICH3.
         if self.rank == 0:
-            print(text)
+            print(text, flush=True)
 
     def is_master(self):
         """
