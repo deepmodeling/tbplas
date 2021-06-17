@@ -1123,7 +1123,7 @@ class Sample:
         subindices = self.indices[self.indptr[i1]:self.indptr[i1 + 1]]
         for i, j in enumerate(subindices):
             if j == i0:
-                self.hop[self.indptr[i1] + i] = hop
+                self.hop[self.indptr[i1] + i] = hop.conjugate()
                 return True
 
         # if not, add hopping value and distance values
@@ -1136,7 +1136,7 @@ class Sample:
             self.indptr[i] += 1
         # conjugate
         self.indices = np.insert(self.indices, self.indptr[i1], i0)
-        self.hop = np.insert(self.hop, self.indptr[i1], hop)
+        self.hop = np.insert(self.hop, self.indptr[i1], hop.conjugate())
         if self.conductivity:
             self.dx = np.insert(self.dx, self.indptr[i1], dist_x)
             self.dy = np.insert(self.dy, self.indptr[i1], dist_y)
