@@ -123,7 +123,7 @@ class Config():
 
     # initialize
     def __init__(self, sample=False, read_from_file=False,
-                 directory=None, prefix=None):
+                 directory=None, prefix=None, mpi_env=None):
         """Initialize.
 
         Parameters
@@ -136,6 +136,8 @@ class Config():
             Directory for writing/reading files.
         prefix: string
             Prefix prepended to output files under directory.
+        mpi_env: MPIEnv object
+           MPI environment.
         """
 
         # declare dicts
@@ -168,7 +170,10 @@ class Config():
         self.generic['nr_Fermi_fft_steps'] = 2**15
         self.generic['Fermi_cheb_precision'] = 1.0e-10
         self.generic['seed'] = 1337
-        self.generic['rank'] = 0
+        if mpi_env is None:
+            self.generic['rank'] = 0
+        else:
+            self.generic['rank'] = mpi_env.rank
 
         # LDOS
         self.LDOS['site_indices'] = 0
@@ -223,15 +228,18 @@ class Config():
         else:
             self.output['prefix'] = str(int(time.time()))
         full_prefix = "%s/%s" % (self.output['directory'], self.output['prefix'])
-        self.output['corr_DOS'] = '%scorr_DOS.dat' % full_prefix
-        self.output['corr_LDOS'] = '%scorr_LDOS.dat' % full_prefix
-        self.output['corr_AC'] = '%scorr_AC.dat' % full_prefix
-        self.output['corr_dyn_pol'] = '%scorr_dyn_pol.dat' % full_prefix
-        self.output['corr_DC'] = '%scorr_DC.dat' % full_prefix
+        for key in ('corr_DOS', 'corr_LDOS', 'corr_AC', 'corr_dyn_pol', 'corr_DC'):
+            self.output[key] = "%s%s.dat.%s" % (full_prefix, key, self.generic['rank'])
+        if self.generic['rank'] == 0:
+            print("Output details:")
+            print("%11s: %s" % ("Directory", self.output['directory']))
+            print("%11s: %s" % ("Prefix", self.output['prefix']))
+            print(flush=True)
 
         # Create directory if not exits
-        if not os.path.exists(self.output['directory']):
-            os.mkdir(self.output['directory'])
+        if self.generic['rank'] == 0:
+            if not os.path.exists(self.output['directory']):
+                os.mkdir(self.output['directory'])
 
     def save(self, filename="config.pkl", directory=None, prefix=None):
         """Function to save config parameters to a .pkl file.
@@ -246,15 +254,16 @@ class Config():
         prefix : string, optional
             prefix for filenames, set to False for standard (timestamp) prefix
         """
-        if directory is None:
-            directory = self.output['directory']
-        if prefix is None:
-            prefix = self.output['prefix']
-        if not os.path.exists(directory):
-            os.mkdir(directory)
-        pickle_name = "%s/%s%s" % (directory, prefix, filename)
-        with open(pickle_name, 'wb') as f:
-            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+        if self.generic['rank'] == 0:
+            if directory is None:
+                directory = self.output['directory']
+            if prefix is None:
+                prefix = self.output['prefix']
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+            pickle_name = "%s/%s%s" % (directory, prefix, filename)
+            with open(pickle_name, 'wb') as f:
+                pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def dckb_prefactor(self):
         return 16 * self.sample['nr_orbitals'] / self.sample['area_unit_cell']

@@ -27,14 +27,8 @@ class MPIEnv(object):
         id of this process in mpi communicator
     size: integer
         number of processes in mpi communicator
-    generic: dictionary
-        copy of config.generic, for restoring purposes
-    output: dictionary
-        copy of config.output, for restoring purposes
-    num_sample: integer
-        numbre of random samples assigned to this process
     """
-    def __init__(self, config) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
         # Initialize MPI environment
@@ -42,22 +36,7 @@ class MPIEnv(object):
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
 
-        # Backup attributes of config that will be changed during parallel
-        # run, for restoring purposes
-        self.generic = config.generic.copy()
-        self.output = config.output.copy()
-
-        # Adjust nr_random_samples for optimal balance
-        num_sample_tot = self.generic["nr_random_samples"]
-        while num_sample_tot % self.size != 0:
-            num_sample_tot += 1
-        if num_sample_tot != self.generic["nr_random_samples"]:
-            self.print("\nWARNING:\n  nr_random_samples adjusted to %d for"
-                       " optimal balance" % num_sample_tot)
-        self.num_sample = num_sample_tot / self.size
-
         # Print simulation details
-        self.print("\nOutput prefix: " + self.output["prefix"])
         self.print("\nParallelization details:")
         self.print("%17s:%4d" % ("MPI processes", self.size))
         for env_name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -144,12 +123,21 @@ class MPIEnv(object):
             raise ValueError("Illegal func_name '%s'" % func_name)
 
         # Adjust attributes of config for parallelrun
-        config.generic['nr_random_samples'] = self.num_sample
-        config.generic['rank'] = self.rank
-        for key in config.output.keys():
-            config.output[key] = "%s.%s" % (self.output[key], self.rank)
+        num_sample_bak = num_sample = config.generic["nr_random_samples"]
+        while num_sample % self.size != 0:
+            num_sample += 1
+        if num_sample != config.generic["nr_random_samples"]:
+            self.print("\nWARNING:\n  nr_random_samples adjusted to %d for"
+                       " optimal balance" % num_sample)
+        config.generic['nr_random_samples'] = num_sample / self.size
 
         # Run jobs assigned to this process
+        # NOTE: the master process has additional I/O tasks such as creating
+        # directories and saving config to disk. On some file systems, e.g.
+        # btrfs, creating directories may be slow. Other processes may try to
+        # access the directory before the creation finishes and run into I/O
+        # error. So we need to put a barrier here.
+        self.comm.Barrier()
         if num_return == 1:
             data1_local = func(sample, config)
         else:
@@ -161,8 +149,7 @@ class MPIEnv(object):
             data2 = self.__all_average(data2_local)
 
         # Restore attributes of config and return
-        config.generic = self.generic.copy()
-        config.output = self.output.copy()
+        config.generic['nr_random_samples'] = num_sample_bak
         if num_return == 1:
             return data1
         else:
