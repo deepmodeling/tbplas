@@ -177,11 +177,11 @@ subroutine check_norm(wf_t, norm_ref)
     real(kind=8) :: dnorm
     dnorm = abs(inner_prod(wf_t, wf_t) - norm_ref)
     if (ieee_is_nan(dnorm) .or. .not. ieee_is_finite(dnorm) .or. dnorm > eps) then
-        write (*,*) "================================================================================"
-        write (*,*) "=                                    ERROR                                     ="
-        write (*,*) "= Wave function norm gets broken during proparation. Try increasing 'rescale'  ="
-        write (*,*) "= in the input.                                                                ="
-        write (*,*) "================================================================================"
+        write (*,*) "=============================================================================="
+        write (*,*) "=                                   ERROR                                    ="
+        write (*,*) "= Wave function norm gets broken during proparation. First of all, check the ="
+        write (*,*) "= Hermitianity of the Hamiltonian. Then try increasing 'rescale' in input.   ="
+        write (*,*) "=============================================================================="
         stop
     end if
 end subroutine check_norm
