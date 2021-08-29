@@ -80,19 +80,19 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
     r0 = 2 * PI / nr_Fermi
 
     IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
-        !$OMP PARALLEL DO SIMD PRIVATE(energy)
+        !$OMP PARALLEL DO PRIVATE(energy)
         DO i = 1, nr_Fermi
             energy = COS((i - 1) * r0)
             cheb_coef_complex(i) = 1D0 - Fermi_dist(beta, mu, energy, eps)
         END DO
-        !$OMP END PARALLEL DO SIMD
+        !$OMP END PARALLEL DO
     ELSE ! compute coeffs for Fermi operator
-        !$OMP PARALLEL DO SIMD PRIVATE(energy)
+        !$OMP PARALLEL DO PRIVATE(energy)
         DO i = 1, nr_Fermi
             energy = COS((i - 1) * r0)
             cheb_coef_complex(i) = Fermi_dist(beta, mu, energy, eps)
         END DO
-        !$OMP END PARALLEL DO SIMD
+        !$OMP END PARALLEL DO
     END IF
 
     ! Fourier transform result
