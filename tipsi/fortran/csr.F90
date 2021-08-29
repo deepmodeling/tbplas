@@ -91,9 +91,9 @@ FUNCTION csr_mv(mat, in) RESULT(out)
     !$OMP PARALLEL DO PRIVATE(j, k)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -127,9 +127,9 @@ FUNCTION amv_d(a, mat, in) RESULT(out)
     !$OMP PARALLEL DO PRIVATE(j, k)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -161,9 +161,9 @@ FUNCTION amv_z(a, mat, in) RESULT(out)
     !$OMP PARALLEL DO PRIVATE(j, k)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -196,9 +196,9 @@ SUBROUTINE amxpy_d(a, mat, in, out)
     !$OMP PARALLEL DO PRIVATE(j, k)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -229,9 +229,9 @@ SUBROUTINE amxpy_z(a, mat, in, out)
     !$OMP PARALLEL DO PRIVATE(j, k)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -272,9 +272,9 @@ SUBROUTINE amxpby_d(a, mat, in, b, out)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
         out(i) = b * out(i)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
@@ -312,9 +312,9 @@ SUBROUTINE amxpby_z(a, mat, in, b, out)
     ! Note: fortran indexing is off by 1
     DO i = 1, SIZE(in)
         out(i) = b * out(i)
-        DO j = mat%indptr(i), mat%indptr(i + 1) - 1
-            k = mat%indices(j + 1)
-            out(i) = a * mat%values(j + 1) * in(k + 1) + out(i)
+        DO j = mat%indptr(i) + 1, mat%indptr(i + 1)
+            k = mat%indices(j) + 1
+            out(i) = a * mat%values(j) * in(k) + out(i)
         END DO
     END DO
     !$OMP END PARALLEL DO
