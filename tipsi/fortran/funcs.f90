@@ -77,6 +77,11 @@ SUBROUTINE get_Fermi_cheb_coef(cheb_coef, n_cheb, nr_Fermi, &
     COMPLEX(KIND=8), DIMENSION(nr_Fermi) :: cheb_coef_complex
     REAL(KIND=8), DIMENSION(nr_Fermi) :: kernel
 
+    !---------------------------------------------------------------------------
+    ! NOTE: 'SIMD' should be disabled for 'OMP PARALLEL DO' instruction.
+    ! Otherwise it will cause ifort to abort complaining about internal segfault
+    ! errors. For gfortran there won't be such problem. (yhli)
+    !---------------------------------------------------------------------------
     r0 = 2 * PI / nr_Fermi
 
     IF (one_minus_Fermi) THEN ! compute coeffs for one minus Fermi operator
