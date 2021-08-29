@@ -89,8 +89,9 @@ def corr_DOS(sample, config):
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
+    ham_csr = sample.build_ham_csr()
     corr_DOS = f2py.tbpm_dos(Bes,
-                             sample.indptr, sample.indices, sample.hop,
+                             ham_csr.indptr, ham_csr.indices, ham_csr.data,
                              config.generic['seed'],
                              config.generic['nr_time_steps'],
                              config.generic['nr_random_samples'],
@@ -123,8 +124,9 @@ def corr_LDOS(sample, config):
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
+    ham_csr = sample.build_ham_csr()
     corr_LDOS = f2py.tbpm_ldos(config.LDOS['site_indices'], Bes,
-                               sample.indptr, sample.indices, sample.hop,
+                               ham_csr.indptr, ham_csr.indices, ham_csr.data,
                                config.generic['seed'],
                                config.generic['nr_time_steps'],
                                config.generic['nr_random_samples'],
@@ -162,10 +164,11 @@ def corr_AC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
+    indptr, indices, hop, dx, dy = sample.build_ham_dxy()
     corr_AC = f2py.tbpm_accond(Bes, beta_re, mu_re,
-                               sample.indptr, sample.indices,
-                               sample.hop,
-                               sample.rescale, sample.dx, sample.dy,
+                               indptr,indices,
+                               hop,
+                               sample.rescale, dx, dy,
                                config.generic['seed'],
                                config.generic['nr_time_steps'],
                                config.generic['nr_random_samples'],
@@ -204,12 +207,14 @@ def corr_dyn_pol(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
+    indptr, indices, hop, dx, dy = sample.build_ham_dxy()
+    site_x = sample.orb_pos[:, 0]
+    site_y = sample.orb_pos[:, 1]
+    site_z = sample.orb_pos[:, 2]
     corr_dyn_pol = f2py.tbpm_dyn_pol(Bes, beta_re, mu_re,
-                                     sample.indptr, sample.indices,
-                                     sample.hop, sample.rescale,
-                                     sample.dx, sample.dy,
-                                     sample.site_x, sample.site_y,
-                                     sample.site_z,
+                                     indptr, indices,
+                                     hop, sample.rescale,
+                                     dx, dy, site_x, site_y, site_z,
                                      config.generic['seed'],
                                      config.generic['nr_time_steps'],
                                      config.generic['nr_random_samples'],
@@ -256,10 +261,11 @@ def corr_DC(sample, config):
     mu_re = config.generic['mu'] / sample.rescale
 
     # pass to FORTRAN
+    indptr, indices, hop, dx, dy = sample.build_ham_dxy()
     corr_DOS, corr_DC = f2py.tbpm_dccond(Bes, beta_re, mu_re,
-                                         sample.indptr, sample.indices,
-                                         sample.hop,
-                                         sample.rescale, sample.dx, sample.dy,
+                                         indptr, indices,
+                                         hop,
+                                         sample.rescale, dx, dy,
                                          config.generic['seed'],
                                          config.generic['nr_time_steps'],
                                          config.generic['nr_random_samples'],
@@ -301,9 +307,10 @@ def mu_Hall(sample, config):
     from .fortran import f2py as fortran_f2py
 
     # call fortran function
+    indptr, indices, hop, dx, dy = sample.build_ham_dxy()
     mu_mn = fortran_f2py.tbpm_kbdc(
-        config.generic['seed'], sample.indptr, sample.indices, sample.hop,
-        sample.rescale, sample.dx, sample.dy,
+        config.generic['seed'], indptr, indices, hop,
+        sample.rescale, dx, dy,
         config.generic['nr_random_samples'], config.dckb['n_kernel'],
         config.dckb['direction'],
         config.generic['rank'])
@@ -335,8 +342,9 @@ def quasi_eigenstates(sample, config):
                  config.generic['Bessel_max'])
 
     # pass to FORTRAN
+    ham_csr = sample.build_ham_csr()
     states = f2py.tbpm_eigenstates(Bes,
-                                   sample.indptr, sample.indices, sample.hop,
+                                   ham_csr.indptr, ham_csr.indices, ham_csr.data,
                                    config.generic['seed'],
                                    config.generic['nr_time_steps'],
                                    config.generic['nr_random_samples'], t_step,

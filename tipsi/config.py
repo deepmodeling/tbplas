@@ -152,11 +152,11 @@ class Config():
 
         # sample parameters
         if sample:
-            self.sample['nr_orbitals'] = len(sample.lattice.orbital_coords)
-            self.sample['energy_range'] = sample.energy_range()
-            self.sample['area_unit_cell'] = sample.lattice.area_unit_cell()
-            self.sample['volume_unit_cell'] = sample.lattice.volume_unit_cell()
-            self.sample['extended'] = sample.lattice.extended
+            self.sample['nr_orbitals'] = sample.nr_orbitals
+            self.sample['energy_range'] = sample.energy_range
+            self.sample['area_unit_cell'] = sample.area_unit_cell
+            self.sample['volume_unit_cell'] = sample.volume_unit_cell
+            self.sample['extended'] = sample.extended
             self.sample['H_rescale'] = sample.rescale
 
         # generic standard values

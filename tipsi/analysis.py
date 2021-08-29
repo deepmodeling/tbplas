@@ -463,10 +463,11 @@ def get_ldos_haydock(sample, config):
 
     from .fortran import f2py as fortran_f2py
 
+    ham_csr = sample.build_ham_csr()
     energies, LDOS = fortran_f2py.ldos_haydock(
         config.LDOS['site_indices'], config.LDOS['delta'],
-        config.sample['energy_range'], sample.indptr, sample.indices,
-        sample.hop, sample.rescale, config.generic['seed'],
+        config.sample['energy_range'], ham_csr.indptr, ham_csr.indices,
+        ham_csr.data, sample.rescale, config.generic['seed'],
         config.LDOS['recursion_depth'], config.generic['nr_time_steps'],
         config.generic['nr_random_samples'], config.output['corr_LDOS'])
     return energies, LDOS
