@@ -60,7 +60,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
         corr(1) = corr(1) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
-        norm_ref = inner_prod(wf0, wf0)
+        norm_ref = inner_prod(wf_t, wf_t)
         DO t = 2, n_timestep
             IF (MODULO(t, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
@@ -138,7 +138,9 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
         corr(0) = corr(0) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
-        norm_ref = inner_prod(wf0, wf0)
+        ! Unlike that of tbpm_dos, herein wf0 is used for projection, not the
+        ! initial wave function. So we must calculate the initialnorm from wf_t.
+        norm_ref = inner_prod(wf_t, wf_t)
         DO k = 1, n_timestep
             IF (MODULO(k, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", k, " of ", n_timestep
@@ -262,6 +264,8 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             REAL(corrval(4)), AIMAG(corrval(4))
 
         ! iterate over time
+        ! Norm check is performed for psi2. It can also be done for psi1_x
+        ! and psi1_y.
         norm_ref = inner_prod(psi2, psi2)
         DO t = 2, n_timestep
             IF (MODULO(t, 64) == 0) THEN
@@ -405,22 +409,24 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             corr(i_q, 1) = corr(i_q, 1) + corrval / n_ran_samples
 
             ! iterate over tau
+            ! Norm check is performed for psi2. It can also be done for psi1
+            ! and wf1.
             norm_ref = inner_prod(psi2, psi2)
             DO t = 2, n_timestep
-            IF (MODULO(t, 64) == 0) THEN
-                if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
-            END IF
-            if (t == 128) call check_norm(psi2, norm_ref)
+                IF (MODULO(t, 64) == 0) THEN
+                    if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
+                END IF
+                if (t == 128) call check_norm(psi2, norm_ref)
 
-            ! call time and density operators
-            psi1 = cheb_wf_timestep(H_csr, Bes, psi1, .true.)
-            psi2 = cheb_wf_timestep(H_csr, Bes, psi2, .true.)
-            wf1 = s_density_q .pMul. psi1
+                ! call time and density operators
+                psi1 = cheb_wf_timestep(H_csr, Bes, psi1, .true.)
+                psi2 = cheb_wf_timestep(H_csr, Bes, psi2, .true.)
+                wf1 = s_density_q .pMul. psi1
 
-            ! get correlation and store
-            corrval = AIMAG(inner_prod(psi2, wf1))
-            WRITE(27, *) t, corrval
-            corr(i_q, t) = corr(i_q, t) + corrval / n_ran_samples
+                ! get correlation and store
+                corrval = AIMAG(inner_prod(psi2, wf1))
+                WRITE(27, *) t, corrval
+                corr(i_q, t) = corr(i_q, t) + corrval / n_ran_samples
 
             END DO
         END DO
@@ -615,6 +621,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             dc_corr(2, i, 1) = dc_corr(2, i, 1) + dc_corrval(2)/n_ran_samples
 
             ! iterate over time
+            ! We may also need to check the norm of wfE_J here.
             DO t = 2, n_timestep
                 ! NEGATIVE time evolution of QE state
                 ! wfE_J(1, :) = cheb_wf_timestep(H_csr, Bes, wfE_J(1, :), .false.)
