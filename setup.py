@@ -51,6 +51,11 @@ setup(
 #     print('Error: Cython not found. Installation failed.')
 #     exit()
 
+# # Uncomment these lines if you want to use Intel C Compiler.
+# import os
+# os.environ["CC"] = "icc"
+# os.environ['LDSHARED'] = "icc -shared"
+
 # extensions = [
 #     Extension(
 #         "tipsi.builder.core",
