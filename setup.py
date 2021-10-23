@@ -29,13 +29,19 @@ f90files = ['const.f90', 'math.F90', 'csr.F90', 'fft.F90', 'random.f90',
 sourcefiles = [f'{f90_dir}/{file}' for file in f90files]
 sourcefiles.insert(0, f'{f90_dir}/f2py.pyf')
 
+f_extensions = [
+    Extension(
+        name='tipsi.fortran.f2py',
+        sources=sourcefiles
+    )
+]
+
 setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
     packages=['tipsi', 'tipsi.fortran', 'tipsi.materials'],
-    ext_modules=[Extension(name='tipsi.fortran.f2py',
-                           sources=sourcefiles)]
+    ext_modules=f_extensions,
 )
 
 
@@ -56,10 +62,10 @@ setup(
 # os.environ["CC"] = "icc"
 # os.environ['LDSHARED'] = "icc -shared"
 
-# extensions = [
+# c_extensions = [
 #     Extension(
-#         "tipsi.builder.core",
-#         ["tipsi/builder/core.pyx"],
+#         name="tipsi.builder.core",
+#         sources=["tipsi/builder/core.pyx"],
 #         include_dirs=[np.get_include()],
 #     )
 # ]
@@ -69,5 +75,5 @@ setup(
 #     version=PKG_INFO['version'],
 #     description=PKG_INFO['description'],
 #     packages=['tipsi.builder'],
-#     ext_modules=cythonize(extensions),
+#     ext_modules=cythonize(c_extensions),
 # )
