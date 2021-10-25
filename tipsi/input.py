@@ -31,28 +31,28 @@ from .builder import *
 from .config import *
 
 
-def read_sample(filename, lattice=None, bc_func=bc_default, nr_processes=1):
-    """Read Sample object from file
-
-    Parameters
-    ----------
-    filename : string
-        read Sample object from this file
-    lattice : Lattice object
-        lattice corresponding to the sample; default: None
-    bc_func : function
-        boundary conditions function; default: bc_default
-    nr_processes : integer
-        number of processes to use for numerically
-        expensive Sample methods; default: 1
-
-    Returns
-    ----------
-    Sample object
-    """
-    return Sample(lattice, bc_func=bc_func,
-                  nr_processes=nr_processes,
-                  read_from_file=filename)
+# def read_sample(filename, lattice=None, bc_func=bc_default, nr_processes=1):
+#     """Read Sample object from file
+#
+#     Parameters
+#     ----------
+#     filename : string
+#         read Sample object from this file
+#     lattice : Lattice object
+#         lattice corresponding to the sample; default: None
+#     bc_func : function
+#         boundary conditions function; default: bc_default
+#     nr_processes : integer
+#         number of processes to use for numerically
+#         expensive Sample methods; default: 1
+#
+#     Returns
+#     ----------
+#     Sample object
+#     """
+#     return Sample(lattice, bc_func=bc_func,
+#                   nr_processes=nr_processes,
+#                   read_from_file=filename)
 
 
 def read_config(filename):

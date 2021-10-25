@@ -53,3 +53,6 @@ testing
 # preparation script before push #
 ##################################
 generate_wrapper.sh
+
+# PyCharm workspace
+/.idea

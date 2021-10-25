@@ -23,16 +23,16 @@ f90_dir = 'tipsi/fortran'
 
 # NOTE: DO NOT change the ordering of f90 files. Otherwise the
 # dependencies will be violated the compilation will fail.
-f90files = ['const.f90', 'math.F90', 'csr.F90', 'fft.F90', 'random.f90',
-            'propagation.f90', 'kpm.f90', 'funcs.f90',
-            'tbpm.f90', 'analysis.f90']
-sourcefiles = [f'{f90_dir}/{file}' for file in f90files]
-sourcefiles.insert(0, f'{f90_dir}/f2py.pyf')
+f90_files = ['const.f90', 'math.F90', 'csr.F90', 'fft.F90', 'random.f90',
+             'propagation.f90', 'kpm.f90', 'funcs.f90',
+             'tbpm.f90', 'analysis.f90']
+f_sources = [f'{f90_dir}/{file}' for file in f90_files]
+f_sources.insert(0, f'{f90_dir}/f2py.pyf')
 
 f_extensions = [
     Extension(
         name='tipsi.fortran.f2py',
-        sources=sourcefiles
+        sources=f_sources
     )
 ]
 
@@ -45,35 +45,35 @@ setup(
 )
 
 
-# # C Extension
-# try:
-#     from setuptools import Extension, setup
-# except ImportError:
-#     print('Error: setuptools not found. Installation failed.')
-#     exit()
-# try:
-#     from Cython.Build import cythonize
-# except ImportError:
-#     print('Error: Cython not found. Installation failed.')
-#     exit()
+# C Extension
+try:
+    from setuptools import Extension, setup
+except ImportError:
+    print('Error: setuptools not found. Installation failed.')
+    exit()
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    print('Error: Cython not found. Installation failed.')
+    exit()
 
 # # Uncomment these lines if you want to use Intel C Compiler.
 # import os
 # os.environ["CC"] = "icc"
 # os.environ['LDSHARED'] = "icc -shared"
 
-# c_extensions = [
-#     Extension(
-#         name="tipsi.builder.core",
-#         sources=["tipsi/builder/core.pyx"],
-#         include_dirs=[np.get_include()],
-#     )
-# ]
+c_extensions = [
+    Extension(
+        name="tipsi.builder.core",
+        sources=["tipsi/builder/core.pyx"],
+        include_dirs=[np.get_include()],
+    )
+]
 
-# setup(
-#     name=PKG_INFO['name'],
-#     version=PKG_INFO['version'],
-#     description=PKG_INFO['description'],
-#     packages=['tipsi.builder'],
-#     ext_modules=cythonize(c_extensions),
-# )
+setup(
+    name=PKG_INFO['name'],
+    version=PKG_INFO['version'],
+    description=PKG_INFO['description'],
+    packages=['tipsi.builder'],
+    ext_modules=cythonize(c_extensions),
+)
