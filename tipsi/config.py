@@ -10,26 +10,19 @@ Classes
 ################
 # dependencies
 ################
+import time
+import os
 
 # numerics & math
 import numpy as np
 import pickle
-
-# input & output
-try:
-    import h5py
-except ImportError:
-    print("h5py functions not available.")
-import time
-import os
-
 
 ################
 # Config class
 ################
 
 
-class Config():
+class Config:
     """Class for TBPM parameters.
 
     Attributes
@@ -75,7 +68,7 @@ class Config():
         Site indices for LDOS calculation.
     LDOS['wf_weights'] : int
         Wave function weights for LDOS calculation.
-        Default: equal weights for all sites.
+        Default value: equal weights for all sites.
     LDOS['delta'] : float
         Parameter of infinitesimal. Default value: 0.01.
     LDOS['recursion_depth'] : int
@@ -202,7 +195,6 @@ class Config():
         # TODO: what if read_from_file?
         if not read_from_file:
             self.set_output(directory, prefix)
-
 
     def set_output(self, directory=None, prefix=None):
         """Function to set data output options.

@@ -324,8 +324,6 @@ def get_dielectric_function(config, dyn_pol):
 
     Parameters
     ----------
-    sample : Sample object
-        contains sample information
     config : Config object
         contains TBPM configuration parameters
     dyn_pol : (n_q_points, n_t_steps) list of complex floats
@@ -478,8 +476,6 @@ def get_dckb(config, mu_Hall):
 
     Parameters
     ----------
-    sample: fortran_sample object
-        sample information
     config : tbpm_config object
         config parameters
 

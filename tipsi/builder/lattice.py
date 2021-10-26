@@ -1,6 +1,7 @@
 """Functions for lattice operations."""
 
 from math import sin, cos, sqrt, pi
+
 import numpy as np
 
 

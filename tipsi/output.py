@@ -12,12 +12,7 @@ Functions
 
 # numerics & math
 import numpy as np
-
-# plotting
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    print("Plotting functions not available.")
+import matplotlib.pyplot as plt
 
 
 def plot_wf(wfsq, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
@@ -40,8 +35,9 @@ def plot_wf(wfsq, sample, filename, site_size=5, fig_dpi=300, colorbar=False):
     """
 
     # get site locations
-    x = np.array(sample.site_x)
-    y = np.array(sample.site_y)
+    sample.init_orb_pos()
+    x = np.array(sample.orb_pos[:, 0])
+    y = np.array(sample.orb_pos[:, 1])
 
     # get absolute square of wave function and sort
     z = wfsq

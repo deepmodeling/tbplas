@@ -1,6 +1,7 @@
 """Functions for k-point operations."""
 
 import numpy as np
+
 from .lattice import gen_reciprocal_vectors, frac2cart
 
 

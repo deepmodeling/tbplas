@@ -55,11 +55,11 @@ def Bessel(t_step, H_rescale, Bessel_precision, Bessel_max):
     Bes = []
     for i in range(Bessel_max):
         besval = spec.jv(i, t_step * H_rescale)
-        if (np.abs(besval) > Bessel_precision):
+        if np.abs(besval) > Bessel_precision:
             Bes.append(besval)
         else:
             besval_up = spec.jv(i + 1, t_step * H_rescale)
-            if (np.abs(besval_up) > Bessel_precision):
+            if np.abs(besval_up) > Bessel_precision:
                 Bes.append(besval)
             else:
                 return Bes
@@ -166,7 +166,7 @@ def corr_AC(sample, config):
     # pass to FORTRAN
     indptr, indices, hop, dx, dy = sample.build_ham_dxy()
     corr_AC = f2py.tbpm_accond(Bes, beta_re, mu_re,
-                               indptr,indices,
+                               indptr, indices,
                                hop,
                                sample.rescale, dx, dy,
                                config.generic['seed'],
