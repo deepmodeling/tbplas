@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import os
+import configparser
 
 
 # Shared package information by FORTRAN and C extensions
@@ -8,6 +10,7 @@ PKG_INFO = {
     'description': 'TIght-binding Propagation SImulator',
 }
 
+
 # FORTRAN extension
 try:
     import numpy as np
@@ -16,10 +19,10 @@ except ImportError:
     print('Error: numpy not found. Installation failed.')
     exit()
 
+# Generate f2py interface
 f90_dir = 'tipsi/fortran'
-# import os
-# os.system('f2py -h %s/f2py.pyf -m f2py %s/{analysis,tbpm}.f90 \
-#           --overwrite-signature' % (f90_dir, f90_dir))
+os.system('f2py -h %s/f2py.pyf -m f2py %s/{analysis,tbpm}.f90 \
+          --overwrite-signature' % (f90_dir, f90_dir))
 
 # NOTE: DO NOT change the ordering of f90 files. Otherwise the
 # dependencies will be violated the compilation will fail.
@@ -57,15 +60,21 @@ except ImportError:
     print('Error: Cython not found. Installation failed.')
     exit()
 
-# # Uncomment these lines if you want to use Intel C Compiler.
-# import os
-# os.environ["CC"] = "icc"
-# os.environ['LDSHARED'] = "icc -shared"
+# Detect compiler from setup.cfg
+config = configparser.ConfigParser()
+config.read('setup.cfg')
+if 'config_cc' in config.sections():
+    cc = config.get('config_cc', 'compiler')
+else:
+    cc = 'unix'
+if cc == 'intelem':
+    os.environ['CC'] = 'icc'
+    os.environ['LDSHARED'] = 'icc -shared'
 
 c_extensions = [
     Extension(
-        name="tipsi.builder.core",
-        sources=["tipsi/builder/core.pyx"],
+        name='tipsi.builder.core',
+        sources=['tipsi/builder/core.pyx'],
         include_dirs=[np.get_include()],
     )
 ]
