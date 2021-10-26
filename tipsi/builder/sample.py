@@ -620,7 +620,8 @@ class Sample:
             core.sort_col_csr(indptr, indices, hop, dx, dy)
         return indptr, indices, hop, dx, dy
 
-    def plot(self, with_orbitals=True, with_cells=True):
+    def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
+             with_cells=True):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -628,6 +629,10 @@ class Sample:
             whether to plot orbitals as filled circles
         :param with_cells: boolean
             whether to plot borders of primitive cells
+        :param fig_name: string
+            file name to which the figure will be saved
+        :param fig_dpi: integer
+            resolution of the figure file
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
@@ -651,7 +656,10 @@ class Sample:
         axes.set_xticks([])
         axes.set_yticks([])
         fig.tight_layout()
-        plt.show()
+        if fig_name is not None:
+            plt.savefig(fig_name, dpi=fig_dpi)
+        else:
+            plt.show()
 
     def calc_bands(self, k_path, solver="lapack", num_bands=None):
         """

@@ -690,8 +690,19 @@ class PrimitiveCell(LockableObject):
                        length_includes_head=True, width=0.002, head_width=0.02,
                        fill=False)
 
-    def plot(self):
-        """Plot lattice vectors, orbitals, and hopping terms."""
+    def plot(self, fig_name=None, fig_dpi=300):
+        """
+        Plot lattice vectors, orbitals, and hopping terms.
+
+        If figure name is give, save the figure to file. Otherwise, show it on
+        the screen.
+
+        :param fig_name: string
+            file name to which the figure will be saved
+        :param fig_dpi: integer
+            resolution of the figure file
+        :returns: None
+        """
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
 
@@ -713,7 +724,10 @@ class PrimitiveCell(LockableObject):
         axes.set_xticks([])
         axes.set_yticks([])
         fig.tight_layout()
-        plt.show()
+        if fig_name is not None:
+            plt.savefig(fig_name, dpi=fig_dpi)
+        else:
+            plt.show()
 
     def print(self):
         """
