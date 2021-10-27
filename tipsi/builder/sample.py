@@ -570,23 +570,23 @@ class Sample:
         dy_csr = dy_csr - dy_csr.getH()
         return dx_csr, dy_csr
 
-    def build_ham_dxy(self, orb_eng_cutoff=1.0e-5, algo="v1", sort_col=False):
+    def build_ham_dxy(self, orb_eng_cutoff=1.0e-5, algo="fast", sort_col=False):
         """
         Build the arrays for conductivity calculations using TBPM.
 
-        NOTE: Two algorithms are implemented to build the arrays. "v1" is faster
-        and uses less memory, but relies on delicate pointer operations heavily.
-        "v2" is mainly built on numpy functions and considered to be more
-        robust, but uses more memory and twice slower than "v1". In short, use
-        "v1" for production runs and "v2" for testing purposes.
+        NOTE: Two algorithms are implemented to build the arrays. "fast" is more
+        efficient and uses less memory, but relies heavily on delicate pointer
+        operations. "safe" is built on numpy functions and considered to be more
+        robust, but uses more memory and twice slower than "fast". In short, use
+        "fast" for production runs and "safe" for testing purposes.
 
         :param orb_eng_cutoff: float
             cutoff for orbital energies in eV
             Orbital energies below this value will be dropped when constructing
             sparse Hamiltonian.
-        :param algo: string, should be "v1" or "v2"
+        :param algo: string, should be "fast" or "safe"
             specifies which core function to call to generate the arrays
-            Use "v1" for production runs and "v2" for testing purposes.
+            Use "fast" for production runs and "safe" for testing purposes.
         :param sort_col: boolean
             whether to sort column indices and data of CSR matrices after
             creation, for TESTING purposes
@@ -608,13 +608,13 @@ class Sample:
         self.init_orb_pos()
         self.init_hop()
         self.init_dr()
-        if algo == "v1":
+        if algo == "fast":
             indptr, indices, hop, dx, dy = \
-                core.build_ham_dxy_csr(self.orb_eng, self.hop_i, self.hop_j,
-                                       self.hop_v, self.dr, orb_eng_cutoff)
+                core.build_ham_dxy_fast(self.orb_eng, self.hop_i, self.hop_j,
+                                        self.hop_v, self.dr, orb_eng_cutoff)
         else:
             indptr, indices, hop, dx, dy = \
-                core.build_ham_dxy_csr2(self.orb_eng, self.hop_i, self.hop_j,
+                core.build_ham_dxy_safe(self.orb_eng, self.hop_i, self.hop_j,
                                         self.hop_v, self.dr, orb_eng_cutoff)
         if sort_col:
             core.sort_col_csr(indptr, indices, hop, dx, dy)

@@ -1179,9 +1179,9 @@ cdef long _get_free_ptr(long i, long [::1] indptr, int [::1] num_data_count):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_ham_dxy_csr(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
-                      double complex [::1] hop_v, double [:,::1] dr,
-                      double cutoff):
+def build_ham_dxy_fast(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
+                       double complex [::1] hop_v, double [:,::1] dr,
+                       double cutoff):
     """
     Build the indptr, indices, hop, dx and dy arrays for conductivity
     calculations using TBPM.
@@ -1291,7 +1291,7 @@ def build_ham_dxy_csr(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_ham_dxy_csr2(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
+def build_ham_dxy_safe(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
                        double complex [::1] hop_v, double [:,::1] dr,
                        double cutoff):
     """
@@ -1327,9 +1327,9 @@ def build_ham_dxy_csr2(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
 
     NOTES
     -----
-    This function is provided as an alternative to 'build_ham_dxy_csr' and
+    This function is provided as an alternative to 'build_ham_dxy_fast' and
     is mainly for testing and reference purposes. According to out test,
-    build_ham_dxy_csr takes about 1.48s for Graphene with 10^7 atoms while
+    build_ham_dxy_fast takes about 1.48s for Graphene with 10^7 atoms while
     this function takes 2.83s. Also, this function uses more memory. So, do
     not use this function in production runs.
     """
@@ -1420,7 +1420,7 @@ def sort_col_csr(long [::1] indptr, long [::1] indices,
                  double complex [::1] hop, double [::1] dx, double [::1] dy):
     """
     Sort column indices and corresponding data for results from
-    'build_ham_dxy_csr' and 'build_ham_dxy_csr2'.
+    'build_ham_dxy_fast' and 'build_ham_dxy_safe'.
 
     Parameters
     ----------
