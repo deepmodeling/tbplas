@@ -1,501 +1,424 @@
-"""analysis.py contains tools to analyze correlation functions.
+"""
+Functions and classes for analyzing correlation functions.
 
 Functions
 ----------
-    window_Hanning
+    window_hanning
         Hanning window
     window_exp
         Exponential window
     window_exp_ten
         Window function given by exponential of 10
-    analyze_corr_DOS
-        Analyze DOS correlation function
-    analyze_corr_LDOS
-        Analyze LDOS correlation function
-    analyze_corr_AC
-        Analyze AC correlation function
-    AC_imag
-        Calculate the imaginary part of the AC conductivity
-    analyze_corr_dyn_pol
-        Analyze dynamical polarization correlation function
-    get_dielectric_function
-        Get dielectric function from dynamical polarization
-    analyze_corr_DC
-        Analyze DC correlation function
 """
 
-################
-# dependencies
-################
-
-# numerics & math
 import numpy as np
 import numpy.linalg as npla
 from scipy.signal import hilbert
+import matplotlib.pyplot as plt
 
-################
-# window functions
-################
+from .builder import Sample
+from .config import Config
+from .solver import BaseSolver
+from .fortran import f2py
 
 
-# no window
 def window_default(i, N):
+    """Default window function."""
     return 1.
 
 
-# Hanning window
-def window_Hanning(i, N):
-    """Hanning window.
+def window_hanning(i, N):
+    """
+    Hanning window function.
 
-    Parameters
-    ----------
-    i : integer
+    :param i: integer
         summation index
-    N : integer
+    :param N: integer
         total length of summation
-
-    Returns
-    ----------
-    float
+    :return: float
         Hanning window value
     """
-
     return 0.5 * (1 + np.cos(np.pi * i / N))
 
 
-# Exponential window
 def window_exp(i, N):
-    """Exponential window.
+    """
+    Exponential window function.
 
-    Parameters
-    ----------
-    i : integer
+    :param i: integer
         summation index
-    N : integer
+    :param N: integer
         total length of summation
-
-    Returns
-    ----------
-    float
+    :return: float
         exponential window value
     """
-
     return np.exp(-2. * (i / N)**2)
 
 
-# Exponential of 10 window
 def window_exp_ten(i, N):
-    """Window function given by exponential of 10.
+    """
+    Exponential window function with base 10.
 
-    Parameters
-    ----------
-    i : integer
+    :param i: integer
         summation index
-    N : integer
+    :param N: integer
         total length of summation
-
-    Returns
-    ----------
-    float
+    :return: float
         exponential window value
     """
-
     power = -2 * (1. * i / N)**2
     return 10.**power
 
 
-################
-# correlation function analysis
-################
+class Analyzer(BaseSolver):
+    """Class for analyzing"""
+    def __init__(self, sample: Sample, config: Config, enable_mpi=False):
+        """
+        :param sample: instance of 'Sample' class
+            sample for which TBPM calculations will be performed
+        :param config: instance of 'Config' class
+            parameters controlling TBPM calculations
+        :param enable_mpi: boolean
+            whether to enable parallelism using MPI
+        """
+        super().__init__(sample, config, enable_mpi)
 
+    def calc_dos(self, corr_dos, window=window_hanning):
+        """
+        Calculate DOS from correlation function.
 
-def analyze_corr_DOS(config, corr_DOS, window=window_Hanning):
-    """Function for analyzing the DOS correlation function.
+        :param corr_dos: (nr_time_steps+1,) complex128 array
+            DOS correlation function
+        :param window: function, optional
+            window function for integral
+        :return: energies: (2*nr_time_steps,) float64 array
+            energy values
+        :return: dos: (2*nr_time_steps,) float64 array
+            DOS values corresponding to energies
+        """
+        if self.rank == 0:
+            # Get parameters
+            tnr = self.config.generic['nr_time_steps']
+            en_range = self.sample.energy_range
+            en_step = 0.5 * en_range / tnr
+            energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
+                                 for i in range(tnr * 2)])
 
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    corr_DOS : list of complex floats
-        DOS correlation function
-    window : function, optional
-        window function for integral; default: window_Hanning
+            # Get negative time correlation
+            corr_neg_time = np.empty(tnr * 2, dtype=complex)
+            corr_neg_time[tnr - 1] = corr_dos[0]
+            corr_neg_time[2 * tnr - 1] = window(tnr - 1, tnr) * corr_dos[tnr]
+            for i in range(tnr - 1):
+                corr_neg_time[tnr + i] = window(i, tnr) * corr_dos[i + 1]
+                corr_neg_time[tnr-i-2] = window(i, tnr) * np.conjugate(corr_dos[i+1])
 
-    Returns
-    ----------
-    energies : list of floats
-        energy values
-    DOS : list of floats
-        DOS values corresponding to energies
-    """
+            # Fourier transform
+            corr_fft = np.fft.ifft(corr_neg_time)
+            dos = np.empty(tnr * 2)
+            for i in range(tnr):
+                dos[i + tnr] = np.abs(corr_fft[i])
+            for i in range(tnr, 2 * tnr):
+                dos[i - tnr] = np.abs(corr_fft[i])
 
-    # get useful things
-    tnr = config.generic['nr_time_steps']
-    en_range = config.sample['energy_range']
-    energies = [0.5 * i * en_range / tnr - en_range / 2.
-                for i in range(tnr * 2)]
-    en_step = 0.5 * en_range / tnr
-
-    # Get negative time correlation
-    corr_negtime = np.empty(tnr * 2, dtype=complex)
-    corr_negtime[tnr - 1] = corr_DOS[0]
-    corr_negtime[2 * tnr - 1] = window(tnr - 1, tnr) * corr_DOS[tnr]
-    for i in range(tnr - 1):
-        corr_negtime[tnr + i] = window(i, tnr) * corr_DOS[i + 1]
-        corr_negtime[tnr-i-2] = window(i, tnr) * np.conjugate(corr_DOS[i+1])
-
-    # Fourier transform
-    corr_fft = np.fft.ifft(corr_negtime)
-    DOS = np.empty(tnr * 2)
-    for i in range(tnr):
-        DOS[i + tnr] = np.abs(corr_fft[i])
-    for i in range(tnr, 2 * tnr):
-        DOS[i - tnr] = np.abs(corr_fft[i])
-
-    # Normalise and correct for spin
-    DOS = DOS / (np.sum(DOS) * en_step)
-    if config.generic['correct_spin']:
-        DOS = 2. * DOS
-
-    return energies, DOS
-
-
-def analyze_corr_LDOS(config, corr_LDOS, window=window_Hanning):
-    """Function for analyzing the LDOS correlation function -
-    exactly the same as DOS analysis function.
-
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    corr_LDOS : list of complex floats
-        LDOS correlation function
-    window : function, optional
-        window function for integral; default: window_Hanning
-
-    Returns
-    ----------
-    energies : list of floats
-        energy values
-    LDOS : list of floats
-        LDOS values corresponding to energies
-    """
-
-    return analyze_corr_DOS(config, corr_LDOS, window)
-
-
-def analyze_corr_AC(config, corr_AC, window=window_exp):
-    """Function for analyzing the AC conductivity correlation function.
-
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    corr_AC : (4,n) list of complex floats
-        AC conductivity correlation function
-    window : function, optional
-        window function for integral; default: window_exp
-
-    Returns
-    ----------
-    omegas : list of floats
-        omega values
-    AC : (4,n) list of floats
-        AC conductivity values corresponding to omegas, for
-        4 directions (xx, xy, yx, yy, respectively)
-    """
-
-    # get useful things
-    tnr = config.generic['nr_time_steps']
-    en_range = config.sample['energy_range']
-    t_step = np.pi / en_range
-    beta = config.generic['beta']
-    omegas = [i * en_range / tnr for i in range(tnr)]
-    ac_prefactor = 4. * config.sample['nr_orbitals'] \
-        / config.sample['area_unit_cell'] \
-        / config.sample['extended']
-
-    # get AC conductivity
-    AC = np.zeros((4, tnr))
-    for j in range(4):
-        for i in range(tnr):
-            omega = omegas[i]
-            acv = 0.
-            for k in range(tnr):
-                acv += 2. * window(k + 1, tnr) \
-                    * np.sin(omega * k * t_step) \
-                    * corr_AC[j, k].imag
-            if omega == 0.:
-                acv = 0.
-            else:
-                acv = ac_prefactor * t_step * acv \
-                    * (np.exp(-beta * omega) - 1) / omega
-            AC[j, i] = acv
-
-    # correct for spin
-    if config.generic['correct_spin']:
-        AC = 2. * AC
-
-    return omegas, AC
-
-
-def AC_imag(AC_real):
-    """Get the imaginary part of the AC conductivity
-    from the real part using the Kramers-Kronig relations
-    (the Hilbert transform).
-
-    Parameters
-    ----------
-    AC_real : array of floats
-        Re(sigma)
-
-    Returns
-    ----------
-    array of floats
-        Im(sigma)
-    """
-
-    N = len(AC_real)
-    sigma = np.zeros(2 * N)
-    for i in range(N):
-        sigma[N + i] = AC_real[i]
-        sigma[N - i] = AC_real[i]
-    return np.imag(hilbert(sigma))[N:2 * N]
-
-
-def analyze_corr_dyn_pol(config, corr_dyn_pol,
-                         window=window_exp_ten):
-    """Function for analyzing the dynamical polarization correlation function.
-
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    corr_dyn_pol : (n_q_points, n_t_steps) list of floats
-        dynamical polarization correlation function
-    window : function, optional
-        window function for integral; default: window_exp_ten
-
-    Returns
-    ----------
-    q_points : list of floats
-        q-point values
-    omegas : list of floats
-        omega values
-    dyn_pol : (n_q_points, n_omegas) list of complex floats
-        dynamical polarization values corresponding to q-points and omegas
-    """
-
-    # get useful things
-    tnr = config.generic['nr_time_steps']
-    en_range = config.sample['energy_range']
-    t_step = np.pi / en_range
-    beta = config.generic['beta']
-    q_points = config.dyn_pol['q_points']
-    n_q_points = len(q_points)
-    omegas = [i * en_range / tnr for i in range(tnr)]
-    n_omegas = tnr
-    # do we need to divide the prefac by 1.5??
-    dyn_pol_prefactor = -2. * config.sample['nr_orbitals'] \
-        / config.sample['area_unit_cell'] \
-        / config.sample['extended']
-
-    # get dynamical polarization
-    dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
-    for i_q in range(n_q_points):
-        for i in range(n_omegas):
-            omega = omegas[i]
-            dpv = 0.0j
-            for k in range(tnr):
-                tau = k * t_step
-                dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
-                    * np.exp(1j * omega * tau)
-            dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
-
-    # correct for spin
-    if config.generic['correct_spin']:
-        dyn_pol = 2. * dyn_pol
-
-    return q_points, omegas, dyn_pol
-
-
-def get_dielectric_function(config, dyn_pol):
-    """Function for analyzing the DOS correlation function.
-
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    dyn_pol : (n_q_points, n_t_steps) list of complex floats
-        dynamical polarization values
-
-    Returns
-    ----------
-    epsilon : (n_q_points, n_omegas) list of complex floats
-        dielectric function
-    """
-
-    # get useful things
-    tnr = config.generic['nr_time_steps']
-    en_range = config.sample['energy_range']
-    t_step = np.pi / en_range
-    beta = config.generic['beta']
-    q_points = config.dyn_pol['q_points']
-    n_q_points = len(q_points)
-    omegas = [i * en_range / tnr for i in range(tnr)]
-    n_omegas = tnr
-    epsilon_prefactor = config.dyn_pol['coulomb_constant'] \
-        / config.dyn_pol['background_dielectric_constant'] \
-        / config.sample['extended']
-
-    # declare arrays
-    epsilon = np.ones((n_q_points, n_omegas)) \
-        + np.zeros((n_q_points, n_omegas)) * 0j
-    V0 = epsilon_prefactor * np.ones(n_q_points)
-    V = np.zeros(n_q_points)
-
-    # calculate epsilon
-    for i, q_point in enumerate(q_points):
-        k = npla.norm(q_point)
-        if k == 0.0:
-            V[i] = 0.
+            # Normalise and correct for spin
+            dos = dos / (np.sum(dos) * en_step)
+            if self.config.generic['correct_spin']:
+                dos = 2. * dos
         else:
-            V[i] = V0[i] / k
-            epsilon[i, :] -= V[i] * dyn_pol[i, :]
+            energies, dos = None, None
+        return energies, dos
 
-    return q_points, omegas, epsilon
+    def calc_ldos(self, corr_ldos, window=window_hanning):
+        """
+        Calculate LDOS from correlation function.
 
+        :param corr_ldos: (nr_time_steps+1,) complex128 array
+            LDOS correlation function
+        :param window: function, optional
+            window function for integral
+        :return: energies: (2*nr_time_steps,) float64 array
+            energy values
+        :return: ldos: (2*nr_time_steps,) float64 array
+            LDOS values corresponding to energies
+        """
+        return self.calc_dos(corr_ldos, window)
 
-def analyze_corr_DC(config, corr_DOS, corr_DC,
-                    window_DOS=window_Hanning, window_DC=window_exp):
-    """Function for analyzing the DC correlation function.
+    def calc_ac_cond(self, corr_ac, window=window_exp):
+        """
+        Calculate AC conductivity from correlation function.
 
-    Parameters
-    ----------
-    config : Config object
-        contains TBPM configuration parameters
-    corr_DOS : (n_t_steps) list of floats
-        DOS correlation function
-    corr_DC : (2, n_energies, n_t_steps) list of floats
-        DC conductivity correlation function
-    window_DOS : function, optional
-        window function for DOS integral; default: window_Hanning
-    window_DC : function, optional
-        window function for DC integral; default: window_exp
+        :param corr_ac: (4, nr_time_steps) complex128 array
+            AC correlation function in 4 directions:
+            xx, xy, yx, yy, respectively
+        :param window: function, optional
+            window function for integral
+        :return: omegas: (nr_time_steps,) float64 array
+            omega values
+        :return: ac: (4, nr_time_steps) float64 array
+            ac conductivity values corresponding to omegas for 4 directions
+            (xx, xy, yx, yy, respectively)
+        """
+        if self.rank == 0:
+            # Get parameters
+            tnr = self.config.generic['nr_time_steps']
+            en_range = self.sample.energy_range
+            t_step = np.pi / en_range
+            beta = self.config.generic['beta']
+            ac_prefactor = 4. * self.sample.nr_orbitals \
+                / (self.sample.area_unit_cell * self.sample.extended)
+            omegas = np.array([i * en_range / tnr for i in range(tnr)])
 
-    Returns
-    ----------
-    energies : list of floats
-        energy values
-    DC : (2, n_energies) list of floats
-        DC conductivity values
-    """
+            # Get AC conductivity
+            ac = np.zeros((4, tnr))
+            for j in range(4):
+                for i in range(tnr):
+                    omega = omegas[i]
+                    acv = 0.
+                    for k in range(tnr):
+                        acv += 2. * window(k + 1, tnr) \
+                            * np.sin(omega * k * t_step) \
+                            * corr_ac[j, k].imag
+                    if omega == 0.:
+                        acv = 0.
+                    else:
+                        acv = ac_prefactor * t_step * acv \
+                            * (np.exp(-beta * omega) - 1) / omega
+                    ac[j, i] = acv
 
-    # get DOS
-    # NOTE: Here we need to call analyze_corr_DOS to obtain DOS, which is
-    # intended to analyze the result of corr_DOS by design. As can been seen
-    # in fortran/f2py.pyf, the result of corr_DOS and corr_LDOS has length of
-    # nr_time_steps+1, while that of corr_dccond has length of nr_time_steps.
-    # This is due to incomplete update of the source code to take LDOS in
-    # consideration. corr_DOS and corr_LDOS have been update, while other
-    # functions are not. So here we need to insert 1.0 to the head of corr_DOS
-    # returned by corr_dccond before calling analyze_corr_DOS. (kxhuang)
-    corr_DOS = np.insert(corr_DOS, 0, 1.0)
-    energies_DOS, DOS = analyze_corr_DOS(config, corr_DOS, window_DOS)
-    energies_DOS = np.array(energies_DOS)
-    DOS = np.array(DOS)
+            # Correct for spin
+            if self.config.generic['correct_spin']:
+                ac = 2. * ac
+        else:
+            omegas, ac = None, None
+        return omegas, ac
 
-    # get useful things
-    tnr = config.generic['nr_time_steps']
-    en_range = config.sample['energy_range']
-    t_step = 2 * np.pi / en_range
-    lims = config.DC_conductivity['energy_limits']
-    QE_indices = np.where(
-        (energies_DOS >= lims[0]) & (energies_DOS <= lims[1]))[0]
-    n_energies = len(QE_indices)
-    energies = energies_DOS[QE_indices]
-    dc_prefactor = config.sample['nr_orbitals'] \
-        / config.sample['area_unit_cell']
+    def calc_ac_cond_imag(self, ac_cond_real):
+        """
+        Calculate imaginary part of the AC conductivity from real part
+        using Kramers-Kronig relations (Hilbert transformation).
 
-    # get DC conductivity
-    DC = np.zeros((2, n_energies))
-    for i in range(2):
-        for j in range(n_energies):
+        :param ac_cond_real: (num_data,) float64 array
+            real part of AC conductivity
+        :return: ac_imag: (num_data,) float64 array
+            imaginary part of AC conductivity
+        """
+        if self.rank == 0:
+            num_data = len(ac_cond_real)
+            sigma = np.zeros(2 * num_data)
+            for i in range(num_data):
+                sigma[num_data + i] = ac_cond_real[i]
+                sigma[num_data - i] = ac_cond_real[i]
+            ac_imag = np.imag(hilbert(sigma))[num_data:2 * num_data]
+        else:
+            ac_imag = None
+        return ac_imag
 
-            en = energies[j]
-            dosval = DOS[QE_indices[j]]
-            dcval = 0.
-            for k in range(tnr):
-                W = window_DC(k + 1, tnr)
-                cexp = np.exp(-1j * k * t_step * en)
-                add_dcv = W * (cexp * corr_DC[i, j, k]).real
-                dcval += add_dcv
-            DC[i, j] = dc_prefactor * t_step * dosval * dcval
+    def calc_dyn_pol(self, corr_dyn_pol, window=window_exp_ten):
+        """
+        Calculate dynamical polarization from correlation function.
 
-    # correct for spin
-    if config.generic['correct_spin']:
-        DC = 2. * DC
+        :param corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
+            dynamical polarization correlation function
+        :param window: function, optional
+            window function for integral
+        :return: q_points: (n_q_points, 3) float64 array
+            coordinates of q-points
+        :return: omegas: (nr_time_steps,) float64 array
+            omega values
+        :return: dyn_pol: (n_q_points, nr_time_steps) complex128 array
+            dynamical polarization values corresponding to q-points and omegas
+        """
+        if self.rank == 0:
+            # Get parameters
+            tnr = self.config.generic['nr_time_steps']
+            en_range = self.sample.energy_range
+            t_step = np.pi / en_range
+            q_points = np.array(self.config.dyn_pol['q_points'])
+            n_q_points = len(q_points)
+            # do we need to divide the prefactor by 1.5??
+            dyn_pol_prefactor = -2. * self.sample.nr_orbitals \
+                / (self.sample.area_unit_cell * self.sample.extended)
+            n_omegas = tnr
+            omegas = np.array([i * en_range / tnr for i in range(tnr)])
 
-    return energies, DC
+            # get dynamical polarization
+            dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
+            for i_q in range(n_q_points):
+                for i in range(n_omegas):
+                    omega = omegas[i]
+                    dpv = 0.0j
+                    for k in range(tnr):
+                        tau = k * t_step
+                        dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
+                            * np.exp(1j * omega * tau)
+                    dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
 
+            # correct for spin
+            if self.config.generic['correct_spin']:
+                dyn_pol = 2. * dyn_pol
+        else:
+            q_points, omegas, dyn_pol = None, None, None
+        return q_points, omegas, dyn_pol
 
-def get_ldos_haydock(sample, config):
-    """Get local density of states using Haydock recursion method
+    def calc_epsilon(self, dyn_pol):
+        """
+        Calculate dielectric function from dynamical polarization.
 
-    Parameters
-    ----------
-    sample : Sample object
-        Sample information
-    config : Config object
-        Parameters, LDOS['site_indices'], LDOS['delta'],
-        sample['energy_range'], LDOS['recursion_depth'],
-        generic['nr_time_steps'], output['corr_LDOS'] are used
+        :param dyn_pol: (n_q_points, nr_time_steps) complex128 array
+            dynamical polarization
+        :return: epsilon: (n_q_points, nr_time_steps) complex128 array
+            dielectric function
+        """
+        if self.rank == 0:
+            # Get parameters
+            tnr = self.config.generic['nr_time_steps']
+            q_points = self.config.dyn_pol['q_points']
+            n_q_points = len(q_points)
+            epsilon_prefactor = self.config.dyn_pol['coulomb_constant'] \
+                / self.config.dyn_pol['background_dielectric_constant'] \
+                / self.sample.extended
+            n_omegas = tnr
 
-    Returns
-    ----------
-    energies : list of floats
-        energy list with rank (2*nr_time_steps+1)
-    LDOS : list of complex floats
-        LDOS value to corresponding energies_DOS
-    """
+            # declare arrays
+            epsilon = np.ones((n_q_points, n_omegas)) \
+                + np.zeros((n_q_points, n_omegas)) * 0j
+            V0 = epsilon_prefactor * np.ones(n_q_points)
+            V = np.zeros(n_q_points)
 
-    from .fortran import f2py as fortran_f2py
+            # calculate epsilon
+            for i, q_point in enumerate(q_points):
+                k = npla.norm(q_point)
+                if k == 0.0:
+                    V[i] = 0.
+                else:
+                    V[i] = V0[i] / k
+                    epsilon[i, :] -= V[i] * dyn_pol[i, :]
+        else:
+            epsilon = None
+        return epsilon
 
-    ham_csr = sample.build_ham_csr()
-    energies, LDOS = fortran_f2py.ldos_haydock(
-        config.LDOS['site_indices'], config.LDOS['delta'],
-        config.sample['energy_range'], ham_csr.indptr, ham_csr.indices,
-        ham_csr.data, sample.rescale, config.generic['seed'],
-        config.LDOS['recursion_depth'], config.generic['nr_time_steps'],
-        config.generic['nr_random_samples'], config.output['corr_LDOS'])
-    return energies, LDOS
+    def calc_dc_cond(self, corr_dos, corr_dc, window_dos=window_hanning,
+                     window_dc=window_exp):
+        """
+        Calculate DC conductivity from its correlation function.
 
+        :param corr_dos: (nr_time_steps,) complex128 array
+            DOS correlation function
+        :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
+            DC conductivity correlation function
+        :param window_dos: function, optional
+            window function for DOS integral
+        :param window_dc: function, optional
+            window function for DC integral
+        :return: energies: (n_energies,) float64 array
+            energy values
+        :return: dc: (2, n_energies) float64 array
+            dc conductivity values
+        """
+        # NOTE: Here we need to call analyze_corr_dos to obtain DOS, which is
+        # intended to analyze the result of calc_corr_dos by design. As in
+        # fortran/f2py.pyf, the results of calc_corr_dos and calc_corr_ldos
+        # have the length of nr_time_steps+1, while that of calc_corr_dc has
+        # length of nr_time_steps. This is due to incomplete update of the
+        # source code. tbpm_dos and tbpm_ldos have been update, while other
+        # subroutines are not. So here we need to insert 1.0 to the head of
+        # corr_dos by calc_corr_dc before calling analyze_corr_dos.
+        if self.rank == 0:
+            corr_dos = np.insert(corr_dos, 0, 1.0)
+            energies_dos, dos = self.calc_dos(corr_dos, window_dos)
+            energies_dos = np.array(energies_dos)
+            dos = np.array(dos)
 
-def get_dckb(config, mu_Hall):
-    """Get Hall conductivity
+            # Get parameters
+            tnr = self.config.generic['nr_time_steps']
+            en_range = self.sample.energy_range
+            t_step = 2 * np.pi / en_range
+            en_limit = self.config.DC_conductivity['energy_limits']
+            qe_indices = np.where((energies_dos >= en_limit[0]) &
+                                  (energies_dos <= en_limit[1]))[0]
+            n_energies = len(qe_indices)
+            energies = energies_dos[qe_indices]
+            dc_prefactor = self.sample.nr_orbitals / self.sample.area_unit_cell
 
-    Parameters
-    ----------
-    config : tbpm_config object
-        config parameters
+            # get DC conductivity
+            dc = np.zeros((2, n_energies))
+            for i in range(2):
+                for j in range(n_energies):
+                    en = energies[j]
+                    dos_val = dos[qe_indices[j]]
+                    dc_val = 0.
+                    for k in range(tnr):
+                        w = window_dc(k + 1, tnr)
+                        c_exp = np.exp(-1j * k * t_step * en)
+                        add_dcv = w * (c_exp * corr_dc[i, j, k]).real
+                        dc_val += add_dcv
+                    dc[i, j] = dc_prefactor * t_step * dos_val * dc_val
+            # correct for spin
+            if self.config.generic['correct_spin']:
+                dc = 2. * dc
+        else:
+            energies, dc = None, None
+        return energies, dc
 
-    Returns
-    ----------
-    energies : list of floats
-        energy list with rank (2*nr_time_steps+1)
-    mu_mn:
-    conductivity:
+    def calc_hall_cond(self, mu_mn):
+        """
+        Calculate Hall conductivity according to Kubo-Bastin formula mu_mn.
 
-    """
+        :param mu_mn: (n_kernel, n_kernel) complex128 array
+            output of self.calc_hall_mu
+        :return: energies: float64 array
+            energies
+        :return: conductivity: float64 array
+            Hall conductivity according to energies
+        """
+        if self.rank == 0:
+            energies = np.array(self.config.dckb['energies'])
+            conductivity = f2py.cond_from_trace(
+                mu_mn,
+                self.config.dckb['energies'],
+                self.sample.rescale,
+                self.config.generic['beta'],
+                self.config.dckb['ne_integral'],
+                self.config.generic['Fermi_cheb_precision'],
+                self.sample.dckb_prefactor)
+        else:
+            energies, conductivity = None, None
+        return energies, conductivity
 
-    print(" -- Getting DC with Kubo-Bastin")
+    def plot_wf2(self, wf2, filename, site_size=5, fig_dpi=300, colorbar=False):
+        """
+        Plot squared wave function in real space.
 
-    from .fortran import f2py as fortran_f2py
+        :param wf2: (n_indptr-1,) float64 array
+            squared projection of wave function on all the sites
+        :param filename: string
+            image file name
+        :param site_size: float
+            site size
+        :param fig_dpi: float
+            dpi of output figure
+        :param colorbar: boolean
+            add colorbar to figure
+        :return: None
+        """
+        if self.rank == 0:
+            # Get site locations
+            self.sample.init_orb_pos()
+            x = np.array(self.sample.orb_pos[:, 0])
+            y = np.array(self.sample.orb_pos[:, 1])
 
-    conductivity = fortran_f2py.cond_from_trace(
-        mu_Hall, config.dckb['energies'], config.sample['H_rescale'],
-        config.generic['beta'], config.dckb['ne_integral'],
-        config.generic['Fermi_cheb_precision'], config.dckb_prefactor())
-    print('finish cond_from_trace')
+            # Get absolute square of wave function and sort
+            z = wf2
+            idx = z.argsort()
+            x, y, z = x[idx], y[idx], z[idx]
 
-    return config.dckb['energies'], conductivity
+            # make plot
+            fig, ax = plt.subplots()
+            sc = ax.scatter(x, y, c=z, s=site_size, edgecolor='')
+            plt.axis('equal')
+            plt.axis('off')
+            if colorbar:
+                plt.colorbar(sc)
+            plt.draw()
+            plt.savefig(filename, dpi=fig_dpi)
+            plt.close()

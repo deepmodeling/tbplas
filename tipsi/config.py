@@ -1,44 +1,27 @@
-"""config.py contains the class Config, which keeps track of
-parameters for the TBPM calculation.
+"""
+Functions and classes for managing the parameters of TBPM calculation.
+
+Functions
+---------
+    read_config: user function
+        read configuration from file
 
 Classes
-----------
-    Config
-        Contains TBPM parameters.
+-------
+    Config: user class
+        class for representing TBPM parameters
 """
 
-################
-# dependencies
-################
-import time
-import os
-
-# numerics & math
-import numpy as np
+import math
 import pickle
-
-################
-# Config class
-################
 
 
 class Config:
-    """Class for TBPM parameters.
+    """
+    Class for for representing TBPM parameters.
 
     Attributes
     ----------
-    sample['area_unit_cell'] : float
-        Area of the unit cell.
-    sample['energy_range'] : float
-        Energy range in eV, centered at 0.
-    sample['extended'] : integer
-        Number of times the unit cell has been extended.
-    sample['nr_orbitals'] : integer
-        Degrees of freedom per unit cell.
-    sample['volume_unit_cell'] : float
-        Volume of the unit cell.
-    scmple['H_rescale'] : float
-        rescale value for Hamiltonian
     generic['Bessel_max'] : int
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
@@ -61,9 +44,7 @@ class Config:
     generic['nr_time_steps'] : int
         Number of time steps. Default value: 1024
     generic['seed'] : int
-        Seed for random wavefunction generation. Default value: 1337.
-    generic['rank'] : int
-        Rank of mpi process. Default value: 0.
+        Seed for random wave function generation. Default value: 1337.
     LDOS['site_indices'] : int
         Site indices for LDOS calculation.
     LDOS['wf_weights'] : int
@@ -93,169 +74,60 @@ class Config:
         Number of integral steps. Default value: 2048
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
-    output['prefix'] : string
-        Prefix prepended to the output files. Default value: timestamp.
-    output['corr_AC'] : string
-        AC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_AC.dat".
-    output['corr_DC'] : string
-        DC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_DC.dat".
-    output['corr_DOS'] : string
-        DOS correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_DOS.dat".
-    output['corr_LDOS'] : string
-        LDOS correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_LDOS.dat".
-    output['corr_dyn_pol'] : string
-        AC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
-    output['directory'] : string
-        Output directory. Default value: "sim_data".
     """
-
-    # initialize
-    def __init__(self, sample=False, read_from_file=False,
-                 directory=None, prefix=None, mpi_env=None):
-        """Initialize.
-
-        Parameters
-        ----------
-        sample : Sample object
-            Sample object of which to take sample parameters.
-        read_from_file : bool
-            set to True if you are reading a config object from file
-        directory: string
-            Directory for writing/reading files.
-        prefix: string
-            Prefix prepended to output files under directory.
-        mpi_env: MPIEnv object
-           MPI environment.
-        """
-
-        # declare dicts
-        self.sample = {}
-        self.generic = {}
-        self.LDOS = {}
-        self.dyn_pol = {}
-        self.DC_conductivity = {}
-        self.quasi_eigenstates = {}
-        self.output = {}
-        self.dckb = {}
-
-        # sample parameters
-        if sample:
-            self.sample['nr_orbitals'] = sample.nr_orbitals
-            self.sample['energy_range'] = sample.energy_range
-            self.sample['area_unit_cell'] = sample.area_unit_cell
-            self.sample['volume_unit_cell'] = sample.volume_unit_cell
-            self.sample['extended'] = sample.extended
-            self.sample['H_rescale'] = sample.rescale
-
+    def __init__(self):
         # generic standard values
-        self.generic['Bessel_max'] = 100
-        self.generic['Bessel_precision'] = 1.0e-13
-        self.generic['correct_spin'] = False
-        self.generic['nr_time_steps'] = 1024
-        self.generic['nr_random_samples'] = 1
-        self.generic['beta'] = 11604.505 / 300
-        self.generic['mu'] = 0.
-        self.generic['nr_Fermi_fft_steps'] = 2**15
-        self.generic['Fermi_cheb_precision'] = 1.0e-10
-        self.generic['seed'] = 1337
-        if mpi_env is None:
-            self.generic['rank'] = 0
-        else:
-            self.generic['rank'] = mpi_env.rank
+        self.generic = {'Bessel_max': 100,
+                        'Bessel_precision': 1.0e-13,
+                        'correct_spin': False,
+                        'nr_time_steps': 1024,
+                        'nr_random_samples': 1,
+                        'beta': 11604.505 / 300,
+                        'mu': 0.,
+                        'nr_Fermi_fft_steps': 2 ** 15,
+                        'Fermi_cheb_precision': 1.0e-10,
+                        'seed': 1337}
 
         # LDOS
-        self.LDOS['site_indices'] = 0
-        self.LDOS['wf_weights'] = False
-        self.LDOS['delta'] = 0.01
-        self.LDOS['recursion_depth'] = 2000
+        self.LDOS = {'site_indices': 0,
+                     'wf_weights': False,
+                     'delta': 0.01,
+                     'recursion_depth': 2000}
 
         # DC conductivity
-        self.DC_conductivity['energy_limits'] = (-0.5, 0.5)
+        self.DC_conductivity = {'energy_limits': (-0.5, 0.5)}
 
         # quasi-eigenstates
-        self.quasi_eigenstates['energies'] = [-0.1, 0., 0.1]
+        self.quasi_eigenstates = {'energies': [-0.1, 0., 0.1]}
 
         # dynamical polarization
-        self.dyn_pol['q_points'] = [[1., 0., 0.]]
-        self.dyn_pol['coulomb_constant'] = 1.0
-        self.dyn_pol['background_dielectric_constant'] = 2 * np.pi * 3.7557757
+        self.dyn_pol = {'q_points': [[1., 0., 0.]],
+                        'coulomb_constant': 1.0,
+                        'background_dielectric_constant': 2 * math.pi * 3.7557757}
 
         # dckb, Hall conductivity
-        self.dckb['energies'] = [i * 0.01 - 0.2 for i in range(0, 41)]
-        self.dckb['n_kernel'] = 2048
-        self.dckb['direction'] = 1  # 1 gives XX, 2 gives XY conductivity
-        self.dckb['ne_integral'] = 2048
+        self.dckb = {'energies': [i * 0.01 - 0.2 for i in range(0, 41)],
+                     'n_kernel': 2048,
+                     'direction': 1,
+                     'ne_integral': 2048}
 
-        # output settings
-        # TODO: what if read_from_file?
-        if not read_from_file:
-            self.set_output(directory, prefix)
 
-    def set_output(self, directory=None, prefix=None):
-        """Function to set data output options.
+def read_config(filename):
+    """
+    Read configuration from a .pkl file.
 
-        This function will set self.output['directory'] and correlation
-        file names for automised data output.
-
-        Parameters
-        ----------
-        directory : string, optional
-            output directory, set to False if you don't want to specify
-            an output directory
-        prefix : string, optional
-            prefix for filenames, set to False for standard (timestamp) prefix
-        """
-        # Update names of directory and files
-        if directory is not None:
-            self.output['directory'] = directory
-        else:
-            self.output['directory'] = 'sim_data'
-        if prefix is not None:
-            self.output['prefix'] = prefix
-        else:
-            self.output['prefix'] = str(int(time.time()))
-        full_prefix = "%s/%s" % (self.output['directory'], self.output['prefix'])
-        for key in ('corr_DOS', 'corr_LDOS', 'corr_AC', 'corr_dyn_pol', 'corr_DC'):
-            self.output[key] = "%s%s.dat.%s" % (full_prefix, key, self.generic['rank'])
-        if self.generic['rank'] == 0:
-            print("Output details:")
-            print("%11s: %s" % ("Directory", self.output['directory']))
-            print("%11s: %s" % ("Prefix", self.output['prefix']))
-            print(flush=True)
-
-        # Create directory if not exits
-        if self.generic['rank'] == 0:
-            if not os.path.exists(self.output['directory']):
-                os.mkdir(self.output['directory'])
-
-    def save(self, filename="config.pkl", directory=None, prefix=None):
-        """Function to save config parameters to a .pkl file.
-
-        Parameters
-        ----------
-        filename : string, optional
-            file name
-        directory : string, optional
-            output directory, set to False if you don't want to specify
-            an output directory
-        prefix : string, optional
-            prefix for filenames, set to False for standard (timestamp) prefix
-        """
-        if self.generic['rank'] == 0:
-            if directory is None:
-                directory = self.output['directory']
-            if prefix is None:
-                prefix = self.output['prefix']
-            if not os.path.exists(directory):
-                os.mkdir(directory)
-            pickle_name = "%s/%s%s" % (directory, prefix, filename)
-            with open(pickle_name, 'wb') as f:
-                pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
-
-    def dckb_prefactor(self):
-        return 16 * self.sample['nr_orbitals'] / self.sample['area_unit_cell']
+    :param filename: string
+            file name of the .pkl file
+    :return: config: instance of 'Config' class
+        config object read from file
+    """
+    with open(filename, 'rb') as f:
+        config_dict = pickle.load(f)
+    config = Config()
+    config.generic = config_dict.generic
+    config.LDOS = config_dict.LDOS
+    config.dyn_pol = config_dict.dyn_pol
+    config.DC_conductivity = config_dict.DC_conductivity
+    config.dckb = config_dict.dckb
+    config.quasi_eigenstates = config_dict.quasi_eigenstates
+    return config

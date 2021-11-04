@@ -2,8 +2,6 @@
 
 Functions
 ----------
-    read_config
-        Read config object from file.
     read_corr_DOS
         Read DOS correlation function from file.
     read_corr_LDOS
@@ -16,41 +14,7 @@ Functions
         Read DC correlation function from file.
 """
 
-################
-# dependencies
-################
-
-# numerics & math
-# import numpy as np
-
-# from .builder import *
-from .config import *
-
-
-def read_config(filename):
-    """Read Config object from file
-
-    Parameters
-    ----------
-    filename : string
-        read Config object from this file
-
-    Returns
-    ----------
-    Config object
-    """
-
-    with open(filename, 'rb') as f:
-        config_dict = pickle.load(f)
-    config = Config(read_from_file=True)
-    config.sample = config_dict.sample
-    config.generic = config_dict.generic
-    config.LDOS = config_dict.LDOS
-    config.dyn_pol = config_dict.dyn_pol
-    config.DC_conductivity = config_dict.DC_conductivity
-    config.quasi_eigenstates = config_dict.quasi_eigenstates
-    config.output = config_dict.output
-    return config
+import numpy as np
 
 
 def read_corr_DOS(filename):

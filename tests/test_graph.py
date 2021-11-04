@@ -7,12 +7,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from scipy.sparse import csr_matrix
 
-# Old version of Tipsi builder
-import tipsi
+# # Old version of Tipsi builder
+# import tipsi
 
 # New version of Tipsi builder
 # import tipsi.builder.lattice as lat
 from tipsi.builder import PrimitiveCell, SuperCell, Sample
+from tipsi.config import Config
+from tipsi.solver import Solver
+from tipsi.analysis import Analyzer
 # from test_utils import TestHelper
 
 
@@ -202,20 +205,8 @@ class TestSample(unittest.TestCase):
         # sample = make_sample_old((100, 100), enable_pbc=True)
         sample = make_sample_new((100, 100), enable_pbc=True)
 
-        config = tipsi.Config(sample)
-        config.generic['nr_time_steps'] = 256
-        config.generic['nr_random_samples'] = 4
-        config.generic['energy_range'] = 20.
-        config.generic['correct_spin'] = True
-        config.dyn_pol['q_points'] = [[1., 0., 0.]]
-        config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
-        config.LDOS['site_indices'] = [0]
-        config.LDOS['delta'] = 0.1
-        config.LDOS['recursion_depth'] = 2000
-        config.save()
-
         # set config parameters
-        config = tipsi.Config(sample)
+        config = Config()
         config.generic['nr_time_steps'] = 256
         config.generic['nr_random_samples'] = 4
         config.generic['energy_range'] = 20.
@@ -225,44 +216,51 @@ class TestSample(unittest.TestCase):
         config.LDOS['site_indices'] = [0]
         config.LDOS['delta'] = 0.1
         config.LDOS['recursion_depth'] = 2000
-        config.save()
+
+        # create Solver and Analyzer
+        solver = Solver(sample, config)
+        solver.save_config()
+        analyzer = Analyzer(sample, config)
 
         # get DOS
-        corr_DOS = tipsi.corr_DOS(sample, config)
-        energies_DOS, DOS = tipsi.analyze_corr_DOS(config, corr_DOS)
-        plt.plot(energies_DOS, DOS)
-        plt.xlabel("E (eV)")
-        plt.ylabel("DOS")
-        plt.savefig("DOS.png")
-        plt.close()
+        corr_dos = solver.calc_corr_dos()
+        energies_dos, dos = analyzer.calc_dos(corr_dos)
+        if analyzer.is_master:
+            plt.plot(energies_dos, dos)
+            plt.xlabel("E (eV)")
+            plt.ylabel("DOS")
+            plt.savefig("DOS.png")
+            plt.close()
 
         # get AC conductivity
-        corr_AC = tipsi.corr_AC(sample, config)
-        omegas_AC, AC = tipsi.analyze_corr_AC(config, corr_AC)
-        plt.plot(omegas_AC, AC[0])
-        plt.xlabel("hbar * omega (eV)")
-        plt.ylabel("sigma_xx (sigma_0)")
-        plt.savefig("ACxx.png")
-        plt.close()
+        corr_ac = solver.calc_corr_ac_cond()
+        omegas_ac, ac = analyzer.calc_ac_cond(corr_ac)
+        if analyzer.is_master:
+            plt.plot(omegas_ac, ac[0])
+            plt.xlabel("h_bar * omega (eV)")
+            plt.ylabel("sigma_xx (sigma_0)")
+            plt.savefig("ACxx.png")
+            plt.close()
 
         # get dyn pol
-        corr_dyn_pol = tipsi.corr_dyn_pol(sample, config)
-        qval, omegas, dyn_pol = tipsi.analyze_corr_dyn_pol(config, corr_dyn_pol)
-        qval, omegas, epsilon = tipsi.analyze_corr_dyn_pol(config, dyn_pol)
-        plt.plot(omegas, -1 * dyn_pol[0, :].imag)
-        plt.xlabel("hbar * omega (eV)")
-        plt.ylabel("-Im(dp)")
-        plt.savefig("dp_imag.png")
-        plt.close()
+        corr_dyn_pol = solver.calc_corr_dyn_pol()
+        q_val, omegas, dyn_pol = analyzer.calc_dyn_pol(corr_dyn_pol)
+        if analyzer.is_master:
+            plt.plot(omegas, -1 * dyn_pol[0, :].imag)
+            plt.xlabel("h_bar * omega (eV)")
+            plt.ylabel("-Im(dp)")
+            plt.savefig("dp_imag.png")
+            plt.close()
 
         # get DC conductivity
-        corr_DOS, corr_DC = tipsi.corr_DC(sample, config)
-        energies_DC, DC = tipsi.analyze_corr_DC(config, corr_DOS, corr_DC)
-        plt.plot(energies_DC, DC[0, :])
-        plt.xlabel("E (eV)")
-        plt.ylabel("DC conductivity")
-        plt.savefig("DC.png")
-        plt.close()
+        corr_dos, corr_dc = solver.calc_corr_dc_cond()
+        energies_dc, dc = analyzer.calc_dc_cond(corr_dos, corr_dc)
+        if analyzer.is_master:
+            plt.plot(energies_dc, dc[0, :])
+            plt.xlabel("E (eV)")
+            plt.ylabel("DC conductivity")
+            plt.savefig("DC.png")
+            plt.close()
 
 
 if __name__ == "__main__":

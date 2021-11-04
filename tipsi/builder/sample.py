@@ -895,3 +895,15 @@ class Sample:
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
+
+    @property
+    def dckb_prefactor(self):
+        """
+        Get pre-factor for Hall conductivity using Kubo-Bastin formula.
+
+        Reserved for compatibility with old version of Tipsi.
+
+        :return: factor, float
+            pre-factor for Hall conductivity
+        """
+        return 16 * self.nr_orbitals / self.area_unit_cell

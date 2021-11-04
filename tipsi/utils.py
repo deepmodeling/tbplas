@@ -1,19 +1,29 @@
-"""utils.py contains some helper classes and functions.
+"""
+Helper classes and functions used among the code.
 
 Classes
 -------
-    Timer:
-        Tracking time usage of function calls.
-    ProgressBar:
-        Reporting progress during a long task.
+    Timer: user and developer class
+        time counter for tracking time usage of function calls
+    ProgressBar: developer class
+        textual progress bar for reporting progress of a long task
 
 Functions
 ---------
-    gen_seeds:
-        Picking up bytes from os.urandom as seeds for random number
-        generator.
-    split_list:
-        Splitting list into different groups.
+    gen_seeds: developer function
+        generate seeds for random number generator by picking up bits from
+        os.urandom
+    split_list: developer function
+        split list into different groups for distributing tasks among MPI
+        processes
+    print_banner_line: developer function
+        print a banner like '#--------------- FOO ---------------#' to stdout
+    print_banner_block: developer function
+        print a banner like
+        #----------------------------------#
+        #               FOO                #
+        #----------------------------------#
+        to stdout
 """
 
 import time
@@ -34,7 +44,6 @@ class Timer(object):
     end_time: dictionary
         time of last self.toc() call
     """
-
     def __init__(self):
         self.total_time = {}
         self.start_time = {}
@@ -132,7 +141,7 @@ class ProgressBar(object):
         it to 10. When one part finishes, the program will report 10% of the
         whole task has been finished.
     scale_unit: float
-        amount of tasks between two adjoint scales
+        amount of tasks between two ad-joint scales
         See the schematic plot below for demonstration.
     next_scale: float
         the next scale waiting for counter
@@ -143,7 +152,7 @@ class ProgressBar(object):
     num_scales_past: integer
         number of past scales
     percent_unit: float
-        percentage of tasks between two adjoint scales
+        percentage of tasks between two ad-joint scales
 
     Schematic plot of the working mechanism:
     num_count:  50
@@ -155,8 +164,13 @@ class ProgressBar(object):
     num_scales_past: 3
     percent_unit: 10%
     """
-
     def __init__(self, num_count, num_scales=10):
+        """
+        :param num_count: integer
+            total amount of tasks
+        :param num_scales: integer
+            total number of scales in the progress bar
+        """
         self.num_count = num_count
         self.num_scales = num_scales
         self.scale_unit = num_count / num_scales
@@ -166,29 +180,38 @@ class ProgressBar(object):
         self.percent_unit = 100 / num_scales
 
     def count(self):
+        """
+        Increase the counter by 1.
+
+        :return: None
+        """
         self.counter += 1
         if self.counter >= self.next_scale:
             self.num_scales_past += 1
             self.next_scale += self.scale_unit
-            print("[%3d%%] finished %6d of %6d" % (self.num_scales_past * self.percent_unit,
-                                                 self.counter, self.num_count))
+            print("[%3d%%] finished %6d of %6d" %
+                  (self.num_scales_past * self.percent_unit,
+                   self.counter, self.num_count))
 
 
 def gen_seeds(num_seeds):
     """
-    Generate a list of random numbers from /dev/urandom as seeds for Python random
-    number generator.
+    Generate a list of random numbers from /dev/urandom as seeds for Python
+    random number generator.
 
     :param num_seeds: integer, number of seeds
     :return seeds: list of integers, seeds
     """
     num_bytes = [random.randint(1, 4) for _ in range(num_seeds)]
-    byte_order = ['big' if random.randint(1, 2) == 1 else 'little' for _ in range(num_seeds)]
-    #signed = [True if random.randint(1, 2) == 1 else False for _ in range(num_seeds)]
+    byte_order = ['big' if random.randint(1, 2) == 1 else 'little'
+                  for _ in range(num_seeds)]
+    # signed = [True if random.randint(1, 2) == 1 else False
+    #           for _ in range(num_seeds)]
     signed = [True for _ in range(num_seeds)]
     seeds = []
     for item in zip(num_bytes, byte_order, signed):
-        rand_int = int().from_bytes(os.urandom(item[0]), byteorder=item[1], signed=item[2])
+        rand_int = int().from_bytes(os.urandom(item[0]), byteorder=item[1],
+                                    signed=item[2])
         if rand_int not in seeds:
             seeds.append(rand_int)
     return seeds
@@ -216,7 +239,7 @@ def split_list(raw_list, num_group, algorithm="remainder"):
                       if i % num_group == k] for k in range(num_group)]
     else:
         # Get the numbers of items for each group
-        num_item = [num_element // num_group for i in range(num_group)]
+        num_item = [num_element // num_group for _ in range(num_group)]
         for i in range(num_element % num_group):
             num_item[i] += 1
         # Divide the list according to num_item
@@ -232,20 +255,11 @@ def print_banner_line(text, width=80, mark="-", end="#"):
     """
     Print a banner like '#--------------- FOO ---------------#' to stdout.
 
-    Parameters
-    ----------
-    text: string
-        central text in the banner
-    width: integer
-        total width of the banner
-    mark: character
-        marker
-    end: character
-        end prepended and appended to the banner
-
-    Returns
-    -------
-    None
+    :param text: string, central text in the banner
+    :param width: integer, total width of the banner
+    :param mark: character, marker
+    :param end: character, end prepended and appended to the banner
+    :return: None
     """
     num_marks_total = width - len(text) - 4
     num_marks_left = num_marks_total // 2
@@ -256,7 +270,6 @@ def print_banner_line(text, width=80, mark="-", end="#"):
     print(banner_with_marks)
 
 
-
 def print_banner_block(text, width=80, mark="-", end="#"):
     """
     Print a banner like
@@ -265,20 +278,11 @@ def print_banner_block(text, width=80, mark="-", end="#"):
     #----------------------------------#
     to stdout.
 
-     Parameters
-    ----------
-    text: string
-        central text in the banner
-    width: integer
-        total width of the banner
-    mark: character
-        marker
-    end: character
-        end prepended and appended to the banner
-
-    Returns
-    -------
-    None
+    :param text: string, central text in the banner
+    :param width: integer, total width of the banner
+    :param mark: character, marker
+    :param end: character, end prepended and appended to the banner
+    :return: None
     """
     num_spaces_total = width - len(text) - 2
     num_spaces_left = num_spaces_total // 2
@@ -290,4 +294,3 @@ def print_banner_block(text, width=80, mark="-", end="#"):
     print(border)
     print(banner_with_spaces)
     print(border)
-
