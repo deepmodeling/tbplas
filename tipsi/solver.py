@@ -262,24 +262,26 @@ class Solver(BaseSolver):
 
     def __get_time_step(self):
         """
-        Get the time step for TBPM calculation.
+        Get the time step for TBPM calculation via:
+            time_step = 2 * pi / sample.energy_range
 
         :return: time_step: float
             time step
         """
         return 2 * math.pi / self.sample.energy_range
 
-    def __get_bessel_series(self):
+    def __get_bessel_series(self, time_step):
         """
         Get the values of Bessel functions up to given order.
 
+        :param time_step: float
+            time step
         :return: bes: list of floats
             values of Bessel functions
         :raises ValueError: if self.config.generic["Bessel_max"] is too low
         """
         bessel_max = self.config.generic["Bessel_max"]
         bessel_precision = self.config.generic["Bessel_precision"]
-        time_step = self.__get_time_step()
         time_scaled = time_step * self.sample.rescale
 
         # Collect bessel function values
@@ -321,7 +323,8 @@ class Solver(BaseSolver):
             DOS correlation function
         """
         # Get parameters
-        bessel_series = self.__get_bessel_series()
+        time_step = self.__get_time_step()
+        bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
         num_sample = self.__dist_sample()
 
@@ -345,7 +348,8 @@ class Solver(BaseSolver):
             LDOS correlation function
         """
         # Get parameters
-        bessel_series = self.__get_bessel_series()
+        time_step = self.__get_time_step()
+        bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
         num_sample = self.__dist_sample()
 
@@ -371,7 +375,8 @@ class Solver(BaseSolver):
             xx, xy, yx, yy, respectively
         """
         # Get parameters
-        bessel_series = self.__get_bessel_series()
+        time_step = 0.5 * self.__get_time_step()
+        bessel_series = self.__get_bessel_series(time_step)
         beta_re, mu_re = self.__get_beta_mu_re()
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         num_sample = self.__dist_sample()
@@ -400,7 +405,8 @@ class Solver(BaseSolver):
             Dynamical polarization correlation function.
         """
         # Get parameters
-        bessel_series = self.__get_bessel_series()
+        time_step = 0.5 * self.__get_time_step()
+        bessel_series = self.__get_bessel_series(time_step)
         beta_re, mu_re = self.__get_beta_mu_re()
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         site_x = self.sample.orb_pos[:, 0]
@@ -447,7 +453,7 @@ class Solver(BaseSolver):
         beta_re, mu_re = self.__get_beta_mu_re()
 
         time_step = self.__get_time_step()
-        bessel_series = self.__get_bessel_series()
+        bessel_series = self.__get_bessel_series(time_step)
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         num_sample = self.__dist_sample()
 
@@ -506,7 +512,7 @@ class Solver(BaseSolver):
         """
         # Get parameters
         time_step = self.__get_time_step()
-        bessel_series = self.__get_bessel_series()
+        bessel_series = self.__get_bessel_series(time_step)
         num_sample = self.__dist_sample()
 
         # Call FORTRAN subroutine
