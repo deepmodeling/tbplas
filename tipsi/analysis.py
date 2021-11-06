@@ -3,13 +3,19 @@ Functions and classes for analyzing correlation functions.
 
 Functions
 ----------
-    window_hanning
+    window_hanning: user function
         Hanning window
-    window_exp
+    window_exp: user function
         Exponential window
-    window_exp_ten
+    window_exp_ten: user function
         Window function given by exponential of 10
+
+Classes
+-------
+    Analyzer: user class
+        wrapper over analyzing tools
 """
+from math import cos, sin, exp
 
 import numpy as np
 import numpy.linalg as npla
@@ -22,51 +28,46 @@ from .solver import BaseSolver
 from .fortran import f2py
 
 
-def window_default(i, N):
-    """Default window function."""
-    return 1.
-
-
-def window_hanning(i, N):
+def window_hanning(i, tnr):
     """
     Hanning window function.
 
     :param i: integer
         summation index
-    :param N: integer
+    :param tnr: integer
         total length of summation
     :return: float
         Hanning window value
     """
-    return 0.5 * (1 + np.cos(np.pi * i / N))
+    return 0.5 * (1 + cos(np.pi * i / tnr))
 
 
-def window_exp(i, N):
+def window_exp(i, tnr):
     """
     Exponential window function.
 
     :param i: integer
         summation index
-    :param N: integer
+    :param tnr: integer
         total length of summation
     :return: float
         exponential window value
     """
-    return np.exp(-2. * (i / N)**2)
+    return exp(-2. * (i / tnr)**2)
 
 
-def window_exp_ten(i, N):
+def window_exp_ten(i, tnr):
     """
     Exponential window function with base 10.
 
     :param i: integer
         summation index
-    :param N: integer
+    :param tnr: integer
         total length of summation
     :return: float
         exponential window value
     """
-    power = -2 * (1. * i / N)**2
+    power = -2 * (1. * i / tnr)**2
     return 10.**power
 
 
@@ -102,23 +103,23 @@ class Analyzer(BaseSolver):
             en_range = self.sample.energy_range
             en_step = 0.5 * en_range / tnr
             energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
-                                 for i in range(tnr * 2)])
+                                 for i in range(tnr * 2)], dtype=float)
 
             # Get negative time correlation
             corr_neg_time = np.empty(tnr * 2, dtype=complex)
-            corr_neg_time[tnr - 1] = corr_dos[0]
-            corr_neg_time[2 * tnr - 1] = window(tnr - 1, tnr) * corr_dos[tnr]
+            corr_neg_time[tnr - 1] = corr_dos.item(0)
+            corr_neg_time[2 * tnr - 1] = window(tnr - 1, tnr) * corr_dos.item(tnr)
             for i in range(tnr - 1):
-                corr_neg_time[tnr + i] = window(i, tnr) * corr_dos[i + 1]
-                corr_neg_time[tnr-i-2] = window(i, tnr) * np.conjugate(corr_dos[i+1])
+                corr_neg_time[tnr + i] = window(i, tnr) * corr_dos.item(i + 1)
+                corr_neg_time[tnr-i-2] = window(i, tnr) * corr_dos.item(i + 1).conjugate()
 
             # Fourier transform
             corr_fft = np.fft.ifft(corr_neg_time)
             dos = np.empty(tnr * 2)
             for i in range(tnr):
-                dos[i + tnr] = np.abs(corr_fft[i])
+                dos[i + tnr] = abs(corr_fft.item(i))
             for i in range(tnr, 2 * tnr):
-                dos[i - tnr] = np.abs(corr_fft[i])
+                dos[i - tnr] = abs(corr_fft.item(i))
 
             # Normalise and correct for spin
             dos = dos / (np.sum(dos) * en_step)
@@ -166,23 +167,23 @@ class Analyzer(BaseSolver):
             beta = self.config.generic['beta']
             ac_prefactor = 4. * self.sample.nr_orbitals \
                 / (self.sample.area_unit_cell * self.sample.extended)
-            omegas = np.array([i * en_range / tnr for i in range(tnr)])
+            omegas = np.array([i * en_range / tnr for i in range(tnr)],
+                              dtype=float)
 
             # Get AC conductivity
-            ac = np.zeros((4, tnr))
+            ac = np.zeros((4, tnr), dtype=float)
             for j in range(4):
                 for i in range(tnr):
-                    omega = omegas[i]
+                    omega = omegas.item(i)
                     acv = 0.
                     for k in range(tnr):
                         acv += 2. * window(k + 1, tnr) \
-                            * np.sin(omega * k * t_step) \
-                            * corr_ac[j, k].imag
+                            * sin(omega * k * t_step) * corr_ac.item(j, k).imag
                     if omega == 0.:
                         acv = 0.
                     else:
                         acv = ac_prefactor * t_step * acv \
-                            * (np.exp(-beta * omega) - 1) / omega
+                            * (exp(-beta * omega) - 1) / omega
                     ac[j, i] = acv
 
             # Correct for spin
@@ -204,10 +205,10 @@ class Analyzer(BaseSolver):
         """
         if self.rank == 0:
             num_data = len(ac_cond_real)
-            sigma = np.zeros(2 * num_data)
+            sigma = np.zeros(2 * num_data, dtype=float)
             for i in range(num_data):
-                sigma[num_data + i] = ac_cond_real[i]
-                sigma[num_data - i] = ac_cond_real[i]
+                sigma[num_data + i] = ac_cond_real.item(i)
+                sigma[num_data - i] = ac_cond_real.item(i)
             ac_imag = np.imag(hilbert(sigma))[num_data:2 * num_data]
         else:
             ac_imag = None
@@ -233,24 +234,25 @@ class Analyzer(BaseSolver):
             tnr = self.config.generic['nr_time_steps']
             en_range = self.sample.energy_range
             t_step = np.pi / en_range
-            q_points = np.array(self.config.dyn_pol['q_points'])
+            q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
             n_q_points = len(q_points)
             # do we need to divide the prefactor by 1.5??
             dyn_pol_prefactor = -2. * self.sample.nr_orbitals \
                 / (self.sample.area_unit_cell * self.sample.extended)
             n_omegas = tnr
-            omegas = np.array([i * en_range / tnr for i in range(tnr)])
+            omegas = np.array([i * en_range / tnr for i in range(tnr)],
+                              dtype=float)
 
             # get dynamical polarization
             dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
             for i_q in range(n_q_points):
                 for i in range(n_omegas):
-                    omega = omegas[i]
+                    omega = omegas.item(i)
                     dpv = 0.0j
                     for k in range(tnr):
-                        tau = k * t_step
-                        dpv += window(k + 1, tnr) * corr_dyn_pol[i_q, k] \
-                            * np.exp(1j * omega * tau)
+                        phi = k * t_step * omega
+                        dpv += window(k + 1, tnr) * corr_dyn_pol.item(i_q, k) \
+                            * (cos(phi) + 1j * sin(phi))
                     dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
 
             # correct for spin
@@ -282,17 +284,17 @@ class Analyzer(BaseSolver):
             # declare arrays
             epsilon = np.ones((n_q_points, n_omegas)) \
                 + np.zeros((n_q_points, n_omegas)) * 0j
-            V0 = epsilon_prefactor * np.ones(n_q_points)
-            V = np.zeros(n_q_points)
+            v0 = epsilon_prefactor * np.ones(n_q_points)
+            v = np.zeros(n_q_points)
 
             # calculate epsilon
             for i, q_point in enumerate(q_points):
                 k = npla.norm(q_point)
                 if k == 0.0:
-                    V[i] = 0.
+                    v[i] = 0.
                 else:
-                    V[i] = V0[i] / k
-                    epsilon[i, :] -= V[i] * dyn_pol[i, :]
+                    v[i] = v0.item(i) / k
+                    epsilon[i, :] -= v.item(i) * dyn_pol[i, :]
         else:
             epsilon = None
         return epsilon
@@ -344,13 +346,14 @@ class Analyzer(BaseSolver):
             dc = np.zeros((2, n_energies))
             for i in range(2):
                 for j in range(n_energies):
-                    en = energies[j]
-                    dos_val = dos[qe_indices[j]]
+                    en = energies.item(j)
+                    dos_val = dos.item(qe_indices.item(j))
                     dc_val = 0.
                     for k in range(tnr):
                         w = window_dc(k + 1, tnr)
-                        c_exp = np.exp(-1j * k * t_step * en)
-                        add_dcv = w * (c_exp * corr_dc[i, j, k]).real
+                        phi = k * t_step * en
+                        c_exp = cos(phi) - 1j * sin(phi)
+                        add_dcv = w * (c_exp * corr_dc.item(i, j, k)).real
                         dc_val += add_dcv
                     dc[i, j] = dc_prefactor * t_step * dos_val * dc_val
             # correct for spin
