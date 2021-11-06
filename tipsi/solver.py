@@ -158,19 +158,29 @@ class Solver(BaseSolver):
         Default value: timestamp.
     output['corr_AC'] : string
         AC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_AC.dat".
+        Default value: f"sim_data/{timestamp}.corr_AC".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     output['corr_DC'] : string
         DC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_DC.dat".
+        Default value: f"sim_data/{timestamp}.corr_DC".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     output['corr_DOS'] : string
         DOS correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_DOS.dat".
+        Default value: f"sim_data/{timestamp}.corr_DOS".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     output['corr_LDOS'] : string
         LDOS correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_LDOS.dat".
+        Default value: f"sim_data/{timestamp}.corr_LDOS".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     output['corr_dyn_pol'] : string
         AC conductivity correlation output file.
-        Default value: "sim_data/" + timestamp + "corr_dyn_pol.dat".
+        Default value: f"sim_data/{timestamp}.corr_dyn_pol".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     """
     def __init__(self, sample: Sample, config: Config, enable_mpi=False):
         """
@@ -213,11 +223,10 @@ class Solver(BaseSolver):
         self.barrier()
 
         # Determine file names
-        full_prefix = "%s/%s" % (self.output["directory"],
-                                 self.output["prefix"])
         for key in ("corr_DOS", "corr_LDOS", "corr_AC", "corr_dyn_pol",
                     "corr_DC"):
-            self.output[key] = "%s%s.dat.%s" % (full_prefix, key, self.rank)
+            self.output[key] = "%s/%s.%s" % (self.output["directory"],
+                                             self.output["prefix"], key)
 
         # Print output details
         self.print("Output details:")
@@ -234,8 +243,8 @@ class Solver(BaseSolver):
         :return: None
         """
         if self.rank == 0:
-            pickle_name = "%s/%s%s" % (self.output["directory"],
-                                       self.output["prefix"], filename)
+            pickle_name = "%s/%s.%s" % (self.output["directory"],
+                                        self.output["prefix"], filename)
             with open(pickle_name, 'wb') as f:
                 pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
@@ -315,6 +324,28 @@ class Solver(BaseSolver):
         mu_re = self.config.generic['mu'] / self.sample.rescale
         return beta_re, mu_re
 
+    def __save_data(self, data, file_name, output_format="numpy"):
+        """
+        Save array data to file.
+
+        :param data: numpy array
+            data to save
+        :param file_name: string
+            name of file to which data will be saved WITHOUT suffix
+            Suffix will be added automatically depending on the format.
+        :param output_format: string
+            format of output data
+            For now only numpy is supported.
+        :return: None
+        :raises NotImplementedError: if output_format is not "numpy" or "npy"
+        """
+        if output_format in ("numpy", "npy"):
+            suffix = "npy"
+        else:
+            raise NotImplementedError(f"Unsupported format {output_format}")
+        if self.rank == 0:
+            np.save(f"{file_name}.{suffix}", data)
+
     def calc_corr_dos(self):
         """
         Calculate correlation function of density of states (DOS).
@@ -338,6 +369,7 @@ class Solver(BaseSolver):
             self.output['corr_DOS'],
             self.rank)
         corr_dos = self.average(corr_dos)
+        self.__save_data(corr_dos, self.output["corr_DOS"])
         return corr_dos
 
     def calc_corr_ldos(self):
@@ -364,6 +396,7 @@ class Solver(BaseSolver):
             self.output['corr_LDOS'],
             self.rank)
         corr_ldos = self.average(corr_ldos)
+        self.__save_data(corr_ldos, self.output["corr_LDOS"])
         return corr_ldos
 
     def calc_corr_ac_cond(self):
@@ -395,6 +428,7 @@ class Solver(BaseSolver):
             self.output['corr_AC'],
             self.rank)
         corr_ac = self.average(corr_ac)
+        self.__save_data(corr_ac, self.output["corr_AC"])
         return corr_ac
 
     def calc_corr_dyn_pol(self):
@@ -429,6 +463,7 @@ class Solver(BaseSolver):
             self.output['corr_dyn_pol'],
             self.rank)
         corr_dyn_pol = self.average(corr_dyn_pol)
+        self.__save_data(corr_dyn_pol, self.output["corr_dyn_pol"])
         return corr_dyn_pol
 
     def calc_corr_dc_cond(self):
@@ -472,6 +507,8 @@ class Solver(BaseSolver):
             self.rank)
         corr_dos = self.average(corr_dos)
         corr_dc = self.average(corr_dc)
+        self.__save_data(corr_dos, self.output["corr_DOS"])
+        self.__save_data(corr_dc, self.output["corr_DC"])
         return corr_dos, corr_dc
 
     def calc_hall_mu(self):
@@ -554,4 +591,5 @@ class Solver(BaseSolver):
             self.config.generic['nr_time_steps'],
             self.config.generic['nr_random_samples'],
             self.output['corr_LDOS'])
+        self.__save_data(ldos, self.output["corr_LDOS"])
         return energies, ldos
