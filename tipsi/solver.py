@@ -61,7 +61,10 @@ class BaseSolver:
 
         # Print simulation details
         self.print("\nParallelization details:")
-        self.print("%17s:%4d" % ("MPI processes", self.size))
+        if self.mpi_env is not None:
+            self.print("%17s:%4d" % ("MPI processes", self.size))
+        else:
+            self.print("%17s" % "MPI disabled")
         for env_name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
             if env_name in os.environ.keys():
                 self.print("%17s:%4s" % (env_name, os.environ[env_name]))
@@ -246,7 +249,7 @@ class Solver(BaseSolver):
             pickle_name = "%s/%s.%s" % (self.output["directory"],
                                         self.output["prefix"], filename)
             with open(pickle_name, 'wb') as f:
-                pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self.config, f, pickle.HIGHEST_PROTOCOL)
 
     def __dist_sample(self):
         """

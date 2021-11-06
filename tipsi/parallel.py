@@ -53,7 +53,8 @@ class MPIEnv:
         else:
             data = None
         self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
-        data /= self.size
+        if self.rank == 0:
+            data /= self.size
         return data
 
     def barrier(self):

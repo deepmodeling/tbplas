@@ -15,6 +15,7 @@ Classes
     Analyzer: user class
         wrapper over analyzing tools
 """
+
 from math import cos, sin, exp
 
 import numpy as np
