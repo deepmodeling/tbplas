@@ -36,27 +36,35 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     n_wf = n_indptr - 1
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
+#ifdef DEBUG
     OPEN(unit=27, file=output_filename)
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
+#endif
 
     if (rank == 0) PRINT *, "Calculating DOS correlation function."
 
     ! Average over (n_ran_samples) samples
     DO i_sample = 1, n_ran_samples
         if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+#ifdef DEBUG
         WRITE(27, *) "Sample =", i_sample
+#endif
 
         ! make random state
         CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
         corrval = inner_prod(wf0, wf0)
+#ifdef DEBUG
         WRITE(27, *) 0, REAL(corrval), AIMAG(corrval)
+#endif
         corr(0) = corr(0) + corrval / n_ran_samples
 
         wf_t = cheb_wf_timestep(H_csr, Bes, wf0, .true.)
         corrval = inner_prod(wf0, wf_t)
 
+#ifdef DEBUG
         WRITE(27, *) 1, REAL(corrval), AIMAG(corrval)
+#endif
         corr(1) = corr(1) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
@@ -70,12 +78,16 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
             wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
 
+#ifdef DEBUG
             WRITE(27, *) t, REAL(corrval), AIMAG(corrval)
+#endif
             corr(t) = corr(t) + corrval / n_ran_samples
         END DO
     END DO
 
+#ifdef DEBUG
     CLOSE(27)
+#endif
 END SUBROUTINE tbpm_dos
 
 
@@ -116,15 +128,19 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     n_wf = n_indptr - 1
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
+#ifdef DEBUG
     OPEN(unit=27, file=output_filename)
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
+#endif
 
     if (rank == 0) PRINT *, "Calculating LDOS correlation function."
 
     DO i_sample = 1, n_ran_samples
         if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+#ifdef DEBUG
         WRITE(27, *) "Sample =", i_sample
+#endif
 
         ! make LDOS state
         CALL random_state(wf_t, n_wf, seed*(i_sample+rank*n_ran_samples))
@@ -134,7 +150,9 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
         END DO
         corrval = inner_prod(wf0, wf_t)
 
+#ifdef DEBUG
         WRITE(27, *) 0, REAL(corrval), AIMAG(corrval)
+#endif
         corr(0) = corr(0) + corrval / n_ran_samples
 
         ! iterate over time, get correlation function
@@ -150,12 +168,16 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
             wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
 
+#ifdef DEBUG
             WRITE(27, *) k, REAL(corrval), AIMAG(corrval)
+#endif
             corr(k) = corr(k) + corrval / n_ran_samples
         END DO
     END DO
 
+#ifdef DEBUG
     CLOSE(27)
+#endif
 END SUBROUTINE tbpm_ldos
 
 
@@ -206,10 +228,12 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     corr = 0D0
     n_wf = n_indptr - 1
 
+#ifdef DEBUG
     ! prepare output file
     OPEN(unit=27, file=output_filename)
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
+#endif
 
     ! get current coefficients
     CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
@@ -234,7 +258,9 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     DO i_sample = 1, n_ran_samples
 
         if (rank == 0) PRINT *, "Sample ", i_sample, " of ", n_ran_samples
+#ifdef DEBUG
         WRITE(27, *) "Sample =", i_sample
+#endif
 
         ! make random state and psi1, psi2
         CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
@@ -254,6 +280,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         wf1 = cur_csr_y * psi1_y
         corrval(4) = inner_prod(psi2, wf1)
 
+#ifdef DEBUG
         ! write to file
         WRITE(27, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3, &
                   & ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
@@ -262,6 +289,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             REAL(corrval(2)), AIMAG(corrval(2)), &
             REAL(corrval(3)), AIMAG(corrval(3)), &
             REAL(corrval(4)), AIMAG(corrval(4))
+#endif
 
         ! iterate over time
         ! Norm check is performed for psi2. It can also be done for psi1_x
@@ -288,6 +316,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             wf1 = cur_csr_y * psi1_y
             corrval(4) = inner_prod(psi2, wf1)
 
+#ifdef DEBUG
             ! write to file
             WRITE(27, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3, &
                       & ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
@@ -296,6 +325,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                 REAL(corrval(2)), AIMAG(corrval(2)), &
                 REAL(corrval(3)), AIMAG(corrval(3)), &
                 REAL(corrval(4)), AIMAG(corrval(4))
+#endif
 
             ! update output array
             corr(1, t) = corr(1, t) + corrval(1) / n_ran_samples
@@ -305,7 +335,9 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         END DO
     END DO
 
+#ifdef DEBUG
     CLOSE(27)
+#endif
 END SUBROUTINE tbpm_accond
 
 
@@ -369,18 +401,22 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
+#ifdef DEBUG
     OPEN(unit=27, file=output_filename)
     WRITE(27, *) "Number of qpoints =", n_q_points
     WRITE(27, *) "Number of samples =", n_ran_samples
     WRITE(27, *) "Number of timesteps =", n_timestep
+#endif
 
     if (rank == 0) PRINT *, "Calculating dynamical polarization correlation function."
 
     !loop over n qpoints
     DO i_q = 1, n_q_points
         if (rank == 0) PRINT *, "q-point ", i_q, " of ", n_q_points
+#ifdef DEBUG
         WRITE(27, "(A9, ES24.14E3,ES24.14E3,ES24.14E3)") "qpoint= ", &
             q_points(i_q,1), q_points(i_q,2), q_points(i_q,3)
+#endif
 
         !calculate the coefficients for the density operator
         !exp(i * q dot r)
@@ -390,7 +426,9 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         ! Average over (n_ran_samples) samples
         DO i_sample = 1, n_ran_samples
             ! PRINT *, " Sample ", i_sample, " of ", n_ran_samples
+#ifdef DEBUG
             WRITE(27, *) "Sample =", i_sample
+#endif
 
             ! make random state and psi1, psi2
             CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
@@ -405,7 +443,9 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
             ! get correlation and store
             corrval = AIMAG(inner_prod(psi2, wf1))
+#ifdef DEBUG
             WRITE(27, *) 1, corrval
+#endif
             corr(i_q, 1) = corr(i_q, 1) + corrval / n_ran_samples
 
             ! iterate over tau
@@ -425,14 +465,18 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 
                 ! get correlation and store
                 corrval = AIMAG(inner_prod(psi2, wf1))
+#ifdef DEBUG
                 WRITE(27, *) t, corrval
+#endif
                 corr(i_q, t) = corr(i_q, t) + corrval / n_ran_samples
 
             END DO
         END DO
     END DO
 
+#ifdef DEBUG
     CLOSE(27)
+#endif
 END SUBROUTINE tbpm_dyn_pol
 
 
@@ -497,6 +541,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     dc_corr = 0D0
     H_csr = make_csr_matrix(s_indptr, s_indices, s_hop)
 
+#ifdef DEBUG
     ! prepare output files
     OPEN(unit=27,file=output_filename_dos)
     WRITE(27,*) "Number of samples =", n_ran_samples
@@ -506,6 +551,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     WRITE(28,*) "Number of samples =", n_ran_samples
     WRITE(28,*) "Number of energies =", n_en_inds
     WRITE(28,*) "Number of timesteps =", n_timestep
+#endif
 
     ! get current coefficients
     CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
@@ -516,8 +562,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     ! Average over (n_ran_samples) samples
     DO i_sample = 1, n_ran_samples
         if (rank == 0) PRINT *, "Calculating for sample ", i_sample, " of ", n_ran_samples
+#ifdef DEBUG
         WRITE(27, *) "Sample =", i_sample
         WRITE(28, *) "Sample =", i_sample
+#endif
 
         ! make random state
         CALL random_state(wf0, n_wf, seed*(i_sample+rank*n_ran_samples))
@@ -552,7 +600,9 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             ! get dos correlation
             dos_corrval = inner_prod(wf0, wf_t_pos)
             dos_corr(t) = dos_corr(t) + dos_corrval/n_ran_samples
+#ifdef DEBUG
             WRITE(27, *) t, REAL(dos_corrval), AIMAG(dos_corrval)
+#endif
 
             W = 0.5 * (1 + COS(pi * t / n_timestep)) ! Hanning window
 
@@ -588,7 +638,9 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                 if (rank == 0) PRINT *, "Getting DC conductivity for energy: ", &
                         i, " of ", n_en_inds
             END IF
+#ifdef DEBUG
             WRITE(28, *) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
+#endif
 
             ! get corresponding quasi-eigenstate
             ! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
@@ -610,11 +662,13 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
             dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
+#ifdef DEBUG
             ! write to file
             WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
                 1, &
                 REAL(dc_corrval(1)), AIMAG(dc_corrval(1)), &
                 REAL(dc_corrval(2)), AIMAG(dc_corrval(2))
+#endif
 
             ! update correlation functions
             dc_corr(1, i, 1) = dc_corr(1, i, 1) + dc_corrval(1)/n_ran_samples
@@ -635,11 +689,13 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                 dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
                 dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
+#ifdef DEBUG
                 ! write to file
                 WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
                     t, &
                     REAL(dc_corrval(1)), AIMAG(dc_corrval(1)), &
                     REAL(dc_corrval(2)), AIMAG(dc_corrval(2))
+#endif
 
                 ! update correlation functions
                 dc_corr(1,i,t) = dc_corr(1,i,t) + dc_corrval(1)/n_ran_samples
@@ -648,8 +704,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         END DO
     END DO
 
+#ifdef DEBUG
     CLOSE(27)
     CLOSE(28)
+#endif
 END SUBROUTINE tbpm_dccond
 
 
