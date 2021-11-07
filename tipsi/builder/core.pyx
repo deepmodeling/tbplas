@@ -77,7 +77,7 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
         # Conjugate terms are added automatically.
         hij = hop_eng[ih] * (cos(phase) + 1j * sin(phase))
         ham_k[ii, jj] = ham_k[ii, jj] + hij
-        ham_k[jj, ii] = ham_k[ii, jj].conjugate()
+        ham_k[jj, ii] = ham_k[jj, ii] + hij.conjugate()
 
 
 #-------------------------------------------------------------------------------
