@@ -694,19 +694,21 @@ class Sample:
         self.init_dr()
 
         # Initialize working arrays.
-        sc0 = self.sc_list[0]
         num_k_points = len(k_path)
+        num_orbitals = sum(self.__get_num_orb())
+        ham_shape = (num_orbitals, num_orbitals)
         if solver == "lapack":
-            num_bands = sc0.num_orb_sc
+            num_bands = num_orbitals
         elif solver == "arpack":
             if num_bands is None:
-                num_bands = int(sc0.num_orb_sc * 0.6)
+                num_bands = int(num_orbitals * 0.6)
         else:
             raise exc.SolverError(solver)
         bands = np.zeros((num_k_points, num_bands), dtype=np.float64)
         hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
 
         # Get length of k-path in reciprocal space
+        sc0 = self.sc_list[0]
         k_len = kpt.gen_kdist(sc0.sc_lat_vec, k_path)
 
         # Convert k_path to Cartesian Coordinates
@@ -715,14 +717,10 @@ class Sample:
 
         # Loop over k-points to evaluate the band structure
         if solver == "lapack":
-            ham_dense = np.zeros((sc0.num_orb_sc, sc0.num_orb_sc),
-                                 dtype=np.complex128)
+            ham_dense = np.zeros(ham_shape, dtype=np.complex128)
             for i_k, k_point in enumerate(k_path):
                 # Update hop_k
-                core.build_hop_k(sc0.pc_hop_ind,
-                                 sc0.dim, sc0.pbc, sc0.num_orb_pc,
-                                 sc0.orb_id_pc, sc0.vac_id_sc,
-                                 self.dr, k_point, self.hop_v, hop_k)
+                core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
 
                 # Fill dense Hamiltonian
                 ham_dense *= 0.0
@@ -735,18 +733,14 @@ class Sample:
                 eigenvalues = eigenvalues[idx]
                 bands[i_k, :] = eigenvalues
         elif solver == "arpack":
-            ham_dia = dia_matrix((self.orb_eng, 0),
-                                 shape=(sc0.num_orb_sc, sc0.num_orb_sc))
+            ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
             for i_k, k_point in enumerate(k_path):
                 # Update hop_k
-                core.build_hop_k(sc0.pc_hop_ind,
-                                 sc0.dim, sc0.pbc, sc0.num_orb_pc,
-                                 sc0.orb_id_pc, sc0.vac_id_sc,
-                                 self.dr, k_point, self.hop_v, hop_k)
+                core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
 
                 # Create Hamiltonian
                 ham_half = csr_matrix((hop_k, (self.hop_i, self.hop_j)),
-                                      shape=(sc0.num_orb_sc, sc0.num_orb_sc))
+                                      shape=ham_shape)
                 ham_csr = ham_dia + ham_half + ham_half.getH()
 
                 # Evaluate eigenvalues and eigenstates.
@@ -762,7 +756,7 @@ class Sample:
                  sigma=0.05, basis="Gaussian", **kwargs):
         """
         Calculate density of states for given energy range and step.
-
+    
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
         :param e_min: float
@@ -791,7 +785,7 @@ class Sample:
         """
         # Get the band energies
         k_len, bands = self.calc_bands(k_points, **kwargs)
-
+    
         # Create energy grid
         if e_min is None:
             e_min = bands.min()
@@ -799,18 +793,18 @@ class Sample:
             e_max = bands.max()
         num_grid = int((e_max - e_min) / e_step)
         energies = np.linspace(e_min, e_max, num_grid+1)
-
+    
         # Define broadening functions
         def _gaussian(x, mu):
             part_a = 1.0 / (sigma * math.sqrt(2 * math.pi))
             part_b = np.exp(-(x - mu)**2 / (2 * sigma**2))
             return part_a * part_b
-
+    
         def _lorentzian(x, mu):
             part_a = 1.0 / (math.pi * sigma)
             part_b = sigma**2 / ((x - mu)**2 + sigma**2)
             return part_a * part_b
-
+    
         # Evaluate DOS by collecting contributions from all energies
         dos = np.zeros(energies.shape, dtype=np.float64)
         if basis == "Gaussian":
@@ -823,7 +817,7 @@ class Sample:
                     dos += _lorentzian(energies, eng_i)
         else:
             raise exc.BasisError(basis)
-
+    
         # Re-normalize dos
         # For each energy in bands, we use a normalized Gaussian or Lorentzian
         # basis function to approximate the Delta function. Totally, there are
@@ -895,15 +889,3 @@ class Sample:
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
-
-    @property
-    def dckb_prefactor(self):
-        """
-        Get pre-factor for Hall conductivity using Kubo-Bastin formula.
-
-        Reserved for compatibility with old version of Tipsi.
-
-        :return: factor, float
-            pre-factor for Hall conductivity
-        """
-        return 16 * self.nr_orbitals / self.area_unit_cell

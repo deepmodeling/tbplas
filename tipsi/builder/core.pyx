@@ -80,91 +80,6 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
         ham_k[jj, ii] = ham_k[jj, ii] + hij.conjugate()
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def reduce_hop(int [:,::1] hop_ind, double complex [::1] hop_eng,
-               double eng_cutoff, long num_wan):
-    """
-    Reduce hopping terms from seedname_hr.dat of Wannier90 and extract
-    on-site energies.
-
-    Parameters
-    ----------
-    hop_ind: (num_hop, 5) int32 array
-        raw hopping indices
-    hop_eng: (num_hop,) complex128 array
-        raw hopping energies in eV
-    eng_cutoff: float64
-        energy cutoff for hopping terms in eV
-    num_wan: int64
-        number of Wannier functions
-
-    Returns
-    -------
-    orb_eng: (num_wann,) float64 array
-        on-site energies of orbitals in eV
-    hop_ind_re: (num_hop_re, 5) int32 array
-        reduced hopping indices
-    hop_eng_re: (num_hop_re,) complex128
-        reduced hopping energies in eV
-    """
-    # Loop counters and bounds
-    cdef int ih, num_hop
-
-    # Intermediate variables
-    cdef int ra, rb, rc, ii, jj
-    cdef int kk, is_kept, num_hop_re, ptr
-    cdef int [::1] status
-
-    # Results
-    cdef double [::1] orb_eng
-    cdef int [:,::1] hop_ind_re
-    cdef double complex [::1] hop_eng_re
-
-    num_hop = hop_ind.shape[0]
-    status = np.zeros(num_hop, dtype=np.int32)
-    orb_eng = np.zeros(num_wan, dtype=np.float64)
-
-    # Extract on-site energies and build status
-    for ih in range(num_hop):
-        # Extract data
-        ra, rb, rc = hop_ind[ih, 0], hop_ind[ih, 1], hop_ind[ih, 2]
-        ii, jj = hop_ind[ih, 3], hop_ind[ih, 4]
-
-        # Check if this is an on-site term
-        if ra == rb == rc == 0 and ii == jj:
-            orb_eng[ii] = hop_eng[ih].real
-        else:
-            # Check whether to keep this hopping term
-            is_kept = 1
-            if abs(hop_eng[ih]) < eng_cutoff:
-                is_kept = 0
-            else:
-                for kk in range(ih):
-                    if hop_ind[kk, 0] == -ra and \
-                       hop_ind[kk, 1] == -rb and \
-                       hop_ind[kk, 2] == -rc and \
-                       hop_ind[kk, 3] == jj and \
-                       hop_ind[kk, 4] == ii:
-                        is_kept = 0
-                        break
-            status[ih] = is_kept
-
-    # Reduce hopping terms
-    num_hop_re = np.sum(status)
-    hop_ind_re = np.zeros((num_hop_re, 5), dtype=np.int32)
-    hop_eng_re = np.zeros(num_hop_re, dtype=np.complex128)
-    ptr = 0
-    for ih in range(num_hop):
-        if status[ih] == 1:
-            for kk in range(5):
-                hop_ind_re[ptr, kk] = hop_ind[ih, kk]
-            hop_eng_re[ptr] = hop_eng[ih]
-            ptr += 1
-
-    return np.asarray(orb_eng), np.asarray(hop_ind_re), np.asarray(hop_eng_re)
-
-
 #-------------------------------------------------------------------------------
 #      Functions for converting index between pc and sc representations
 #-------------------------------------------------------------------------------
@@ -964,12 +879,8 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_hop_k(int [:,::1] pc_hop_ind,
-                int [::1] dim, int [::1] pbc, int num_orb_pc,
-                int [:,::1] orb_id_pc, long [::1] vac_id_sc,
-                double [:,::1] dr, double [::1] kpt,
-                double complex [::1] hop_v,
-                double complex [::1] hop_k):
+def build_hop_k(double complex [::1] hop_v, double [:,::1] dr,
+                double [::1] kpt, double complex [::1] hop_k):
     """
     Build the arrays of hopping terms for constructing sparse Hamiltonian
     in CSR format for given k-point.
@@ -981,24 +892,12 @@ def build_hop_k(int [:,::1] pc_hop_ind,
 
     Parameters
     ----------
-    pc_hop_ind: (num_hop_pc, 5) int32 array
-        reduced hopping indices of primitive cell
-    dim: (3,) int32 array
-        dimension of the super cell
-    pbc: (3,) int32 array
-        periodic conditions
-    num_orb_pc: int32
-        number of orbitals in primitive cell
-    orb_id_pc: (num_orb_sc, 4) int32 array
-        indices of orbitals of super cell in pc representation
-    vac_id_sc: (num_vac,) int64 array
-        indices of vacancies in sc representation
+    hop_v: (num_hop_sc,) complex128 array
+        reduced hopping energy of <i|H|j> in eV
     dr: (num_hop_sc, 3) float64 array
         reduced distances corresponding to hop_i and hop_j in NM
     kpt: (3,) float64 array
         CARTESIAN coordinate of k-point in 1/NM
-    hop_v: (num_hop_sc,) complex128 array
-        k-independent hopping terms from which to update hop_k in eV
     hop_k: (num_hop_sc,) complex128 array
         incoming hop_k to be set up in eV
 
@@ -1015,58 +914,13 @@ def build_hop_k(int [:,::1] pc_hop_ind,
     The hopping terms have been reduced by the conjugate relation. So only
     half of the terms are stored in hop_k.
     """
-    # Loop counters and bounds
-    cdef long num_orb_sc, io
-    cdef int num_hop_pc, ih
-
-    # Cell and orbital IDs
-    cdef int ja, jb, jc
-    cdef int [::1] id_pc_j
-    cdef long id_sc_j
-
-    # Results
-    cdef long ptr
+    cdef long num_hop_sc, ih
     cdef double phase
 
-    # Initialize variables
-    num_orb_sc = orb_id_pc.shape[0]
-    num_hop_pc = pc_hop_ind.shape[0]
-    id_pc_j = np.zeros(4, dtype=np.int32)
-    ptr = 0
-
-    for io in range(num_orb_sc):
-        # Loop over hopping terms in primitive cell
-        for ih in range(num_hop_pc):
-            if orb_id_pc[io, 3] == pc_hop_ind[ih, 3]:
-                # Apply boundary condition
-                ja = _wrap_pbc(orb_id_pc[io, 0]+pc_hop_ind[ih, 0],
-                               dim[0], pbc[0])
-                jb = _wrap_pbc(orb_id_pc[io, 1]+pc_hop_ind[ih, 1],
-                               dim[1], pbc[1])
-                jc = _wrap_pbc(orb_id_pc[io, 2]+pc_hop_ind[ih, 2],
-                               dim[2], pbc[2])
-
-                # Drop the hopping term if it is out of boundary
-                if ja == -1 or jb == -1 or jc == -1:
-                    pass
-                else:
-                    id_pc_j[0] = ja
-                    id_pc_j[1] = jb
-                    id_pc_j[2] = jc
-                    id_pc_j[3] = pc_hop_ind[ih, 4]
-                    if vac_id_sc is None:
-                        id_sc_j = _id_pc2sc(dim, num_orb_pc, id_pc_j)
-                    else:
-                        id_sc_j = _id_pc2sc_vac(dim, num_orb_pc, id_pc_j,
-                                                vac_id_sc)
-
-                    # Check if id_sc_j corresponds to a vacancy
-                    if vac_id_sc is None or id_sc_j != -1:
-                        phase = dr[ptr, 0] * kpt[0] \
-                              + dr[ptr, 1] * kpt[1] \
-                              + dr[ptr, 2] * kpt[2] 
-                        hop_k[ptr] = hop_v[ptr] * (cos(phase) + 1j * sin(phase))
-                        ptr += 1
+    num_hop_sc = hop_v.shape[0]
+    for ih in range(num_hop_sc):
+        phase = dr[ih, 0] * kpt[0] + dr[ih, 1] * kpt[1] + dr[ih, 2] * kpt[2]
+        hop_k[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
 
 
 @cython.boundscheck(False)
