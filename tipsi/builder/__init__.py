@@ -7,3 +7,4 @@ from .lattice import (gen_lattice_vectors, gen_lattice_vectors2,
 from .primitive import PrimitiveCell, extend_prim_cell
 from .super import OrbitalSet, IntraHopping, SuperCell
 from .sample import InterHopping, Sample
+from .adapter import *
