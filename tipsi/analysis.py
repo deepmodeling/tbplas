@@ -377,6 +377,8 @@ class Analyzer(BaseSolver):
         """
         if self.rank == 0:
             energies = np.array(self.config.dckb['energies'])
+            dckb_prefactor = 16 * self.sample.nr_orbitals / \
+                self.sample.area_unit_cell
             conductivity = f2py.cond_from_trace(
                 mu_mn,
                 self.config.dckb['energies'],
@@ -384,7 +386,7 @@ class Analyzer(BaseSolver):
                 self.config.generic['beta'],
                 self.config.dckb['ne_integral'],
                 self.config.generic['Fermi_cheb_precision'],
-                self.sample.dckb_prefactor)
+                dckb_prefactor)
         else:
             energies, conductivity = None, None
         return energies, conductivity

@@ -13,7 +13,7 @@ import numpy as np
 
 
 #-------------------------------------------------------------------------------
-#                Functions for setting up dense Hamiltonian
+#                         Functions for primitive cell
 #-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -78,6 +78,91 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
         hij = hop_eng[ih] * (cos(phase) + 1j * sin(phase))
         ham_k[ii, jj] = ham_k[ii, jj] + hij
         ham_k[jj, ii] = ham_k[jj, ii] + hij.conjugate()
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def reduce_hop(int [:,::1] hop_ind, double complex [::1] hop_eng,
+               double eng_cutoff, long num_wan):
+    """
+    Reduce hopping terms from seedname_hr.dat of Wannier90 and extract
+    on-site energies.
+
+    Parameters
+    ----------
+    hop_ind: (num_hop, 5) int32 array
+        raw hopping indices
+    hop_eng: (num_hop,) complex128 array
+        raw hopping energies in eV
+    eng_cutoff: float64
+        energy cutoff for hopping terms in eV
+    num_wan: int64
+        number of Wannier functions
+
+    Returns
+    -------
+    orb_eng: (num_wann,) float64 array
+        on-site energies of orbitals in eV
+    hop_ind_re: (num_hop_re, 5) int32 array
+        reduced hopping indices
+    hop_eng_re: (num_hop_re,) complex128
+        reduced hopping energies in eV
+    """
+    # Loop counters and bounds
+    cdef int ih, num_hop
+
+    # Intermediate variables
+    cdef int ra, rb, rc, ii, jj
+    cdef int kk, is_kept, num_hop_re, ptr
+    cdef int [::1] status
+
+    # Results
+    cdef double [::1] orb_eng
+    cdef int [:,::1] hop_ind_re
+    cdef double complex [::1] hop_eng_re
+
+    num_hop = hop_ind.shape[0]
+    status = np.zeros(num_hop, dtype=np.int32)
+    orb_eng = np.zeros(num_wan, dtype=np.float64)
+
+    # Extract on-site energies and build status
+    for ih in range(num_hop):
+        # Extract data
+        ra, rb, rc = hop_ind[ih, 0], hop_ind[ih, 1], hop_ind[ih, 2]
+        ii, jj = hop_ind[ih, 3], hop_ind[ih, 4]
+
+        # Check if this is an on-site term
+        if ra == rb == rc == 0 and ii == jj:
+            orb_eng[ii] = hop_eng[ih].real
+        else:
+            # Check whether to keep this hopping term
+            is_kept = 1
+            if abs(hop_eng[ih]) < eng_cutoff:
+                is_kept = 0
+            else:
+                for kk in range(ih):
+                    if hop_ind[kk, 0] == -ra and \
+                       hop_ind[kk, 1] == -rb and \
+                       hop_ind[kk, 2] == -rc and \
+                       hop_ind[kk, 3] == jj and \
+                       hop_ind[kk, 4] == ii:
+                        is_kept = 0
+                        break
+            status[ih] = is_kept
+
+    # Reduce hopping terms
+    num_hop_re = np.sum(status)
+    hop_ind_re = np.zeros((num_hop_re, 5), dtype=np.int32)
+    hop_eng_re = np.zeros(num_hop_re, dtype=np.complex128)
+    ptr = 0
+    for ih in range(num_hop):
+        if status[ih] == 1:
+            for kk in range(5):
+                hop_ind_re[ptr, kk] = hop_ind[ih, kk]
+            hop_eng_re[ptr] = hop_eng[ih]
+            ptr += 1
+
+    return np.asarray(orb_eng), np.asarray(hop_ind_re), np.asarray(hop_eng_re)
 
 
 #-------------------------------------------------------------------------------
@@ -879,52 +964,6 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_hop_k(double complex [::1] hop_v, double [:,::1] dr,
-                double [::1] kpt, double complex [::1] hop_k):
-    """
-    Build the arrays of hopping terms for constructing sparse Hamiltonian
-    in CSR format for given k-point.
-
-    The arrays hop_i and hop_j are identical to that of build_hop, while hop_k
-    differs from hop_v by element-dependent phase factors. So we create these
-    arrays in Python by calling build_hop, then updating hop_k using this
-    function.
-
-    Parameters
-    ----------
-    hop_v: (num_hop_sc,) complex128 array
-        reduced hopping energy of <i|H|j> in eV
-    dr: (num_hop_sc, 3) float64 array
-        reduced distances corresponding to hop_i and hop_j in NM
-    kpt: (3,) float64 array
-        CARTESIAN coordinate of k-point in 1/NM
-    hop_k: (num_hop_sc,) complex128 array
-        incoming hop_k to be set up in eV
-
-    Returns
-    -------
-    None. Results are saved in hop_k.
-
-    NOTES
-    -----
-    Dimension of the super cell along each direction should be no smaller
-    than a minimum value. Otherwise the result will be wrong. See the
-    documentation of 'OrbitalSet' class for more details.
-
-    The hopping terms have been reduced by the conjugate relation. So only
-    half of the terms are stored in hop_k.
-    """
-    cdef long num_hop_sc, ih
-    cdef double phase
-
-    num_hop_sc = hop_v.shape[0]
-    for ih in range(num_hop_sc):
-        phase = dr[ih, 0] * kpt[0] + dr[ih, 1] * kpt[1] + dr[ih, 2] * kpt[2]
-        hop_k[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
                    double [:,::1] pos_bra, double [:,::1] pos_ket):
     """
@@ -961,9 +1000,6 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
     return np.asarray(dr)
 
 
-#-------------------------------------------------------------------------------
-#                   Functions for advanced Sample utilities
-#-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
@@ -1006,6 +1042,9 @@ def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
     return id_same, id_conj
 
 
+#-------------------------------------------------------------------------------
+#                   Functions for advanced Sample utilities
+#-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def set_mag_field(long [::1] hop_i, long [::1] hop_j,
@@ -1412,6 +1451,52 @@ def sort_col_csr(long [::1] indptr, long [::1] indices,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def build_hop_k(double complex [::1] hop_v, double [:,::1] dr,
+                double [::1] kpt, double complex [::1] hop_k):
+    """
+    Build the arrays of hopping terms for constructing sparse Hamiltonian
+    in CSR format for given k-point.
+
+    The arrays hop_i and hop_j are identical to that of build_hop, while hop_k
+    differs from hop_v by element-dependent phase factors. So we create these
+    arrays in Python by calling build_hop, then updating hop_k using this
+    function.
+
+    Parameters
+    ----------
+    hop_v: (num_hop_sc,) complex128 array
+        reduced hopping energy of <i|H|j> in eV
+    dr: (num_hop_sc, 3) float64 array
+        reduced distances corresponding to hop_i and hop_j in NM
+    kpt: (3,) float64 array
+        CARTESIAN coordinate of k-point in 1/NM
+    hop_k: (num_hop_sc,) complex128 array
+        incoming hop_k to be set up in eV
+
+    Returns
+    -------
+    None. Results are saved in hop_k.
+
+    NOTES
+    -----
+    Dimension of the super cell along each direction should be no smaller
+    than a minimum value. Otherwise the result will be wrong. See the
+    documentation of 'OrbitalSet' class for more details.
+
+    The hopping terms have been reduced by the conjugate relation. So only
+    half of the terms are stored in hop_k.
+    """
+    cdef long num_hop_sc, ih
+    cdef double phase
+
+    num_hop_sc = hop_v.shape[0]
+    for ih in range(num_hop_sc):
+        phase = dr[ih, 0] * kpt[0] + dr[ih, 1] * kpt[1] + dr[ih, 2] * kpt[2]
+        hop_k[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def fill_ham(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
              double complex [::1] hop_v, double complex [:,::1] ham_dense):
     """
@@ -1452,11 +1537,11 @@ def fill_ham(double [::1] orb_eng, long [::1] hop_i, long [::1] hop_j,
     for ih in range(num_hop_sc):
         ii, jj = hop_i[ih], hop_j[ih]
         ham_dense[ii, jj] = ham_dense[ii, jj] + hop_v[ih]
-        ham_dense[jj, ii] = ham_dense[ii, jj].conjugate()
+        ham_dense[jj, ii] = ham_dense[jj, ii] + hop_v[ih].conjugate()
 
 
 #-------------------------------------------------------------------------------
-#      Functions for testing index converting functions
+#                        Functions for testing purposes
 #-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
