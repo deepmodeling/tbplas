@@ -244,7 +244,7 @@ class Sample:
         distances of hopping terms in accordance with hop_i and hop_j in nm
     rescale: float
         rescaling factor for the Hamiltonian
-        reserved for compatibility with old version of Tipsi
+        reserved for compatibility with old version of TBPlaS
 
     NOTES
     -----
@@ -456,7 +456,7 @@ class Sample:
         """
         Rescale orbital energies and hopping terms.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :param factor: float
             rescaling factor
@@ -830,7 +830,7 @@ class Sample:
         """
         Get energy range to consider in calculations.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :returns: en_range : float
             All eigenvalues are between (-en_range / 2, en_range / 2) in eV.
@@ -843,7 +843,7 @@ class Sample:
         """
         Get the area formed by a1 and a2 of the primitive cell.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :return: area, float
             area formed by a1 and a2 in NM^2
@@ -856,7 +856,7 @@ class Sample:
         """
         Get the volume of primitive cell.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :return: volume: float
             volume of primitive cell in NM^3
@@ -869,7 +869,7 @@ class Sample:
         """
         Get the number of extended times of primitive cell.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :return: extended: integer
             number of extended times of primitive cells
@@ -882,7 +882,7 @@ class Sample:
         """
         Get the number of orbitals of primitive cell.
 
-        Reserved for compatibility with old version of Tipsi.
+        Reserved for compatibility with old version of TBPlaS.
 
         :return: nr_orbitals: integer
             number of orbitals in the primitive cell.

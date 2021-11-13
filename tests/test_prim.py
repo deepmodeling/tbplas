@@ -5,11 +5,11 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 
-import tipsi.builder.lattice as lat
-import tipsi.builder.kpoints as kpt
-import tipsi.builder.constants as consts
-import tipsi.builder.exceptions as exc
-from tipsi.builder import PrimitiveCell, extend_prim_cell
+import tbplas.builder.lattice as lat
+import tbplas.builder.kpoints as kpt
+import tbplas.builder.constants as consts
+import tbplas.builder.exceptions as exc
+from tbplas.builder import PrimitiveCell, extend_prim_cell
 from test_utils import TestHelper
 
 

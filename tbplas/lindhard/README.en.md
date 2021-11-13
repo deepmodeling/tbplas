@@ -1,7 +1,7 @@
 # Lindhard
 
 #### Description
-Calculating polarization function and dielectric function by using Lindhard function with Tipsi
+Calculating polarization function and dielectric function by using Lindhard function with TBPlaS
 
 #### Software Architecture
 Software architecture description

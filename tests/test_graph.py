@@ -7,15 +7,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from scipy.sparse import csr_matrix
 
-# # Old version of Tipsi builder
+# Old version of Tipsi builder
 # import tipsi
 
-# New version of Tipsi builder
-# import tipsi.builder.lattice as lat
-from tipsi.builder import PrimitiveCell, SuperCell, Sample
-from tipsi.config import Config
-from tipsi.solver import Solver
-from tipsi.analysis import Analyzer
+# New version of TBPlaS builder
+# import tbplas.builder.lattice as lat
+from tbplas.builder import PrimitiveCell, SuperCell, Sample
+from tbplas.config import Config
+from tbplas.solver import Solver
+from tbplas.analysis import Analyzer
 # from test_utils import TestHelper
 
 
@@ -25,11 +25,11 @@ from tipsi.analysis import Analyzer
 #     a = 0.246
 #     vectors = [[0.5*a, 0.5*sqrt(3)*a, 0.], [-0.5*a, 0.5*sqrt(3)*a, 0.]]
 #     orbital_coords = [[0., 0., 0.], [0, 1./3*sqrt(3)*a, 0.]]
-#     lattice = tipsi.Lattice(vectors, orbital_coords)
+#     lattice = tbplas.Lattice(vectors, orbital_coords)
 #
 #     # SiteSet
 #     W, H = shape[0], shape[1]
-#     site_set = tipsi.SiteSet()
+#     site_set = tbplas.SiteSet()
 #     for i in range(W):
 #         for j in range(H):
 #             unit_cell_coords = (i, j, 0)
@@ -39,7 +39,7 @@ from tipsi.analysis import Analyzer
 #     # HopDict
 #     t = 2.7
 #     e = 0.0
-#     hop_dict = tipsi.HopDict()
+#     hop_dict = tbplas.HopDict()
 #     rn = (0, 0, 0)
 #     hop_dict.empty(rn, (2, 2))
 #     hop_dict.set_element(rn, (0, 0), e)
@@ -62,7 +62,7 @@ from tipsi.analysis import Analyzer
 #             return (n0, n1, n2), orbital
 #
 #     # Sample
-#     sample = tipsi.Sample(lattice, site_set, pbc)
+#     sample = tbplas.Sample(lattice, site_set, pbc)
 #     sample.add_hop_dict(hop_dict)
 #     sample.rescale_H(9.0)
 #     return sample
@@ -196,7 +196,7 @@ class TestSample(unittest.TestCase):
     #     self.assertAlmostEqual((dx_csr_new - dx_csr_old).sum(), 0.0)
     #     self.assertAlmostEqual((dy_csr_new - dy_csr_old).sum(), 0.0)
 
-    def test01_tipsi(self):
+    def test01_tbpm(self):
         """
         Test the new builder with real-case calculations.
 

@@ -4,10 +4,10 @@ import unittest
 
 import numpy as np
 
-import tipsi.builder.lattice as lat
-import tipsi.builder.core as core
-from tipsi.builder import PrimitiveCell, OrbitalSet
-from tipsi.utils import Timer
+import tbplas.builder.lattice as lat
+import tbplas.builder.core as core
+from tbplas.builder import PrimitiveCell, OrbitalSet
+from tbplas.utils import Timer
 from test_utils import TestHelper
 
 

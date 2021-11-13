@@ -4,9 +4,9 @@ import unittest
 
 import numpy as np
 
-import tipsi.builder.lattice as lat
-import tipsi.builder.exceptions as exc
-from tipsi.builder import PrimitiveCell, OrbitalSet, IntraHopping, SuperCell
+import tbplas.builder.lattice as lat
+import tbplas.builder.exceptions as exc
+from tbplas.builder import PrimitiveCell, OrbitalSet, IntraHopping, SuperCell
 from test_utils import TestHelper
 
 

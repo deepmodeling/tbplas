@@ -1,13 +1,13 @@
 """graphene_ribbon_bands.py
 
-Graphene ribbon band structure example for tipsi.
+Graphene ribbon band structure example for tbplas.
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-import tipsi
-from tipsi.materials import graphene
+import tbplas
+from tbplas.materials import graphene
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
     site_set.delete_site((int(W / 2) - H, int(W / 2) - 1 + H, 0), 1)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap)
 
     # apply HopDict
     sample.add_hop_dict(hop_dict)

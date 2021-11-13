@@ -1,13 +1,13 @@
 """antimonene_bands.py
 
-Antimonene band structure example for tipsi.
+Antimonene band structure example for tbplas.
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-import tipsi
-from tipsi.materials import antimonene
+import tbplas
+from tbplas.materials import antimonene
 
 
 def main():
@@ -28,10 +28,10 @@ def main():
     K = [2 * k1, (2. / 3.) * k2, 0.]
     kpoints = [G, M, K, G]
     ticktitles = ["G", "M", "K", "G"]
-    kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
+    kpoints, kvals, ticks = tbplas.interpolate_k_points(kpoints, res_bands)
 
     # get band structure
-    bands = tipsi.band_structure(hops, lat, kpoints)
+    bands = tbplas.band_structure(hops, lat, kpoints)
 
     # plot
     for band in bands.swapaxes(0, 1):

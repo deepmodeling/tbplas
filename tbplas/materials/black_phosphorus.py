@@ -1,5 +1,5 @@
 import numpy as np
-import tipsi
+import tbplas
 
 
 def lattice(dist_nn=0.22156, dist_nnb=0.07159, theta=48.395,
@@ -13,7 +13,7 @@ def lattice(dist_nn=0.22156, dist_nnb=0.07159, theta=48.395,
 
     Returns
     ----------
-    tipsi.Lattice object
+    tbplas.Lattice object
         Black phosphorus lattice.
     """
 
@@ -32,7 +32,7 @@ def lattice(dist_nn=0.22156, dist_nnb=0.07159, theta=48.395,
     orbital_coords[2] = [a / 2., b / 2., q]
     orbital_coords[3] = [a / 2., b / 2. + p, 0.]
 
-    return tipsi.Lattice(vectors, orbital_coords)
+    return tbplas.Lattice(vectors, orbital_coords)
 
 
 def hop_dict():
@@ -40,7 +40,7 @@ def hop_dict():
 
     Returns
     ----------
-    hop_dict : tipsi.HopDict object
+    hop_dict : tbplas.HopDict object
         Black phosphorus HopDict.
     """
 
@@ -62,7 +62,7 @@ def hop_dict():
     t_p5 = 0.005
 
     # initialize
-    hop_dict = tipsi.HopDict()
+    hop_dict = tbplas.HopDict()
     rel_unit_cells = [(-1, 1, 0), (1, 1, 0), (-1, 1, 1),
                       (-1, -1, 1), (1, 1, 1), (0, 0, 1), (-1, 0, 1),
                       (1, -1, 0), (-1, -1, 0), (0, 1, 1), (1, 0, 0),
@@ -178,11 +178,11 @@ def sheet(W, H, n_layers=1):
 
     Returns
     ----------
-    site_set : tipsi.SiteSet object
+    site_set : tbplas.SiteSet object
         rectangular black phosphorus sheet SiteSet
     """
 
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     for z in range(n_layers):
         for x in range(W):
             for y in range(H):
@@ -233,7 +233,7 @@ def sample(W=500, H=500, n_layers=1, nr_processes=1):
 
     Returns
     ----------
-    sample : tipsi.Sample object
+    sample : tbplas.Sample object
         Rectangular black phosphorus sample.
     """
 
@@ -248,7 +248,7 @@ def sample(W=500, H=500, n_layers=1, nr_processes=1):
     site_set = sheet(W, H)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hops)

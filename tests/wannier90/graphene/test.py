@@ -2,8 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import tipsi.builder.kpoints as kpt
-from tipsi.builder.adapter.wannier90 import wan2pc
+import tbplas.builder.kpoints as kpt
+from tbplas.builder.adapter.wannier90 import wan2pc
 
 
 cell = wan2pc("graphene", eng_cutoff=0.0)

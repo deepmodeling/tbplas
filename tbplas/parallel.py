@@ -1,5 +1,5 @@
 """
-Functions and classes for running Tipsi in parallel mode via MPI.
+Functions and classes for running TBPlaS in parallel mode via MPI.
 
 Functions
 ---------

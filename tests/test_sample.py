@@ -6,12 +6,12 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 
-import tipsi.builder.lattice as lat
-import tipsi.builder.kpoints as kpt
-import tipsi.builder.exceptions as exc
-import tipsi.builder.core as core
-from tipsi.builder import PrimitiveCell, SuperCell, InterHopping, Sample
-from tipsi.utils import Timer
+import tbplas.builder.lattice as lat
+import tbplas.builder.kpoints as kpt
+import tbplas.builder.exceptions as exc
+import tbplas.builder.core as core
+from tbplas.builder import PrimitiveCell, SuperCell, InterHopping, Sample
+from tbplas.utils import Timer
 from test_utils import TestHelper
 
 

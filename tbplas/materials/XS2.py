@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import tipsi
+import tbplas
 
 
 def lattice(a=0.312, d=0, z=1):
@@ -18,7 +18,7 @@ def lattice(a=0.312, d=0, z=1):
 
     Returns
     ----------
-    tipsi.Lattice object
+    tbplas.Lattice object
         XS2 lattice.
     """
 
@@ -40,7 +40,7 @@ def lattice(a=0.312, d=0, z=1):
                       [0, b, 0],
                       [0, b, 0],
                       [0, b, 0]]
-    return tipsi.Lattice(vectors, orbital_coords)
+    return tbplas.Lattice(vectors, orbital_coords)
 
 
 def hop_dict(X="Mo"):
@@ -53,7 +53,7 @@ def hop_dict(X="Mo"):
 
     Returns
     ----------
-    hops : tipsi.HopDict object
+    hops : tbplas.HopDict object
         XS2 HopDict.
     """
 
@@ -358,7 +358,7 @@ def hop_dict(X="Mo"):
     ######################################
 
     # set empty hopping matrices
-    hop_dict = tipsi.HopDict()
+    hop_dict = tbplas.HopDict()
     hop_dict.empty((0, 0, 0), (11, 11))  # uc; nb: beta
     hop_dict.empty((-1, 0, 0), (11, 11))  # nb: alpha; nnb: gamma
     hop_dict.empty((0, 1, 0), (11, 11))  # nb: gamma
@@ -406,11 +406,11 @@ def sheet_rectangle(W, H):
 
     Returns
     ----------
-    site_set : tipsi.SiteSet object
+    site_set : tbplas.SiteSet object
         Rectangular XS2 SiteSet.
     """
 
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     for x in range(W):
         for y in range(int(H / 2)):
             i, j = x + y, x - y

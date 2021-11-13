@@ -1,5 +1,5 @@
 import numpy as np
-import tipsi
+import tbplas
 
 
 def lattice(SOC=True, a=0.411975806, z=0.16455347):
@@ -16,7 +16,7 @@ def lattice(SOC=True, a=0.411975806, z=0.16455347):
 
     Returns
     ----------
-    tipsi.Lattice object
+    tbplas.Lattice object
         Antimonene lattice.
     """
 
@@ -29,7 +29,7 @@ def lattice(SOC=True, a=0.411975806, z=0.16455347):
     orbital_coords = \
         [[-b / 2., 0., -z / 2.] for i in range(n_orbitals_per_site)] + \
         [[b / 2., 0., z / 2.] for i in range(n_orbitals_per_site)]
-    return tipsi.Lattice(vectors, orbital_coords)
+    return tbplas.Lattice(vectors, orbital_coords)
 
 
 def SOC_matrix(SOC_lambda):
@@ -75,7 +75,7 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
 
     Returns
     ----------
-    hops : tipsi.HopDict object
+    hops : tbplas.HopDict object
         antimonene HopDict
     """
 
@@ -97,7 +97,7 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     t_15 = -0.04
 
     # first construct HopDict for SOC = False
-    hop_dict = tipsi.HopDict()
+    hop_dict = tbplas.HopDict()
     rel_unit_cells = [(0, 0, 0), (1, 0, 0), (0, 1, 0),
                       (1, -1, 0), (1, 1, 0), (1, -2, 0), (0, 2, 0),
                       (2, -1, 0), (2, 0, 0), (2, -2, 0), (-1, 1, 0),
@@ -366,11 +366,11 @@ def sheet(W, H, SOC=True):
 
     Returns
     ----------
-    site_set : tipsi.SiteSet object
+    site_set : tbplas.SiteSet object
         rectangular antimonene SiteSet
     """
 
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     if SOC:
         n_orbs = 12
     else:
@@ -522,7 +522,7 @@ def sample(W=500, H=500, SOC=True, SOC_lambda=0.34,
 
     Returns
     ----------
-    sample : tipsi.Sample object
+    sample : tbplas.Sample object
         Antimonene sample.
     """
 
@@ -537,7 +537,7 @@ def sample(W=500, H=500, SOC=True, SOC_lambda=0.34,
     site_set = sheet(W, H, SOC)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hops)

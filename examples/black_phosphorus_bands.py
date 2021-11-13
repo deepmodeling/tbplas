@@ -1,10 +1,10 @@
 """black_phosphorus_bands.py
 
-Black phosphorus band structure example for tipsi.
+Black phosphorus band structure example for tbplas.
 """
 
-from tipsi.materials import black_phosphorus
-import tipsi
+from tbplas.materials import black_phosphorus
+import tbplas
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -25,10 +25,10 @@ def main():
     S = X + Y
     kpoints = [G, Y, S, X, G]
     ticktitles = ["G", "Y", "S", "X", "G"]
-    kpoints, kvals, ticks = tipsi.interpolate_k_points(kpoints, res_bands)
+    kpoints, kvals, ticks = tbplas.interpolate_k_points(kpoints, res_bands)
 
     # get band structure
-    bands = tipsi.band_structure(hop_dict, lat, kpoints)
+    bands = tbplas.band_structure(hop_dict, lat, kpoints)
 
     # plot bulk band structure
     for i in range(len(bands[0, :])):
@@ -46,7 +46,7 @@ def main():
     hop_dict.remove_z_hoppings()
 
     # get bands again
-    bands = tipsi.band_structure(hop_dict, lat, kpoints)
+    bands = tbplas.band_structure(hop_dict, lat, kpoints)
 
     # plot single layer band structure
     for i in range(len(bands[0, :])):

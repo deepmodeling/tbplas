@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-import tipsi
-from tipsi.materials import graphene
+import tbplas
+from tbplas.materials import graphene
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
         vacancies.add(((x, y, 0), orb))
 
     # create SiteSet object
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     for x in range(W):
         for y in range(H):
             for i in range(2):
@@ -44,7 +44,7 @@ def main():
                     site_set.add_site(uc, i)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hops)
@@ -53,13 +53,13 @@ def main():
     sample.rescale_H(9.)
 
     # config object
-    config = tipsi.Config(sample)
+    config = tbplas.Config(sample)
     config.generic['correct_spin'] = True
     config.save()
 
     # get DOS
-    corr_DOS = tipsi.corr_DOS(sample, config)
-    energies_DOS, DOS = tipsi.analyze_corr_DOS(config, corr_DOS)
+    corr_DOS = tbplas.corr_DOS(sample, config)
+    energies_DOS, DOS = tbplas.analyze_corr_DOS(config, corr_DOS)
     plt.plot(energies_DOS, DOS)
     plt.xlabel("E (eV)")
     plt.ylabel("DOS")

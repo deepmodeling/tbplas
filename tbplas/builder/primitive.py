@@ -8,7 +8,7 @@ Functions
         super-cell dimension and periodic condition
     extend_prim_cell: user API
         extend primitive cell along a, b, and c directions
-        reserved for compatibility with old version of Tipsi
+        reserved for compatibility with old version of TBPlaS
 
 Classes
 -------
@@ -183,7 +183,7 @@ class PrimitiveCell(LockableObject):
         collection of energies of all hopping terms in eV
     extended: integer
         number of times the primitive cell has been extended
-        reserved for compatibility with old version of Tipsi
+        reserved for compatibility with old version of TBPlaS
     """
     def __init__(self, lat_vec: np.ndarray, unit=consts.ANG) -> None:
         """

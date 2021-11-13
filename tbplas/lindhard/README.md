@@ -1,7 +1,7 @@
 # Lindhard
 
 #### 介绍
-Calculating polarization function and dielectric function by using Lindhard function with Tipsi
+Calculating polarization function and dielectric function by using Lindhard function with TBPlaS
 
 #### 软件架构
 软件架构说明

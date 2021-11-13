@@ -1,4 +1,4 @@
-import tipsi
+import tbplas
 import numpy as np
 
 
@@ -12,14 +12,14 @@ def lattice(a=0.24):
 
     Returns
     ----------
-    tipsi.Lattice object
+    tbplas.Lattice object
         Graphene lattice.
     """
 
     b = a / np.sqrt(3.)
     vectors = [[1.5 * b, -0.5 * a, 0.], [1.5 * b, 0.5 * a, 0.]]
     orbital_coords = [[-b / 2., 0., 0.], [b / 2., 0., 0.]]
-    return tipsi.Lattice(vectors, orbital_coords)
+    return tbplas.Lattice(vectors, orbital_coords)
 
 
 def hop_dict_nn(t=2.7, e=0.):
@@ -34,14 +34,14 @@ def hop_dict_nn(t=2.7, e=0.):
 
     Returns
     ----------
-    hops : tipsi.HopDict object
+    hops : tbplas.HopDict object
         Graphene HopDict.
     """
 
     A_0 = [[e, t], [t, e]]
     A_nn0 = [[0., 0.], [t, 0.]]
     A_nn1 = [[0., t], [0., 0.]]
-    hops = tipsi.HopDict()
+    hops = tbplas.HopDict()
     hops.set((0, 0, 0), A_0)
     hops.set((1, 0, 0), A_nn0)
     hops.set((-1, 0, 0), A_nn1)
@@ -62,11 +62,11 @@ def sheet(W, H):
 
     Returns
     ----------
-    site_set : tipsi.SiteSet object
+    site_set : tbplas.SiteSet object
         Diamond shaped graphene SiteSet.
     """
 
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     for i in range(W):
         for j in range(H):
             unit_cell_coords = (i, j, 0)
@@ -87,11 +87,11 @@ def sheet_rectangle(W, H):
 
     Returns
     ----------
-    site_set : tipsi.SiteSet object
+    site_set : tbplas.SiteSet object
         Rectangular graphene SiteSet.
     """
 
-    site_set = tipsi.SiteSet()
+    site_set = tbplas.SiteSet()
     for x in range(int(W / 2)):
         for y in range(H):
             i, j = x - y, x + y
@@ -263,7 +263,7 @@ def sample(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
 
     Returns
     ----------
-    sample : tipsi.Sample object
+    sample : tbplas.Sample object
         Diamond shaped graphene sample.
     """
 
@@ -278,7 +278,7 @@ def sample(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
     site_set = sheet(W, H)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hop_dict)
@@ -310,7 +310,7 @@ def sample_rectangle(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
 
     Returns
     ----------
-    sample : tipsi.Sample object
+    sample : tbplas.Sample object
         Rectangular graphene sample.
     """
 
@@ -325,7 +325,7 @@ def sample_rectangle(W=500, H=500, a=0.24, t=2.8, e=0.0, nr_processes=1):
     site_set = sheet_rectangle(W, H)
 
     # make sample
-    sample = tipsi.Sample(lat, site_set, pbc_wrap, nr_processes)
+    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
 
     # apply HopDict
     sample.add_hop_dict(hops)

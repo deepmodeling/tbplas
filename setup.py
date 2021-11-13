@@ -5,9 +5,9 @@ import configparser
 
 # Shared package information by FORTRAN and C extensions
 PKG_INFO = {
-    'name': 'tipsi',
+    'name': 'tbplas',
     'version': '0.9.8',
-    'description': 'TIght-binding Propagation SImulator',
+    'description': 'Tight-binding Package for Large-scale Simulation',
 }
 
 
@@ -20,7 +20,7 @@ except ImportError:
     exit()
 
 # Generate f2py interface
-f90_dir = 'tipsi/fortran'
+f90_dir = 'tbplas/fortran'
 os.system('f2py -h %s/f2py.pyf -m f2py %s/{analysis,tbpm}.f90 \
           --overwrite-signature' % (f90_dir, f90_dir))
 
@@ -34,7 +34,7 @@ f_sources.insert(0, f'{f90_dir}/f2py.pyf')
 
 f_extensions = [
     Extension(
-        name='tipsi.fortran.f2py',
+        name='tbplas.fortran.f2py',
         sources=f_sources
     )
 ]
@@ -43,7 +43,7 @@ setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
-    packages=['tipsi', 'tipsi.fortran', 'tipsi.materials'],
+    packages=['tbplas', 'tbplas.fortran', 'tbplas.materials'],
     ext_modules=f_extensions,
 )
 
@@ -73,8 +73,8 @@ if cc == 'intelem':
 
 c_extensions = [
     Extension(
-        name='tipsi.builder.core',
-        sources=['tipsi/builder/core.pyx'],
+        name='tbplas.builder.core',
+        sources=['tbplas/builder/core.pyx'],
         include_dirs=[np.get_include()],
     )
 ]
@@ -83,6 +83,6 @@ setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
-    packages=['tipsi.builder'],
+    packages=['tbplas.builder'],
     ext_modules=cythonize(c_extensions),
 )
