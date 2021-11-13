@@ -28,6 +28,7 @@ import math
 import numpy as np
 import scipy.linalg.lapack as lapack
 import matplotlib.pyplot as plt
+import matplotlib.collections as mc
 
 from . import constants as consts
 from . import lattice as lat
@@ -637,7 +638,8 @@ class PrimitiveCell(LockableObject):
             if verbose:
                 print("INFO: no need to update pc hopping arrays")
 
-    def __plot_cell(self, axes: plt.Axes, cell_index=(0, 0, 0)):
+    def __plot_cell(self, axes: plt.Axes, cell_index=(0, 0, 0),
+                    with_orbitals=True, with_cells=True, hop_as_arrows=True):
         """
         Plot lattice vectors, orbitals and hopping terms for given
         primitive cell.
@@ -646,6 +648,12 @@ class PrimitiveCell(LockableObject):
             axes on which the figure will be plot
         :param cell_index: (ia, ib, ic)
             index of the primitive cell to plot
+        :param with_orbitals: boolean
+            whether to plot orbitals as filled circles
+        :param with_cells: boolean
+            whether to plot borders of primitive cells
+        :param hop_as_arrows: boolean
+            whether to plot hopping terms as arrows
         :return: None
         """
         # Shift lattice vectors according to cell index.
@@ -654,43 +662,57 @@ class PrimitiveCell(LockableObject):
         vec_1 = self.lat_vec[1] + center
         vec_2 = self.lat_vec[0] + self.lat_vec[1] + center
 
-        # For (0, 0, 0) cell we draw lattice vectors as arrows.
-        if cell_index == (0, 0, 0):
-            axes.arrow(center[0], center[1], vec_0[0], vec_0[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
-            axes.arrow(center[0], center[1], vec_1[0], vec_1[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
-        # For other cells, draw lattice vectors as lines.
-        else:
-            axes.plot((center[0], vec_0[0]), (center[1], vec_0[1]),
-                      color='k', ls=":")
-            axes.plot((center[0], vec_1[0]), (center[1], vec_1[1]),
-                      color='k', ls=":")
-        # Draw lines parallel to lattice vectors.
-        axes.plot((vec_0[0], vec_2[0]), (vec_0[1], vec_2[1]),
-                  color='k', ls=":")
-        axes.plot((vec_1[0], vec_2[0]), (vec_1[1], vec_2[1]),
-                  color='k', ls=":")
-
         # Plot orbitals
         cart_pos = lat.frac2cart(self.lat_vec, self.orb_pos) + center
-        axes.scatter(cart_pos[:, 0], cart_pos[:, 1], s=100, c=self.orb_eng)
+        if with_orbitals:
+            axes.scatter(cart_pos[:, 0], cart_pos[:, 1], s=100, c=self.orb_eng)
 
         # Plot hopping terms
-        for hopping in self.hop_ind:
-            rn = hopping[:3]
-            orb_i, orb_j = hopping[3], hopping[4]
-            pos_i = cart_pos[orb_i]
-            pos_j = cart_pos[orb_j] + np.matmul(rn, self.lat_vec)
-            diff_pos = pos_j - pos_i
-            axes.scatter(pos_j[0], pos_j[1], s=100, c=self.orb_eng[orb_j])
-            axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1], color='r',
-                       length_includes_head=True, width=0.002, head_width=0.02,
-                       fill=False)
+        if hop_as_arrows:
+            for hopping in self.hop_ind:
+                rn = hopping[:3]
+                orb_i, orb_j = hopping[3], hopping[4]
+                pos_i = cart_pos[orb_i]
+                pos_j = cart_pos[orb_j] + np.matmul(rn, self.lat_vec)
+                diff_pos = pos_j - pos_i
+                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                           color='r', length_includes_head=True, width=0.002,
+                           head_width=0.02, fill=False)
+        else:
+            hop_mc = []
+            for hopping in self.hop_ind:
+                rn = hopping[:3]
+                orb_i, orb_j = hopping[3], hopping[4]
+                pos_i = cart_pos[orb_i]
+                pos_j = cart_pos[orb_j] + np.matmul(rn, self.lat_vec)
+                hop_mc.append((pos_i[:2], pos_j[:2]))
+            axes.add_collection(mc.LineCollection(hop_mc, color='r'))
 
-    def plot(self, fig_name=None, fig_dpi=300):
+        # Plot cells
+        if with_cells:
+            cell_mc = []
+
+            # For (0, 0, 0) cell we draw lattice vectors as arrows.
+            if cell_index == (0, 0, 0):
+                axes.arrow(center[0], center[1], vec_0[0], vec_0[1],
+                           color="k", length_includes_head=True, width=0.005,
+                           head_width=0.02)
+                axes.arrow(center[0], center[1], vec_1[0], vec_1[1],
+                           color="k", length_includes_head=True, width=0.005,
+                           head_width=0.02)
+            # For other cells, draw lattice vectors as lines.
+            else:
+                cell_mc.append((center[:2], vec_0[:2]))
+                cell_mc.append((center[:2], vec_1[:2]))
+
+            # Draw lines parallel to lattice vectors.
+            cell_mc.append((vec_0[:2], vec_2[:2]))
+            cell_mc.append((vec_1[:2], vec_2[:2]))
+            axes.add_collection(mc.LineCollection(cell_mc, linestyle=':',
+                                                  color='k'))
+
+    def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
+             with_cells=True, hop_as_arrows=True):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -701,6 +723,15 @@ class PrimitiveCell(LockableObject):
             file name to which the figure will be saved
         :param fig_dpi: integer
             resolution of the figure file
+        :param with_orbitals: boolean
+            whether to plot orbitals as filled circles
+        :param with_cells: boolean
+            whether to plot borders of primitive cells
+        :param hop_as_arrows: boolean
+            whether to plot hopping terms as arrows
+            If true, hopping terms will be plotted as arrows using axes.arrow()
+            method. Otherwise, they will be plotted as lines using
+            LineCollection. The former is more intuitive but much slower.
         :returns: None
         """
         fig, axes = plt.subplots()
@@ -716,7 +747,8 @@ class PrimitiveCell(LockableObject):
         for i_a in range(-sc_size[0], sc_size[0]+1):
             for i_b in range(-sc_size[1], sc_size[1]+1):
                 for i_c in range(-sc_size[2], sc_size[2]+1):
-                    self.__plot_cell(axes, (i_a, i_b, i_c))
+                    self.__plot_cell(axes, (i_a, i_b, i_c),
+                                     with_orbitals, with_cells, hop_as_arrows)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
@@ -724,6 +756,7 @@ class PrimitiveCell(LockableObject):
         axes.set_xticks([])
         axes.set_yticks([])
         fig.tight_layout()
+        plt.autoscale()
         if fig_name is not None:
             plt.savefig(fig_name, dpi=fig_dpi)
         else:

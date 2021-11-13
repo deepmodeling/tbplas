@@ -14,8 +14,9 @@ Classes
     SuperCell: user class
         class for representing a super cell from which the sample is constructed
 """
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.collections as mc
 
 from . import exceptions as exc
 from . import core
@@ -801,7 +802,8 @@ class SuperCell(OrbitalSet):
             dr = np.vstack((dr, dr_new))
         return dr
 
-    def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True):
+    def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
+             hop_as_arrows=True):
         """
         Plot lattice vectors, orbitals, and hopping terms to axes.
 
@@ -811,6 +813,8 @@ class SuperCell(OrbitalSet):
             whether to plot orbitals as filled circles
         :param with_cells: boolean
             whether to plot borders of primitive cells
+        :param hop_as_arrows: boolean
+            whether to plot hopping terms as arrows
         :return: None.
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier is out of range
@@ -823,33 +827,42 @@ class SuperCell(OrbitalSet):
         if with_orbitals:
             axes.scatter(orb_pos[:, 0], orb_pos[:, 1], c=orb_eng)
 
-        # Plot hopping terms as arrows
+        # Plot hopping terms
         hop_i, hop_j, hop_v = self.get_hop()
-        for i_h in range(hop_i.shape[0]):
-            pos_i = orb_pos[hop_i.item(i_h)]
-            pos_j = orb_pos[hop_j.item(i_h)]
-            diff_pos = pos_j - pos_i
-            color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
-            axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1], color=color,
-                       length_includes_head=True, width=0.002, head_width=0.02,
-                       fill=False)
+        if hop_as_arrows:
+            for i_h in range(hop_i.shape[0]):
+                pos_i = orb_pos[hop_i.item(i_h)]
+                pos_j = orb_pos[hop_j.item(i_h)]
+                diff_pos = pos_j - pos_i
+                color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
+                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                           color=color, length_includes_head=True, width=0.002,
+                           head_width=0.02, fill=False)
+        else:
+            hop_mc = []
+            for i_h in range(hop_i.shape[0]):
+                pos_i = orb_pos[hop_i.item(i_h)]
+                pos_j = orb_pos[hop_j.item(i_h)]
+                hop_mc.append((pos_i[:2], pos_j[:2]))
+            axes.add_collection(mc.LineCollection(hop_mc, colors="r"))
 
         # Plot borders of primitive cells.
         if with_cells:
+            cell_mc = []
             for i_a in range(self.dim.item(0)+1):
                 point_0 = (i_a, 0, 0)
                 point_1 = (i_a, self.dim.item(1), 0)
                 point_0 = np.matmul(point_0, self.pc_lat_vec)
                 point_1 = np.matmul(point_1, self.pc_lat_vec)
-                axes.plot((point_0[0], point_1[0]), (point_0[1], point_1[1]),
-                          color="k", ls=":")
+                cell_mc.append((point_0[:2], point_1[:2]))
             for i_b in range(self.dim.item(1)+1):
                 point_0 = (0, i_b, 0)
                 point_1 = (self.dim.item(0), i_b, 0)
                 point_0 = np.matmul(point_0, self.pc_lat_vec)
                 point_1 = np.matmul(point_1, self.pc_lat_vec)
-                axes.plot((point_0[0], point_1[0]), (point_0[1], point_1[1]),
-                          color="k", ls=":")
+                cell_mc.append((point_0[:2], point_1[:2]))
+            axes.add_collection(mc.LineCollection(cell_mc, color="k",
+                                                  linestyle=":"))
 
         # Plot lattice vectors of primitive cell
         axes.arrow(0, 0, self.pc_lat_vec[0, 0], self.pc_lat_vec[0, 1],

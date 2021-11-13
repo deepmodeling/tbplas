@@ -22,6 +22,7 @@ import scipy.linalg.lapack as lapack
 from scipy.sparse import dia_matrix, csr_matrix
 from scipy.sparse.linalg import eigsh
 import matplotlib.pyplot as plt
+import matplotlib.collections as mc
 
 from . import lattice as lat
 from . import kpoints as kpt
@@ -192,12 +193,14 @@ class InterHopping(LockableObject):
         dr = core.build_inter_dr(hop_i, hop_j, pos_bra, pos_ket)
         return dr
 
-    def plot(self, axes: plt.Axes):
+    def plot(self, axes: plt.Axes, hop_as_arrows=True):
         """
         Plot hopping terms to axes.
 
         :param axes: instance of matplotlib 'Axes' class
             axes on which the figure will be plot
+        :param hop_as_arrows: boolean
+            whether to plot hopping terms as arrows
         :return: None.
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
@@ -206,18 +209,26 @@ class InterHopping(LockableObject):
         :raises IDPCVacError: if bra or ket in self.indices corresponds
             to a vacancy
         """
-        # Plot hopping terms as arrows
+        # Plot hopping terms
         orb_pos_i = self.sc_bra.get_orb_pos()
         orb_pos_j = self.sc_ket.get_orb_pos()
         hop_i, hop_j, hop_v = self.get_hop()
-        for i_h in range(hop_i.shape[0]):
-            pos_i = orb_pos_i[hop_i.item(i_h)]
-            pos_j = orb_pos_j[hop_j.item(i_h)]
-            diff_pos = pos_j - pos_i
-            color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
-            axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1], color=color,
-                       length_includes_head=True, width=0.002, head_width=0.02,
-                       fill=False)
+        if hop_as_arrows:
+            for i_h in range(hop_i.shape[0]):
+                pos_i = orb_pos_i[hop_i.item(i_h)]
+                pos_j = orb_pos_j[hop_j.item(i_h)]
+                diff_pos = pos_j - pos_i
+                color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
+                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                           color=color, length_includes_head=True, width=0.002,
+                           head_width=0.02, fill=False)
+        else:
+            hop_mc = []
+            for i_h in range(hop_i.shape[0]):
+                pos_i = orb_pos_i[hop_i.item(i_h)]
+                pos_j = orb_pos_j[hop_j.item(i_h)]
+                hop_mc.append((pos_i[:2], pos_j[:2]))
+            axes.add_collection(mc.LineCollection(hop_mc, color="r"))
 
 
 class Sample:
@@ -621,18 +632,26 @@ class Sample:
         return indptr, indices, hop, dx, dy
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True):
+             with_cells=True, hop_as_arrows=True):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
-        :param with_orbitals: boolean
-            whether to plot orbitals as filled circles
-        :param with_cells: boolean
-            whether to plot borders of primitive cells
+        If figure name is give, save the figure to file. Otherwise, show it on
+        the screen.
+
         :param fig_name: string
             file name to which the figure will be saved
         :param fig_dpi: integer
             resolution of the figure file
+        :param with_orbitals: boolean
+            whether to plot orbitals as filled circles
+        :param with_cells: boolean
+            whether to plot borders of primitive cells
+        :param hop_as_arrows: boolean
+            whether to plot hopping terms as arrows
+            If true, hopping terms will be plotted as arrows using axes.arrow()
+            method. Otherwise, they will be plotted as lines using
+            LineCollection. The former is more intuitive but much slower.
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
@@ -646,9 +665,9 @@ class Sample:
 
         # Plot super cells and hopping terms
         for sc in self.sc_list:
-            sc.plot(axes, with_orbitals, with_cells)
+            sc.plot(axes, with_orbitals, with_cells, hop_as_arrows)
         for hop in self.hop_list:
-            hop.plot(axes)
+            hop.plot(axes, hop_as_arrows)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
@@ -656,6 +675,7 @@ class Sample:
         axes.set_xticks([])
         axes.set_yticks([])
         fig.tight_layout()
+        plt.autoscale()
         if fig_name is not None:
             plt.savefig(fig_name, dpi=fig_dpi)
         else:
