@@ -638,81 +638,8 @@ class PrimitiveCell(LockableObject):
             if verbose:
                 print("INFO: no need to update pc hopping arrays")
 
-    def __plot_cell(self, axes: plt.Axes, cell_index=(0, 0, 0),
-                    with_orbitals=True, with_cells=True, hop_as_arrows=True):
-        """
-        Plot lattice vectors, orbitals and hopping terms for given
-        primitive cell.
-
-        :param axes: instance of matplotlib 'Axes'
-            axes on which the figure will be plot
-        :param cell_index: (ia, ib, ic)
-            index of the primitive cell to plot
-        :param with_orbitals: boolean
-            whether to plot orbitals as filled circles
-        :param with_cells: boolean
-            whether to plot borders of primitive cells
-        :param hop_as_arrows: boolean
-            whether to plot hopping terms as arrows
-        :return: None
-        """
-        # Shift lattice vectors according to cell index.
-        center = np.matmul(cell_index, self.lat_vec)
-        vec_0 = self.lat_vec[0] + center
-        vec_1 = self.lat_vec[1] + center
-        vec_2 = self.lat_vec[0] + self.lat_vec[1] + center
-
-        # Plot orbitals
-        cart_pos = lat.frac2cart(self.lat_vec, self.orb_pos) + center
-        if with_orbitals:
-            axes.scatter(cart_pos[:, 0], cart_pos[:, 1], s=100, c=self.orb_eng)
-
-        # Plot hopping terms
-        if hop_as_arrows:
-            for hopping in self.hop_ind:
-                rn = hopping[:3]
-                orb_i, orb_j = hopping[3], hopping[4]
-                pos_i = cart_pos[orb_i]
-                pos_j = cart_pos[orb_j] + np.matmul(rn, self.lat_vec)
-                diff_pos = pos_j - pos_i
-                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                           color='r', length_includes_head=True, width=0.002,
-                           head_width=0.02, fill=False)
-        else:
-            hop_mc = []
-            for hopping in self.hop_ind:
-                rn = hopping[:3]
-                orb_i, orb_j = hopping[3], hopping[4]
-                pos_i = cart_pos[orb_i]
-                pos_j = cart_pos[orb_j] + np.matmul(rn, self.lat_vec)
-                hop_mc.append((pos_i[:2], pos_j[:2]))
-            axes.add_collection(mc.LineCollection(hop_mc, color='r'))
-
-        # Plot cells
-        if with_cells:
-            cell_mc = []
-
-            # For (0, 0, 0) cell we draw lattice vectors as arrows.
-            if cell_index == (0, 0, 0):
-                axes.arrow(center[0], center[1], vec_0[0], vec_0[1],
-                           color="k", length_includes_head=True, width=0.005,
-                           head_width=0.02)
-                axes.arrow(center[0], center[1], vec_1[0], vec_1[1],
-                           color="k", length_includes_head=True, width=0.005,
-                           head_width=0.02)
-            # For other cells, draw lattice vectors as lines.
-            else:
-                cell_mc.append((center[:2], vec_0[:2]))
-                cell_mc.append((center[:2], vec_1[:2]))
-
-            # Draw lines parallel to lattice vectors.
-            cell_mc.append((vec_0[:2], vec_2[:2]))
-            cell_mc.append((vec_1[:2], vec_2[:2]))
-            axes.add_collection(mc.LineCollection(cell_mc, linestyle=':',
-                                                  color='k'))
-
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, hop_as_arrows=True):
+             with_cells=True, with_conj=True, hop_as_arrows=True):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -727,6 +654,8 @@ class PrimitiveCell(LockableObject):
             whether to plot orbitals as filled circles
         :param with_cells: boolean
             whether to plot borders of primitive cells
+        :param with_conj: boolean
+            whether to plot conjugate hopping terms as well
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
             If true, hopping terms will be plotted as arrows using axes.arrow()
@@ -734,21 +663,79 @@ class PrimitiveCell(LockableObject):
             LineCollection. The former is more intuitive but much slower.
         :returns: None
         """
+        self.sync_array()
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
 
-        # Determine the size of super cell in which the primitive cell resides.
-        self.sync_array()
-        sc_size = [1, 1, 1]
-        for i_dim in range(3):
-            sc_size[i_dim] = np.abs(self.hop_ind[:, i_dim]).max()
+        # Restore conjugate hopping terms
+        if with_conj:
+            hop_ind_conj = np.zeros(self.hop_ind.shape, dtype=np.int32)
+            hop_ind_conj[:, :3] = -self.hop_ind[:, :3]
+            hop_ind_conj[:, 3] = self.hop_ind[:, 4]
+            hop_ind_conj[:, 4] = self.hop_ind[:, 3]
+            hop_ind_full = np.vstack((self.hop_ind, hop_ind_conj))
+        else:
+            hop_ind_full = self.hop_ind
 
-        # Plot cells one-by-one.
-        for i_a in range(-sc_size[0], sc_size[0]+1):
-            for i_b in range(-sc_size[1], sc_size[1]+1):
-                for i_c in range(-sc_size[2], sc_size[2]+1):
-                    self.__plot_cell(axes, (i_a, i_b, i_c),
-                                     with_orbitals, with_cells, hop_as_arrows)
+        # Determine the range of rn
+        ra = hop_ind_full[:, 0]
+        rb = hop_ind_full[:, 1]
+        ra_min, ra_max = ra.min(), ra.max()
+        rb_min, rb_max = rb.min(), rb.max()
+
+        # Get Cartesian coordinates of orbitals in (0, 0, 0) cell
+        pos_r0 = np.matmul(self.orb_pos, self.lat_vec)
+
+        # Plot orbitals
+        if with_orbitals:
+            for i_a in range(ra_min, ra_max+1):
+                for i_b in range(rb_min, rb_max+1):
+                    center = np.matmul((i_a, i_b, 0), self.lat_vec)
+                    pos_rn = pos_r0 + center
+                    axes.scatter(pos_rn[:, 0], pos_rn[:, 1], s=100,
+                                 c=self.orb_eng)
+
+        # Plot cells
+        if with_cells:
+            # Borders
+            cell_mc = []
+            for i_a in range(ra_min, ra_max+2):
+                point_0 = (i_a, rb_min, 0)
+                point_1 = (i_a, rb_max+1, 0)
+                point_0 = np.matmul(point_0, self.lat_vec)
+                point_1 = np.matmul(point_1, self.lat_vec)
+                cell_mc.append((point_0[:2], point_1[:2]))
+            for i_b in range(rb_min, rb_max+2):
+                point_0 = (ra_min, i_b, 0)
+                point_1 = (ra_max+1, i_b, 0)
+                point_0 = np.matmul(point_0, self.lat_vec)
+                point_1 = np.matmul(point_1, self.lat_vec)
+                cell_mc.append((point_0[:2], point_1[:2]))
+            axes.add_collection(mc.LineCollection(cell_mc, color="k",
+                                                  linestyle=":"))
+            # Lattice vectors
+            axes.arrow(0, 0, self.lat_vec[0, 0], self.lat_vec[0, 1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
+            axes.arrow(0, 0, self.lat_vec[1, 0], self.lat_vec[1, 1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
+
+        # Plot hopping terms
+        hop_mc = []
+        for hop in hop_ind_full:
+            center = np.matmul(hop[:3], self.lat_vec)
+            pos_i = pos_r0[hop.item(3)]
+            pos_j = pos_r0[hop.item(4)] + center
+            if hop_as_arrows:
+                diff_pos = pos_j - pos_i
+                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                           color="r", length_includes_head=True, width=0.002,
+                           head_width=0.02, fill=False)
+            else:
+                hop_mc.append((pos_i[:2], pos_j[:2]))
+        if not hop_as_arrows:
+            axes.add_collection(mc.LineCollection(hop_mc, color='r'))
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
