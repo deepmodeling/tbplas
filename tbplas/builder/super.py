@@ -802,6 +802,24 @@ class SuperCell(OrbitalSet):
             dr = np.vstack((dr, dr_new))
         return dr
 
+    def trim(self):
+        """
+        Trim dangling orbitals and associated hopping terms.
+
+        :return: None.
+            self.vacancy_list, self.vac_id_pc, self.vac_id_sc and self.orb_id_pc
+            are modified.
+        :raises OrbSetLockError: if the object is locked
+        """
+        # Get indices of dangling orbitals in primitive cell representation
+        hop_i, hop_j, hop_v = self.get_hop()
+        orb_id_trim = core.get_orb_id_trim(self.orb_id_pc, hop_i, hop_j)
+
+        # Add vacancies
+        for orb_id in orb_id_trim:
+            self.add_vacancy(orb_id)
+        self.sync_array(force_sync=True)
+
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
              hop_as_arrows=True):
         """

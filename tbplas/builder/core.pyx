@@ -964,6 +964,60 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
+    """
+    Get the indices of orbitals to trim in primitive cell representation.
+
+    Parameters
+    ----------
+    orb_id_pc: (num_orb_sc, 4) int32 array
+        orbital indices in primitive cell representation
+    hop_i: (num_hop_sc,) int64 array
+        row indices of hopping terms reduced by conjugate relation
+    hop_j: (num_hop_sc,) int64 array
+        column indices of hopping terms reduced by conjugate relation
+
+    Returns
+    -------
+    orb_id_trim: (num_orb_trim, 4) int32 array
+        indices of orbitals to trim in primitive cell representation
+    """
+    cdef long num_orb_sc, io
+    cdef long num_hop_sc, ih
+    cdef long [::1] hop_count
+    cdef long num_orb_trim, counter, i_dim
+    cdef int [:,::1] orb_id_trim
+
+    num_orb_sc = orb_id_pc.shape[0]
+    num_hop_sc = hop_i.shape[0]
+
+    # Count the number or hopping terms for each orbital
+    hop_count = np.zeros(num_orb_sc, dtype=np.int64)
+    for ih in range(num_hop_sc):
+        hop_count[hop_i[ih]] = hop_count[hop_i[ih]] + 1
+        hop_count[hop_j[ih]] = hop_count[hop_j[ih]] + 1
+
+    # Determine the number of orbitals to trim
+    # Since we have reduced hop_i and hop_j, so dangling orbitals have
+    # hopping terms <= 1.
+    num_orb_trim = 0
+    for io in range(num_orb_sc):
+        if hop_count[io] <= 1:
+            num_orb_trim += 1
+
+    # Collect orbitals to trim
+    orb_id_trim = np.zeros((num_orb_trim, 4), dtype=np.int32)
+    counter = 0
+    for io in range(num_orb_sc):
+        if hop_count[io] <= 1:
+            for i_dim in range(4):
+                orb_id_trim[counter, i_dim] = orb_id_pc[io, i_dim]
+            counter += 1
+    return np.asarray(orb_id_trim)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
                    double [:,::1] pos_bra, double [:,::1] pos_ket):
     """

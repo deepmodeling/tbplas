@@ -601,8 +601,16 @@ class TestSample(unittest.TestCase):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
 
-        print("\n24*24 Graphene super cell with 4 holes")
+        print("\n24*24 Graphene super cell with 4 holes without trimming"
+              " dangling orbitals")
         sc = SuperCell(make_cell(), dim=(24, 24, 1), vacancies=holes)
+        sample = Sample(sc)
+        sample.plot(with_cells=False)
+
+        print("\n24*24 Graphene super cell with 4 holes with dangling orbitals"
+              " trimmed")
+        sc.unlock()
+        sc.trim()
         sample = Sample(sc)
         sample.plot(with_cells=False)
 
