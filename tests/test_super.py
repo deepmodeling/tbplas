@@ -431,6 +431,20 @@ class TestSample(unittest.TestCase):
                                   orb_j=1, energy=-1.1)
         th.test_raise(_test, exc.IDPCLenError, r"length of id_pc .+ is not 4")
 
+        # Test 'trim' method
+        intra_hop = IntraHopping()
+        intra_hop.add_hopping((2, 1), 1, (1, 2), 2, 1.0)
+        intra_hop.add_hopping((0, 0), 3, (2, 2), 0, 2.0)
+        intra_hop.add_hopping((4, 3), 1, (2, 3), 1, 3.0)
+        intra_hop.add_hopping((1, 3), 2, (3, 1), 0, 4.0)
+        orb_id_trim = [(2, 1, 0, 1), (2, 2, 0, 0), (4, 3, 0, 0), (3, 1, 0, 1)]
+        intra_hop.trim(orb_id_trim)
+        self.assertTupleEqual(intra_hop.indices[0][0], (4, 3, 0, 1))
+        self.assertTupleEqual(intra_hop.indices[0][1], (2, 3, 0, 1))
+        self.assertTupleEqual(intra_hop.indices[1][0], (1, 3, 0, 2))
+        self.assertTupleEqual(intra_hop.indices[1][1], (3, 1, 0, 0))
+        self.assertListEqual(intra_hop.energies, [3.0, 4.0])
+
     def test13_get_orb_eng(self):
         """
         Test if SuperCell.get_orb_eng works as expected.

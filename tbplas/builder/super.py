@@ -631,6 +631,39 @@ class IntraHopping(LockableObject):
             self.indices.append((bra, ket))
             self.energies.append(energy)
 
+    def trim(self, orb_id_trim):
+        """
+        Remove hopping terms associated to dangling orbitals.
+
+        This method is intended to be called by 'trim' method of 'SuperCell'
+        class.
+
+        :param orb_id_trim: (num_orb_trim, 4) int32 array
+            indices of orbitals to trim in primitive cell representation
+        :return: None.
+            self.energies and self.indices are modified.
+        :raises IntraHopLockError: if the object is locked
+        """
+        try:
+            self.check_lock_state()
+        except exc.LockError as err:
+            raise exc.IntraHopLockError() from err
+
+        remain_terms = []
+        orb_id_trim = [tuple(orb_id) for orb_id in orb_id_trim]
+        for i, ind in enumerate(self.indices):
+            to_trim = False
+            for orb_id in orb_id_trim:
+                if orb_id == ind[0] or orb_id == ind[1]:
+                    to_trim = True
+                    break
+            if not to_trim:
+                remain_terms.append(i)
+        new_indices = [self.indices[i] for i in remain_terms]
+        new_energies = [self.energies[i] for i in remain_terms]
+        self.indices = new_indices
+        self.energies = new_energies
+
 
 class SuperCell(OrbitalSet):
     """
@@ -819,6 +852,12 @@ class SuperCell(OrbitalSet):
         for orb_id in orb_id_trim:
             self.add_vacancy(orb_id)
         self.sync_array(force_sync=True)
+
+        # Also trim hop_modifier
+        if self.hop_modifier is not None:
+            self.hop_modifier.unlock()
+            self.hop_modifier.trim(orb_id_trim)
+            self.hop_modifier.lock()
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
              hop_as_arrows=True):
