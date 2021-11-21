@@ -9,7 +9,7 @@ import tbplas.builder.lattice as lat
 import tbplas.builder.kpoints as kpt
 import tbplas.builder.constants as consts
 import tbplas.builder.exceptions as exc
-from tbplas.builder import PrimitiveCell, extend_prim_cell
+from tbplas.builder import PrimitiveCell, extend_prim_cell, reshape_prim_cell
 from test_utils import TestHelper
 
 
@@ -581,6 +581,37 @@ class TestPrimitive(unittest.TestCase):
         energies, dos = extend_cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
+
+    def test13_reshape_prim_cell(self):
+        """
+        Test function 'reshape_prim_cell'.
+
+        :return: None
+        """
+        print("\nReference rectangular cell:")
+        sqrt3 = 1.73205080757
+        a = 2.46
+        cc_bond = sqrt3 / 3 * a
+        vectors = lat.gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond)
+        cell = PrimitiveCell(vectors)
+        cell.add_orbital((0, 0))
+        cell.add_orbital((0, 2./3))
+        cell.add_orbital((1./2, 1./6))
+        cell.add_orbital((1./2, 1./2))
+        cell.add_hopping([0, 0], 0, 2, -2.7)
+        cell.add_hopping([0, 0], 2, 3, -2.7)
+        cell.add_hopping([0, 0], 3, 1, -2.7)
+        cell.add_hopping([0, 1], 1, 0, -2.7)
+        cell.add_hopping([1, 0], 3, 1, -2.7)
+        cell.add_hopping([1, 0], 2, 0, -2.7)
+        cell.plot()
+
+        print("\nTest rectangular cell:")
+        cell = make_cell()
+        lat_frac = np.array([[1, 0, 0], [-1, 2, 0], [0, 0, 1]])
+        cell = reshape_prim_cell(cell, lat_frac)
+        self.assertEqual(cell.num_orb, 4)
+        cell.plot()
 
 
 if __name__ == "__main__":

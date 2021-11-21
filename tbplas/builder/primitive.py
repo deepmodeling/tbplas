@@ -867,7 +867,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
     Extend primitive cell along a, b and c directions.
 
     :param prim_cell: instance of 'PrimitiveCell'
-        primitive cell from which the extended cell is built
+        primitive cell from which the extended cell is constructed
     :param dim: (na, nb, nc)
         dimension of the extended cell along 3 directions
     :return: extend_cell: instance of 'PrimitiveCell'
@@ -925,3 +925,108 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
 
     extend_cell.sync_array()
     return extend_cell
+
+
+def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
+                      origin: np.ndarray = np.zeros(3),
+                      delta=0.01, pos_tol=1e-5):
+    """
+    Reshape primitive cell to given lattice vectors and origin.
+
+    :param prim_cell: instance of 'PrimitiveCell' class
+        primitive cell from which the reshaped cell is constructed
+    :param lat_frac: (3, 3) int32 array
+        FRACTIONAL coordinates of lattice vectors of reshaped cell in basis
+        vectors of primitive cell
+    :param origin: (3,) float64 array
+        FRACTIONAL coordinates of origin of reshaped cell in basis vectors
+        of reshaped cell
+    :param delta: float64
+        small parameter to add to origin such that orbitals fall on cell
+        borders will not be clipped
+        This parameter will be subtracted from orbital positions of reshaped
+        cell. So the origin is still correct.
+    :param pos_tol: float64
+        tolerance on positions for identifying equivalent orbitals
+    :return: res_cell: instance of 'PrimitiveCell' class
+        reshaped cell
+    :raises LatVecError: if lat_frac.shape != (3, 3)
+    :raises ValueError: if origin.shape != (3,)
+    """
+    # Check lattice vectors and origin
+    lat_frac = np.array(lat_frac, dtype=np.int32)
+    if lat_frac.shape != (3, 3):
+        raise exc.LatVecError()
+    if origin.shape != (3,):
+        raise ValueError("Length of origin is not 3")
+
+    # Conversion matrix of fractional coordinates from primitive cell to
+    # reshaped cell: x_res = x_prim * conv_mat, with x_new and x_prim
+    # being ROW vectors
+    conv_mat = np.linalg.inv(lat_frac)
+
+    # Function for getting cell index from fractional coordinates
+    def _get_cell_index(x):
+        return math.floor(x.item(0)), math.floor(x.item(1)), \
+               math.floor(x.item(2))
+
+    # Create reshaped cell
+    lat_cart = np.zeros((3, 3), dtype=np.float64)
+    for i_dim in range(3):
+        lat_cart[i_dim] = np.matmul(lat_frac[i_dim], prim_cell.lat_vec)
+    res_cell = PrimitiveCell(lat_cart, unit=1.0)
+
+    # Add orbitals
+    prim_cell.sync_array()
+    rn_range = np.zeros((3, 3), dtype=np.int32)
+    for i_dim in range(3):
+        rn_range[i_dim, 0] = lat_frac[:, i_dim].min() - 1
+        rn_range[i_dim, 1] = lat_frac[:, i_dim].max() + 1
+
+    orb_id_pc, orb_id_sc = [], {}
+    id_sc = 0
+    for i_a in range(rn_range.item(0, 0), rn_range.item(0, 1)+1):
+        for i_b in range(rn_range.item(1, 0), rn_range.item(1, 1)+1):
+            for i_c in range(rn_range.item(2, 0), rn_range.item(2, 1)+1):
+                rn = (i_a, i_b, i_c)
+                for i_o, pos in enumerate(prim_cell.orb_pos):
+                    res_pos = np.matmul(rn + pos, conv_mat) - origin + delta
+                    res_rn = _get_cell_index(res_pos)
+                    if res_rn == (0, 0, 0):
+                        id_pc = (i_a, i_b, i_c, i_o)
+                        orb_id_pc.append(id_pc)
+                        orb_id_sc[id_pc] = id_sc
+                        id_sc += 1
+                        res_cell.add_orbital(res_pos,
+                                             prim_cell.orb_eng.item(i_o))
+
+    # Add hopping terms
+    res_cell.sync_array()
+    for id_sc_i in range(res_cell.num_orb):
+        id_pc_i = orb_id_pc[id_sc_i]
+        for i_h, hop in enumerate(prim_cell.hop_ind):
+            if id_pc_i[3] == hop.item(3):
+                # Get fractional coordinate of id_sc_j in reshaped cell
+                rn = id_pc_i[:3] + hop[:3]
+                pos = prim_cell.orb_pos[hop.item(4)]
+                res_pos = np.matmul(rn + pos, conv_mat) - origin + delta
+
+                # Wrap back into (0, 0, 0)-th reshaped cell
+                res_rn = _get_cell_index(res_pos)
+                res_pos -= res_rn
+
+                # Determine corresponding id_sc_j
+                for id_pc_j in orb_id_pc:
+                    if id_pc_j[3] == hop.item(4):
+                        id_sc_j = orb_id_sc[id_pc_j]
+                        chk_pos = res_cell.orb_pos[id_sc_j]
+                        if np.linalg.norm(chk_pos - res_pos) <= pos_tol:
+                            res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
+                                                 prim_cell.hop_eng[i_h])
+
+    # Subtract delta from orbital positions
+    res_cell.orb_pos -= delta
+    for i_o, pos in enumerate(res_cell.orb_pos):
+        res_cell.orbital_list[i_o].position = tuple(pos)
+    res_cell.sync_array()
+    return res_cell
