@@ -21,8 +21,8 @@ except ImportError:
 
 # Generate f2py interface
 f90_dir = 'tbplas/fortran'
-os.system('f2py -h %s/f2py.pyf -m f2py %s/{analysis,tbpm}.f90 \
-          --overwrite-signature' % (f90_dir, f90_dir))
+os.system(f'f2py -h %s/f2py.pyf -m f2py --overwrite-signature '
+          f'{f90_dir}/analysis.f90 {f90_dir}/tbpm.f90')
 
 # NOTE: DO NOT change the ordering of f90 files. Otherwise the
 # dependencies will be violated the compilation will fail.
@@ -83,6 +83,6 @@ setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
-    packages=['tbplas.builder'],
+    packages=['tbplas.builder', 'tbplas.builder.adapter'],
     ext_modules=cythonize(c_extensions),
 )
