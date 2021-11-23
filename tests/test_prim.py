@@ -298,7 +298,7 @@ class TestPrimitive(unittest.TestCase):
 
     def test06_add_hopping(self):
         """
-        Test if add_hopping works as expected.
+        Test if add_hopping and add_hopping_matrix work as expected.
 
         :return: None
         """
@@ -337,6 +337,33 @@ class TestPrimitive(unittest.TestCase):
         cell.add_hopping(rn=(0, 0), orb_i=1, orb_j=0, energy=-2.8)
         self.assertEqual(len(cell.hopping_list), 3)
         self.assertAlmostEqual(cell.hopping_list[1].energy, -2.8)
+
+        # Add hopping as matrix
+        cell = make_cell()
+
+        # Error handling
+        test_mat = np.zeros((3, 3))
+        with self.assertRaises(ValueError) as cm:
+            cell.add_hopping_matrix([0, 0], test_mat)
+        self.assertRegex(str(cm.exception), r"Shape of hopping matrix \(3, 3\) "
+                                            r"does not match num_orb 2")
+
+        # Normal case
+        hop_mat_00 = np.array([[0.7, -2.5], [-2.6, 3.6]])
+        hop_mat_10 = np.array([[1.2, -2.6], [-2.3, 1.1]])
+        hop_mat_01 = np.array([[1.6, -2.8], [-2.7, 1.2]])
+        cell.add_hopping_matrix([0, 0], hop_mat_00)
+        cell.add_hopping_matrix([1, 0], hop_mat_10)
+        cell.add_hopping_matrix([0, 1], hop_mat_01)
+        self.assertEqual(cell.get_hopping([0, 0], 0, 1).energy, -2.6)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 0).energy, 1.2)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 1).energy, 1.1)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 1).energy, -2.6)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 0).energy, -2.3)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 0).energy, 1.6)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
 
     def test06_get_hopping(self):
         """

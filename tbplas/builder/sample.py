@@ -790,6 +790,8 @@ class Sample:
         :param basis: string
             basis function to approximate the Delta function
             should be either "Gaussian" or "Lorentzian"
+        :param kwargs: dictionary
+            arguments for method 'calc_bands'
         :return: energies: (num_grid,) float64 array
             energy grid corresponding to e_min, e_max and e_step
         :return: dos: (num_grid,) float64 array

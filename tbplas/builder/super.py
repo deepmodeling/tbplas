@@ -209,6 +209,8 @@ class OrbitalSet(LockableObject):
             vacancy index in primitive cell representation
         :param sync_array: boolean
             whether to call 'sync_array' to update the arrays
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.vacancy_list is modified.
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
@@ -239,12 +241,16 @@ class OrbitalSet(LockableObject):
             if sync_array:
                 self.sync_array(**kwargs)
 
-    def set_vacancies(self, vacancies=None, **kwargs):
+    def set_vacancies(self, vacancies=None, sync_array=True, **kwargs):
         """
         Reset the list of vacancies to given ones.
 
         :param vacancies: list of (ia, ib, ic, io) or equivalent int32 arrays
             list of indices of vacancies in primitive cell representation
+        :param sync_array: boolean
+            whether to call 'sync_array' to update the arrays
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.vacancy_list is modified.
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
@@ -257,7 +263,8 @@ class OrbitalSet(LockableObject):
         self.vacancy_list = []
         for vacancy in vacancies:
             self.add_vacancy(vacancy)
-        self.sync_array(**kwargs)
+        if sync_array:
+            self.sync_array(**kwargs)
 
     def sync_array(self, verbose=False, force_sync=False):
         """

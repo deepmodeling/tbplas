@@ -230,6 +230,8 @@ class PrimitiveCell(LockableObject):
         :param sync_array: boolean
             whether to call 'sync_array' to update numpy arrays
             according to orbitals and hopping terms
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.orbital_list is modified.
         :raises PCLockError: if the primitive cell is locked
@@ -267,6 +269,8 @@ class PrimitiveCell(LockableObject):
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.orbital_list is modified.
         :raises PCLockError: if the primitive cell is locked
@@ -322,6 +326,8 @@ class PrimitiveCell(LockableObject):
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.orbital_list and self.hopping_list are modified.
         :raises PCLockError: if the primitive cell is locked
@@ -424,8 +430,8 @@ class PrimitiveCell(LockableObject):
                 pass
         return id_same, id_conj
 
-    def add_hopping(self, rn, orb_i, orb_j, energy, sync_array=False,
-                    verbose=False, **kwargs):
+    def add_hopping(self, rn, orb_i, orb_j, energy, verbose=False,
+                    sync_array=False, **kwargs):
         """
         Add a new hopping term to the primitive cell, or update an existing
         hopping term.
@@ -438,11 +444,13 @@ class PrimitiveCell(LockableObject):
             index of orbital j in <i,0|H|j,R>
         :param energy: float
             hopping integral in eV
+        :param verbose: boolean
+            whether to output additional debugging information
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
-        :param verbose: boolean
-            whether to output additional debugging information
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.hopping_list is modified.
         :raises PCLockError: if the primitive cell is locked
@@ -477,15 +485,52 @@ class PrimitiveCell(LockableObject):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def add_hopping_matrix(self, rn, energy, **kwargs):
+    def add_hopping_matrix(self, rn, energy: np.ndarray, eng_cutoff=1e-5,
+                           verbose=False, sync_array=False, **kwargs):
         """
+        Add a matrix of hopping terms to the primitive cell, or update existing
+        hopping terms.
 
-        :param rn:
-        :param energy:
-        :param kwargs:
-        :return:
+        :param rn: (ra, rb, rc)
+            cell index of the hopping term, i.e. R
+        :param energy: (num_orb, num_orb) complex128 array
+            hopping energies in matrix form
+        :param eng_cutoff: float
+            energy cutoff for hopping terms in eV
+            Hopping terms with energy below this threshold will be dropped.
+        :param verbose: boolean
+            whether to output additional debugging information
+        :param sync_array: boolean
+            whether to call sync_array to update numpy arrays
+            according to orbitals and hopping terms
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
+        :return: None
+        :raises PCLockError: if the primitive cell is locked
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        :raises ValueError: if shape of hopping matrix does not match number of
+            orbitals
         """
-        pass
+        energy = np.array(energy)
+        if energy.shape != (self.num_orb, self.num_orb):
+            raise ValueError(f"Shape of hopping matrix {energy.shape} does not "
+                             f"match num_orb {self.num_orb}")
+
+        # Check if rn == (0, 0, 0)
+        is_r0 = True
+        for v in rn:
+            if v != 0:
+                is_r0 = False
+
+        # Add hopping terms
+        for orb_i in range(energy.shape[0]):
+            for orb_j in range(energy.shape[1]):
+                if not (is_r0 and orb_i == orb_j):
+                    hop_eng = energy.item(orb_i, orb_j)
+                    if abs(hop_eng) >= eng_cutoff:
+                        self.add_hopping(rn, orb_i, orb_j, hop_eng, verbose)
+        if sync_array:
+            self.sync_array(**kwargs)
 
     def get_hopping(self, rn, orb_i, orb_j, verbose=True):
         """
@@ -521,8 +566,8 @@ class PrimitiveCell(LockableObject):
         else:
             raise exc.PCHopNotFoundError(new_hopping.index)
 
-    def remove_hopping(self, rn, orb_i, orb_j, sync_array=False,
-                       verbose=False, **kwargs):
+    def remove_hopping(self, rn, orb_i, orb_j, verbose=False,
+                       sync_array=False, **kwargs):
         """
         Remove given hopping term.
 
@@ -532,11 +577,13 @@ class PrimitiveCell(LockableObject):
             index of orbital i in <i,0|H|j,R>
         :param orb_j: integer
             index of orbital j in <i,0|H|j,R>
+        :param verbose: boolean
+            whether to output additional debugging information
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
-        :param verbose: boolean
-            whether to output additional debugging information
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
         :return: None
             self.hopping_list is modified.
         :raises PCLockError: if the primitive cell is locked
