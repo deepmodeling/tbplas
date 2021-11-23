@@ -424,7 +424,8 @@ class PrimitiveCell(LockableObject):
                 pass
         return id_same, id_conj
 
-    def add_hopping(self, rn, orb_i, orb_j, energy, sync_array=False, **kwargs):
+    def add_hopping(self, rn, orb_i, orb_j, energy, sync_array=False,
+                    verbose=False, **kwargs):
         """
         Add a new hopping term to the primitive cell, or update an existing
         hopping term.
@@ -440,6 +441,8 @@ class PrimitiveCell(LockableObject):
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
+        :param verbose: boolean
+            whether to output additional debugging information
         :return: None
             self.hopping_list is modified.
         :raises PCLockError: if the primitive cell is locked
@@ -457,22 +460,34 @@ class PrimitiveCell(LockableObject):
         # Update existing hopping term, or add the new term to hopping_list.
         if id_same is not None:
             exist_hopping = self.hopping_list[id_same]
-            print("INFO: updating existing hopping term")
-            print(" ", exist_hopping.index, exist_hopping.energy,
-                  "->", new_hopping.energy)
+            if verbose:
+                print("INFO: updating existing hopping term")
+                print(" ", exist_hopping.index, exist_hopping.energy,
+                      "->", new_hopping.energy)
             exist_hopping.energy = new_hopping.energy
         elif id_conj is not None:
             exist_hopping = self.hopping_list[id_conj]
-            print("INFO: updating existing conjugate hopping term")
-            print(" ", exist_hopping.index, exist_hopping.energy,
-                  "->", new_hopping.energy.conjugate())
+            if verbose:
+                print("INFO: updating existing conjugate hopping term")
+                print(" ", exist_hopping.index, exist_hopping.energy,
+                      "->", new_hopping.energy.conjugate())
             exist_hopping.energy = new_hopping.energy.conjugate()
         else:
             self.hopping_list.append(new_hopping)
         if sync_array:
             self.sync_array(**kwargs)
 
-    def get_hopping(self, rn, orb_i, orb_j):
+    def add_hopping_matrix(self, rn, energy, **kwargs):
+        """
+
+        :param rn:
+        :param energy:
+        :param kwargs:
+        :return:
+        """
+        pass
+
+    def get_hopping(self, rn, orb_i, orb_j, verbose=True):
         """
         Get given hopping term or its conjugate counterpart.
 
@@ -482,6 +497,8 @@ class PrimitiveCell(LockableObject):
             index of orbital i in <i,0|H|j,R>
         :param orb_j:
             index of orbital j in <i,0|H|j,R>
+        :param verbose: boolean
+            whether to output additional debugging information
         :return: instance of 'Hopping' class
             hopping term or its conjugate counterpart
         :raises PCHopNotFoundError: if rn + (orb_i, orb_j) or its conjugate
@@ -497,13 +514,15 @@ class PrimitiveCell(LockableObject):
         if id_same is not None:
             return self.hopping_list[id_same]
         elif id_conj is not None:
-            print("INFO: given hopping term not found."
-                  " Returning conjugate counterpart instead.")
+            if verbose:
+                print("INFO: given hopping term not found."
+                      " Returning conjugate counterpart instead.")
             return self.hopping_list[id_conj]
         else:
             raise exc.PCHopNotFoundError(new_hopping.index)
 
-    def remove_hopping(self, rn, orb_i, orb_j, sync_array=False, **kwargs):
+    def remove_hopping(self, rn, orb_i, orb_j, sync_array=False,
+                       verbose=False, **kwargs):
         """
         Remove given hopping term.
 
@@ -516,6 +535,8 @@ class PrimitiveCell(LockableObject):
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
+        :param verbose: boolean
+            whether to output additional debugging information
         :return: None
             self.hopping_list is modified.
         :raises PCLockError: if the primitive cell is locked
@@ -535,15 +556,17 @@ class PrimitiveCell(LockableObject):
         # Remove the given item or its conjugate counterpart.
         if id_same is not None:
             exist_hopping = self.hopping_list[id_same]
-            print("INFO: removing hopping term")
-            print(" ", exist_hopping.index, exist_hopping.energy)
+            if verbose:
+                print("INFO: removing hopping term")
+                print(" ", exist_hopping.index, exist_hopping.energy)
             self.hopping_list.pop(id_same)
             if sync_array:
                 self.sync_array(**kwargs)
         elif id_conj is not None:
             exist_hopping = self.hopping_list[id_conj]
-            print("INFO: removing conjugate hopping term")
-            print(" ", exist_hopping.index, exist_hopping.energy)
+            if verbose:
+                print("INFO: removing conjugate hopping term")
+                print(" ", exist_hopping.index, exist_hopping.energy)
             self.hopping_list.pop(id_conj)
             if sync_array:
                 self.sync_array(**kwargs)
