@@ -112,7 +112,7 @@ def dump_csr(indptr, indices):
             print(i0, indices[ptr])
 
 
-class TestSample(unittest.TestCase):
+class TestGraphene(unittest.TestCase):
     def setUp(self) -> None:
         return super().setUp()
 

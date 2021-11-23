@@ -10,7 +10,7 @@ from tbplas.builder import PrimitiveCell, OrbitalSet, IntraHopping, SuperCell
 from test_utils import TestHelper
 
 
-class TestSample(unittest.TestCase):
+class TestSuper(unittest.TestCase):
     def setUp(self) -> None:
         vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         self.cell = PrimitiveCell(vectors)

@@ -11,7 +11,7 @@ from tbplas.utils import Timer
 from test_utils import TestHelper
 
 
-class TestSample(unittest.TestCase):
+class TestCore(unittest.TestCase):
     def setUp(self) -> None:
         vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         self.cell = PrimitiveCell(vectors)
