@@ -482,16 +482,14 @@ class PrimitiveCell(LockableObject):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def add_hopping_matrix(self, rn, energy: np.ndarray, eng_cutoff=1e-5,
-                           verbose=False, sync_array=False, **kwargs):
+    def add_hopping_dict(self, hop_dict, eng_cutoff=1e-5, verbose=False,
+                         sync_array=False, **kwargs):
         """
         Add a matrix of hopping terms to the primitive cell, or update existing
         hopping terms.
 
-        :param rn: (ra, rb, rc)
-            cell index of the hopping term, i.e. R
-        :param energy: (num_orb, num_orb) complex128 array
-            hopping energies in matrix form
+        :param hop_dict: instance of 'HopDict' class
+            hopping dictionary
         :param eng_cutoff: float
             energy cutoff for hopping terms in eV
             Hopping terms with energy below this threshold will be dropped.
@@ -504,26 +502,11 @@ class PrimitiveCell(LockableObject):
             arguments for method 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
-        :raises CellIndexLenError: if len(rn) != 2 or 3
-        :raises ValueError: if shape of hopping matrix does not match number of
-            orbitals
         """
-        energy = np.array(energy)
-        if energy.shape != (self.num_orb, self.num_orb):
-            raise ValueError(f"Shape of hopping matrix {energy.shape} does not "
-                             f"match num_orb {self.num_orb}")
-
-        # Check if rn == (0, 0, 0)
-        is_r0 = True
-        for v in rn:
-            if v != 0:
-                is_r0 = False
-
-        # Add hopping terms
-        for orb_i in range(energy.shape[0]):
-            for orb_j in range(energy.shape[1]):
-                if not (is_r0 and orb_i == orb_j):
-                    hop_eng = energy.item(orb_i, orb_j)
+        for rn, hop_mat in hop_dict.dict.items():
+            for orb_i in range(hop_mat.shape[0]):
+                for orb_j in range(hop_mat.shape[1]):
+                    hop_eng = hop_mat.item(orb_i, orb_j)
                     if abs(hop_eng) >= eng_cutoff:
                         self.add_hopping(rn, orb_i, orb_j, hop_eng, verbose)
         if sync_array:

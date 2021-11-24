@@ -9,7 +9,8 @@ import tbplas.builder.lattice as lat
 import tbplas.builder.kpoints as kpt
 import tbplas.builder.constants as consts
 import tbplas.builder.exceptions as exc
-from tbplas.builder import PrimitiveCell, extend_prim_cell, reshape_prim_cell
+from tbplas.builder import (PrimitiveCell, extend_prim_cell, reshape_prim_cell,
+                            HopDict)
 from test_utils import TestHelper
 
 
@@ -338,33 +339,6 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(len(cell.hopping_list), 3)
         self.assertAlmostEqual(cell.hopping_list[1].energy, -2.8)
 
-        # Add hopping as matrix
-        cell = make_cell()
-
-        # Error handling
-        test_mat = np.zeros((3, 3))
-        with self.assertRaises(ValueError) as cm:
-            cell.add_hopping_matrix([0, 0], test_mat)
-        self.assertRegex(str(cm.exception), r"Shape of hopping matrix \(3, 3\) "
-                                            r"does not match num_orb 2")
-
-        # Normal case
-        hop_mat_00 = np.array([[0.7, -2.5], [-2.6, 3.6]])
-        hop_mat_10 = np.array([[1.2, -2.6], [-2.3, 1.1]])
-        hop_mat_01 = np.array([[1.6, -2.8], [-2.7, 1.2]])
-        cell.add_hopping_matrix([0, 0], hop_mat_00)
-        cell.add_hopping_matrix([1, 0], hop_mat_10)
-        cell.add_hopping_matrix([0, 1], hop_mat_01)
-        self.assertEqual(cell.get_hopping([0, 0], 0, 1).energy, -2.6)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 0).energy, 1.2)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 1).energy, 1.1)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 1).energy, -2.6)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 0).energy, -2.3)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 0).energy, 1.6)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
-
     def test06_get_hopping(self):
         """
         Test if get_hopping works as expected.
@@ -640,6 +614,128 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.num_orb, 4)
         cell.plot()
 
+    def test14_hop_dict(self):
+        """
+        Test if 'HopDict' class works as expected.
+
+        :return: None
+        """
+        cell = make_cell()
+        hop_dict = HopDict(cell.num_orb)
+        th = TestHelper(self)
+
+        # Test initialization
+        self.assertEqual(hop_dict.mat_shape, (cell.num_orb, cell.num_orb))
+
+        # Test __get_minus_sign
+        rn = (0, -1, 3, 2)
+        minus_rn = (0, 1, -3, -2)
+        self.assertTupleEqual(minus_rn, hop_dict._HopDict__get_minus_rn(rn))
+
+        # Test set_mat and set_zero_mat
+        # Exception handling
+        def _test():
+            hop_dict.set_mat((2, 2, -1, 3), np.zeros(hop_dict.mat_shape))
+        th.test_raise(_test, exc.CoordLenError, r"length of cell index .+ not "
+                                                r"in \(2, 3\)")
+
+        def _test():
+            hop_dict.set_mat((2, 2, -1), np.zeros((3, 3)))
+        th.test_raise(_test, ValueError, r"Shape of hopping matrix .+ does not "
+                                         r"match .+")
+
+        def _test():
+            hop_dict.set_mat((0, 0, 0), np.eye(hop_dict.mat_shape[0]))
+        th.test_raise(_test, exc.PCHopDiagonalError, r"hopping term .+ is "
+                                                     r"diagonal")
+
+        def _test():
+            hop_dict.set_mat((0, 0, 0),
+                             np.array([[0.0, 1-1.2j], [1+1.3j, 0.0]]))
+        th.test_raise(_test, ValueError, r"Hopping matrix at .+ is not "
+                                         r"Hermitian")
+
+        # Normal case of set_zero_mat
+        hop_dict.set_zero_mat((0, 0))
+        hop_dict.set_zero_mat((0, 1))
+        th.test_equal_array(hop_dict.dict[(0, 0, 0)],
+                            np.zeros(hop_dict.mat_shape))
+        th.test_equal_array(hop_dict.dict[(0, 1, 0)],
+                            np.zeros(hop_dict.mat_shape))
+
+        # Normal case of set_mat
+        hop_mat0 = np.array([[0.0, 1-1.2j], [1+1.2j, 0.0]])
+        hop_mat1 = np.array([[1.0, 1-0.5j], [1+0.2j, 2.0]])
+        # Set hopping matrix directly
+        hop_dict.set_mat((0, 0), hop_mat0)
+        th.test_equal_array(hop_dict.dict[(0, 0, 0)], hop_mat0)
+        hop_dict.set_mat((0, 1), hop_mat1)
+        th.test_equal_array(hop_dict.dict[(0, 1, 0)], hop_mat1)
+        # Set conjugate hopping term
+        hop_dict.set_mat((0, -1), hop_mat1)
+        th.test_equal_array(hop_dict.dict[(0, 1, 0)], hop_mat1.T.conj())
+        self.assertTrue((0, -1, 0) not in hop_dict.dict.keys())
+        # Zero all hopping matrices
+        hop_dict.set_zero_mat((0, 0))
+        th.test_equal_array(hop_dict.dict[(0, 0, 0)],
+                            np.zeros(hop_dict.mat_shape))
+        hop_dict.set_zero_mat((0, 1))
+        th.test_equal_array(hop_dict.dict[(0, 1, 0)],
+                            np.zeros(hop_dict.mat_shape))
+
+        # Test set_element
+        def _test():
+            hop_dict.set_element((0, 0), (2, 3), 1.5)
+        th.test_raise(_test, ValueError, r"Element .+ out of range .+")
+
+        def _test():
+            hop_dict.set_element((0, 0), (1, 1), 1.5)
+        th.test_raise(_test, exc.PCHopDiagonalError, r"hopping term .+ is "
+                                                     r"diagonal")
+
+        hop_dict.set_mat((0, 0), hop_mat0)
+        hop_dict.set_mat((0, 1), hop_mat1)
+        hop_dict.set_element((0, 0), (0, 1), 1+1.3j)
+        self.assertEqual(hop_dict.dict[(0, 0, 0)].item(0, 1), 1+1.3j)
+        self.assertEqual(hop_dict.dict[(0, 0, 0)].item(1, 0), 1-1.3j)
+        hop_dict.set_element((0, -1), (0, 1), 0.5-1.5j)
+        self.assertEqual(hop_dict.dict[(0, 1, 0)].item(1, 0), 0.5+1.5j)
+        hop_dict.set_element((1, 0), (0, 1), 1.2j)
+        self.assertTrue((1, 0, 0) in hop_dict.dict.keys())
+        self.assertEqual(hop_dict.dict[(1, 0, 0)].item(0, 1), 1.2j)
+
+        # Test delete_mat
+        hop_dict.delete_mat((0, 0))
+        self.assertTrue((0, 0, 0) not in hop_dict.dict.keys())
+        hop_dict.delete_mat((0, 1))
+        self.assertTrue((0, 1, 0) not in hop_dict.dict.keys())
+        hop_dict.delete_mat((-1, 0))
+        self.assertTrue((1, 0, 0) not in hop_dict.dict.keys())
+
+    def test15_add_hopping_dict(self):
+        """
+        Test function 'add_hopping_dict'.
+
+        :return: None
+        """
+        cell = make_cell()
+        hop_dict = HopDict(cell.num_orb)
+        hop_mat_00 = np.array([[0.0, -2.5], [-2.5, 0.0]])
+        hop_mat_10 = np.array([[1.2, -2.6], [-2.3, 1.1]])
+        hop_mat_01 = np.array([[1.6, -2.8], [-2.7, 1.2]])
+        hop_dict.set_mat([0, 0], hop_mat_00)
+        hop_dict.set_mat([1, 0], hop_mat_10)
+        hop_dict.set_mat([0, 1], hop_mat_01)
+        cell.add_hopping_dict(hop_dict)
+        self.assertEqual(cell.get_hopping([0, 0], 0, 1).energy, -2.5)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 0).energy, 1.2)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 1).energy, 1.1)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 1).energy, -2.6)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 0).energy, -2.3)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 0).energy, 1.6)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
 
 if __name__ == "__main__":
     unittest.main()
