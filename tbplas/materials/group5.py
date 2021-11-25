@@ -1,85 +1,137 @@
+"""
+Utilities for constructing graphene and silicene samples.
+
+Functions
+---------
+    make_graphene_diamond: user API
+        make graphene primitive cell in diamond shape
+    make_graphene_rect: user API
+        make graphene primitive cell in rectangular shape
+"""
+
 import numpy as np
-import tbplas
+
+from ..builder import PrimitiveCell, cart2frac, HopDict
 
 
-def lattice(SOC=True, a=0.411975806, z=0.16455347):
-    """Antimonene lattice.
-
-    Parameters
-    ----------
-    SOC : bool
-        set to True to include spin orbit coupling
-    a : float
-        lattice constant
-    z : float
-        vertical displacement
-
-    Returns
-    ----------
-    tbplas.Lattice object
-        Antimonene lattice.
+def make_black_phosphorus():
     """
+    Make black phosphorus primitive cell.
 
-    b = a / np.sqrt(3.)
-    vectors = [[1.5 * b, -0.5 * a, 0.], [1.5 * b, 0.5 * a, 0.]]
-    if SOC:
-        n_orbitals_per_site = 6
-    else:
-        n_orbitals_per_site = 3
-    orbital_coords = \
-        [[-b / 2., 0., -z / 2.] for i in range(n_orbitals_per_site)] + \
-        [[b / 2., 0., z / 2.] for i in range(n_orbitals_per_site)]
-    return tbplas.Lattice(vectors, orbital_coords)
+    Reference:
+    https://journals.aps.org/prb/pdf/10.1103/PhysRevB.92.085419
 
-
-def SOC_matrix(SOC_lambda):
-    """On-site SOC matrix.
-
-    Parameters
-    ----------
-    SOC_lambda : float
-        strength of spin orbit coupling
-
-    Returns
-    ----------
-    M : (6, 6) numpy array
-        on-site SOC matrix
+    :return: cell: instance of 'PrimitiveCell' class
+        black phosphorus primitive cell
     """
+    # Geometric constants
+    # Lengths are in nm and angles are in degree.
+    dist_nn = 0.22156
+    dist_nnb = 0.07159
+    theta = 48.395
+    theta_z = 108.657
+    dist_nz = 0.22378
 
-    M = 0.5 * SOC_lambda * np.array([
-        [0.00000 + 0.0000j,   0.0000 + 0.5854j,   0.0000 - 0.5854j,
-         -0.0000 + 0.0000j,   0.7020 - 0.4053j,  -0.0000 - 0.8107j],
-        [0.00000 - 0.5854j,   0.0000 + 0.0000j,   0.0000 + 0.5854j,
-         -0.7020 + 0.4053j,   0.0000 + 0.0000j,  -0.7020 - 0.4053j],
-        [0.00000 + 0.5854j,   0.0000 - 0.5854j,   0.0000 + 0.0000j,
-         -0.0000 + 0.8107j,   0.7020 + 0.4053j,  -0.0000 + 0.0000j],
-        [0.00000 + 0.0000j,  -0.7020 - 0.4053j,   0.0000 - 0.8107j,
-         0.00000 + 0.0000j,   0.0000 - 0.5854j,   0.0000 + 0.5854j],
-        [0.70200 + 0.4053j,  -0.0000 + 0.0000j,   0.7020 - 0.4053j,
-         0.00000 + 0.5854j,   0.0000 + 0.0000j,   0.0000 - 0.5854j],
-        [0.00000 + 0.8107j,  -0.7020 + 0.4053j,   0.0000 + 0.0000j,
-         0.00000 - 0.5854j,   0.0000 + 0.5854j,   0.0000 + 0.0000j]
-    ])
-    return M
+    # Hopping terms in eV
+    t_1 = -1.486
+    t_2 = 3.729
+    t_3 = -0.252
+    t_4 = -0.071
+    t_5 = 0.019
+    t_6 = 0.186
+    t_7 = -0.063
+    t_8 = 0.101
+    t_9 = -0.042
+    t_10 = 0.073
+
+    # Calculate lattice vectors
+    a = 2 * dist_nn * np.sin(np.radians(theta))
+    b = 2 * dist_nnb + 2 * dist_nn * np.cos(np.radians(theta))
+    p = dist_nnb
+    q = dist_nz * np.cos(np.radians(theta_z - 90))
+    vectors = np.array([[a, 0., 0.], [0., b, 0.], [0., 0., 1.]])
+
+    # Calculate orbital coordinates
+    orbital_coords = np.zeros((4, 3))
+    orbital_coords[0] = [0., 0., 0.]
+    orbital_coords[1] = [0., p, q]
+    orbital_coords[2] = [a / 2., b / 2., q]
+    orbital_coords[3] = [a / 2., b / 2. + p, 0.]
+    orbital_coords = cart2frac(vectors, orbital_coords)
+
+    # Create primitive cell and add orbital
+    # Since lattice vectors are already in nm, unit is set to 1.0.
+    cell = PrimitiveCell(lat_vec=vectors, unit=1.0)
+    for coord in orbital_coords:
+        cell.add_orbital(coord)
+
+    # Add hopping terms
+    cell.add_hopping((0, 0), 0, 1, t_2)
+    cell.add_hopping((0, -1), 0, 3, t_1)
+    cell.add_hopping((-1, -1), 0, 3, t_1)
+    cell.add_hopping((0, 0), 0, 2, t_5)
+    cell.add_hopping((-1, 0), 0, 2, t_5)
+    cell.add_hopping((0, -1), 0, 2, t_5)
+    cell.add_hopping((-1, -1), 0, 2, t_5)
+    cell.add_hopping((0, 0), 0, 3, t_4)
+    cell.add_hopping((-1, 0), 0, 3, t_4)
+    cell.add_hopping((0, -1), 0, 1, t_6)
+    cell.add_hopping((1, 0), 0, 0, t_3)
+    cell.add_hopping((0, 1), 0, 0, t_7)
+    cell.add_hopping((-2, -1), 0, 3, t_8)
+    cell.add_hopping((1, -1), 0, 3, t_8)
+    cell.add_hopping((-1, -1), 0, 1, t_9)
+    cell.add_hopping((1, -1), 0, 1, t_9)
+    cell.add_hopping((1, 1), 0, 0, t_10)
+    cell.add_hopping((-1, 1), 0, 0, t_10)
+    cell.add_hopping((0, 0), 1, 2, t_1)
+    cell.add_hopping((-1, 0), 1, 2, t_1)
+    cell.add_hopping((-1, -1), 1, 3, t_5)
+    cell.add_hopping((0, -1), 1, 3, t_5)
+    cell.add_hopping((0, 0), 1, 3, t_5)
+    cell.add_hopping((-1, 0), 1, 3, t_5)
+    cell.add_hopping((-1, -1), 1, 2, t_4)
+    cell.add_hopping((0, -1), 1, 2, t_4)
+    cell.add_hopping((1, 0), 1, 1, t_3)
+    cell.add_hopping((0, 1), 1, 1, t_7)
+    cell.add_hopping((-2, 0), 1, 2, t_8)
+    cell.add_hopping((1, 0), 1, 2, t_8)
+    cell.add_hopping((1, 1), 1, 1, t_10)
+    cell.add_hopping((-1, 1), 1, 1, t_10)
+    cell.add_hopping((1, 0), 2, 2, t_3)
+    cell.add_hopping((0, 1), 2, 2, t_7)
+    cell.add_hopping((1, 1), 2, 2, t_10)
+    cell.add_hopping((-1, 1), 2, 2, t_10)
+    cell.add_hopping((0, 0), 2, 3, t_2)
+    cell.add_hopping((0, -1), 2, 3, t_6)
+    cell.add_hopping((-1, -1), 2, 3, t_9)
+    cell.add_hopping((1, -1), 2, 3, t_9)
+    cell.add_hopping((1, 0), 3, 3, t_3)
+    cell.add_hopping((0, 1), 3, 3, t_7)
+    cell.add_hopping((1, 1), 3, 3, t_10)
+    cell.add_hopping((-1, 1), 3, 3, t_10)
+    return cell
 
 
-def hop_dict(SOC=True, SOC_lambda=0.34):
-    """Antimonene hopping dictionary.
-
-    Parameters
-    ----------
-    SOC : bool
-        set to True to include spin orbit coupling
-    SOC_lambda : float
-        strength of spin orbit coupling
-
-    Returns
-    ----------
-    hops : tbplas.HopDict object
-        antimonene HopDict
+def make_antimonene(with_soc=True, soc_lambda=0.34):
     """
+    Make antimonene primitive cell.
 
-    # hopping parameters
+    Reference:
+    https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.081407
+
+    :param with_soc: boolean
+        whether to include spin-orbital coupling in constructing the model
+    :param soc_lambda: float
+        strength of spin-orbital coupling
+    :return: cell: instance of 'PrimitiveCell' class
+        antimonene primitive cell
+    """
+    # Geometric constants
+    a = 0.411975806
+    z = 0.16455347
+
+    # Hopping terms
     t_01 = -2.09
     t_02 = 0.47
     t_03 = 0.18
@@ -96,20 +148,52 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     t_14 = -0.03
     t_15 = -0.04
 
-    # first construct HopDict for SOC = False
-    hop_dict = tbplas.HopDict()
-    rel_unit_cells = [(0, 0, 0), (1, 0, 0), (0, 1, 0),
-                      (1, -1, 0), (1, 1, 0), (1, -2, 0), (0, 2, 0),
-                      (2, -1, 0), (2, 0, 0), (2, -2, 0), (-1, 1, 0),
-                      (-1, 0, 0), (0, -1, 0), (-1, 2, 0), (0, -2, 0),
-                      (-2, 1, 0), (-2, 0, 0), (-2, 2, 0), (-1, -1, 0)]
-    for uc in rel_unit_cells:
-        hop_dict.empty(uc, (6, 6))
+    # SOC coupling matrix
+    soc_mat = 0.5 * soc_lambda * np.array([
+        [0.00000 + 0.0000j, 0.0000 + 0.5854j, 0.0000 - 0.5854j,
+         -0.0000 + 0.0000j, 0.7020 - 0.4053j, -0.0000 - 0.8107j],
+        [0.00000 - 0.5854j, 0.0000 + 0.0000j, 0.0000 + 0.5854j,
+         -0.7020 + 0.4053j, 0.0000 + 0.0000j, -0.7020 - 0.4053j],
+        [0.00000 + 0.5854j, 0.0000 - 0.5854j, 0.0000 + 0.0000j,
+         -0.0000 + 0.8107j, 0.7020 + 0.4053j, -0.0000 + 0.0000j],
+        [0.00000 + 0.0000j, -0.7020 - 0.4053j, 0.0000 - 0.8107j,
+         0.00000 + 0.0000j, 0.0000 - 0.5854j, 0.0000 + 0.5854j],
+        [0.70200 + 0.4053j, -0.0000 + 0.0000j, 0.7020 - 0.4053j,
+         0.00000 + 0.5854j, 0.0000 + 0.0000j, 0.0000 - 0.5854j],
+        [0.00000 + 0.8107j, -0.7020 + 0.4053j, 0.0000 + 0.0000j,
+         0.00000 - 0.5854j, 0.0000 + 0.5854j, 0.0000 + 0.0000j]
+    ])
 
-    ####################
-    # NEAREST NEIGHBOURS
-    ####################
+    # Calculate lattice vectors
+    b = a / np.sqrt(3.)
+    vectors = np.array([[1.5 * b, -0.5 * a, 0.],
+                        [1.5 * b, 0.5 * a, 0.],
+                        [0.0, 0.0, 1.0]])
 
+    # Calculate orbital coordinates
+    num_orb_per_site = 3
+    if with_soc:
+        num_orb_per_site *= 2
+    coord_site_1 = [-b / 2., 0., -z / 2.]
+    coord_site_2 = [b / 2., 0., z / 2.]
+    orbital_coords = [coord_site_1 for _ in range(num_orb_per_site)]
+    orbital_coords.extend([coord_site_2 for _ in range(num_orb_per_site)])
+    orbital_coords = np.array(orbital_coords)
+    orbital_coords = cart2frac(vectors, orbital_coords)
+
+    # Create primitive cell and add orbital
+    # Since lattice vectors are already in nm, unit is set to 1.0.
+    cell = PrimitiveCell(lat_vec=vectors, unit=1.0)
+    for coord in orbital_coords:
+        cell.add_orbital(coord)
+
+    # Build hop_dict
+    if with_soc:
+        hop_dict = HopDict(cell.num_orb // 2)
+    else:
+        hop_dict = HopDict(cell.num_orb)
+
+    # 1st NEAREST NEIGHBOURS
     hop_dict.set_element((0, -1, 0), (0, 3), t_01)
     hop_dict.set_element((0, 0, 0), (1, 4), t_01)
     hop_dict.set_element((-1, 0, 0), (2, 5), t_01)
@@ -143,10 +227,7 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     hop_dict.set_element((0, 1, 0), (5, 0), t_07)
     hop_dict.set_element((0, 0, 0), (5, 1), t_07)
 
-    ####################
-    # NEXT-NEAREST NEIGHBOURS
-    ####################
-
+    # 2nd NEAREST NEIGHBOURS
     hop_dict.set_element((-1, 1, 0), (0, 0), t_03)
     hop_dict.set_element((0, 1, 0), (0, 0), t_03)
     hop_dict.set_element((1, -1, 0), (0, 0), t_03)
@@ -211,11 +292,8 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     hop_dict.set_element((0, -1, 0), (5, 5), t_11)
     hop_dict.set_element((0, 1, 0), (5, 5), t_11)
 
-    ####################
-    # NEXT-NEXT-NEAREST NEIGHBOURS
+    # 3rd NEAREST NEIGHBOURS
     # ACROSS THE HEXAGON
-    ####################
-
     hop_dict.set_element((-1, 1, 0), (0, 4), t_08)
     hop_dict.set_element((-1, 1, 0), (0, 5), t_08)
     hop_dict.set_element((-1, -1, 0), (1, 5), t_08)
@@ -242,11 +320,8 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     hop_dict.set_element((1, 1, 0), (5, 0), t_12)
     hop_dict.set_element((1, -1, 0), (5, 1), t_12)
 
-    ####################
-    # NEXT-NEXT-NEAREST NEIGHBOURS
+    # 3rd NEAREST NEIGHBOURS
     # ACROSS THE ZIGZAG
-    ####################
-
     hop_dict.set_element((1, -2, 0), (0, 3), t_05)
     hop_dict.set_element((0, -2, 0), (0, 3), t_05)
     hop_dict.set_element((0, 1, 0), (1, 4), t_05)
@@ -299,11 +374,8 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     hop_dict.set_element((0, 2, 0), (5, 2), t_13)
     hop_dict.set_element((0, -1, 0), (5, 2), t_13)
 
-    ####################
-    # NEXT-NEXT-NEXT-NEAREST NEIGHBOURS
+    # 4th NEAREST NEIGHBOURS
     # ACROSS THE ZIGZAG
-    ####################
-
     hop_dict.set_element((0, -2, 0), (0, 1), t_14)
     hop_dict.set_element((2, -2, 0), (0, 2), t_14)
     hop_dict.set_element((2, 0, 0), (1, 2), t_14)
@@ -330,220 +402,26 @@ def hop_dict(SOC=True, SOC_lambda=0.34):
     hop_dict.set_element((2, -2, 0), (3, 5), t_15)
     hop_dict.set_element((2, 0, 0), (4, 5), t_15)
 
-    # deal with SOC
-    if SOC:
+    # Deal with SOC
+    if with_soc:
+        hop_dict.set_num_orb(cell.num_orb)
         for rel_unit_cell, hop in hop_dict.dict.items():
-            newhop = np.zeros((12, 12), dtype="complex")
+            new_hop = np.zeros((12, 12), dtype="complex")
             hop00 = hop[0:3, 0:3]
             hop01 = hop[0:3, 3:6]
             hop10 = hop[3:6, 0:3]
             hop11 = hop[3:6, 3:6]
-            newhop[0:3, 0:3] = hop00
-            newhop[3:6, 3:6] = hop00
-            newhop[0:3, 6:9] = hop01
-            newhop[3:6, 9:12] = hop01
-            newhop[6:9, 0:3] = hop10
-            newhop[9:12, 3:6] = hop10
-            newhop[6:9, 6:9] = hop11
-            newhop[9:12, 9:12] = hop11
-            hop_dict.set(rel_unit_cell, newhop)
-        hop_dict.dict[(0, 0, 0)] += np.kron(np.eye(2), SOC_matrix(SOC_lambda))
+            new_hop[0:3, 0:3] = hop00
+            new_hop[3:6, 3:6] = hop00
+            new_hop[0:3, 6:9] = hop01
+            new_hop[3:6, 9:12] = hop01
+            new_hop[6:9, 0:3] = hop10
+            new_hop[9:12, 3:6] = hop10
+            new_hop[6:9, 6:9] = hop11
+            new_hop[9:12, 9:12] = hop11
+            hop_dict.set_mat(rel_unit_cell, new_hop)
+        hop_dict.dict[(0, 0, 0)] += np.kron(np.eye(2), soc_mat)
 
-    return hop_dict
-
-
-def sheet(W, H, SOC=True):
-    """Antimonene SiteSet for a rectangular sheet.
-
-    Parameters
-    ----------
-    W : integer
-        width of SiteSet in unit cells
-    H : integer
-        height of SiteSet in unit cells
-    SOC : bool
-        set to True to include spin orbit coupling
-
-    Returns
-    ----------
-    site_set : tbplas.SiteSet object
-        rectangular antimonene SiteSet
-    """
-
-    site_set = tbplas.SiteSet()
-    if SOC:
-        n_orbs = 12
-    else:
-        n_orbs = 6
-    for x in range(int(W / 2)):
-        for y in range(H):
-            i, j = x - y, x + y
-            for orb in range(n_orbs):
-                unit_cell_coords = (i, j, 0)
-                site_set.add_site(unit_cell_coords, orb)
-                unit_cell_coords = (i, j + 1, 0)
-                site_set.add_site(unit_cell_coords, orb)
-    return site_set
-
-
-def pbc(W, H, unit_cell_coords, orbital):
-    """PBC for a rectangular antimonene sheet.
-
-    Parameters
-    ----------
-    W : integer
-        width of SiteSet in unit cells
-    H : integer
-        height of SiteSet in unit cells
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-
-    Returns
-    ----------
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-    """
-
-    # get input
-    x, y, z = unit_cell_coords
-    # transform to rectangular coords (xloc, yloc)
-    xloc = (x + y) / 2.
-    yloc = (y - x) / 2.
-    # use standard pbc
-    xloc = xloc % (W / 2)
-    yloc = yloc % H
-    # transform back
-    x = int(xloc - yloc)
-    y = int(xloc + yloc)
-    # done
-    return (x, y, z), orbital
-
-
-def pbc_armchair(W, H, unit_cell_coords, orbital):
-    """PBC for a rectangular antimonene sheet
-    with an armchair edge.
-
-    Parameters
-    ----------
-    W : integer
-        width of SiteSet in unit cells
-    H : integer
-        height of SiteSet in unit cells
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-
-    Returns
-    ----------
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-    """
-
-    # get input
-    x, y, z = unit_cell_coords
-    # transform to rectangular coords (xloc, yloc)
-    xloc = (x + y) / 2.
-    yloc = (y - x) / 2.
-    # use zigzag pbc
-    xloc = xloc % (W / 2)
-    yloc = yloc
-    # transform back
-    x = int(xloc - yloc)
-    y = int(xloc + yloc)
-    # done
-    return (x, y, z), orbital
-
-
-def pbc_zigzag(W, H, unit_cell_coords, orbital):
-    """PBC for a rectangular antimonene sheet
-    with a zigzag edge.
-
-    Parameters
-    ----------
-    W : integer
-        width of SiteSet in unit cells
-    H : integer
-        height of SiteSet in unit cells
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-
-    Returns
-    ----------
-    unit_cell_coords : 3-tuple of integers
-        unit cell coordinates
-    orbital : integer
-        orbital index
-    """
-
-    # get input
-    x, y, z = unit_cell_coords
-    # transform to rectangular coords (xloc, yloc)
-    xloc = (x + y) / 2.
-    yloc = (y - x) / 2.
-    # use zigzag pbc
-    xloc = xloc
-    yloc = yloc % H
-    # transform back
-    x = int(xloc - yloc)
-    y = int(xloc + yloc)
-    # done
-    return (x, y, z), orbital
-
-
-def sample(W=500, H=500, SOC=True, SOC_lambda=0.34,
-           a=0.411975806, z=0.16455347, nr_processes=1):
-    """Rectangular antimonene sample.
-
-    Parameters
-    ----------
-    W : integer
-        width of the sample, in unit cells
-    H : integer
-        height of the sample, in unit cells
-    SOC : bool
-        set to True to include spin orbit coupling
-    SOC_lambda : float
-        strength of spin orbit coupling
-    a : float
-        lattice constant
-    z : float
-        vertical displacement
-    nr_processes : integer
-        number of processes for sample building, optional (default 1)
-
-    Returns
-    ----------
-    sample : tbplas.Sample object
-        Antimonene sample.
-    """
-
-    # create lattice, hop_dict and pbc_wrap
-    lat = lattice(SOC, a, z)
-    hops = hop_dict(SOC, SOC_lambda)
-
-    def pbc_wrap(unit_cell_coords, orbital):
-        return pbc(W, H, unit_cell_coords, orbital)
-
-    # create SiteSet object
-    site_set = sheet(W, H, SOC)
-
-    # make sample
-    sample = tbplas.Sample(lat, site_set, pbc_wrap, nr_processes)
-
-    # apply HopDict
-    sample.add_hop_dict(hops)
-
-    # rescale Hamiltonian
-    sample.rescale_H(4.5)
-
-    # done
-    return sample
+    # Apply hop_dict
+    cell.add_hopping_dict(hop_dict)
+    return cell

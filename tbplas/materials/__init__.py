@@ -1,1 +1,1 @@
-__all__ = []
+"""Initialization of materials package."""
