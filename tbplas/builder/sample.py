@@ -30,6 +30,7 @@ from . import exceptions as exc
 from . import core
 from .primitive import correct_coord, LockableObject
 from .super import SuperCell
+from .utils import proj_coord
 
 
 class InterHopping(LockableObject):
@@ -193,7 +194,7 @@ class InterHopping(LockableObject):
         dr = core.build_inter_dr(hop_i, hop_j, pos_bra, pos_ket)
         return dr
 
-    def plot(self, axes: plt.Axes, hop_as_arrows=True):
+    def plot(self, axes: plt.Axes, hop_as_arrows=True, view="ab"):
         """
         Plot hopping terms to axes.
 
@@ -201,6 +202,9 @@ class InterHopping(LockableObject):
             axes on which the figure will be plot
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
+        :param view: string
+            kind of view point
+            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
         :return: None.
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
@@ -208,10 +212,11 @@ class InterHopping(LockableObject):
             self.indices is out of range
         :raises IDPCVacError: if bra or ket in self.indices corresponds
             to a vacancy
+        :raises ValueError: if view is illegal
         """
         # Plot hopping terms
-        orb_pos_i = self.sc_bra.get_orb_pos()
-        orb_pos_j = self.sc_ket.get_orb_pos()
+        orb_pos_i = proj_coord(self.sc_bra.get_orb_pos(), view)
+        orb_pos_j = proj_coord(self.sc_ket.get_orb_pos(), view)
         hop_i, hop_j, hop_v = self.get_hop()
         if hop_as_arrows:
             for i_h in range(hop_i.shape[0]):
@@ -632,7 +637,7 @@ class Sample:
         return indptr, indices, hop, dx, dy
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, hop_as_arrows=True):
+             with_cells=True, hop_as_arrows=True, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -652,6 +657,9 @@ class Sample:
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
+        :param view: string
+            kind of view point
+            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
@@ -659,15 +667,16 @@ class Sample:
             of range
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
+        :raises ValueError: if view is illegal
         """
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
 
         # Plot super cells and hopping terms
         for sc in self.sc_list:
-            sc.plot(axes, with_orbitals, with_cells, hop_as_arrows)
+            sc.plot(axes, with_orbitals, with_cells, hop_as_arrows, view)
         for hop in self.hop_list:
-            hop.plot(axes, hop_as_arrows)
+            hop.plot(axes, hop_as_arrows, view)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):

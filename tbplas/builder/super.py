@@ -21,6 +21,7 @@ import matplotlib.collections as mc
 from . import exceptions as exc
 from . import core
 from .primitive import correct_coord, LockableObject, PrimitiveCell
+from .utils import proj_coord
 
 
 class OrbitalSet(LockableObject):
@@ -867,7 +868,7 @@ class SuperCell(OrbitalSet):
             self.hop_modifier.lock()
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
-             hop_as_arrows=True):
+             hop_as_arrows=True, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms to axes.
 
@@ -879,14 +880,18 @@ class SuperCell(OrbitalSet):
             whether to plot borders of primitive cells
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
+        :param view: string
+            kind of view point
+            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
         :return: None.
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier is out of range
         :raises IDPCVacError: if bra or ket in hop_modifier corresponds
             to a vacancy
+        :raises ValueError: if view is illegal
         """
         # Plot orbitals
-        orb_pos = self.get_orb_pos()
+        orb_pos = proj_coord(self.get_orb_pos(), view)
         orb_eng = self.get_orb_eng()
         if with_orbitals:
             axes.scatter(orb_pos[:, 0], orb_pos[:, 1], c=orb_eng)
@@ -910,28 +915,53 @@ class SuperCell(OrbitalSet):
                 hop_mc.append((pos_i[:2], pos_j[:2]))
             axes.add_collection(mc.LineCollection(hop_mc, colors="r"))
 
-        # Plot borders of primitive cells.
+        # Functions for plotting cells
+        def _asm_coord(a, b):
+            if dim_zero == 0:
+                return 0, a, b
+            elif dim_zero == 1:
+                return a, 0, b
+            else:
+                return a, b, 0
+
+        def _add_grid(r1_max, r2_max):
+            for i1 in range(r1_max + 1):
+                x0 = _asm_coord(i1, 0)
+                x1 = _asm_coord(i1, r2_max)
+                x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
+                x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
+                cell_mc.append((x0, x1))
+            for i2 in range(r2_max + 1):
+                x0 = _asm_coord(0, i2)
+                x1 = _asm_coord(r1_max, i2)
+                x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
+                x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
+                cell_mc.append((x0, x1))
+
+        def _add_vector():
+            x0 = _asm_coord(0, 1)
+            x1 = _asm_coord(1, 0)
+            x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
+            x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
+            axes.arrow(0, 0, x0[0], x0[1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
+            axes.arrow(0, 0, x1[0], x1[1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
+
+        # Plot cells
         if with_cells:
             cell_mc = []
-            for i_a in range(self.dim.item(0)+1):
-                point_0 = (i_a, 0, 0)
-                point_1 = (i_a, self.dim.item(1), 0)
-                point_0 = np.matmul(point_0, self.pc_lat_vec)
-                point_1 = np.matmul(point_1, self.pc_lat_vec)
-                cell_mc.append((point_0[:2], point_1[:2]))
-            for i_b in range(self.dim.item(1)+1):
-                point_0 = (0, i_b, 0)
-                point_1 = (self.dim.item(0), i_b, 0)
-                point_0 = np.matmul(point_0, self.pc_lat_vec)
-                point_1 = np.matmul(point_1, self.pc_lat_vec)
-                cell_mc.append((point_0[:2], point_1[:2]))
+            if view in ("ab", "ba"):
+                dim_zero = 2
+                _add_grid(self.dim.item(0), self.dim.item(1))
+            elif view in ("bc", "cb"):
+                dim_zero = 0
+                _add_grid(self.dim.item(1), self.dim.item(2))
+            else:
+                dim_zero = 1
+                _add_grid(self.dim.item(0), self.dim.item(2))
             axes.add_collection(mc.LineCollection(cell_mc, color="k",
                                                   linestyle=":"))
-
-        # Plot lattice vectors of primitive cell
-        axes.arrow(0, 0, self.pc_lat_vec[0, 0], self.pc_lat_vec[0, 1],
-                   color="k", length_includes_head=True, width=0.005,
-                   head_width=0.02)
-        axes.arrow(0, 0, self.pc_lat_vec[1, 0], self.pc_lat_vec[1, 1],
-                   color="k", length_includes_head=True, width=0.005,
-                   head_width=0.02)
+            _add_vector()

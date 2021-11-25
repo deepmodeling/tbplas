@@ -35,6 +35,7 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
+from .utils import proj_coord
 
 
 def correct_coord(coord, complete_item=0):
@@ -857,7 +858,8 @@ class PrimitiveCell(LockableObject):
                 print("INFO: no need to update pc hopping arrays")
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, with_conj=True, hop_as_arrows=True):
+             with_cells=True, with_conj=True, hop_as_arrows=True,
+             view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -879,7 +881,11 @@ class PrimitiveCell(LockableObject):
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
+        :param view: string
+            kind of view point
+            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
         :returns: None
+        :raises ValueError: if view is illegal
         """
         self.sync_array()
         fig, axes = plt.subplots()
@@ -898,8 +904,10 @@ class PrimitiveCell(LockableObject):
         # Determine the range of rn
         ra = hop_ind_full[:, 0]
         rb = hop_ind_full[:, 1]
+        rc = hop_ind_full[:, 2]
         ra_min, ra_max = ra.min(), ra.max()
         rb_min, rb_max = rb.min(), rb.max()
+        rc_min, rc_max = rc.min(), rc.max()
 
         # Get Cartesian coordinates of orbitals in (0, 0, 0) cell
         pos_r0 = np.matmul(self.orb_pos, self.lat_vec)
@@ -908,50 +916,76 @@ class PrimitiveCell(LockableObject):
         if with_orbitals:
             for i_a in range(ra_min, ra_max+1):
                 for i_b in range(rb_min, rb_max+1):
-                    center = np.matmul((i_a, i_b, 0), self.lat_vec)
-                    pos_rn = pos_r0 + center
-                    axes.scatter(pos_rn[:, 0], pos_rn[:, 1], s=100,
-                                 c=self.orb_eng)
+                    for i_c in range(rc_min, rc_max+1):
+                        center = np.matmul((i_a, i_b, i_c), self.lat_vec)
+                        pos_rn = proj_coord(pos_r0 + center, view)
+                        axes.scatter(pos_rn[:, 0], pos_rn[:, 1], s=100,
+                                     c=self.orb_eng)
+
+        # Functions for plotting cells
+        def _asm_coord(a, b):
+            if dim_zero == 0:
+                return 0, a, b
+            elif dim_zero == 1:
+                return a, 0, b
+            else:
+                return a, b, 0
+
+        def _add_grid(r1_min, r1_max, r2_min, r2_max):
+            for i1 in range(r1_min, r1_max+2):
+                x0 = _asm_coord(i1, r2_min)
+                x1 = _asm_coord(i1, r2_max+1)
+                x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
+                x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
+                cell_mc.append((x0, x1))
+            for i2 in range(r2_min, r2_max+2):
+                x0 = _asm_coord(r1_min, i2)
+                x1 = _asm_coord(r1_max+1, i2)
+                x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
+                x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
+                cell_mc.append((x0, x1))
+
+        def _add_vector():
+            x0 = _asm_coord(0, 1)
+            x1 = _asm_coord(1, 0)
+            x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
+            x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
+            axes.arrow(0, 0, x0[0], x0[1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
+            axes.arrow(0, 0, x1[0], x1[1],
+                       color="k", length_includes_head=True, width=0.005,
+                       head_width=0.02)
 
         # Plot cells
         if with_cells:
-            # Borders
             cell_mc = []
-            for i_a in range(ra_min, ra_max+2):
-                point_0 = (i_a, rb_min, 0)
-                point_1 = (i_a, rb_max+1, 0)
-                point_0 = np.matmul(point_0, self.lat_vec)
-                point_1 = np.matmul(point_1, self.lat_vec)
-                cell_mc.append((point_0[:2], point_1[:2]))
-            for i_b in range(rb_min, rb_max+2):
-                point_0 = (ra_min, i_b, 0)
-                point_1 = (ra_max+1, i_b, 0)
-                point_0 = np.matmul(point_0, self.lat_vec)
-                point_1 = np.matmul(point_1, self.lat_vec)
-                cell_mc.append((point_0[:2], point_1[:2]))
+            if view in ("ab", "ba"):
+                dim_zero = 2
+                _add_grid(ra_min, ra_max, rb_min, rb_max)
+            elif view in ("bc", "cb"):
+                dim_zero = 0
+                _add_grid(rb_min, rb_max, rc_min, rc_max)
+            else:
+                dim_zero = 1
+                _add_grid(ra_min, ra_max, rc_min, rc_max)
             axes.add_collection(mc.LineCollection(cell_mc, color="k",
                                                   linestyle=":"))
-            # Lattice vectors
-            axes.arrow(0, 0, self.lat_vec[0, 0], self.lat_vec[0, 1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
-            axes.arrow(0, 0, self.lat_vec[1, 0], self.lat_vec[1, 1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
+            _add_vector()
 
         # Plot hopping terms
         hop_mc = []
-        for hop in hop_ind_full:
+        for i_h, hop in enumerate(hop_ind_full):
             center = np.matmul(hop[:3], self.lat_vec)
-            pos_i = pos_r0[hop.item(3)]
-            pos_j = pos_r0[hop.item(4)] + center
+            pos_i = proj_coord(pos_r0[hop.item(3)], view)
+            pos_j = proj_coord(pos_r0[hop.item(4)] + center, view)
             if hop_as_arrows:
                 diff_pos = pos_j - pos_i
                 axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
                            color="r", length_includes_head=True, width=0.002,
                            head_width=0.02, fill=False)
             else:
-                hop_mc.append((pos_i[:2], pos_j[:2]))
+                hop_mc.append((pos_i, pos_j))
         if not hop_as_arrows:
             axes.add_collection(mc.LineCollection(hop_mc, color='r'))
 
