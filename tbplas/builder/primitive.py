@@ -15,6 +15,9 @@ Classes
         class for representing a hopping term in TB model
     LockableObject: developer class
         base class for all lockable classes
+    HopDict: user class
+        class for holding hopping terms
+        reserved for compatibility with old version of TBPlaS
     PrimitiveCell: user class
         class for representing a primitive cell from which a super cell
         can be created
@@ -147,6 +150,171 @@ class LockableObject:
         """
         if self.is_locked:
             raise exc.LockError()
+
+
+class HopDict:
+    """
+    Class for holding hopping terms.
+
+    Reserved for compatibility with old version of TBPlaS.
+
+    Attributes
+    ----------
+    dict: dictionary
+        dictionary with site tags as keys and complex matrices as values
+    mat_shape: (num_orb, num_orb)
+        shape of hopping matrices
+    """
+    def __init__(self, num_orb):
+        """
+        Initialize hop_dict object.
+
+        :param num_orb: integer
+            number of orbitals
+        """
+        self.dict = {}
+        self.mat_shape = (num_orb, num_orb)
+
+    @staticmethod
+    def __get_minus_rn(rn):
+        """Get minus cell index."""
+        return tuple([-v for v in rn])
+
+    def set_num_orb(self, num_orb):
+        """
+        Reset 'mat_shape' according to num_orb.
+
+        :param num_orb: integer
+            number of orbitals
+        :return: None
+        """
+        self.mat_shape = (num_orb, num_orb)
+
+    def set_mat(self, rn, hop_mat: np.ndarray):
+        """
+        Add hopping matrix to dictionary or update an existing hopping matrix.
+
+        :param rn: (ra, rb, rc)
+            cell index of hopping matrix
+        :param hop_mat: (num_orb, num_orb) complex128 array
+            hopping matrix
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        :raises ValueError: if hop_mat.shape does not match number of orbitals
+            or hopping matrix at (0, 0, 0) is not Hermitian
+        :raises PCHopDiagonalError: if on-site energies are included in hopping
+            matrix
+        """
+        # Check cell index
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+
+        # Check matrix size
+        hop_mat = np.array(hop_mat)
+        if hop_mat.shape != self.mat_shape:
+            raise ValueError(f"Shape of hopping matrix {hop_mat.shape} does not "
+                             f"match {self.mat_shape}")
+
+        # Special check for (0, 0, 0) cell
+        if rn == (0, 0, 0):
+            for i in range(hop_mat.shape[0]):
+                if abs(hop_mat.item(i, i)) >= 1e-5:
+                    raise exc.PCHopDiagonalError(rn, i)
+                for j in range(i+1, hop_mat.shape[0]):
+                    h_ij = hop_mat.item(i, j)
+                    h_ji = hop_mat.item(j, i)
+                    if abs(h_ij - h_ji.conjugate()) >= 1e-5:
+                        raise ValueError(f"Hopping matrix at (0, 0, 0) is not "
+                                         f"Hermitian")
+
+        # Set hopping matrix
+        if rn in self.dict.keys():
+            self.dict[rn] = hop_mat
+        else:
+            minus_rn = self.__get_minus_rn(rn)
+            if minus_rn in self.dict.keys():
+                self.dict[minus_rn] = hop_mat.T.conj()
+            else:
+                self.dict[rn] = hop_mat
+
+    def set_zero_mat(self, rn):
+        """
+        Add zero hopping matrix to dictionary.
+
+        :param rn: (ra, rb, rc)
+            cell index of hopping matrix
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        """
+        zero_mat = np.zeros(self.mat_shape, dtype=complex)
+        self.set_mat(rn, zero_mat)
+
+    def set_element(self, rn, element, hop):
+        """
+        Add single hopping to hopping matrix.
+
+        :param rn: (ra, rb, rc)
+            cell index of hopping matrix
+        :param element: (orb_i, orb_j)
+            element indices
+        :param hop: complex float
+            hopping value
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        :raises ValueError: if element indices are out of range
+        :raises PCHopDiagonalError: if on-site energy is given as input
+        """
+        # Check cell index
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+
+        # Check element indices
+        if element[0] not in range(self.mat_shape[0]) or \
+                element[1] not in range(self.mat_shape[1]):
+            raise ValueError(f"Element {element} out of range {self.mat_shape}")
+
+        # Check for on-site energy
+        if rn == (0, 0, 0) and element[0] == element[1]:
+            raise exc.PCHopDiagonalError(rn, element[0])
+
+        # Set matrix element
+        if rn in self.dict.keys():
+            self.dict[rn][element[0], element[1]] = hop
+        else:
+            minus_rn = self.__get_minus_rn(rn)
+            if minus_rn in self.dict.keys():
+                self.dict[minus_rn][element[1], element[0]] = hop.conjugate()
+            else:
+                self.dict[rn] = np.zeros(self.mat_shape, dtype=complex)
+                self.dict[rn][element[0], element[1]] = hop
+
+        # Special treatment for (0, 0, 0) cell
+        if rn == (0, 0, 0):
+            self.dict[rn][element[1], element[0]] = hop.conjugate()
+
+    def delete_mat(self, rn):
+        """
+        Delete hopping matrix from dictionary.
+
+        :param rn: (ra, rb, rc)
+            cell index of hopping matrix
+        :returns: None
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        """
+        # Check cell index
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+
+        # Delete hopping matrix
+        if rn in self.dict.keys():
+            self.dict.pop(rn, None)
+        else:
+            minus_rn = self.__get_minus_rn(rn)
+            if minus_rn in self.dict.keys():
+                self.dict.pop(minus_rn, None)
 
 
 class PrimitiveCell(LockableObject):
@@ -482,8 +650,8 @@ class PrimitiveCell(LockableObject):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def add_hopping_dict(self, hop_dict, eng_cutoff=1e-5, verbose=False,
-                         sync_array=False, **kwargs):
+    def add_hopping_dict(self, hop_dict: HopDict, eng_cutoff=1e-5,
+                         verbose=False, sync_array=False, **kwargs):
         """
         Add a matrix of hopping terms to the primitive cell, or update existing
         hopping terms.
