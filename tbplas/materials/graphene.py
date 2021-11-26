@@ -1,5 +1,5 @@
 """
-Utilities for constructing graphene and silicene samples.
+Utilities for constructing graphene samples.
 
 Functions
 ---------

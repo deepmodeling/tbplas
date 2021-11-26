@@ -6,8 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas.builder.kpoints as kpt
-import tbplas.materials.group4 as group4
-import tbplas.materials.group5 as group5
+from tbplas.materials.graphene import (make_graphene_diamond,
+                                       make_graphene_rect)
+from tbplas.materials.phosphorene import make_black_phosphorus
+from tbplas.materials.antimonene import make_antimonene
 from tbplas.builder import SuperCell, Sample
 
 
@@ -24,15 +26,15 @@ class TestMaterials(unittest.TestCase):
 
         :return: None
         """
-        prim_cell = group4.make_graphene_diamond()
+        prim_cell = make_graphene_diamond()
         prim_cell.plot()
-        prim_cell = group4.make_graphene_rect(from_scratch=True)
+        prim_cell = make_graphene_rect(from_scratch=True)
         prim_cell.plot()
-        prim_cell = group4.make_graphene_rect(from_scratch=False)
+        prim_cell = make_graphene_rect(from_scratch=False)
         prim_cell.plot()
 
         # Test band structure
-        prim_cell = group4.make_graphene_diamond()
+        prim_cell = make_graphene_diamond()
         k_points = np.array([
             [0.0, 0.0, 0.0],
             [2./3, 1./3, 0.0],
@@ -58,7 +60,7 @@ class TestMaterials(unittest.TestCase):
 
         :return: None
         """
-        prim_cell = group5.make_black_phosphorus()
+        prim_cell = make_black_phosphorus()
 
         # Test band structure
         k_points = np.array([
@@ -93,7 +95,7 @@ class TestMaterials(unittest.TestCase):
 
         :return: None
         """
-        prim_cell = group5.make_antimonene(with_soc=True)
+        prim_cell = make_antimonene(with_soc=True)
         prim_cell.plot()
 
         # Test band structure
@@ -115,6 +117,7 @@ class TestMaterials(unittest.TestCase):
         energies, dos = prim_cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
+
 
 if __name__ == "__main__":
     unittest.main()
