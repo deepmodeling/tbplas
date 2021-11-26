@@ -6,7 +6,7 @@ import tbplas.builder.kpoints as kpt
 from tbplas.builder.adapter.wannier90 import wan2pc
 
 
-cell = wan2pc("inse", eng_cutoff=0.0)
+cell = wan2pc("inse", hop_eng_cutoff=0.0)
 k_points = np.array([
     [0.0, 0.0, 0.0],
     [2./3, 1./3, 0.0],

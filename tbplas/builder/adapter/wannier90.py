@@ -181,7 +181,7 @@ def apply_wsvec(wsvec, hop_ind, hop_eng):
                 hop_eng.append(eng_bak / num_vec)
 
 
-def wan2pc(seed_name="wannier90", correct_hop=False, eng_cutoff=1.0e-5):
+def wan2pc(seed_name="wannier90", correct_hop=False, hop_eng_cutoff=1.0e-5):
     """
     Create primitive cell from output of Wannier90.
 
@@ -189,7 +189,7 @@ def wan2pc(seed_name="wannier90", correct_hop=False, eng_cutoff=1.0e-5):
         seed_name of Wannier90 output files
     :param correct_hop: boolean
         whether to correct hopping terms using data in seed_name_wsvec.dat
-    :param eng_cutoff: float
+    :param hop_eng_cutoff: float
         energy cutoff for hopping terms in eV
         Hopping terms with energy below this threshold will be dropped.
     :return: prim_cell: instance of 'PrimitiveCell' class
@@ -216,7 +216,8 @@ def wan2pc(seed_name="wannier90", correct_hop=False, eng_cutoff=1.0e-5):
     # Reduce hopping terms
     hop_ind = np.array(hop_ind, dtype=np.int32)
     hop_eng = np.array(hop_eng, dtype=np.complex128)
-    orb_eng, hop_ind, hop_eng = core.reduce_hop(hop_ind, hop_eng, eng_cutoff,
+    orb_eng, hop_ind, hop_eng = core.reduce_hop(hop_ind, hop_eng,
+                                                hop_eng_cutoff,
                                                 orb_pos.shape[0])
 
     # Create the primitive cell

@@ -859,7 +859,7 @@ class PrimitiveCell(LockableObject):
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
              with_cells=True, with_conj=True, hop_as_arrows=True,
-             view="ab"):
+             hop_eng_cutoff=1e-5, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -881,6 +881,10 @@ class PrimitiveCell(LockableObject):
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
+        :param hop_eng_cutoff: float
+            cutoff for showing hopping terms
+            Hopping terms with absolute energy below this value will not be
+            shown in the plot.
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -898,8 +902,10 @@ class PrimitiveCell(LockableObject):
             hop_ind_conj[:, 3] = self.hop_ind[:, 4]
             hop_ind_conj[:, 4] = self.hop_ind[:, 3]
             hop_ind_full = np.vstack((self.hop_ind, hop_ind_conj))
+            hop_eng_full = np.vstack((self.hop_eng, self.hop_eng))
         else:
             hop_ind_full = self.hop_ind
+            hop_eng_full = self.hop_eng
 
         # Determine the range of rn
         ra = hop_ind_full[:, 0]
@@ -976,16 +982,17 @@ class PrimitiveCell(LockableObject):
         # Plot hopping terms
         hop_mc = []
         for i_h, hop in enumerate(hop_ind_full):
-            center = np.matmul(hop[:3], self.lat_vec)
-            pos_i = proj_coord(pos_r0[hop.item(3)], view)
-            pos_j = proj_coord(pos_r0[hop.item(4)] + center, view)
-            if hop_as_arrows:
-                diff_pos = pos_j - pos_i
-                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                           color="r", length_includes_head=True, width=0.002,
-                           head_width=0.02, fill=False)
-            else:
-                hop_mc.append((pos_i, pos_j))
+            if abs(hop_eng_full.item(i_h)) >= hop_eng_cutoff:
+                center = np.matmul(hop[:3], self.lat_vec)
+                pos_i = proj_coord(pos_r0[hop.item(3)], view)
+                pos_j = proj_coord(pos_r0[hop.item(4)] + center, view)
+                if hop_as_arrows:
+                    diff_pos = pos_j - pos_i
+                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                               color="r", length_includes_head=True,
+                               width=0.002, head_width=0.02, fill=False)
+                else:
+                    hop_mc.append((pos_i, pos_j))
         if not hop_as_arrows:
             axes.add_collection(mc.LineCollection(hop_mc, color='r'))
 

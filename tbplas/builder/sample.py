@@ -194,7 +194,8 @@ class InterHopping(LockableObject):
         dr = core.build_inter_dr(hop_i, hop_j, pos_bra, pos_ket)
         return dr
 
-    def plot(self, axes: plt.Axes, hop_as_arrows=True, view="ab"):
+    def plot(self, axes: plt.Axes, hop_as_arrows=True, hop_eng_cutoff=1e-5,
+             view="ab"):
         """
         Plot hopping terms to axes.
 
@@ -202,6 +203,10 @@ class InterHopping(LockableObject):
             axes on which the figure will be plot
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
+        :param hop_eng_cutoff: float
+            cutoff for showing hopping terms
+            Hopping terms with absolute energy below this value will not be
+            shown in the plot.
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -218,21 +223,19 @@ class InterHopping(LockableObject):
         orb_pos_i = proj_coord(self.sc_bra.get_orb_pos(), view)
         orb_pos_j = proj_coord(self.sc_ket.get_orb_pos(), view)
         hop_i, hop_j, hop_v = self.get_hop()
-        if hop_as_arrows:
-            for i_h in range(hop_i.shape[0]):
+        hop_mc = []
+        for i_h in range(hop_i.shape[0]):
+            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos_i[hop_i.item(i_h)]
                 pos_j = orb_pos_j[hop_j.item(i_h)]
-                diff_pos = pos_j - pos_i
-                color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
-                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                           color=color, length_includes_head=True, width=0.002,
-                           head_width=0.02, fill=False)
-        else:
-            hop_mc = []
-            for i_h in range(hop_i.shape[0]):
-                pos_i = orb_pos_i[hop_i.item(i_h)]
-                pos_j = orb_pos_j[hop_j.item(i_h)]
-                hop_mc.append((pos_i[:2], pos_j[:2]))
+                if hop_as_arrows:
+                    diff_pos = pos_j - pos_i
+                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                               color='r', length_includes_head=True,
+                               width=0.002, head_width=0.02, fill=False)
+                else:
+                    hop_mc.append((pos_i, pos_j))
+        if not hop_as_arrows:
             axes.add_collection(mc.LineCollection(hop_mc, color="r"))
 
 
@@ -637,7 +640,8 @@ class Sample:
         return indptr, indices, hop, dx, dy
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, hop_as_arrows=True, view="ab"):
+             with_cells=True, hop_as_arrows=True, hop_eng_cutoff=1e-5,
+             view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -657,6 +661,10 @@ class Sample:
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
+        :param hop_eng_cutoff: float
+            cutoff for showing hopping terms
+            Hopping terms with absolute energy below this value will not be
+            shown in the plot.
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -674,9 +682,12 @@ class Sample:
 
         # Plot super cells and hopping terms
         for sc in self.sc_list:
-            sc.plot(axes, with_orbitals, with_cells, hop_as_arrows, view)
+            sc.plot(axes, with_orbitals=with_orbitals, with_cells=with_cells,
+                    hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
+                    view=view)
         for hop in self.hop_list:
-            hop.plot(axes, hop_as_arrows, view)
+            hop.plot(axes, hop_as_arrows=hop_as_arrows,
+                     hop_eng_cutoff=hop_eng_cutoff, view=view)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):

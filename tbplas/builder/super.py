@@ -868,7 +868,7 @@ class SuperCell(OrbitalSet):
             self.hop_modifier.lock()
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
-             hop_as_arrows=True, view="ab"):
+             hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms to axes.
 
@@ -880,6 +880,10 @@ class SuperCell(OrbitalSet):
             whether to plot borders of primitive cells
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
+        :param hop_eng_cutoff: float
+            cutoff for showing hopping terms
+            Hopping terms with absolute energy below this value will not be
+            shown in the plot.
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -898,21 +902,19 @@ class SuperCell(OrbitalSet):
 
         # Plot hopping terms
         hop_i, hop_j, hop_v = self.get_hop()
-        if hop_as_arrows:
-            for i_h in range(hop_i.shape[0]):
+        hop_mc = []
+        for i_h in range(hop_i.shape[0]):
+            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos[hop_i.item(i_h)]
                 pos_j = orb_pos[hop_j.item(i_h)]
-                diff_pos = pos_j - pos_i
-                color = "r" if np.abs(hop_v.item(i_h)) >= 0.1 else 'b'
-                axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                           color=color, length_includes_head=True, width=0.002,
-                           head_width=0.02, fill=False)
-        else:
-            hop_mc = []
-            for i_h in range(hop_i.shape[0]):
-                pos_i = orb_pos[hop_i.item(i_h)]
-                pos_j = orb_pos[hop_j.item(i_h)]
-                hop_mc.append((pos_i[:2], pos_j[:2]))
+                if hop_as_arrows:
+                    diff_pos = pos_j - pos_i
+                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
+                               color='r', length_includes_head=True,
+                               width=0.002, head_width=0.02, fill=False)
+                else:
+                    hop_mc.append((pos_i, pos_j))
+        if not hop_as_arrows:
             axes.add_collection(mc.LineCollection(hop_mc, colors="r"))
 
         # Functions for plotting cells
