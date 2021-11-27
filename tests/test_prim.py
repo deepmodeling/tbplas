@@ -529,7 +529,7 @@ class TestPrimitive(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = cell.calc_bands(k_path)
         num_bands = bands.shape[1]
         for i in range(num_bands):
@@ -570,7 +570,7 @@ class TestPrimitive(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = extend_cell.calc_bands(k_path)
         num_bands = bands.shape[1]
         for i in range(num_bands):

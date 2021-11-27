@@ -700,6 +700,7 @@ class Sample:
             plt.savefig(fig_name, dpi=fig_dpi)
         else:
             plt.show()
+        plt.close()
 
     def calc_bands(self, k_path, solver="lapack", num_bands=None):
         """

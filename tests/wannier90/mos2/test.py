@@ -13,7 +13,7 @@ k_points = np.array([
     [1./2, 0.0, 0.0],
     [0.0, 0.0, 0.0],
 ])
-k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
 k_len, bands = cell.calc_bands(k_path)
 
 

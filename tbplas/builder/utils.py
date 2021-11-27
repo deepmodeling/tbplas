@@ -7,7 +7,7 @@ Classes
 
 Functions
 ---------
-    proj_coord: developer API
+    proj_coord: developer function
         project 3-dimensional coordinates onto given view
 """
 

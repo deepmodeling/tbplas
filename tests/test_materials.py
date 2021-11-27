@@ -11,6 +11,7 @@ from tbplas.materials.graphene import (make_graphene_diamond,
 from tbplas.materials.phosphorene import make_black_phosphorus
 from tbplas.materials.antimonene import make_antimonene
 from tbplas.builder import SuperCell, Sample
+from tbplas.visual import Visualizer
 
 
 class TestMaterials(unittest.TestCase):
@@ -41,12 +42,10 @@ class TestMaterials(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_label = ["G", "K", "M", "G"]
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        num_bands = bands.shape[1]
-        for i in range(num_bands):
-            plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
-        plt.show()
+        Visualizer().plot_band(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = kpt.gen_kmesh((120, 120, 1))
@@ -70,12 +69,10 @@ class TestMaterials(unittest.TestCase):
             [0.5, 0.0, 0.0],
             [0.0, 0.0, 0.0]
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40, 40])
+        k_label = ["G", "X", "S", "Y", "G"]
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        num_bands = bands.shape[1]
-        for i in range(num_bands):
-            plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
-        plt.show()
+        Visualizer().plot_band(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = kpt.gen_kmesh((100, 100, 1))
@@ -105,12 +102,10 @@ class TestMaterials(unittest.TestCase):
             [2./3, 1./3, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_label = ["G", "M", "K", "G"]
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        num_bands = bands.shape[1]
-        for i in range(num_bands):
-            plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
-        plt.show()
+        Visualizer().plot_band(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = kpt.gen_kmesh((120, 120, 1))

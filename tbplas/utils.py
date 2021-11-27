@@ -53,7 +53,8 @@ class Timer(object):
         """
         Begin tracking time usage and store it in a slot.
 
-        :param slot: string, name of slot
+        :param slot: string
+            name of slot
         :return: None
         """
         if slot not in self.total_time.keys():
@@ -64,7 +65,8 @@ class Timer(object):
         """
         Stop tracking time usage store it in a slot.
 
-        :param slot: string, name of slot
+        :param slot: string
+            name of slot
         :return: None
         """
         if slot not in self.start_time.keys():
@@ -199,8 +201,10 @@ def gen_seeds(num_seeds):
     Generate a list of random numbers from /dev/urandom as seeds for Python
     random number generator.
 
-    :param num_seeds: integer, number of seeds
-    :return seeds: list of integers, seeds
+    :param num_seeds: integer
+        number of seeds
+    :return seeds: list of integers
+        generated seeds
     """
     num_bytes = [random.randint(1, 4) for _ in range(num_seeds)]
     byte_order = ['big' if random.randint(1, 2) == 1 else 'little'
@@ -226,10 +230,15 @@ def split_list(raw_list, num_group, algorithm="remainder"):
     if we are to split the list of [0, 1, 2, 3] into two groups, by remainder
     we will get [[0, 2], [1, 3]] while by range we will get [[0, 1], [2, 3]].
 
-    :param raw_list: list to split
-    :param num_group: integer, number of groups
-    :param algorithm: string, should be either "remainder" or "range"
-    :return: a list containing the split list
+    :param raw_list: list
+        incoming list to split
+    :param num_group: integer
+        number of groups
+    :param algorithm: string
+        algorithm for grouping elements
+        should be either "remainder" or "range"
+    :return: list_split: list
+        split list from raw_list
     """
     assert num_group in range(1, len(raw_list)+1)
     assert algorithm in ("remainder", "range")
@@ -255,10 +264,14 @@ def print_banner_line(text, width=80, mark="-", end="#"):
     """
     Print a banner like '#--------------- FOO ---------------#' to stdout.
 
-    :param text: string, central text in the banner
-    :param width: integer, total width of the banner
-    :param mark: character, marker
-    :param end: character, end prepended and appended to the banner
+    :param text: string
+        central text in the banner
+    :param width: integer
+        total width of the banner
+    :param mark: string
+        border character of the banner
+    :param end: string
+        end character prepended and appended to the banner
     :return: None
     """
     num_marks_total = width - len(text) - 4
@@ -278,10 +291,14 @@ def print_banner_block(text, width=80, mark="-", end="#"):
     #----------------------------------#
     to stdout.
 
-    :param text: string, central text in the banner
-    :param width: integer, total width of the banner
-    :param mark: character, marker
-    :param end: character, end prepended and appended to the banner
+    :param text: string
+        central text in the banner
+    :param width: integer
+        total width of the banner
+    :param mark: string
+        border character of the banner
+    :param end: string
+        end character prepended and appended to the banner
     :return: None
     """
     num_spaces_total = width - len(text) - 2

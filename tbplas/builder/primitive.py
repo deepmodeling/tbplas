@@ -3,7 +3,7 @@ Functions and classes for orbitals, hopping terms and primitive cell.
 
 Functions
 ---------
-    correct_coord: developer API
+    correct_coord: developer function
         check and auto-complete cell index, orbital coordinate,
         super-cell dimension and periodic condition
 
@@ -1007,6 +1007,7 @@ class PrimitiveCell(LockableObject):
             plt.savefig(fig_name, dpi=fig_dpi)
         else:
             plt.show()
+        plt.close()
 
     def print(self):
         """

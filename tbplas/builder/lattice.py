@@ -1,4 +1,24 @@
-"""Functions for lattice operations."""
+"""
+Functions for lattice operations.
+
+Functions
+---------
+    gen_lattice_vectors: user function
+        generate lattice vectors from lattice parameters
+    gen_lattice_vectors2: user function
+        generate lattice vectors from given vectors
+    gen_reciprocal_vectors: user function
+        generate reciprocal lattice vectors from real-space lattice
+        vectors
+    cart2frac: user function
+        convert Cartesian coordinates to fractional coordinates
+    frac2cart: user function
+        convert fractional coordinates to Cartesian coordinates
+    get_lattice_area: user function
+        calculate the area formed by lattice vectors along given direction
+    get_lattice_volume: user function
+        calculate the volume formed by lattice vectors
+"""
 
 from math import sin, cos, sqrt, pi
 
@@ -9,14 +29,23 @@ def gen_lattice_vectors(a=1.0, b=1.0, c=1.0, alpha=90.0, beta=90.0, gamma=90.0):
     """
     Generate lattice vectors from given lattice parameters.
 
-    :param a: float, lattice constant a in angstrom or nm
-    :param b: float, lattice constant b in angstrom or nm
-    :param c: float, lattice constant c in angstrom or nm
-    :param alpha: float, angle between a2 and a3 in DEGREE
-    :param beta: float, angle between a3 and a1 in DEGREE
-    :param gamma: float, angle between a1 and a2 in DEGREE
-    :return lattice_vectors: a 3*3 array containing the lattice vectors, in the
-        same unit as a/b/c.
+    Reference:
+    http://www.quantum-espresso.org/Doc/INPUT_PW.html
+
+    :param a: float
+        lattice constant a in angstrom or nm
+    :param b: float
+        lattice constant b in angstrom or nm
+    :param c: float
+        lattice constant c in angstrom or nm
+    :param alpha: float
+        angle between a2 and a3 in DEGREE
+    :param beta: float
+        angle between a3 and a1 in DEGREE
+    :param gamma: float
+        angle between a1 and a2 in DEGREE
+    :return: lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors in the same unit as a/b/c
     """
     alpha = alpha / 180 * pi
     beta = beta / 180 * pi
@@ -41,11 +70,15 @@ def gen_lattice_vectors2(a1, a2, a3=None):
     """
     Generate lattice vectors from given a1, a2 and a3.
 
-    :param a1: tuple or list of floats, lattice vector a1
-    :param a2: tuple or list of floats, lattice vector a2
-    :param a3: tuple or list of floats, lattice vector a3
-    :return lattice_vectors: a 3*3 array containing the lattice vectors, in the
-        same unit as a/b/c.
+    :param a1: tuple or list of floats
+        Cartesian coordinates of lattice vector a1
+    :param a2: tuple or list of floats
+        Cartesian coordinates of lattice vector a2
+    :param a3: tuple or list of floats
+        Cartesian coordinates of lattice vector a3
+    :return: lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors in the same unit as
+        a1, a2 and a3
     """
     assert len(a1) in (2, 3)
     a1 = tuple(a1)
@@ -69,8 +102,15 @@ def gen_reciprocal_vectors(lattice_vectors):
     """
     Generate reciprocal lattice vectors from real-space lattice vectors.
 
-    :param lattice_vectors: 3*3 array
-    :return: reciprocal_vectors: 3*3 array
+    NOTE: Here we evaluate reciprocal lattice vectors via
+        dot_product(a_i, b_j) = 2 * pi * delta_{ij}
+    The formulae based on cross-products are not robust in some cases.
+
+    :param lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of real-space lattice vectors
+    :return: reciprocal_vectors: (3, 3) float64 array
+        Cartesian coordinates of reciprocal lattice vectors
+        Unit is inverse to the one of real-space lattice vectors.
     """
     reciprocal_vectors = np.zeros((3, 3))
     product = 2 * pi * np.eye(3)
@@ -83,11 +123,12 @@ def cart2frac(lattice_vectors, cartesian_coordinates):
     """
     Convert Cartesian coordinates to fractional coordinates.
 
-    :param lattice_vectors: 3*3 array containing the coordinates of lattice
-            vectors
-    :param cartesian_coordinates: N*3 array containing the Cartesian coordinates
-            of atoms
-    :return: fractional_coordinates: N*3 array
+    :param lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors
+    :param cartesian_coordinates: (num_coord, 3) float64 array
+        Cartesian coordinates to convert
+    :return: fractional_coordinates: (num_coord, 3) float64 array
+        fractional coordinates in basis of lattice vectors
     """
     fractional_coordinates = np.zeros(cartesian_coordinates.shape)
     conversion_matrix = np.linalg.inv(lattice_vectors.T)
@@ -100,9 +141,12 @@ def frac2cart(lattice_vectors, fractional_coordinates):
     """
     Convert fractional coordinates to Cartesian coordinates.
 
-    :param lattice_vectors: 3*3 array
-    :param fractional_coordinates: N*3 array
-    :return: cartesian coordinates: N*3 array
+    :param lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors
+    :param fractional_coordinates: (num_coord, 3) float64 array
+        fractional coordinates to convert in basis of lattice vectors
+    :return: cartesian coordinates: (num_coord, 3) float64 array
+        Cartesian coordinates converted from fractional coordinates
     """
     cartesian_coordinates = np.zeros(fractional_coordinates.shape)
     conversion_matrix = lattice_vectors.T
@@ -115,9 +159,14 @@ def get_lattice_area(lattice_vectors, direction="c"):
     """
     Calculate the area along given direction.
 
-    :param lattice_vectors: 3*3 array
-    :param direction: character, direction along which the area is evaluated
-    :return: float, area along given direction
+    :param lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors
+    :param direction: string
+        direction along which the area is evaluated
+        should be in ("a", "b", "c")
+    :return: float
+        area along given direction in squared unit of lattice vectors
+    :raises ValueError: if direction is not in ("a", "b", "c")
     """
     if direction == "a":
         a0 = lattice_vectors[1]
@@ -137,8 +186,10 @@ def get_lattice_volume(lattice_vectors):
     """
     Calculate the volume formed by lattice vectors.
 
-    :param lattice_vectors: 3*3 array
-    :return: float, lattice volume
+    :param lattice_vectors: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors
+    :return: float
+        lattice volume in cubic unit of lattice vectors
     """
     a0 = lattice_vectors[0]
     a1 = lattice_vectors[1]

@@ -626,7 +626,7 @@ class TestSample(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
         sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
         sample = Sample(sc)
 

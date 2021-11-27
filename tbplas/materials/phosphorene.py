@@ -3,7 +3,7 @@ Utilities for constructing phosphorene samples.
 
 Functions
 ---------
-    make_black_phosphorus: user API
+    make_black_phosphorus: user function
         make black phosphorus primitive cell
 """
 

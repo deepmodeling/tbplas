@@ -3,9 +3,9 @@ Utilities for constructing graphene samples.
 
 Functions
 ---------
-    make_graphene_diamond: user API
+    make_graphene_diamond: user function
         make graphene primitive cell in diamond shape
-    make_graphene_rect: user API
+    make_graphene_rect: user function
         make graphene primitive cell in rectangular shape
 """
 

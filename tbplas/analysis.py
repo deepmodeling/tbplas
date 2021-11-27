@@ -73,7 +73,7 @@ def window_exp_ten(i, tnr):
 
 
 class Analyzer(BaseSolver):
-    """Class for analyzing"""
+    """Class for analyzing correlation functions."""
     def __init__(self, sample: Sample, config: Config, enable_mpi=False):
         """
         :param sample: instance of 'Sample' class
@@ -390,41 +390,3 @@ class Analyzer(BaseSolver):
         else:
             energies, conductivity = None, None
         return energies, conductivity
-
-    def plot_wf2(self, wf2, filename, site_size=5, fig_dpi=300, colorbar=False):
-        """
-        Plot squared wave function in real space.
-
-        :param wf2: (n_indptr-1,) float64 array
-            squared projection of wave function on all the sites
-        :param filename: string
-            image file name
-        :param site_size: float
-            site size
-        :param fig_dpi: float
-            dpi of output figure
-        :param colorbar: boolean
-            add colorbar to figure
-        :return: None
-        """
-        if self.rank == 0:
-            # Get site locations
-            self.sample.init_orb_pos()
-            x = np.array(self.sample.orb_pos[:, 0])
-            y = np.array(self.sample.orb_pos[:, 1])
-
-            # Get absolute square of wave function and sort
-            z = wf2
-            idx = z.argsort()
-            x, y, z = x[idx], y[idx], z[idx]
-
-            # make plot
-            fig, ax = plt.subplots()
-            sc = ax.scatter(x, y, c=z, s=site_size, edgecolor='')
-            plt.axis('equal')
-            plt.axis('off')
-            if colorbar:
-                plt.colorbar(sc)
-            plt.draw()
-            plt.savefig(filename, dpi=fig_dpi)
-            plt.close()

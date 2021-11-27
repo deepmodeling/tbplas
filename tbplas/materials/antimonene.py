@@ -3,7 +3,7 @@ Utilities for constructing antimonene samples.
 
 Functions
 ---------
-    make_antimonene: user API
+    make_antimonene: user function
         make antimonene primitive cell
 """
 

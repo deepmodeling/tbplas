@@ -3,10 +3,10 @@ Functions and classes for constructing samples.
 
 Functions
 ---------
-    extend_prim_cell: user API
+    extend_prim_cell: user function
         extend primitive cell along a, b, and c directions
         reserved for compatibility with old version of TBPlaS
-    reshape_prim_cell: user API
+    reshape_prim_cell: user function
         reshape primitive cell to given lattice vectors and origin
 
 Classes
