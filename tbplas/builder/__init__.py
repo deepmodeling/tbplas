@@ -9,4 +9,5 @@ from .lattice import (gen_lattice_vectors, gen_lattice_vectors2,
 from .primitive import PrimitiveCell, HopDict
 from .super import IntraHopping, SuperCell
 from .sample import InterHopping, Sample
-from .factory import extend_prim_cell, reshape_prim_cell
+from .factory import (extend_prim_cell, reshape_prim_cell, trim_prim_cell,
+                      apply_pbc)

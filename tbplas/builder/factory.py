@@ -8,6 +8,11 @@ Functions
         reserved for compatibility with old version of TBPlaS
     reshape_prim_cell: user function
         reshape primitive cell to given lattice vectors and origin
+    trim_prim_cell: user function
+        trim dangling orbitals and associated hopping terms
+    apply_pbc: user function
+        apply periodic boundary conditions on primitive cell by removing hopping
+        terms between cells along non-periodic direction
 
 Classes
 -------
@@ -191,3 +196,61 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
         res_cell.orbital_list[i_o].position = tuple(pos)
     res_cell.sync_array()
     return res_cell
+
+
+def trim_prim_cell(prim_cell: PrimitiveCell):
+    """
+    Trim dangling orbitals and associated hopping terms.
+
+    :param prim_cell: instance of 'PrimitiveCell' class
+        primitive cell to trim
+    :return: None
+        Incoming prim_cell is modified.
+    """
+    # Count the number of hopping terms of each orbital
+    hop_count = np.zeros(prim_cell.num_orb, dtype=np.int32)
+    for hop in prim_cell.hopping_list:
+        hop_count[hop.index[3]] += 1
+        hop_count[hop.index[4]] += 1
+
+    # Get indices of orbitals to remove
+    orb_id_trim = [i_o for i_o, count in enumerate(hop_count) if count <= 1]
+
+    # Remove orbitals and hopping terms
+    # Orbital indices should be sorted in increasing order.
+    orb_id_trim = sorted(orb_id_trim)
+    for i, orb_id in enumerate(orb_id_trim):
+        prim_cell.remove_orbital(orb_id - i)
+    prim_cell.sync_array()
+
+
+def apply_pbc(prim_cell: PrimitiveCell, pbc=(True, True, True)):
+    """
+    Apply periodic boundary conditions on primitive cell by removing hopping
+    terms between cells along non-periodic direction.
+
+    :param prim_cell: instance of 'PrimitiveCell' class
+        primitive on which pbc will be applied
+    :param pbc: tuple of 3 booleans
+        whether pbc is enabled along 3 directions
+    :return: None
+        Incoming prim_cell is modified.
+    :raises ValueError: if len(pbc) != 3
+    """
+    if len(pbc) != 3:
+        raise ValueError("Length of pbc is not 3")
+
+    # Get the list of hopping terms to keep
+    hop_to_keep = []
+    for hop in prim_cell.hopping_list:
+        to_keep = True
+        for i_dim in range(3):
+            if not pbc[i_dim] and hop.index[i_dim] != 0:
+                to_keep = False
+                break
+        if to_keep:
+            hop_to_keep.append(hop)
+
+    # Reset hopping_list
+    prim_cell.hopping_list = hop_to_keep
+    prim_cell.sync_array()

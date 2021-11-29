@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, HopDict, extend_prim_cell,
-                    reshape_prim_cell, ANG, NM)
+                    reshape_prim_cell, trim_prim_cell, apply_pbc,
+                    ANG, NM, Visualizer)
 import tbplas.builder.exceptions as exc
 from tbplas.utils import TestHelper
 
@@ -734,6 +735,51 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
         self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
         self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
+
+    def test16_apply_pbc(self):
+        """
+        Test function 'apply_pbc'.
+
+        :return: None
+        """
+        lat_frac = np.array([[1, 0, 0], [-1, 2, 0], [0, 0, 1]])
+        rect_cell = reshape_prim_cell(make_cell(), lat_frac)
+
+        # GNR along AM direction
+        gnr = extend_prim_cell(rect_cell, dim=(3, 3, 1))
+        gnr.plot(with_conj=False)
+        apply_pbc(gnr, pbc=(False, True, False))
+        gnr.plot(with_conj=False)
+        trim_prim_cell(gnr)
+        gnr.plot(with_conj=False)
+
+        k_points = np.array([
+            [0.0, -0.5, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.5, 0.0],
+        ])
+        k_label = ["X", "G", "X"]
+        k_path, k_idx = gen_kpath(k_points, [40, 40])
+        k_len, bands = gnr.calc_bands(k_path)
+        Visualizer().plot_band(k_len, bands, k_idx, k_label)
+
+        # GNR along ZZ direction
+        gnr = extend_prim_cell(rect_cell, dim=(3, 3, 1))
+        gnr.plot(with_conj=False)
+        apply_pbc(gnr, pbc=(True, False, False))
+        gnr.plot(with_conj=False)
+        trim_prim_cell(gnr)
+        gnr.plot(with_conj=False)
+
+        k_points = np.array([
+            [-0.5, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.5, 0.0, 0.0],
+        ])
+        k_label = ["X", "G", "X"]
+        k_path, k_idx = gen_kpath(k_points, [40, 40])
+        k_len, bands = gnr.calc_bands(k_path)
+        Visualizer().plot_band(k_len, bands, k_idx, k_label)
 
 
 if __name__ == "__main__":
