@@ -11,12 +11,9 @@ import matplotlib.pyplot as plt
 # import tipsi
 
 # New version of TBPlaS builder
+from tbplas import PrimitiveCell, SuperCell, Sample, Config, Solver, Analyzer
 # import tbplas.builder.lattice as lat
-from tbplas.builder import PrimitiveCell, SuperCell, Sample
-from tbplas.config import Config
-from tbplas.solver import Solver
-from tbplas.analysis import Analyzer
-# from test_utils import TestHelper
+# from tbplas.utils import TestHelper
 
 
 # def make_sample_old(shape, enable_pbc=True):

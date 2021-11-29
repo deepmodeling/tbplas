@@ -6,17 +6,15 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 
-import tbplas.builder.lattice as lat
-import tbplas.builder.kpoints as kpt
+from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
+                    PrimitiveCell, SuperCell, InterHopping, Sample, Timer)
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
-from tbplas.builder import PrimitiveCell, SuperCell, InterHopping, Sample
-from tbplas.utils import Timer
-from test_utils import TestHelper
+from tbplas.utils import TestHelper
 
 
 def make_cell():
-    vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+    vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
     cell = PrimitiveCell(vectors)
     cell.add_orbital([0.0, 0.0], 0.0)
     cell.add_orbital([1. / 3, 1. / 3], 0.0)
@@ -626,7 +624,7 @@ class TestSample(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = gen_kpath(k_points, [40, 40, 40])
         sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
         sample = Sample(sc)
 
@@ -646,7 +644,7 @@ class TestSample(unittest.TestCase):
 
         :return: None
         """
-        k_points = kpt.gen_kmesh((24, 24, 1))
+        k_points = gen_kmesh((24, 24, 1))
         sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
         sample = Sample(sc)
 

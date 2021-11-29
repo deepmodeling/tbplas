@@ -4,15 +4,15 @@ import unittest
 
 import numpy as np
 
-import tbplas.builder.lattice as lat
+from tbplas import gen_lattice_vectors, PrimitiveCell, IntraHopping, SuperCell
 import tbplas.builder.exceptions as exc
-from tbplas.builder import PrimitiveCell, OrbitalSet, IntraHopping, SuperCell
-from test_utils import TestHelper
+from tbplas.builder.super import OrbitalSet
+from tbplas.utils import TestHelper
 
 
 class TestSuper(unittest.TestCase):
     def setUp(self) -> None:
-        vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+        vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         self.cell = PrimitiveCell(vectors)
         self.cell.add_orbital((0.0, 0.0), 0.0)
         self.cell.add_orbital((1./3, 1./3), 0.0)

@@ -21,7 +21,6 @@ from math import cos, sin, exp
 import numpy as np
 import numpy.linalg as npla
 from scipy.signal import hilbert
-import matplotlib.pyplot as plt
 
 from .builder import Sample
 from .config import Config

@@ -5,17 +5,15 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 
-import tbplas.builder.lattice as lat
-import tbplas.builder.kpoints as kpt
-import tbplas.builder.constants as consts
+from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
+                    PrimitiveCell, HopDict, extend_prim_cell,
+                    reshape_prim_cell, ANG, NM)
 import tbplas.builder.exceptions as exc
-from tbplas.builder import (PrimitiveCell, extend_prim_cell, reshape_prim_cell,
-                            HopDict)
-from test_utils import TestHelper
+from tbplas.utils import TestHelper
 
 
 def make_cell():
-    vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+    vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
     cell = PrimitiveCell(vectors)
     cell.add_orbital([0.0, 0.0], 0.0)
     cell.add_orbital([1. / 3, 1. / 3], 0.0)
@@ -45,12 +43,12 @@ class TestPrimitive(unittest.TestCase):
         self.assertRegex(str(cm.exception), r"^illegal lattice vectors$")
 
         # Check unit conversion
-        vectors = lat.gen_lattice_vectors(a=1.5, b=2.0, c=2.5)
-        cell = PrimitiveCell(vectors, unit=consts.ANG)
+        vectors = gen_lattice_vectors(a=1.5, b=2.0, c=2.5)
+        cell = PrimitiveCell(vectors, unit=ANG)
         self.assertAlmostEqual(cell.lat_vec.item(0, 0), 0.15)
         self.assertAlmostEqual(cell.lat_vec.item(1, 1), 0.20)
         self.assertAlmostEqual(cell.lat_vec.item(2, 2), 0.25)
-        cell = PrimitiveCell(vectors, unit=consts.NM)
+        cell = PrimitiveCell(vectors, unit=NM)
         self.assertAlmostEqual(cell.lat_vec.item(0, 0), 1.5)
         self.assertAlmostEqual(cell.lat_vec.item(1, 1), 2.0)
         self.assertAlmostEqual(cell.lat_vec.item(2, 2), 2.5)
@@ -529,7 +527,7 @@ class TestPrimitive(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = gen_kpath(k_points, [40, 40, 40])
         k_len, bands = cell.calc_bands(k_path)
         num_bands = bands.shape[1]
         for i in range(num_bands):
@@ -537,7 +535,7 @@ class TestPrimitive(unittest.TestCase):
         plt.show()
 
         # Calculate DOS.
-        k_points = kpt.gen_kmesh((120, 120, 1))
+        k_points = gen_kmesh((120, 120, 1))
         energies, dos = cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
@@ -570,7 +568,7 @@ class TestPrimitive(unittest.TestCase):
             [1./2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
-        k_path, k_idx = kpt.gen_kpath(k_points, [40, 40, 40])
+        k_path, k_idx = gen_kpath(k_points, [40, 40, 40])
         k_len, bands = extend_cell.calc_bands(k_path)
         num_bands = bands.shape[1]
         for i in range(num_bands):
@@ -578,7 +576,7 @@ class TestPrimitive(unittest.TestCase):
         plt.show()
 
         # DOS
-        k_points = kpt.gen_kmesh((24, 24, 1))
+        k_points = gen_kmesh((24, 24, 1))
         energies, dos = extend_cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
@@ -593,7 +591,7 @@ class TestPrimitive(unittest.TestCase):
         sqrt3 = 1.73205080757
         a = 2.46
         cc_bond = sqrt3 / 3 * a
-        vectors = lat.gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond)
+        vectors = gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond)
         cell = PrimitiveCell(vectors)
         cell.add_orbital((0, 0))
         cell.add_orbital((0, 2./3))
@@ -736,6 +734,7 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
         self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
         self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
+
 
 if __name__ == "__main__":
     unittest.main()

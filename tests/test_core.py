@@ -4,16 +4,15 @@ import unittest
 
 import numpy as np
 
-import tbplas.builder.lattice as lat
+from tbplas import gen_lattice_vectors, PrimitiveCell, Timer
 import tbplas.builder.core as core
-from tbplas.builder import PrimitiveCell, OrbitalSet
-from tbplas.utils import Timer
-from test_utils import TestHelper
+from tbplas.builder.super import OrbitalSet
+from tbplas.utils import TestHelper
 
 
 class TestCore(unittest.TestCase):
     def setUp(self) -> None:
-        vectors = lat.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+        vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         self.cell = PrimitiveCell(vectors)
         self.cell.add_orbital((0.0, 0.0), 0.0)
         self.cell.add_orbital((1./3, 1./3), 0.0)
