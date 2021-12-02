@@ -245,7 +245,7 @@ class TestSuper(unittest.TestCase):
         # Nothing will be updated.
         th.test_stdout(_test, no_update)
 
-        # 4nd call with vacancy_list set to []
+        # 4th call with vacancy_list set to []
         orb_set.vacancy_list = []
         th.test_stdout(_test, update)
 
@@ -255,25 +255,20 @@ class TestSuper(unittest.TestCase):
 
     def test07_properties(self):
         """
-        Test methods of OrbitalSet decorated with '@property'.
+        Test methods of SuperCell decorated with '@property'.
 
         :return: None
         """
-        orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
+        sc = SuperCell(self.cell, dim=(3, 3, 1))
         th = TestHelper(self)
-        self.assertEqual(orb_set.num_orb_pc,
-                         orb_set.prim_cell.num_orb)
-        self.assertEqual(orb_set.num_orb_sc, orb_set.orb_id_pc.shape[0])
-        th.test_equal_array(orb_set.pc_lat_vec,
-                            orb_set.prim_cell.lat_vec, almost=True)
-        th.test_equal_array(orb_set.pc_orb_pos,
-                            orb_set.prim_cell.orb_pos, almost=True)
-        th.test_equal_array(orb_set.pc_orb_eng,
-                            orb_set.prim_cell.orb_eng, almost=True)
-        th.test_equal_array(orb_set.pc_hop_ind,
-                            orb_set.prim_cell.hop_ind)
-        th.test_equal_array(orb_set.pc_hop_eng,
-                            orb_set.prim_cell.hop_eng, almost=True)
+        self.assertEqual(sc.num_orb_pc,
+                         sc.prim_cell.num_orb)
+        self.assertEqual(sc.num_orb_sc, sc.orb_id_pc.shape[0])
+        th.test_equal_array(sc.pc_lat_vec, sc.prim_cell.lat_vec, almost=True)
+        th.test_equal_array(sc.pc_orb_pos, sc.prim_cell.orb_pos, almost=True)
+        th.test_equal_array(sc.pc_orb_eng, sc.prim_cell.orb_eng, almost=True)
+        th.test_equal_array(sc.pc_hop_ind, sc.prim_cell.hop_ind)
+        th.test_equal_array(sc.pc_hop_eng, sc.prim_cell.hop_eng, almost=True)
 
     def test08_orb_id_sc2pc(self):
         """

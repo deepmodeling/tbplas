@@ -143,8 +143,8 @@ class OrbitalSet(LockableObject):
         except exc.CoordLenError as err:
             raise exc.SCDimLenError(dim) from err
         for i in range(3):
-            rn_min = self.pc_hop_ind[:, i].min()
-            rn_max = self.pc_hop_ind[:, i].max()
+            rn_min = self.prim_cell.hop_ind[:, i].min()
+            rn_max = self.prim_cell.hop_ind[:, i].max()
             dim_min = 2 * (rn_max - rn_min) + 1
             if dim[i] < dim_min:
                 raise exc.SCDimSizeError(i, dim_min)
@@ -432,73 +432,6 @@ class OrbitalSet(LockableObject):
         num_orb_sc = self.num_orb_pc * np.prod(self.dim).item()
         num_orb_sc -= len(self.vacancy_list)
         return num_orb_sc
-
-    @property
-    def pc_lat_vec(self):
-        """
-        Get the lattice vectors of primitive cell.
-
-        :return: (3, 3) float64 array
-            lattice vectors of primitive cell in nm.
-        """
-        return self.prim_cell.lat_vec
-
-    @property
-    def sc_lat_vec(self):
-        """
-        Get the lattice vectors of super cell.
-
-        :return: (3, 3) float64 array
-            lattice vectors of primitive cell in nm.
-        """
-        sc_lat_vec = self.pc_lat_vec.copy()
-        for i in range(3):
-            sc_lat_vec[i] *= self.dim.item(i)
-        return sc_lat_vec
-
-    @property
-    def pc_orb_pos(self):
-        """
-        Get the orbital positions of primitive cell.
-
-        :return: (num_orb_pc, 3) float64 array
-            fractional positions of primitive cell
-        """
-        self.prim_cell.sync_array()
-        return self.prim_cell.orb_pos
-
-    @property
-    def pc_orb_eng(self):
-        """
-        Get the energies of orbitals of primitive cell.
-
-        :return: (num_orb_pc,) float64 array
-            energies of orbitals of primitive cell in eV.
-        """
-        self.prim_cell.sync_array()
-        return self.prim_cell.orb_eng
-
-    @property
-    def pc_hop_ind(self):
-        """
-        Get the indices of hopping terms of primitive cell.
-
-        :return: (num_hop_pc, 5) int32 array
-            indices of hopping terms of primitive cell
-        """
-        self.prim_cell.sync_array()
-        return self.prim_cell.hop_ind
-
-    @property
-    def pc_hop_eng(self):
-        """
-        Get the energies of hopping terms of primitive cell.
-
-        :return: (num_hop_pc,) complex128 array
-            hopping energies of primitive cell in eV
-        """
-        self.prim_cell.sync_array()
-        return self.prim_cell.hop_eng
 
 
 class IntraHopping(LockableObject):
@@ -953,3 +886,70 @@ class SuperCell(OrbitalSet):
             axes.add_collection(mc.LineCollection(cell_mc, color="k",
                                                   linestyle=":"))
             _add_vector()
+
+    @property
+    def pc_lat_vec(self):
+        """
+        Get the lattice vectors of primitive cell.
+
+        :return: (3, 3) float64 array
+            lattice vectors of primitive cell in nm.
+        """
+        return self.prim_cell.lat_vec
+
+    @property
+    def sc_lat_vec(self):
+        """
+        Get the lattice vectors of super cell.
+
+        :return: (3, 3) float64 array
+            lattice vectors of primitive cell in nm.
+        """
+        sc_lat_vec = self.pc_lat_vec.copy()
+        for i in range(3):
+            sc_lat_vec[i] *= self.dim.item(i)
+        return sc_lat_vec
+
+    @property
+    def pc_orb_pos(self):
+        """
+        Get the orbital positions of primitive cell.
+
+        :return: (num_orb_pc, 3) float64 array
+            fractional positions of primitive cell
+        """
+        self.prim_cell.sync_array()
+        return self.prim_cell.orb_pos
+
+    @property
+    def pc_orb_eng(self):
+        """
+        Get the energies of orbitals of primitive cell.
+
+        :return: (num_orb_pc,) float64 array
+            energies of orbitals of primitive cell in eV.
+        """
+        self.prim_cell.sync_array()
+        return self.prim_cell.orb_eng
+
+    @property
+    def pc_hop_ind(self):
+        """
+        Get the indices of hopping terms of primitive cell.
+
+        :return: (num_hop_pc, 5) int32 array
+            indices of hopping terms of primitive cell
+        """
+        self.prim_cell.sync_array()
+        return self.prim_cell.hop_ind
+
+    @property
+    def pc_hop_eng(self):
+        """
+        Get the energies of hopping terms of primitive cell.
+
+        :return: (num_hop_pc,) complex128 array
+            hopping energies of primitive cell in eV
+        """
+        self.prim_cell.sync_array()
+        return self.prim_cell.hop_eng
