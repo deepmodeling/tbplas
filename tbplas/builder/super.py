@@ -202,6 +202,46 @@ class OrbitalSet(LockableObject):
         else:
             raise exc.IDPCTypeError(id_pc)
 
+    def wrap_id_pc(self, id_pc):
+        """
+        Wrap orbital or vacancy index in primitive cell representation
+        according to periodic conditions.
+
+        :param id_pc: (ia, ib, ic, io) or equivalent int32 array
+            orbital or vacancy index in primitive cell representation
+        :return: id_pc_wrap: (ia, ib, ic, io) or equivalent int32 array
+            wrapped index in same type as id_pc
+        :raises IDPCLenError: if len(id_pc) != 4
+        :raises IDPCIndexError: if orbital index of id_pc is out of range
+        :raises IDPCTypeError: if id_pc is not tuple or numpy array
+        """
+        if len(id_pc) != 4:
+            raise exc.IDPCLenError(id_pc)
+        if id_pc[3] not in range(self.num_orb_pc):
+            raise exc.IDPCIndexError(3, id_pc)
+
+        # Wrap id_pc to id_pc_wrap
+        id_pc_wrap = []
+        for i_dim in range(3):
+            j_dim = id_pc[i_dim]
+            n_dim = self.dim.item(i_dim)
+            if self.pbc.item(i_dim) == 0:
+                if j_dim < 0 or j_dim >= n_dim:
+                    id_pc_wrap.append(-1)
+                else:
+                    id_pc_wrap.append(j_dim)
+            else:
+                id_pc_wrap.append(j_dim % n_dim)
+        id_pc_wrap.append(id_pc[3])
+
+        # Set type according to id_pc
+        if isinstance(id_pc, tuple):
+            return tuple(id_pc_wrap)
+        elif isinstance(id_pc, np.ndarray):
+            return np.array(id_pc_wrap, dtype=np.int32)
+        else:
+            raise exc.IDPCTypeError(id_pc)
+
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
         Add a vacancy to existing list of vacancies.

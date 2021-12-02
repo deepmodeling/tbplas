@@ -446,6 +446,36 @@ def id_pc2sc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
     return np.asarray(id_sc_array)
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def wrap_id_pc_array(int [:,::1] orb_id_pc, int [::1] dim, int [::1] pbc):
+    """
+    Wrap orbital indices in primitive cell representation using periodic
+    condition.
+
+    Parameters
+    ----------
+    orb_id_pc: (num_orb, 4) int32 array
+        orbital indices in pc representation
+    dim: (3,) int32 array
+        dimension of super cell
+    pbc: (3,) int32 array
+        whether periodic condition is enabled along 3 directions
+
+    Returns
+    -------
+    None. orb_id_pc is modified.
+    """
+    cdef long num_orb, i_o
+    cdef int i_dim, ji_new
+
+    num_orb = orb_id_pc.shape[0]
+    for i_o in range(num_orb):
+        for i_dim in range(3):
+            ji_new = _wrap_pbc(orb_id_pc[i_o, i_dim], dim[i_dim], pbc[i_dim])
+            orb_id_pc[i_o, i_dim] = ji_new
+
+
 #-------------------------------------------------------------------------------
 #       Functions for constructing attributes of OrbitalSet class
 #-------------------------------------------------------------------------------
