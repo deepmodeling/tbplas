@@ -309,62 +309,37 @@ class OrbitalSet(LockableObject):
             if verbose:
                 print("INFO: no need to update sc vacancy and orbital arrays")
 
-    def orb_id_sc2pc(self, id_sc, unsafe=False):
+    def orb_id_sc2pc(self, id_sc):
         """
         Convert orbital (NOT VACANCY) index from sc representation to pc
         representation.
 
-        NOTE: This method is safe, but EXTREMELY SLOW. Turning off the safety
-        check may boost the efficiency, but still much slower than the Cython
-        version. So, if you are going to call this method many times, use
-        orb_id_sc2pc_array instead, which is a thin wrapper over the Cython
-        version.
-
-        Time usage of getting all the id_pc for a TB model with 1,000,000
-        orbitals on a Xeon E5-2690 v3 CPU:
-            This method with safety check: 5.80s
-            This method without safety check: 3.26s
-            orb_id_sc2pc_array: 0.05s
-            Cython: 0.18s
+        NOTE: This method is safe, but EXTREMELY SLOW. If you are going to
+        call this method many times, use orb_id_sc2pc_array instead.
 
         :param id_sc: integer
             index of orbital in super cell representation
-        :param unsafe: boolean
-            whether to turn off safety check
         :return: id_pc: (4,) int32 array
             index of orbital in primitive cell representation
         :raises IDSCIndexError: if id_sc is out of range
         """
-        if not unsafe:
-            self.sync_array()
+        self.sync_array()
         try:
             id_pc = self.orb_id_pc[id_sc]
         except IndexError as err:
             raise exc.IDSCIndexError(id_sc) from err
         return id_pc
 
-    def orb_id_pc2sc(self, id_pc, unsafe=False):
+    def orb_id_pc2sc(self, id_pc):
         """
         Convert orbital (NOT VACANCY) index from pc representation to sc
         representation.
 
-        NOTE: This method is safe, but EXTREMELY SLOW. Turning off the safety
-        check may boost the efficiency, but still much slower than the Cython
-        version. So, if you are going to call this method many times, use
-        orb_id_pc2sc_array instead, which is a thin wrapper over the Cython
-        version.
-
-        Time usage of getting all the id_pc for a TB model with 1,000,000
-        orbitals on a Xeon E5-2690 v3 CPU:
-            This method with safety check: 43.36s
-            This method without safety check: 16.39s
-            orb_id_pc2sc_array: 0.23s
-            Cython: 0.18s
+        NOTE: This method is safe, but EXTREMELY SLOW. If you are going to
+        call this method many times, use orb_id_pc2sc_array instead.
 
         :param id_pc: (ia, ib, ic, io), or equivalent int32 array
             index of orbital in primitive cell representation
-        :param unsafe: boolean
-            whether to turn off safety check
         :return: id_sc: integer
             index of orbital in super cell representation
         :raises IDPCLenError: if len(id_pc) != 4
@@ -373,9 +348,8 @@ class OrbitalSet(LockableObject):
         :raises IDPCTypeError: if id_pc is not tuple or numpy array
         :raises IDPCVacError: if id_pc corresponds to a vacancy
         """
-        if not unsafe:
-            self.sync_array()
-            self.check_id_pc(id_pc)
+        self.sync_array()
+        self.check_id_pc(id_pc)
         if not isinstance(id_pc, np.ndarray):
             id_pc = np.array(id_pc, dtype=np.int32)
         orb_id_sc = core.id_pc2sc(self.dim, self.num_orb_pc,
