@@ -15,6 +15,8 @@ Classes
         class for representing a super cell from which the sample is constructed
 """
 
+from typing import Callable
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.collections as mc
@@ -559,6 +561,20 @@ class IntraHopping(LockableObject):
             self._indices.append((bra, ket))
             self._energies.append(energy)
 
+    def get_orb_ind(self):
+        """
+        Get orbital indices of bra and ket in hopping terms in primitive cell
+        presentation.
+
+        :return: id_bra: (num_hop,) int32 array
+            indices of bra
+        :return id_ket: (num_hop,) int32 array
+            indices of ket
+        """
+        id_bra = np.array([_[0] for _ in self._indices], dtype=np.int32)
+        id_ket = np.array([_[1] for _ in self._indices], dtype=np.int32)
+        return id_bra, id_ket
+
     def trim(self, orb_id_trim):
         """
         Remove hopping terms associated to dangling orbitals.
@@ -613,11 +629,14 @@ class SuperCell(OrbitalSet):
 
     Attributes
     ----------
-    hop_modifier: instance of 'IntraHopping' class
+    _hop_modifier: instance of 'IntraHopping' class
         modification to hopping terms in the super cell
+    _orb_pos_modifier: function
+        modification to orbital positions in the super cell
     """
     def __init__(self, prim_cell: PrimitiveCell, dim, pbc=(False, False, False),
-                 vacancies=None, hop_modifier: IntraHopping = None) -> None:
+                 vacancies=None, hop_modifier: IntraHopping = None,
+                 orb_pos_modifier: Callable[[np.ndarray], None] = None) -> None:
         """
         :param prim_cell: instance of 'PrimitiveCell' class
             primitive cell from which the super cell is constructed
@@ -630,6 +649,8 @@ class SuperCell(OrbitalSet):
             indices of vacancies in primitive cell representation
         :param hop_modifier: instance of 'IntraHopping' class
             modification to hopping terms
+        :param orb_pos_modifier: function
+            modification to orbital positions in the super cell
         :return: None
         :raises SCDimLenError: if len(dim) != 2 or 3
         :raises SCDimSizeError: if dimension is smaller than minimal value
@@ -643,9 +664,39 @@ class SuperCell(OrbitalSet):
         self.lock()
 
         # Assign and Lock hop_modifier
-        self.hop_modifier = hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.lock()
+        self._hop_modifier = hop_modifier
+        if self._hop_modifier is not None:
+            self._hop_modifier.lock()
+
+        # Assign orb_pos_modifier
+        self._orb_pos_modifier = orb_pos_modifier
+
+    def set_hop_modifier(self, hop_modifier: IntraHopping = None):
+        """
+        Reset hop_modifier.
+
+        :param hop_modifier: instance of 'IntraHopping' class
+            hopping modifier
+        :return: None
+        """
+        # Release old hop_modifier
+        if self._hop_modifier is not None:
+            self._hop_modifier.unlock()
+
+        # Assign and lock new hop_modifier
+        self._hop_modifier = hop_modifier
+        if self._hop_modifier is not None:
+            self._hop_modifier.lock()
+
+    def set_orb_pos_modifier(self, orb_pos_modifier: Callable = None):
+        """
+        Reset orb_pos_modifier.
+
+        :param orb_pos_modifier: function
+            modifier to orbital positions
+        :return: None
+        """
+        self._orb_pos_modifier = orb_pos_modifier
 
     def get_orb_eng(self):
         """
@@ -665,8 +716,11 @@ class SuperCell(OrbitalSet):
             Cartesian coordinates of orbitals in the super cell in nm
         """
         self.sync_array()
-        return core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
-                                  self.orb_id_pc)
+        orb_pos = core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
+                                     self.orb_id_pc)
+        if self._orb_pos_modifier is not None:
+            self._orb_pos_modifier(orb_pos)
+        return orb_pos
 
     def get_hop(self):
         """
@@ -697,12 +751,10 @@ class SuperCell(OrbitalSet):
                            data_kind=0)
 
         # Apply hopping modifier
-        if self.hop_modifier is not None \
-                and len(self.hop_modifier.indices) != 0:
+        if self._hop_modifier is not None \
+                and len(self._hop_modifier.indices) != 0:
             # Convert hopping indices to sc representation
-            hop_ind = self.hop_modifier.indices
-            id_bra_pc = np.array([_[0] for _ in hop_ind], dtype=np.int32)
-            id_ket_pc = np.array([_[1] for _ in hop_ind], dtype=np.int32)
+            id_bra_pc, id_ket_pc = self._hop_modifier.get_orb_ind()
             id_bra_sc = self.orb_id_pc2sc_array(id_bra_pc)
             id_ket_sc = self.orb_id_pc2sc_array(id_ket_pc)
 
@@ -715,7 +767,7 @@ class SuperCell(OrbitalSet):
                     core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
 
                 # If the hopping term already exists, update it.
-                hop_energy = self.hop_modifier.energies[ih]
+                hop_energy = self._hop_modifier.energies[ih]
                 if id_same != -1:
                     hop_v[id_same] = hop_energy
 
@@ -796,10 +848,10 @@ class SuperCell(OrbitalSet):
         self.sync_array(force_sync=True)
 
         # Also trim hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.unlock()
-            self.hop_modifier.trim(orb_id_trim)
-            self.hop_modifier.lock()
+        if self._hop_modifier is not None:
+            self._hop_modifier.unlock()
+            self._hop_modifier.trim(orb_id_trim)
+            self._hop_modifier.lock()
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
              hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):

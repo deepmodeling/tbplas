@@ -7,7 +7,8 @@ from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
-                    PrimitiveCell, SuperCell, InterHopping, Sample, Timer)
+                    PrimitiveCell, SuperCell, IntraHopping,
+                    InterHopping, Sample, Timer)
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
 from tbplas.utils import TestHelper
@@ -553,6 +554,17 @@ class TestSample(unittest.TestCase):
         sample = Sample(sc)
         sample.plot()
 
+        print("3x3 Graphene super cell with open bc and intra hopping")
+        hop_mod = IntraHopping()
+        hop_mod.add_hopping(rn_i=(0, 0), orb_i=1, rn_j=(1, 2), orb_j=0,
+                            energy=1.5)
+        hop_mod.add_hopping(rn_i=(0, 2), orb_i=0, rn_j=(2, 0), orb_j=1,
+                            energy=2.0)
+        sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False),
+                       hop_modifier=hop_mod)
+        sample = Sample(sc)
+        sample.plot()
+
         print("3x3 Graphene super cell with 2 layers")
         pc1 = make_cell()
         pc2 = make_cell()
@@ -611,6 +623,19 @@ class TestSample(unittest.TestCase):
         sc.trim()
         sample = Sample(sc)
         sample.plot(with_cells=False)
+
+        print("\n24*24 Graphene super cell with Gaussian bump")
+
+        def _make_pos_mod(c0):
+            def _pos_mod(orb_pos):
+                x, y = orb_pos[:, 0], orb_pos[:, 1]
+                orb_pos[:, 2] += np.exp(-(x - c0[0])**2 - (y - c0[1])**2)
+            return _pos_mod
+
+        sc = SuperCell(make_cell(), dim=(24, 24, 1),
+                       orb_pos_modifier=_make_pos_mod([4.17, 2.70]))
+        sample = Sample(sc)
+        sample.plot(with_cells=False, hop_as_arrows=False, view="ac")
 
     def test13_calc_bands(self):
         """
