@@ -769,42 +769,6 @@ class PrimitiveCell(LockableObject):
         else:
             raise exc.PCHopNotFoundError(new_hopping.index)
 
-    @property
-    def num_orb(self):
-        """
-        Get the number of orbitals in the primitive cell.
-
-        :return: integer, number of orbitals
-        """
-        return len(self.orbital_list)
-
-    def get_lattice_area(self, direction="c"):
-        """
-        Get the area formed by lattice vectors normal to given direction.
-
-        :param direction: string, should be in ("a", "b", "c")
-            direction of area, e.g. "c" indicates the area formed by lattice
-            vectors in the aOb plane.
-        :return: float, area formed by lattice vectors in NM^2.
-        """
-        return lat.get_lattice_area(self.lat_vec, direction)
-
-    def get_lattice_volume(self):
-        """
-        Get the volume formed by all three lattice vectors in NM^3.
-
-        :return: float, volume in NM^3.
-        """
-        return lat.get_lattice_volume(self.lat_vec)
-
-    def get_reciprocal_vectors(self):
-        """
-        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
-
-        :return: (3, 3) float64 array, reciprocal vectors in 1/NM.
-        """
-        return lat.gen_reciprocal_vectors(self.lat_vec)
-
     def sync_array(self, verbose=False, force_sync=False):
         """
         Synchronize orb_pos, orb_eng, hop_ind and hop_eng according to
@@ -856,6 +820,33 @@ class PrimitiveCell(LockableObject):
         else:
             if verbose:
                 print("INFO: no need to update pc hopping arrays")
+
+    def get_lattice_area(self, direction="c"):
+        """
+        Get the area formed by lattice vectors normal to given direction.
+
+        :param direction: string, should be in ("a", "b", "c")
+            direction of area, e.g. "c" indicates the area formed by lattice
+            vectors in the aOb plane.
+        :return: float, area formed by lattice vectors in NM^2.
+        """
+        return lat.get_lattice_area(self.lat_vec, direction)
+
+    def get_lattice_volume(self):
+        """
+        Get the volume formed by all three lattice vectors in NM^3.
+
+        :return: float, volume in NM^3.
+        """
+        return lat.get_lattice_volume(self.lat_vec)
+
+    def get_reciprocal_vectors(self):
+        """
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+
+        :return: (3, 3) float64 array, reciprocal vectors in 1/NM.
+        """
+        return lat.gen_reciprocal_vectors(self.lat_vec)
 
     def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
              with_cells=True, with_conj=True, hop_as_arrows=True,
@@ -1120,3 +1111,12 @@ class PrimitiveCell(LockableObject):
         # bands.size basis functions. So we divide dos by this number.
         dos /= bands.size
         return energies, dos
+
+    @property
+    def num_orb(self):
+        """
+        Get the number of orbitals in the primitive cell.
+
+        :return: integer, number of orbitals
+        """
+        return len(self.orbital_list)
