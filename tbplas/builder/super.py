@@ -14,6 +14,7 @@ Classes
     SuperCell: user class
         class for representing a super cell from which the sample is constructed
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.collections as mc
@@ -440,10 +441,10 @@ class IntraHopping(LockableObject):
 
     Attributes
     ----------
-    indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
+    _indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
         where (ia, ib, ic, io) is the index of bra in primitive cell
         representation and (ia', ib', ic', io') is the index of ket
-    energies: list of complex numbers
+    _energies: list of complex numbers
         hopping energies corresponding to indices in eV
 
     NOTES
@@ -473,8 +474,8 @@ class IntraHopping(LockableObject):
     """
     def __init__(self):
         super().__init__()
-        self.indices = []
-        self.energies = []
+        self._indices = []
+        self._energies = []
 
     def __find_equiv_hopping(self, bra, ket):
         """
@@ -495,12 +496,12 @@ class IntraHopping(LockableObject):
         hop_same = (bra, ket)
         hop_conj = (ket, bra)
         try:
-            id_same = self.indices.index(hop_same)
+            id_same = self._indices.index(hop_same)
         except ValueError:
             pass
         if id_same is None:
             try:
-                id_conj = self.indices.index(hop_conj)
+                id_conj = self._indices.index(hop_conj)
             except ValueError:
                 pass
         return id_same, id_conj
@@ -551,12 +552,12 @@ class IntraHopping(LockableObject):
         # Update existing hopping term, or add the new term to hopping_list.
         id_same, id_conj = self.__find_equiv_hopping(bra, ket)
         if id_same is not None:
-            self.energies[id_same] = energy
+            self._energies[id_same] = energy
         elif id_conj is not None:
-            self.energies[id_conj] = energy.conjugate()
+            self._energies[id_conj] = energy.conjugate()
         else:
-            self.indices.append((bra, ket))
-            self.energies.append(energy)
+            self._indices.append((bra, ket))
+            self._energies.append(energy)
 
     def trim(self, orb_id_trim):
         """
@@ -578,7 +579,7 @@ class IntraHopping(LockableObject):
 
         remain_terms = []
         orb_id_trim = [tuple(orb_id) for orb_id in orb_id_trim]
-        for i, ind in enumerate(self.indices):
+        for i, ind in enumerate(self._indices):
             to_trim = False
             for orb_id in orb_id_trim:
                 if orb_id == ind[0] or orb_id == ind[1]:
@@ -586,10 +587,24 @@ class IntraHopping(LockableObject):
                     break
             if not to_trim:
                 remain_terms.append(i)
-        new_indices = [self.indices[i] for i in remain_terms]
-        new_energies = [self.energies[i] for i in remain_terms]
-        self.indices = new_indices
-        self.energies = new_energies
+        new_indices = [self._indices[i] for i in remain_terms]
+        new_energies = [self._energies[i] for i in remain_terms]
+        self._indices = new_indices
+        self._energies = new_energies
+
+    @property
+    def indices(self):
+        """
+        :return: self._indices
+        """
+        return self._indices
+
+    @property
+    def energies(self):
+        """
+        :return: self._energies
+        """
+        return self._energies
 
 
 class SuperCell(OrbitalSet):
