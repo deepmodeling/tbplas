@@ -22,7 +22,6 @@ import scipy.linalg.lapack as lapack
 from scipy.sparse import dia_matrix, csr_matrix
 from scipy.sparse.linalg import eigsh
 import matplotlib.pyplot as plt
-import matplotlib.collections as mc
 
 from . import lattice as lat
 from . import kpoints as kpt
@@ -30,7 +29,7 @@ from . import exceptions as exc
 from . import core
 from .primitive import correct_coord, LockableObject
 from .super import SuperCell
-from .utils import proj_coord
+from .utils import ModelViewer
 
 
 class InterHopping(LockableObject):
@@ -219,24 +218,24 @@ class InterHopping(LockableObject):
             to a vacancy
         :raises ValueError: if view is illegal
         """
+        viewer = ModelViewer(axes, self.sc_bra.pc_lat_vec, view)
+
         # Plot hopping terms
-        orb_pos_i = proj_coord(self.sc_bra.get_orb_pos(), view)
-        orb_pos_j = proj_coord(self.sc_ket.get_orb_pos(), view)
+        orb_pos_i = self.sc_bra.get_orb_pos()
+        orb_pos_j = self.sc_ket.get_orb_pos()
         hop_i, hop_j, hop_v = self.get_hop()
-        hop_mc = []
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos_i[hop_i.item(i_h)]
                 pos_j = orb_pos_j[hop_j.item(i_h)]
                 if hop_as_arrows:
-                    diff_pos = pos_j - pos_i
-                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                               color='r', length_includes_head=True,
-                               width=0.002, head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, color='r',
+                                      length_includes_head=True,
+                                      width=0.002, head_width=0.02, fill=False)
                 else:
-                    hop_mc.append((pos_i, pos_j))
+                    viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
-            axes.add_collection(mc.LineCollection(hop_mc, color="r"))
+            viewer.plot_line(color="r")
 
 
 class Sample:

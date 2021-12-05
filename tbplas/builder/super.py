@@ -19,12 +19,11 @@ from typing import Callable
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.collections as mc
 
 from . import exceptions as exc
 from . import core
 from .primitive import correct_coord, LockableObject, PrimitiveCell
-from .utils import proj_coord
+from .utils import ModelViewer
 
 
 class OrbitalSet(LockableObject):
@@ -880,79 +879,40 @@ class SuperCell(OrbitalSet):
             to a vacancy
         :raises ValueError: if view is illegal
         """
+        viewer = ModelViewer(axes, self.pc_lat_vec, view)
+
         # Plot orbitals
-        orb_pos = proj_coord(self.get_orb_pos(), view)
+        orb_pos = self.get_orb_pos()
         orb_eng = self.get_orb_eng()
         if with_orbitals:
-            axes.scatter(orb_pos[:, 0], orb_pos[:, 1], c=orb_eng)
+            viewer.scatter(orb_pos, c=orb_eng)
 
         # Plot hopping terms
         hop_i, hop_j, hop_v = self.get_hop()
-        hop_mc = []
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos[hop_i.item(i_h)]
                 pos_j = orb_pos[hop_j.item(i_h)]
                 if hop_as_arrows:
-                    diff_pos = pos_j - pos_i
-                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                               color='r', length_includes_head=True,
-                               width=0.002, head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, color='r',
+                                      length_includes_head=True,
+                                      width=0.002, head_width=0.02, fill=False)
                 else:
-                    hop_mc.append((pos_i, pos_j))
+                    viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
-            axes.add_collection(mc.LineCollection(hop_mc, colors="r"))
-
-        # Functions for plotting cells
-        def _asm_coord(a, b):
-            if dim_zero == 0:
-                return 0, a, b
-            elif dim_zero == 1:
-                return a, 0, b
-            else:
-                return a, b, 0
-
-        def _add_grid(r1_max, r2_max):
-            for i1 in range(r1_max + 1):
-                x0 = _asm_coord(i1, 0)
-                x1 = _asm_coord(i1, r2_max)
-                x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
-                x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
-                cell_mc.append((x0, x1))
-            for i2 in range(r2_max + 1):
-                x0 = _asm_coord(0, i2)
-                x1 = _asm_coord(r1_max, i2)
-                x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
-                x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
-                cell_mc.append((x0, x1))
-
-        def _add_vector():
-            x0 = _asm_coord(0, 1)
-            x1 = _asm_coord(1, 0)
-            x0 = proj_coord(np.matmul(x0, self.pc_lat_vec), view)
-            x1 = proj_coord(np.matmul(x1, self.pc_lat_vec), view)
-            axes.arrow(0, 0, x0[0], x0[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
-            axes.arrow(0, 0, x1[0], x1[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
+            viewer.plot_line(color='r')
 
         # Plot cells
         if with_cells:
-            cell_mc = []
             if view in ("ab", "ba"):
-                dim_zero = 2
-                _add_grid(self.dim.item(0), self.dim.item(1))
+                viewer.add_grid(0, self.dim.item(0), 0, self.dim.item(1))
             elif view in ("bc", "cb"):
-                dim_zero = 0
-                _add_grid(self.dim.item(1), self.dim.item(2))
+                viewer.add_grid(0, self.dim.item(1), 0, self.dim.item(2))
             else:
-                dim_zero = 1
-                _add_grid(self.dim.item(0), self.dim.item(2))
-            axes.add_collection(mc.LineCollection(cell_mc, color="k",
-                                                  linestyle=":"))
-            _add_vector()
+                viewer.add_grid(0, self.dim.item(0), 0, self.dim.item(2))
+            viewer.plot_grid(color="k", linestyle=":")
+            viewer.plot_lat_vec(color="k", length_includes_head=True,
+                                width=0.005, head_width=0.02)
 
     @property
     def pc_lat_vec(self):

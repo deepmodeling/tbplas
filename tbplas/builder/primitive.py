@@ -28,14 +28,13 @@ import math
 import numpy as np
 import scipy.linalg.lapack as lapack
 import matplotlib.pyplot as plt
-import matplotlib.collections as mc
 
 from . import constants as consts
 from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .utils import proj_coord
+from .utils import ModelViewer
 
 
 def correct_coord(coord, complete_item=0):
@@ -885,6 +884,7 @@ class PrimitiveCell(LockableObject):
         self.sync_array()
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
+        viewer = ModelViewer(axes, self.lat_vec, view)
 
         # Restore conjugate hopping terms
         if with_conj:
@@ -915,77 +915,35 @@ class PrimitiveCell(LockableObject):
                 for i_b in range(rb_min, rb_max+1):
                     for i_c in range(rc_min, rc_max+1):
                         center = np.matmul((i_a, i_b, i_c), self.lat_vec)
-                        pos_rn = proj_coord(pos_r0 + center, view)
-                        axes.scatter(pos_rn[:, 0], pos_rn[:, 1], s=100,
-                                     c=self.orb_eng)
-
-        # Functions for plotting cells
-        def _asm_coord(a, b):
-            if dim_zero == 0:
-                return 0, a, b
-            elif dim_zero == 1:
-                return a, 0, b
-            else:
-                return a, b, 0
-
-        def _add_grid(r1_min, r1_max, r2_min, r2_max):
-            for i1 in range(r1_min, r1_max+2):
-                x0 = _asm_coord(i1, r2_min)
-                x1 = _asm_coord(i1, r2_max+1)
-                x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
-                x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
-                cell_mc.append((x0, x1))
-            for i2 in range(r2_min, r2_max+2):
-                x0 = _asm_coord(r1_min, i2)
-                x1 = _asm_coord(r1_max+1, i2)
-                x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
-                x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
-                cell_mc.append((x0, x1))
-
-        def _add_vector():
-            x0 = _asm_coord(0, 1)
-            x1 = _asm_coord(1, 0)
-            x0 = proj_coord(np.matmul(x0, self.lat_vec), view)
-            x1 = proj_coord(np.matmul(x1, self.lat_vec), view)
-            axes.arrow(0, 0, x0[0], x0[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
-            axes.arrow(0, 0, x1[0], x1[1],
-                       color="k", length_includes_head=True, width=0.005,
-                       head_width=0.02)
+                        pos_rn = pos_r0 + center
+                        viewer.scatter(pos_rn, s=100, c=self.orb_eng)
 
         # Plot cells
         if with_cells:
-            cell_mc = []
             if view in ("ab", "ba"):
-                dim_zero = 2
-                _add_grid(ra_min, ra_max, rb_min, rb_max)
+                viewer.add_grid(ra_min, ra_max + 1, rb_min, rb_max + 1)
             elif view in ("bc", "cb"):
-                dim_zero = 0
-                _add_grid(rb_min, rb_max, rc_min, rc_max)
+                viewer.add_grid(rb_min, rb_max + 1, rc_min, rc_max + 1)
             else:
-                dim_zero = 1
-                _add_grid(ra_min, ra_max, rc_min, rc_max)
-            axes.add_collection(mc.LineCollection(cell_mc, color="k",
-                                                  linestyle=":"))
-            _add_vector()
+                viewer.add_grid(ra_min, ra_max + 1, rc_min, rc_max + 1)
+            viewer.plot_grid(color="k", linestyle=":")
+            viewer.plot_lat_vec(color="k", length_includes_head=True,
+                                width=0.005, head_width=0.02)
 
         # Plot hopping terms
-        hop_mc = []
         for i_h, hop in enumerate(hop_ind_full):
             if abs(hop_eng_full.item(i_h)) >= hop_eng_cutoff:
                 center = np.matmul(hop[:3], self.lat_vec)
-                pos_i = proj_coord(pos_r0[hop.item(3)], view)
-                pos_j = proj_coord(pos_r0[hop.item(4)] + center, view)
+                pos_i = pos_r0[hop.item(3)]
+                pos_j = pos_r0[hop.item(4)] + center
                 if hop_as_arrows:
-                    diff_pos = pos_j - pos_i
-                    axes.arrow(pos_i[0], pos_i[1], diff_pos[0], diff_pos[1],
-                               color="r", length_includes_head=True,
-                               width=0.002, head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, color="r",
+                                      length_includes_head=True, width=0.002,
+                                      head_width=0.02, fill=False)
                 else:
-                    hop_mc.append((pos_i, pos_j))
+                    viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
-            axes.add_collection(mc.LineCollection(hop_mc, color='r'))
+            viewer.plot_line(color='r')
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
