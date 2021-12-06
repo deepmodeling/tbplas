@@ -791,6 +791,8 @@ class SuperCell(OrbitalSet):
         # Check for diagonal, duplicate or conjugate terms in hopping terms
         # NOTE: the checking procedure is EXTREMELY SLOW for large models even
         # though it is implemented in Cython. So it is disabled by default.
+        # Hopefully, the limitation on super cell dimension will prohibit the
+        # ill situations.
         # status = core.check_hop(hop_i, hop_j)
         # if status[0] == -3:
         #     raise ValueError(f"Diagonal term detected {status[1]}")
