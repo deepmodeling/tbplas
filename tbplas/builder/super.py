@@ -76,8 +76,8 @@ class OrbitalSet(LockableObject):
     'build_hop', 'build_hop_k' and 'fill_ham' will not work properly.
 
     In the hr.dat file produced by Wannier90, there is an N_min and an N_max
-    for the furthest primitive cell index. In that case, N = N_max - N_min
-    as the result of translational symmetry.
+    for the furthest primitive cell index. In that case, N should be the
+    maximum of |N_max| and |N_min| as the result of translational symmetry.
 
     2. Why not orb_id_sc
 
@@ -87,8 +87,8 @@ class OrbitalSet(LockableObject):
     some operations. For orb_id_sc, there is no such need and we do not keep
     it for reduce memory usage.
 
-    However, it should noted that vac_id_sc and orb_id_sc are generated via
-    different approaches. We show it by a example of 2*2 super cell with 2
+    However, it should be noted that vac_id_sc and orb_id_sc are generated via
+    different approaches. We show it by an example of 2*2 super cell with 2
     orbitals per primitive cell. The indices of orbitals as well as vacancies
     in primitive cell representation are
                id_pc    id_sc    type
@@ -147,7 +147,7 @@ class OrbitalSet(LockableObject):
         for i in range(3):
             rn_min = self.prim_cell.hop_ind[:, i].min()
             rn_max = self.prim_cell.hop_ind[:, i].max()
-            dim_min = 2 * (rn_max - rn_min) + 1
+            dim_min = max(abs(rn_min), abs(rn_max))
             if dim[i] < dim_min:
                 raise exc.SCDimSizeError(i, dim_min)
         self.dim = np.array(dim, dtype=np.int32)
@@ -470,8 +470,9 @@ class IntraHopping(LockableObject):
     counterparts are new to 'SuperCell', they will be appended to hop_* arrays.
     The dr array will also be updated accordingly.
 
-    For now only hopping terms within the (0, 0, 0) super cell are allowed.
-    Other hopping terms will be treated as illegal.
+    We restrict hopping terms to reside within the (0, 0, 0) super cell even if
+    periodic conditions are enabled. Other hopping terms will be treated as
+    illegal.
     """
     def __init__(self):
         super().__init__()
@@ -786,6 +787,21 @@ class SuperCell(OrbitalSet):
             hop_i = np.append(hop_i, hop_i_new)
             hop_j = np.append(hop_j, hop_j_new)
             hop_v = np.append(hop_v, hop_v_new)
+
+        # Check for diagonal, duplicate or conjugate terms in hopping terms
+        # NOTE: the checking procedure is EXTREMELY SLOW for large models even
+        # though it is implemented in Cython. So it is disabled by default.
+        # status = core.check_hop(hop_i, hop_j)
+        # if status[0] == -3:
+        #     raise ValueError(f"Diagonal term detected {status[1]}")
+        # elif status[0] == -2:
+        #     raise ValueError(f"Conjugate terms detected {status[1]} "
+        #                      f"{status[2]}")
+        # elif status[0] == -1:
+        #     raise ValueError(f"Duplicate terms detected {status[1]} "
+        #                      f"{status[2]}")
+        # else:
+        #     pass
         return hop_i, hop_j, hop_v
 
     def get_dr(self):
