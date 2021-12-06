@@ -111,7 +111,7 @@ class TestSample(unittest.TestCase):
 
     def test01_get_hop(self):
         """
-        Test 'get_hop' method method of 'InterHopping' class.
+        Test 'get_hop' method of 'InterHopping' class.
 
         :return: None
         """
@@ -134,6 +134,12 @@ class TestSample(unittest.TestCase):
             inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
             inter_hop2.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(3, 3), orb_j=1)
             inter_hop2.get_hop()
+        th.test_no_raise(_test, exc.IDPCIndexError)
+
+        def _test():
+            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
+            inter_hop2.add_hopping(rn_i=(3, 3), orb_i=0, rn_j=(0, 0), orb_j=1)
+            inter_hop2.get_hop()
         th.test_raise(_test, exc.IDPCIndexError, r"cell index .+ of .+ out"
                                                  r" of range")
 
@@ -143,6 +149,17 @@ class TestSample(unittest.TestCase):
             inter_hop2.get_hop()
         th.test_raise(_test, exc.IDPCIndexError, r"orbital index .+ of .+ out"
                                                  r" of range")
+
+        def _check_status(status):
+            if status[0] == -1:
+                raise ValueError(f"Duplicate terms detected {status[1]} "
+                                 f"{status[2]}")
+
+        def _test():
+            _hop_i = np.array([1, 1, 2], dtype=np.int64)
+            _hop_j = np.array([1, 1, 3], dtype=np.int64)
+            _check_status(core.check_inter_hop(_hop_i, _hop_j))
+        th.test_raise(_test, ValueError, r"Duplicate terms detected 0 1")
 
         # Normal case
         inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
@@ -162,7 +179,7 @@ class TestSample(unittest.TestCase):
 
     def test02_get_dr(self):
         """
-        Test 'get_dr' method method of 'InterHopping' class.
+        Test 'get_dr' method of 'InterHopping' class.
 
         :return: None
         """

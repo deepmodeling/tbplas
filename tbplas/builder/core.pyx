@@ -994,6 +994,63 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def check_hop(long [::1] hop_i, long [::1] hop_j):
+    """
+    Check if there are diagonal, duplicate or conjugate terms in hop_i and hop_j
+    from SuperCell.get_hop().
+
+    Parameters
+    ----------
+    hop_i: (num_hop,) int64 array
+        row indices of hopping terms
+    hop_j: (num_hop,) int64 array
+        column indices of hopping terms
+
+    Returns
+    -------
+    status: (3,) int32 array
+        0th element is the error type:
+            -3: diagonal term found
+            -2: conjugate terms found
+            -1: duplicate terms found
+             0: NO ERROR
+        1st and 2nd elements are the indices of diagonal, duplicate or conjugate
+        terms
+    """
+    cdef long num_hop, ih1, ih2
+    cdef long i_ref, j_ref, i_chk, j_chk
+    cdef int [::1] status
+
+    status = np.zeros(3, dtype=np.int32)
+    num_hop = hop_i.shape[0]
+
+    for ih1 in range(num_hop-1):
+        i_ref, j_ref = hop_i[ih1], hop_j[ih1]
+        # Check for diagonal terms
+        if i_ref == j_ref:
+            status[0] = -3
+            status[1] = ih1
+            status[2] = ih1
+            break
+
+        # Check for duplicate or conjugate terms
+        for ih2 in range(ih1+1, num_hop):
+            i_chk, j_chk = hop_i[ih2], hop_j[ih2]
+            if i_ref == i_chk and j_ref == j_chk:
+                status[0] = -1
+                status[1] = ih1
+                status[2] = ih2
+                break
+            elif i_ref == j_chk and j_ref == i_chk:
+                status[0] = -2
+                status[1] = ih1
+                status[2] = ih2
+                break
+    return np.asarray(status)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
     """
     Get the indices of orbitals to trim in primitive cell representation.
@@ -1048,8 +1105,51 @@ def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def check_inter_hop(long [::1] hop_i, long [::1] hop_j):
+    """
+    Check if there are duplicate terms in hop_i and hop_j from
+    InterHop.get_hop().
+
+    Parameters
+    ----------
+    hop_i: (num_hop,) int64 array
+        row indices of hopping terms
+    hop_j: (num_hop,) int64 array
+        column indices of hopping terms
+
+    Returns
+    -------
+    status: (3,) int32 array
+        0th element is the error type:
+            -1: dunplicate terms found
+             0: NO ERROR
+        1st and 2nd elements are the indices of the duplicate terms
+    """
+    cdef long num_hop, ih1, ih2
+    cdef long i_ref, j_ref, i_chk, j_chk
+    cdef int [::1] status
+
+    status = np.zeros(3, dtype=np.int32)
+    num_hop = hop_i.shape[0]
+
+    for ih1 in range(num_hop-1):
+        i_ref, j_ref = hop_i[ih1], hop_j[ih1]
+        for ih2 in range(ih1+1, num_hop):
+            i_chk, j_chk = hop_i[ih2], hop_j[ih2]
+            if i_ref == i_chk and j_ref == j_chk:
+                status[0] = -1
+                status[1] = ih1
+                status[2] = ih2
+                break
+    return np.asarray(status)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
-                   double [:,::1] pos_bra, double [:,::1] pos_ket):
+                   double [:,::1] pos_bra, double [:,::1] pos_ket,
+                   int [:,::1] id_ket_pc, int [::1] dim_ket,
+                   double [:, ::1] sc_lat_ket):
     """
     Build the array of hopping distances for an 'InterHopping' instance.
 
@@ -1062,7 +1162,13 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
     pos_bra: (num_hop, 3) float64 array
         Cartesian coordiantes of orbitals of the 'bra' super cell in nm
     pos_ket: (num_hop, 3) float64 array
-        Cartesian coordiantes of orbitals of the 'bra' super cell in nm
+        Cartesian coordiantes of orbitals of the 'ket' super cell in nm
+    id_ket_pc: (num_hop, 4) int32 array
+        indices of orbitals of the 'ket' super cell in pc representation
+    dim_ket: (3,) int32 array
+        dimension of 'ket' super cell
+    sc_lat_ket: (3, 3) float64 array
+        Cartesian coordiantes of 'ket' super cell lattice vectors
 
     Returns
     -------
@@ -1071,7 +1177,7 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
     """
     cdef long num_hop, ih
     cdef long id_bra, id_ket
-    cdef int i_dim
+    cdef int na, nb, nc
     cdef double [:,::1] dr
 
     num_hop = hop_i.shape[0]
@@ -1079,8 +1185,24 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
     for ih in range(num_hop):
         id_bra = hop_i[ih]
         id_ket = hop_j[ih]
-        for i_dim in range(3):
-            dr[ih, i_dim] = pos_ket[id_ket, i_dim] - pos_bra[id_bra, i_dim]
+        na = _fast_div(id_ket_pc[ih, 0], dim_ket[0])
+        nb = _fast_div(id_ket_pc[ih, 1], dim_ket[1])
+        nc = _fast_div(id_ket_pc[ih, 2], dim_ket[2])
+        dr[ih, 0] = pos_ket[id_ket, 0] \
+                  - pos_bra[id_bra, 0] \
+                  + na * sc_lat_ket[0, 0] \
+                  + nb * sc_lat_ket[1, 0] \
+                  + nc * sc_lat_ket[2, 0]
+        dr[ih, 1] = pos_ket[id_ket, 1] \
+                  - pos_bra[id_bra, 1] \
+                  + na * sc_lat_ket[0, 1] \
+                  + nb * sc_lat_ket[1, 1] \
+                  + nc * sc_lat_ket[2, 1]
+        dr[ih, 2] = pos_ket[id_ket, 2] \
+                  - pos_bra[id_bra, 2] \
+                  + na * sc_lat_ket[0, 2] \
+                  + nb * sc_lat_ket[1, 2] \
+                  + nc * sc_lat_ket[2, 2]
     return np.asarray(dr)
 
 
