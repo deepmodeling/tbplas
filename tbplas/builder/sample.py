@@ -339,23 +339,23 @@ class Sample:
 
     Attributes
     ----------
-    sc_list: list of 'SuperCell' instances
-        list of super cells within the sample
-    hop_list: list of 'IntraHopping' instances
-        list of inter-hopping sets between super cells within the sample
-    orb_eng: (num_orb_sc,) float64 array
+    _sc_list: list of 'SuperCell' instances
+        list of supercells within the sample
+    _hop_list: list of 'IntraHopping' instances
+        list of inter-hopping sets between supercells within the sample
+    _orb_eng: (num_orb_sc,) float64 array
         on-site energies of orbitals in the super cell in eV
-    orb_pos: (num_orb_sc, 3) float64 array
+    _orb_pos: (num_orb_sc, 3) float64 array
         Cartesian coordinates of orbitals in the super cell in nm
-    hop_i: (num_hop_sc,) int64 array
+    _hop_i: (num_hop_sc,) int64 array
         row indices of hopping terms reduced by conjugate relation
-    hop_j: (num_hop_sc,) int64 array
+    _hop_j: (num_hop_sc,) int64 array
         column indices of hopping terms reduced by conjugate relation
-    hop_v: (num_hop_sc,) complex128 array
+    _hop_v: (num_hop_sc,) complex128 array
         energies of hopping terms in accordance with hop_i and hop_j in eV
-    dr: (num_hop_sc, 3) float64 array
+    _dr: (num_hop_sc, 3) float64 array
         distances of hopping terms in accordance with hop_i and hop_j in nm
-    rescale: float
+    _rescale: float
         rescaling factor for the Hamiltonian
         reserved for compatibility with old version of TBPlaS
 
@@ -369,46 +369,46 @@ class Sample:
     def __init__(self, *args: Union[SuperCell, InterHopping]):
         """
         :param args: list of 'SuperCell' or 'IntraHopping' instances
-            super cells and inter-hopping sets within this sample
+            supercells and inter-hopping sets within this sample
         :returns: None
         :raises SampleVoidError: if len(args) == 0
         :raises SampleCompError: if any argument in args is not instance of
             'SuperCell' or 'InterHopping' classes
-        :raises SampleClosureError: if any 'InterHopping' instance has super
-            cells not included in the sample
+        :raises SampleClosureError: if any 'InterHopping' instance has
+            supercells not included in the sample
         """
         # Check arguments
         if len(args) == 0:
             raise exc.SampleVoidError()
 
-        # Parse super cells and inter-hopping terms
-        self.sc_list = []
-        self.hop_list = []
+        # Parse supercells and inter-hopping terms
+        self._sc_list = []
+        self._hop_list = []
         for i_arg, arg in enumerate(args):
             if isinstance(arg, SuperCell):
-                self.sc_list.append(arg)
+                self._sc_list.append(arg)
             elif isinstance(arg, InterHopping):
-                self.hop_list.append(arg)
+                self._hop_list.append(arg)
                 arg.lock()
             else:
                 raise exc.SampleCompError(i_arg)
 
         # Check closure of inter-hopping instances
-        for i_h, hop in enumerate(self.hop_list):
-            if hop.sc_bra not in self.sc_list:
+        for i_h, hop in enumerate(self._hop_list):
+            if hop.sc_bra not in self._sc_list:
                 raise exc.SampleClosureError(i_h, "sc_bra")
-            if hop.sc_ket not in self.sc_list:
+            if hop.sc_ket not in self._sc_list:
                 raise exc.SampleClosureError(i_h, "sc_ket")
 
         # Declare arrays
         # The actual initialization will be done on-demand in init_* methods.
-        self.orb_eng = None
-        self.orb_pos = None
-        self.hop_i = None
-        self.hop_j = None
-        self.hop_v = None
-        self.dr = None
-        self.rescale = 1.0
+        self._orb_eng = None
+        self._orb_pos = None
+        self._hop_i = None
+        self._hop_j = None
+        self._hop_v = None
+        self._dr = None
+        self._rescale = 1.0
 
     def __get_num_orb(self):
         """
@@ -434,41 +434,41 @@ class Sample:
 
     def init_orb_eng(self, force_init=False):
         """
-        Initialize self.orb_eng on demand.
+        Initialize self._orb_eng on demand.
 
-        If self.orb_eng is None, build it from scratch. Otherwise, build it
+        If self._orb_eng is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self.orb_eng is modified.
+            self._orb_eng is modified.
         """
-        if force_init or self.orb_eng is None:
+        if force_init or self._orb_eng is None:
             orb_eng = [sc.get_orb_eng() for sc in self.sc_list]
-            self.orb_eng = np.concatenate(orb_eng)
+            self._orb_eng = np.concatenate(orb_eng)
 
     def init_orb_pos(self, force_init=False):
         """
-        Initialize self.orb_pos on demand.
+        Initialize self._orb_pos on demand.
 
-        If self.orb_pos is None, build it from scratch. Otherwise, build it
+        If self._orb_pos is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self.orb_pos is modified.
+            self._orb_pos is modified.
         """
-        if force_init or self.orb_pos is None:
+        if force_init or self._orb_pos is None:
             orb_pos = [sc.get_orb_pos() for sc in self.sc_list]
-            self.orb_pos = np.concatenate(orb_pos)
+            self._orb_pos = np.concatenate(orb_pos)
 
     def init_hop(self, force_init=False):
         """
-        Initialize self.hop_i, self.hop_j, self.hop_v and reset self.rescale
+        Initialize self._hop_i, self._hop_j, self._hop_v and reset self._rescale
         on demand.
 
         If the arrays are None, build them from scratch. Otherwise, build them
@@ -478,7 +478,7 @@ class Sample:
             whether to force initializing the arrays from scratch even if they
             have already been initialized
         :return: None
-            self.hop_i, self.hop_j and self.hop_j are modified.
+            self._hop_i, self._hop_j and self._hop_j are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -486,7 +486,7 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_init or self.hop_i is None:
+        if force_init or self._hop_i is None:
             hop_i_tot, hop_j_tot, hop_v_tot = [], [], []
             ind_start = self.__get_ind_start()
 
@@ -509,22 +509,22 @@ class Sample:
                 hop_v_tot.append(hop_v)
 
             # Assemble hopping terms
-            self.hop_i = np.concatenate(hop_i_tot)
-            self.hop_j = np.concatenate(hop_j_tot)
-            self.hop_v = np.concatenate(hop_v_tot)
+            self._hop_i = np.concatenate(hop_i_tot)
+            self._hop_j = np.concatenate(hop_j_tot)
+            self._hop_v = np.concatenate(hop_v_tot)
 
     def init_dr(self, force_init=False):
         """
-        Initialize self.dr on demand.
+        Initialize self._dr on demand.
 
-        If self.dr is None, build it from scratch. Otherwise, build it only when
+        If self._dr is None, build it from scratch. Otherwise, build it only when
         force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self.dr is modified.
+            self._dr is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -532,23 +532,23 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_init or self.dr is None:
+        if force_init or self._dr is None:
             dr_tot = []
             for sc in self.sc_list:
                 dr_tot.append(sc.get_dr())
             for hop in self.hop_list:
                 dr_tot.append(hop.get_dr())
-            self.dr = np.concatenate(dr_tot)
+            self._dr = np.concatenate(dr_tot)
 
     def reset_array(self, force_reset=False):
         """
-        Reset all modifications to self.orb_*, self.hop_* and self.dr.
+        Reset all modifications to self._orb_*, self._hop_* and self._dr.
 
         :param force_reset: boolean
             whether to force resetting the arrays even if they have not been
             initialized or modified
         :return: None
-            self.orb_*, self.hop_* and self.dr are modified.
+            self._orb_*, self._hop_* and self._dr are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -556,13 +556,13 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_reset or self.orb_eng is not None:
+        if force_reset or self._orb_eng is not None:
             self.init_orb_eng(force_init=True)
-        if force_reset or self.orb_pos is not None:
+        if force_reset or self._orb_pos is not None:
             self.init_orb_pos(force_init=True)
-        if force_reset or self.hop_i is not None:
+        if force_reset or self._hop_i is not None:
             self.init_hop(force_init=True)
-        if force_reset or self.dr is not None:
+        if force_reset or self._dr is not None:
             self.init_dr(force_init=True)
 
     def rescale_ham(self, factor=None):
@@ -580,7 +580,7 @@ class Sample:
             is smaller than 1 after rescaling. If no value is chosen,
             a reasonable value will be estimated from the Hamiltonian.
         :returns: None
-            self.orb_eng, self.hop_v and self.rescale are modified.
+            self._orb_eng, self._hop_v and self._rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -593,9 +593,9 @@ class Sample:
         if factor is None:
             factor = core.get_rescale(self.orb_eng, self.hop_i, self.hop_j,
                                       self.hop_v)
-        self.orb_eng /= (factor / self.rescale)
-        self.hop_v /= (factor / self.rescale)
-        self.rescale = factor
+        self._orb_eng /= (factor / self.rescale)
+        self._hop_v /= (factor / self.rescale)
+        self._rescale = factor
 
     def set_magnetic_field(self, intensity):
         """
@@ -618,7 +618,7 @@ class Sample:
         :param intensity: float
             magnetic B field in Tesla
         :return: None
-            self.hop_v is modified.
+            self._hop_v is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -629,7 +629,7 @@ class Sample:
         self.init_orb_pos()
         self.init_hop()
         self.init_dr()
-        core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
+        core.set_mag_field(self.hop_i, self.hop_j, self._hop_v, self.dr,
                            self.orb_pos, intensity)
 
     def build_ham_csr(self):
@@ -774,7 +774,7 @@ class Sample:
         fig, axes = plt.subplots()
         axes.set_aspect('equal')
 
-        # Plot super cells and hopping terms
+        # Plot supercells and hopping terms
         for sc in self.sc_list:
             sc.plot(axes, with_orbitals=with_orbitals, with_cells=with_cells,
                     hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
@@ -1026,3 +1026,66 @@ class Sample:
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
+
+    @property
+    def sc_list(self):
+        """
+        :return: self._sc_list
+        """
+        return self._sc_list
+
+    @property
+    def hop_list(self):
+        """
+        :return: self._hop_list
+        """
+        return self._hop_list
+
+    @property
+    def orb_eng(self):
+        """
+        :return: self._orb_eng
+        """
+        return self._orb_eng
+
+    @property
+    def orb_pos(self):
+        """
+        :return: self._orb_pos
+        """
+        return self._orb_pos
+
+    @property
+    def hop_i(self):
+        """
+        :return: self._hop_i
+        """
+        return self._hop_i
+
+    @property
+    def hop_j(self):
+        """
+        :return: self._hop_j
+        """
+        return self._hop_j
+
+    @property
+    def hop_v(self):
+        """
+        :return: self._hop_v
+        """
+        return self._hop_v
+
+    @property
+    def dr(self):
+        """
+        :return: self._dr
+        """
+        return self._dr
+
+    @property
+    def rescale(self):
+        """
+        :return: self._rescale
+        """
+        return self._rescale

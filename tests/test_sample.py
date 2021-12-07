@@ -26,7 +26,7 @@ def make_cell():
 
 
 def make_test_set():
-    # Make 3 super cells
+    # Make 3 supercells
     sc1 = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
     sc2 = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
     sc3 = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
@@ -427,7 +427,7 @@ class TestSample(unittest.TestCase):
 
     def test08_set_magnetic_field(self):
         """
-        Test if the the new code of adding magnetic field yields the same result
+        Test if the new code of adding magnetic field yields the same result
         as the old version and compare their efficiency.
 
         :return: None.
