@@ -144,10 +144,14 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
 
     # Add orbitals
     prim_cell.sync_array()
-    rn_range = np.zeros((3, 3), dtype=np.int32)
+    rn_range = np.zeros((3, 2), dtype=np.int32)
     for i_dim in range(3):
-        rn_range[i_dim, 0] = lat_frac[:, i_dim].min() - 1
-        rn_range[i_dim, 1] = lat_frac[:, i_dim].max() + 1
+        sum_vec = lat_frac.sum(axis=0) - lat_frac[i_dim]
+        for j_dim in range(3):
+            rn_range[j_dim, 0] = min(rn_range.item(j_dim, 0), sum_vec[j_dim])
+            rn_range[j_dim, 1] = max(rn_range.item(j_dim, 1), sum_vec[j_dim])
+    rn_range[:, 0] -= 1
+    rn_range[:, 1] += 1
 
     orb_id_pc, orb_id_sc = [], {}
     id_sc = 0
