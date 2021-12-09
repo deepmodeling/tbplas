@@ -13,6 +13,7 @@ import math
 
 import numpy as np
 
+import tbplas
 from ..builder import PrimitiveCell, HopDict, cart2frac, NM
 
 
@@ -62,13 +63,15 @@ _HOP_CONSTS = {
              -0.0676, -0.1608, -0.2618, -0.2424)}
 
 
-def _gen_lattice(material="MoS2"):
+def _gen_lattice(material="MoS2", c=10.0):
     """
     Generate coordinates of lattice vectors and orbitals.
 
     :param material: string
         chemical label of material
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
+    :param c: float
+        length of c-axis in ANGSTROM
     :return: vectors: (3, 3) float64 array
         Cartesian coordinates of lattice vectors in NM
     :return: orbital_coordinates: (11, 3) float64 array
@@ -86,7 +89,7 @@ def _gen_lattice(material="MoS2"):
     sqrt_3 = math.sqrt(3)
     vectors = np.array([[a / 2, a * sqrt_3 / 2, 0],
                         [-a / 2, a * sqrt_3 / 2, 0],
-                        [0, 0, z]])
+                        [0, 0, c*tbplas.ANG]])
     coord_mo = [0, a / sqrt_3, d_xx / 2]
     coord_s1 = [0, 0, d_xx]
     coord_s2 = [0, 0, 0]

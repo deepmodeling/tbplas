@@ -9,16 +9,19 @@ Functions
 
 import numpy as np
 
+import tbplas
 from ..builder import PrimitiveCell, cart2frac
 
 
-def make_black_phosphorus():
+def make_black_phosphorus(c=10.0):
     """
     Make black phosphorus primitive cell.
 
     Reference:
     https://journals.aps.org/prb/pdf/10.1103/PhysRevB.92.085419
 
+    :param c: float
+        length of c-axis in ANGSTROM
     :return: cell: instance of 'PrimitiveCell' class
         black phosphorus primitive cell
     """
@@ -47,7 +50,7 @@ def make_black_phosphorus():
     b = 2 * dist_nnb + 2 * dist_nn * np.cos(np.radians(theta))
     p = dist_nnb
     q = dist_nz * np.cos(np.radians(theta_z - 90))
-    vectors = np.array([[a, 0., 0.], [0., b, 0.], [0., 0., 1.]])
+    vectors = np.array([[a, 0., 0.], [0., b, 0.], [0., 0., c*tbplas.ANG]])
 
     # Calculate orbital coordinates
     orbital_coords = np.zeros((4, 3))

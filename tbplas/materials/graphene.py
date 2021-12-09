@@ -16,14 +16,16 @@ import numpy as np
 from ..builder import gen_lattice_vectors, PrimitiveCell, reshape_prim_cell
 
 
-def make_graphene_diamond():
+def make_graphene_diamond(c=10.0):
     """
     Make graphene primitive cell in diamond shape.
 
+    :param c: float
+        length of c-axis in ANGSTROM
     :return: cell: instance of 'PrimitiveCell' class
         graphene primitive cell
     """
-    vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+    vectors = gen_lattice_vectors(a=2.46, b=2.46, c=c, gamma=60)
     cell = PrimitiveCell(vectors)
     cell.add_orbital([0.0, 0.0])
     cell.add_orbital([1/3., 1/3.])
@@ -33,10 +35,12 @@ def make_graphene_diamond():
     return cell
 
 
-def make_graphene_rect(from_scratch=True):
+def make_graphene_rect(from_scratch=True, c=10.0):
     """
     Make graphene primitive cell in rectangular shape.
 
+    :param c: float
+        length of c-axis in ANGSTROM
     :param from_scratch: boolean
         method to build the primitive cell
         If true, build the cell from scratch. Otherwise build it by reshaping
@@ -49,7 +53,7 @@ def make_graphene_rect(from_scratch=True):
         sqrt3 = math.sqrt(3)
         a = 2.46
         cc_bond = sqrt3 / 3 * a
-        vectors = gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond)
+        vectors = gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond, c)
 
         # Create cell and add orbitals
         cell = PrimitiveCell(vectors)

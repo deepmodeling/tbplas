@@ -9,10 +9,11 @@ Functions
 
 import numpy as np
 
+import tbplas
 from ..builder import PrimitiveCell, cart2frac, HopDict
 
 
-def make_antimonene(with_soc=True, soc_lambda=0.34):
+def make_antimonene(with_soc=True, soc_lambda=0.34, c=10.0):
     """
     Make antimonene primitive cell.
 
@@ -23,6 +24,8 @@ def make_antimonene(with_soc=True, soc_lambda=0.34):
         whether to include spin-orbital coupling in constructing the model
     :param soc_lambda: float
         strength of spin-orbital coupling
+    :param c: float
+        length of lattice vector along c direction in ANGSTROM
     :return: cell: instance of 'PrimitiveCell' class
         antimonene primitive cell
     """
@@ -67,7 +70,7 @@ def make_antimonene(with_soc=True, soc_lambda=0.34):
     b = a / np.sqrt(3.)
     vectors = np.array([[1.5 * b, -0.5 * a, 0.],
                         [1.5 * b, 0.5 * a, 0.],
-                        [0.0, 0.0, 1.0]])
+                        [0.0, 0.0, c*tbplas.ANG]])
 
     # Calculate orbital coordinates
     num_orb_per_site = 3
