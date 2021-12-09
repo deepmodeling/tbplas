@@ -16,8 +16,8 @@ from tbplas.utils import TestHelper
 def make_cell():
     vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
     cell = PrimitiveCell(vectors)
-    cell.add_orbital([0.0, 0.0], 0.0)
-    cell.add_orbital([1. / 3, 1. / 3], 0.0)
+    cell.add_orbital([0.0, 0.0], 0.0, label="C_pz")
+    cell.add_orbital([1. / 3, 1. / 3], 0.0, label="C_pz")
     cell.add_hopping([0, 0], 0, 1, -2.7)
     cell.add_hopping([1, 0], 1, 0, -2.7)
     cell.add_hopping([0, 1], 1, 0, -2.7)
@@ -177,6 +177,8 @@ class TestPrimitive(unittest.TestCase):
                                4.714045207910317e-1)
         self.assertAlmostEqual(orbitals[0].energy, 0.0)
         self.assertAlmostEqual(orbitals[1].energy, 0.0)
+        self.assertEqual(orbitals[0].label, "C_pz")
+        self.assertEqual(orbitals[1].label, "C_pz")
 
     def test04_set_orbital(self):
         """
@@ -220,6 +222,11 @@ class TestPrimitive(unittest.TestCase):
         self.assertAlmostEqual(cell.orbital_list[-1].energy, 4.2)
         self.assertAlmostEqual(np.linalg.norm(cell.orbital_list[-1].position),
                                4.714045207910317e-1)
+
+        # Test setting label
+        cell = make_cell()
+        cell.set_orbital(-1, label="C_pz_2")
+        self.assertEqual(cell.orbital_list[-1].label, "C_pz_2")
 
     def test04_get_orbital(self):
         """
@@ -582,6 +589,10 @@ class TestPrimitive(unittest.TestCase):
         plt.plot(energies, dos)
         plt.show()
 
+        # Orbital labels
+        self.assertSetEqual(set([orb.label for orb in extend_cell.orbital_list]),
+                            {"C_pz"})
+
     def test13_reshape_prim_cell(self):
         """
         Test function 'reshape_prim_cell'.
@@ -612,6 +623,9 @@ class TestPrimitive(unittest.TestCase):
         cell = reshape_prim_cell(cell, lat_frac)
         self.assertEqual(cell.num_orb, 4)
         cell.plot()
+
+        # Check orbital labels
+        self.assertSetEqual(set([orb.label for orb in cell.orbital_list]), {"C_pz"})
 
     def test14_hop_dict(self):
         """

@@ -70,22 +70,27 @@ class Orbital:
         FRACTIONAL coordinate of the orbital
     energy: float
         on-site energy of the orbital in eV
+    label: string
+        orbital label
     """
-    def __init__(self, position, energy=0.0) -> None:
+    def __init__(self, position, energy=0.0, label="X") -> None:
         """
         :param position: tuple with 3 floats
             FRACTIONAL coordinate of the orbital
         :param energy: float
             on-site energy of the orbital in eV
+        :param label: string
+            orbital label
         :return: None
         """
         assert len(position) == 3
         self.position = position
         self.energy = energy
+        self.label = label
 
     def __hash__(self):
         """Return hash value of this instance."""
-        return hash(self.position + (self.energy,))
+        return hash(self.position + (self.energy, self.label))
 
 
 class Hopping:
@@ -392,7 +397,8 @@ class PrimitiveCell(LockableObject):
         # Setup misc. attributes.
         self.extended = 1
 
-    def add_orbital(self, position, energy=0.0, sync_array=False, **kwargs):
+    def add_orbital(self, position, energy=0.0, label="X", sync_array=False,
+                    **kwargs):
         """
         Add a new orbital to the primitive cell.
 
@@ -400,6 +406,8 @@ class PrimitiveCell(LockableObject):
             FRACTIONAL coordinate of the orbital
         :param energy: float
             on-site energy of the orbital in eV
+        :param label: string
+            orbital label
         :param sync_array: boolean
             whether to call 'sync_array' to update numpy arrays
             according to orbitals and hopping terms
@@ -421,12 +429,12 @@ class PrimitiveCell(LockableObject):
             raise exc.OrbPositionLenError(err.coord) from err
 
         # Add the orbital
-        self.orbital_list.append(Orbital(position, energy))
+        self.orbital_list.append(Orbital(position, energy, label))
         if sync_array:
             self.sync_array(**kwargs)
 
-    def set_orbital(self, orb_i, position=None, energy=None, sync_array=False,
-                    **kwargs):
+    def set_orbital(self, orb_i, position=None, energy=None, label=None,
+                    sync_array=False, **kwargs):
         """
         Modify the position and energy of an existing orbital.
 
@@ -439,6 +447,8 @@ class PrimitiveCell(LockableObject):
             new FRACTIONAL coordinate of the orbital
         :param energy: float
             new on-site energy of the orbital in eV
+        :param label: string
+            orbital label
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
@@ -470,6 +480,8 @@ class PrimitiveCell(LockableObject):
             orbital.position = position
         if energy is not None:
             orbital.energy = energy
+        if label is not None:
+            orbital.label = label
         if sync_array:
             self.sync_array(**kwargs)
 
