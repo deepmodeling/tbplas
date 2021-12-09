@@ -83,6 +83,10 @@ class Orbital:
         self.position = position
         self.energy = energy
 
+    def __hash__(self):
+        """Return hash value of this instance."""
+        return hash(self.position + (self.energy,))
+
 
 class Hopping:
     """
@@ -110,6 +114,10 @@ class Hopping:
         assert len(rn) == 3
         self.index = rn + (orb_i, orb_j)
         self.energy = energy
+
+    def __hash__(self):
+        """Return hash value of this instance."""
+        return hash(self.index + (self.energy,))
 
 
 class LockableObject:
@@ -146,7 +154,7 @@ class LockableObject:
         Check and raise an error if the object is locked.
 
         :return: None.
-        :raises LockError: is the the object is locked
+        :raises LockError: if the object is locked
         """
         if self.is_locked:
             raise exc.LockError()
