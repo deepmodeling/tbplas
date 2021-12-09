@@ -101,7 +101,7 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
 
     :param prim_cell: instance of 'PrimitiveCell' class
         primitive cell from which the reshaped cell is constructed
-    :param lat_frac: (3, 3) int32 array
+    :param lat_frac: (3, 3) float64 array
         FRACTIONAL coordinates of lattice vectors of reshaped cell in basis
         vectors of primitive cell
     :param origin: (3,) float64 array
@@ -120,7 +120,6 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     :raises ValueError: if origin.shape != (3,)
     """
     # Check lattice vectors and origin
-    lat_frac = np.array(lat_frac, dtype=np.int32)
     if lat_frac.shape != (3, 3):
         raise exc.LatVecError()
     if origin.shape != (3,):
@@ -148,8 +147,10 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     for i_dim in range(3):
         sum_vec = lat_frac.sum(axis=0) - lat_frac[i_dim]
         for j_dim in range(3):
-            rn_range[j_dim, 0] = min(rn_range.item(j_dim, 0), sum_vec[j_dim])
-            rn_range[j_dim, 1] = max(rn_range.item(j_dim, 1), sum_vec[j_dim])
+            rn_range[j_dim, 0] = min(rn_range.item(j_dim, 0),
+                                     math.floor(sum_vec[j_dim]))
+            rn_range[j_dim, 1] = max(rn_range.item(j_dim, 1),
+                                     math.ceil(sum_vec[j_dim]))
     rn_range[:, 0] -= 1
     rn_range[:, 1] += 1
 
