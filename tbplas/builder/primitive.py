@@ -161,7 +161,7 @@ class HopDict:
     Attributes
     ----------
     dict: dictionary
-        dictionary with site tags as keys and complex matrices as values
+        Keys should be cell indices and values should be complex matrices.
     mat_shape: (num_orb, num_orb)
         shape of hopping matrices
     """
