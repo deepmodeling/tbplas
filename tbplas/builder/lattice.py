@@ -14,6 +14,8 @@ Functions
         convert Cartesian coordinates to fractional coordinates
     frac2cart: user function
         convert fractional coordinates to Cartesian coordinates
+    rotate_coord: user function
+        rotate Cartesian coordinates according to Euler angles
     get_lattice_area: user function
         calculate the area formed by lattice vectors along given direction
     get_lattice_volume: user function
@@ -153,6 +155,53 @@ def frac2cart(lattice_vectors, fractional_coordinates):
     for i, row in enumerate(fractional_coordinates):
         cartesian_coordinates[i] = np.matmul(conversion_matrix, row.T)
     return cartesian_coordinates
+
+
+def rotate_coord(coord, angle=0.0, axis="z"):
+    """
+    Rotate Cartesian coordinates according to Euler angles.
+
+    Reference:
+    https://mathworld.wolfram.com/RotationMatrix.html
+    https://mathworld.wolfram.com/EulerAngles.html
+
+    Note that in the reference the axes are rotated, not the vectors.
+    So here you will see a minus sign before the angles.
+
+    :param coord: (num_coord, 3) float64 array
+        Cartesian coordinates to rotate
+    :param angle: float
+        rotation angle in RADIAN, not degrees
+    :param axis: string
+        axis around which the rotation is performed
+        x - pitch, y - roll, z - yawn
+    :return: coord_rot: (num_coord, 3) float64 array
+        rotated Cartesian coordinates
+    :raises ValueError: if axis is not "x", "y" or "z"
+    """
+    cos_ang, sin_ang = cos(-angle), sin(-angle)
+    rot_mat = np.eye(3)
+    if axis == "x":
+        rot_mat[1, 1] = cos_ang
+        rot_mat[1, 2] = sin_ang
+        rot_mat[2, 1] = -sin_ang
+        rot_mat[2, 2] = cos_ang
+    elif axis == "y":
+        rot_mat[0, 0] = cos_ang
+        rot_mat[0, 2] = -sin_ang
+        rot_mat[2, 0] = sin_ang
+        rot_mat[2, 2] = cos_ang
+    elif axis == "z":
+        rot_mat[0, 0] = cos_ang
+        rot_mat[0, 1] = sin_ang
+        rot_mat[1, 0] = -sin_ang
+        rot_mat[1, 2] = cos_ang
+    else:
+        raise ValueError("Axis should be in 'x', 'y', 'z'")
+    coord_rot = np.zeros(shape=coord.shape, dtype=coord.dtype)
+    for i in range(coord.shape[0]):
+        coord_rot[i] = np.matmul(rot_mat, coord[i])
+    return coord_rot
 
 
 def get_lattice_area(lattice_vectors, direction="c"):
