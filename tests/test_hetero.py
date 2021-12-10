@@ -171,11 +171,11 @@ class TestHetero(unittest.TestCase):
 
         # Get the Cartesian coordinates of orbitals of fixed layer
         layer_fixed.sync_array()
-        pos_fixed = tb.frac2cart(layer_fixed.lat_vec, layer_fixed.orb_pos)
+        pos_fixed = layer_fixed.orb_pos_nm
 
         # Same for twisted layer
         layer_twisted.sync_array()
-        pos_twisted = tb.frac2cart(layer_twisted.lat_vec, layer_twisted.orb_pos)
+        pos_twisted = layer_twisted.orb_pos_nm
 
         # Loop over neighbouring cells to build inter-hopping dictionary
         inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, HopDict, extend_prim_cell,
                     reshape_prim_cell, trim_prim_cell, apply_pbc,
-                    ANG, NM, Visualizer)
+                    ANG, NM, Visualizer, frac2cart)
 import tbplas.builder.exceptions as exc
 from tbplas.utils import TestHelper
 
@@ -180,6 +180,24 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(orbitals[0].label, "C_pz")
         self.assertEqual(orbitals[1].label, "C_pz")
 
+        # Test adding orbital with Cartesian coordinates
+        th = TestHelper(self)
+        vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+        cell_ref = PrimitiveCell(vectors)
+        cell_ref.add_orbital([1. / 3, 1. / 3], 0.0, label="C_pz")
+        cell_ref.add_orbital([2. / 3, 2. / 3], 0.0, label="C_pz")
+        cell_ref.sync_array()
+        orb_pos_ref = frac2cart(cell_ref.lat_vec, cell_ref.orb_pos)
+
+        cell_test = PrimitiveCell(vectors)
+        cell_test.add_orbital_cart(orb_pos_ref[0] * 10, unit=ANG, label="C_pz")
+        cell_test.add_orbital_cart(orb_pos_ref[1], unit=NM, label="C_pz")
+        cell_test.sync_array()
+
+        th.test_equal_array(cell_ref.orb_pos, cell_test.orb_pos, almost=True)
+        orb_pos_test = frac2cart(cell_test.lat_vec, cell_test.orb_pos)
+        th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)
+
     def test04_set_orbital(self):
         """
         Test if set_orbital works as expected.
@@ -227,6 +245,23 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.set_orbital(-1, label="C_pz_2")
         self.assertEqual(cell.orbital_list[-1].label, "C_pz_2")
+
+        # Test setting orbital with Cartesian coordinates
+        th = TestHelper(self)
+        cell_ref = make_cell()
+        cell_ref.set_orbital(0, position=(1. / 3, 1. / 3))
+        cell_ref.set_orbital(1, position=(2. / 3, 2. / 3))
+        cell_ref.sync_array()
+        orb_pos_ref = frac2cart(cell_ref.lat_vec, cell_ref.orb_pos)
+
+        cell_test = make_cell()
+        cell_test.set_orbital_cart(0, position=orb_pos_ref[0]*10, unit=ANG)
+        cell_test.set_orbital_cart(1, position=orb_pos_ref[1], unit=NM)
+        cell_test.sync_array()
+
+        th.test_equal_array(cell_ref.orb_pos, cell_test.orb_pos, almost=True)
+        orb_pos_test = frac2cart(cell_test.lat_vec, cell_test.orb_pos)
+        th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)
 
     def test04_get_orbital(self):
         """
@@ -794,6 +829,22 @@ class TestPrimitive(unittest.TestCase):
         k_path, k_idx = gen_kpath(k_points, [40, 40])
         k_len, bands = gnr.calc_bands(k_path)
         Visualizer().plot_band(k_len, bands, k_idx, k_label)
+
+    def test17_get_orbital_positions_cart(self):
+        """
+        Test method 'get_orbital_positions_cart'.
+
+        :return: None
+        """
+        th = TestHelper(self)
+        cell = make_cell()
+        cell.sync_array()
+        orb_pos_ref = frac2cart(cell.lat_vec, cell.orb_pos)
+        orb_pos_test = cell.orb_pos_nm
+        th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)
+        orb_pos_ref *= 10.0
+        orb_pos_test = cell.orb_pos_ang
+        th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)
 
 
 if __name__ == "__main__":

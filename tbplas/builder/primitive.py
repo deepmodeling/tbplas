@@ -433,13 +433,31 @@ class PrimitiveCell(LockableObject):
         if sync_array:
             self.sync_array(**kwargs)
 
+    def add_orbital_cart(self, position, unit=consts.ANG, **kwargs):
+        """
+        Add a new orbital to the primitive cell with Cartesian coordinates.
+
+        :param position: tuple of 2 or 3 floats
+            Cartesian coordinate of orbital in arbitrary unit
+        :param unit: float
+            conversion coefficient from arbitrary unit to NM
+        :param kwargs: dictionary
+            keyword arguments for 'add_orbital'
+        :return: None
+            self.orbital_list is modified.
+        :raises PCLockError: if the primitive cell is locked
+        :raises OrbPositionLenError: if len(position) != 2 or 3
+        """
+        position = lat.cart2frac(self.lat_vec, np.array([position * unit]))[0]
+        self.add_orbital(position, **kwargs)
+
     def set_orbital(self, orb_i, position=None, energy=None, label=None,
                     sync_array=False, **kwargs):
         """
-        Modify the position and energy of an existing orbital.
+        Modify the position, energy and label of an existing orbital.
 
-        If position or energy is None, then the corresponding attribute will
-        not be modified.
+        If position, energy or label is None, then the corresponding attribute
+        will not be modified.
 
         :param orb_i: integer
             index of the orbital to modify
@@ -484,6 +502,33 @@ class PrimitiveCell(LockableObject):
             orbital.label = label
         if sync_array:
             self.sync_array(**kwargs)
+
+    def set_orbital_cart(self, orb_i, position=None, unit=consts.ANG, **kwargs):
+        """
+        Modify the position,  energy and label of an existing orbital
+        with Cartesian coordinates.
+
+        If position, energy or label is None, then the corresponding attribute
+        will not be modified.
+
+        :param orb_i: integer
+            index of the orbital to modify
+        :param position: tuple of 2 or 3 floats
+            Cartesian coordinate of orbital in arbitrary unit
+        :param unit: float
+            conversion coefficient from arbitrary unit to NM
+        :param kwargs: dictionary
+            keyword arguments for 'set_orbital'
+        :return: None
+            self.orbital_list is modified.
+        :raises PCLockError: if the primitive cell is locked
+        :raises PCOrbIndexError: if orb_i falls out of range
+        :raises OrbPositionLenError: if len(position) != 2 or 3
+        """
+        if position is not None:
+            position = lat.cart2frac(self.lat_vec,
+                                     np.array([position * unit]))[0]
+        self.set_orbital(orb_i, position, **kwargs)
 
     def get_orbital(self, orb_i):
         """
@@ -1098,3 +1143,26 @@ class PrimitiveCell(LockableObject):
         :return: integer, number of orbitals
         """
         return len(self.orbital_list)
+
+    @property
+    def orb_pos_nm(self):
+        """
+        Get the Cartesian coordinates of orbitals in NANOMETER.
+
+        :return: orb_pos_nm: (num_orb, 3) float64 array
+            Cartesian coordinates of orbitals in NANOMETER
+        """
+        self.sync_array()
+        orb_pos_nm = lat.frac2cart(self.lat_vec, self.orb_pos)
+        return orb_pos_nm
+
+    @property
+    def orb_pos_ang(self):
+        """
+        Get the Cartesian coordinates of orbitals in ANGSTROM.
+
+        :return: orb_pos_ang: (num_orb, 3) float64 array
+            Cartesian coordinates of orbitals in arbitrary NANOMETER
+        """
+        orb_pos_ang = self.orb_pos_nm * 10
+        return orb_pos_ang
