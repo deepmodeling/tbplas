@@ -9,11 +9,10 @@ Functions
 
 import numpy as np
 
-import tbplas
-from ..builder import PrimitiveCell, cart2frac, HopDict
+from ..builder import PrimitiveCell, cart2frac, HopDict, NM
 
 
-def make_antimonene(with_soc=True, soc_lambda=0.34, c=10.0):
+def make_antimonene(with_soc=True, soc_lambda=0.34, c=1.0):
     """
     Make antimonene primitive cell.
 
@@ -25,7 +24,7 @@ def make_antimonene(with_soc=True, soc_lambda=0.34, c=10.0):
     :param soc_lambda: float
         strength of spin-orbital coupling
     :param c: float
-        length of lattice vector along c direction in ANGSTROM
+        length of lattice vector along c direction in NANOMETER
     :return: cell: instance of 'PrimitiveCell' class
         antimonene primitive cell
     """
@@ -70,7 +69,7 @@ def make_antimonene(with_soc=True, soc_lambda=0.34, c=10.0):
     b = a / np.sqrt(3.)
     vectors = np.array([[1.5 * b, -0.5 * a, 0.],
                         [1.5 * b, 0.5 * a, 0.],
-                        [0.0, 0.0, c*tbplas.ANG]])
+                        [0.0, 0.0, c]])
 
     # Calculate orbital coordinates
     num_orb_per_site = 3
@@ -85,7 +84,7 @@ def make_antimonene(with_soc=True, soc_lambda=0.34, c=10.0):
 
     # Create primitive cell and add orbital
     # Since lattice vectors are already in nm, unit is set to 1.0.
-    cell = PrimitiveCell(lat_vec=vectors, unit=1.0)
+    cell = PrimitiveCell(lat_vec=vectors, unit=NM)
     for coord in orbital_coords:
         cell.add_orbital(coord)
 

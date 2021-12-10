@@ -9,11 +9,10 @@ Functions
 
 import numpy as np
 
-import tbplas
-from ..builder import PrimitiveCell, cart2frac
+from ..builder import PrimitiveCell, cart2frac, NM
 
 
-def make_black_phosphorus(c=10.0):
+def make_black_phosphorus(c=1.0):
     """
     Make black phosphorus primitive cell.
 
@@ -21,7 +20,7 @@ def make_black_phosphorus(c=10.0):
     https://journals.aps.org/prb/pdf/10.1103/PhysRevB.92.085419
 
     :param c: float
-        length of c-axis in ANGSTROM
+        length of c-axis in NANOMETER
     :return: cell: instance of 'PrimitiveCell' class
         black phosphorus primitive cell
     """
@@ -50,7 +49,7 @@ def make_black_phosphorus(c=10.0):
     b = 2 * dist_nnb + 2 * dist_nn * np.cos(np.radians(theta))
     p = dist_nnb
     q = dist_nz * np.cos(np.radians(theta_z - 90))
-    vectors = np.array([[a, 0., 0.], [0., b, 0.], [0., 0., c*tbplas.ANG]])
+    vectors = np.array([[a, 0., 0.], [0., b, 0.], [0., 0., c]])
 
     # Calculate orbital coordinates
     orbital_coords = np.zeros((4, 3))
@@ -62,7 +61,7 @@ def make_black_phosphorus(c=10.0):
 
     # Create primitive cell and add orbital
     # Since lattice vectors are already in nm, unit is set to 1.0.
-    cell = PrimitiveCell(lat_vec=vectors, unit=1.0)
+    cell = PrimitiveCell(lat_vec=vectors, unit=NM)
     for coord in orbital_coords:
         cell.add_orbital(coord)
 
