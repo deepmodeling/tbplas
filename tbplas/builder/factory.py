@@ -13,18 +13,31 @@ Functions
     apply_pbc: user function
         apply periodic boundary conditions on primitive cell by removing hopping
         terms between cells along non-periodic direction
+    spiral_prim_cell: user function
+        rotate and shift primitive cell with respect to z-axis
+    make_hetero_layer: user function
+        make one layer in the hetero-structure by reshaping primitive cell to
+        given lattice vectors
+    merge_prim_cell: user function
+        merge primitive cells and inter-hopping dictionaries to build a large
+        primitive cell
+
 
 Classes
 -------
-    None.
+    InterHopDict: user class
+    containing holding hopping terms between different primitive cells in
+    hetero-structure
 """
 
 import math
+from typing import Union
 
 import numpy as np
 
 from . import constants as consts
 from . import exceptions as exc
+from .lattice import frac2cart, cart2frac, rotate_coord
 from .primitive import correct_coord, PrimitiveCell
 
 
@@ -69,7 +82,8 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
                     pos_ext = [(orbital.position[0] + i_a) / dim[0],
                                (orbital.position[1] + i_b) / dim[1],
                                (orbital.position[2] + i_c) / dim[2]]
-                    extend_cell.add_orbital(pos_ext, orbital.energy)
+                    extend_cell.add_orbital(pos_ext, orbital.energy,
+                                            orbital.label)
 
     # Define periodic boundary condition.
     def _wrap_pbc(ji, ni):
@@ -169,7 +183,8 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                         orb_id_sc[id_pc] = id_sc
                         id_sc += 1
                         res_cell.add_orbital(res_pos,
-                                             prim_cell.orb_eng.item(i_o))
+                                             prim_cell.orb_eng.item(i_o),
+                                             prim_cell.orbital_list[i_o].label)
 
     # Add hopping terms
     res_cell.sync_array()
@@ -259,3 +274,211 @@ def apply_pbc(prim_cell: PrimitiveCell, pbc=(True, True, True)):
     # Reset hopping_list
     prim_cell.hopping_list = hop_to_keep
     prim_cell.sync_array()
+
+
+def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0, shift=0.0):
+    """
+    Rotate and shift primitive cell with respect to z-axis.
+
+    :param prim_cell: instance of 'PrimitiveCell' class
+        primitive cell to twist
+    :param angle: float
+        twisting angle in RADIANs, NOT degrees
+    :param shift: float
+        distance of shift in NANOMETER
+    :return: None
+        Incoming primitive cell is modified.
+    """
+    prim_cell.sync_array()
+
+    # Since prim_cell uses fractional coordinates internally, we
+    # just need to rotate its lattice vectors.
+    prim_cell.lat_vec = rotate_coord(prim_cell.lat_vec, angle)
+
+    # Shift coordinates
+    orb_pos = frac2cart(prim_cell.lat_vec, prim_cell.orb_pos)
+    orb_pos[:, 2] += shift
+    orb_pos = cart2frac(prim_cell.lat_vec, orb_pos)
+    for i, pos in enumerate(orb_pos):
+        prim_cell.orbital_list[i].position = tuple(pos)
+
+    # Update arrays
+    prim_cell.sync_array()
+
+
+def make_hetero_layer(prim_cell: PrimitiveCell, hetero_lattice: np.ndarray,
+                      **kwargs):
+    """
+    Make one layer in the hetero-structure by reshaping primitive cell to
+    given lattice vectors.
+
+    :param prim_cell: instance of 'PrimitiveCell' class
+        primitive cell of the layer
+    :param hetero_lattice: (3, 3) float64 array
+        Cartesian coordinates of hetero-structure lattice vectors in NANOMETER
+    :param kwargs: dictionary
+        keyword arguments for 'reshape_prim_cell'
+    :return: hetero_layer: instance of 'PrimitiveCell' class
+        layer in the hetero-structure
+    """
+    hetero_lattice_frac = cart2frac(prim_cell.lat_vec, hetero_lattice)
+    hetero_layer = reshape_prim_cell(prim_cell, hetero_lattice_frac, **kwargs)
+    return hetero_layer
+
+
+class InterHopDict:
+    """
+    Class for holding hopping terms between different primitive cells
+    in hetero-structure.
+
+    Attributes
+    ----------
+    _pc_bra: instance of 'PrimitiveCell' class
+        the 'bra' primitive cell from which the hopping terms exist
+    _pc_ket: instance of 'PrimitiveCell' class
+        the 'ket' primitive cell from which the hopping terms exist
+    _dict: dictionary
+        Keys should be cell indices and values should be dictionaries
+        themselves.
+
+    NOTES
+    -----
+    We assume hopping terms to be from (0, 0, 0) cell of pc_bra to any cell of
+    pc_ket. The counterparts can be restored via the conjugate relation:
+        <pc_bra, R0, i|H|pc_ket, Rn, j> = <pc_ket, R0, j|H|pc_bra, -Rn, i>*
+    """
+    def __init__(self, pc_bra: PrimitiveCell, pc_ket: PrimitiveCell):
+        """
+        :param pc_bra: instance of 'PrimitiveCell' class
+            the 'bra' primitive cell from which the hopping terms exist
+        :param pc_ket: instance of 'PrimitiveCell' class
+            the 'bra' primitive cell from which the hopping terms exist
+        """
+        self._pc_bra = pc_bra
+        self._pc_ket = pc_ket
+        self._dict = {}
+
+    def add_hopping(self, rn, orb_i, orb_j, energy):
+        """
+        Add a new hopping term.
+
+        :param rn: (ra, rb, rc)
+            cell index of hopping matrix, i.e. Rn
+        :param orb_i: integer
+            index of orbital i in <pc_bra, R0, i|H|pc_ket, Rn, j>
+        :param orb_j: integer
+            index of orbital j in <pc_bra, R0, i|H|pc_ket, Rn, j>
+        :param energy: complex
+            hopping integral in eV
+        :return: None
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        """
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+        try:
+            hop_rn = self._dict[rn]
+        except KeyError:
+            hop_rn = self._dict[rn] = {}
+        hop_rn[(orb_i, orb_j)] = energy
+
+    @property
+    def pc_bra(self):
+        """
+        :return: self._pc_bra
+        """
+        return self._pc_bra
+
+    @property
+    def pc_ket(self):
+        """
+        :return: self._pc_ket
+        """
+        return self._pc_ket
+
+    @property
+    def dict(self):
+        """
+        :return: self._dict
+        """
+        return self._dict
+
+
+def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
+    """
+    Merge primitive cells and inter-hopping dictionaries to build a large
+    primitive cell.
+
+    :param args: list of 'PrimitiveCell' or 'InterHopDict' instances
+        primitive cells and inter-hopping terms within the large primitive cell
+    :return: merged_cell: instance of 'PrimitiveCell'
+        merged primitive cell
+    :raises ValueError: if no arg is given, or any arg is not instance of
+        PrimitiveCell or InterHopDict, or any inter_hop_dict involves primitive
+        cells not included in args
+    :raises PCOrbIndexError: if any orbital indice in any inter_hop_dict is out
+        of range
+    """
+    # Check arguments
+    if len(args) == 0:
+        raise ValueError("No components assigned to the primitive cell")
+
+    # Parse primitive cells and inter-hopping terms
+    pc_list = []
+    hop_list = []
+    for i_arg, arg in enumerate(args):
+        if isinstance(arg, PrimitiveCell):
+            pc_list.append(arg)
+        elif isinstance(arg, InterHopDict):
+            hop_list.append(arg)
+        else:
+            raise ValueError(f"Component #{i_arg} should be instance of "
+                             f"PrimitiveCell or InterHopDict")
+
+    # Check closure of inter-hopping instances
+    for i_h, hop in enumerate(hop_list):
+        if hop.pc_bra not in pc_list:
+            raise ValueError(f"pc_bra of inter_hop #{i_h} not included in args")
+        if hop.pc_ket not in pc_list:
+            raise ValueError(f"pc_ket of inter_hop #{i_h} not included in args")
+
+    # Get numbers of orbitals of each component
+    num_orb = [pc.num_orb for pc in pc_list]
+
+    # Get starting indices of orbitals of each component
+    ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
+
+    # Create merged primitive cell
+    merged_cell = PrimitiveCell(pc_list[0].lat_vec, unit=consts.NM)
+
+    # Add orbitals
+    for pc in pc_list:
+        for orb in pc.orbital_list:
+            merged_cell.add_orbital(position=orb.position, energy=orb.energy,
+                                    label=orb.label)
+
+    # Add intra-hopping terms
+    for i_pc, pc in enumerate(pc_list):
+        offset = ind_start[i_pc]
+        for hop in pc.hopping_list:
+            rn = hop.index[:3]
+            orb_i = hop.index[3] + offset
+            orb_j = hop.index[4] + offset
+            merged_cell.add_hopping(rn=rn, orb_i=orb_i, orb_j=orb_j,
+                                    energy=hop.energy)
+
+    # Add inter-hopping terms
+    for hop in hop_list:
+        offset_bra = ind_start[pc_list.index(hop.pc_bra)]
+        offset_ket = ind_start[pc_list.index(hop.pc_ket)]
+        for rn, hop_terms in hop.dict.items():
+            for orb_pair, energy in hop_terms.items():
+                orb_i = orb_pair[0] + offset_bra
+                orb_j = orb_pair[1] + offset_ket
+                merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
+                                        energy=energy)
+
+    # Clean up and return
+    merged_cell.sync_array()
+    return merged_cell
