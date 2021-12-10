@@ -195,7 +195,7 @@ def rotate_coord(coord, angle=0.0, axis="z"):
         rot_mat[0, 0] = cos_ang
         rot_mat[0, 1] = sin_ang
         rot_mat[1, 0] = -sin_ang
-        rot_mat[1, 2] = cos_ang
+        rot_mat[1, 1] = cos_ang
     else:
         raise ValueError("Axis should be in 'x', 'y', 'z'")
     coord_rot = np.zeros(shape=coord.shape, dtype=coord.dtype)
