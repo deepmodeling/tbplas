@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas as tb
+from tbplas.materials.xs2 import _gen_orb_labels
 
 
 class TestMaterials(unittest.TestCase):
@@ -47,6 +48,22 @@ class TestMaterials(unittest.TestCase):
         plt.plot(energies, dos)
         plt.show()
 
+        # Test orbital labels
+        prim_cell = tb.make_graphene_diamond()
+        label_ref = ["C_pz" for _ in range(2)]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
+
+        prim_cell = tb.make_graphene_rect(from_scratch=True)
+        label_ref = ["C_pz" for _ in range(4)]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
+
+        prim_cell = tb.make_graphene_rect(from_scratch=False)
+        label_ref = ["C_pz" for _ in range(4)]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
+
     def test01_black_phosphorus(self):
         """
         Test utilities for constructing black phosphorus sample.
@@ -80,6 +97,11 @@ class TestMaterials(unittest.TestCase):
             prim_cell.plot(view=view)
             sample.plot(view=view)
 
+        # Test orbital labels
+        label_ref = ["P_pz" for _ in range(4)]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
+
     def test02_antimonene(self):
         """
         Test utilities for constructing antimonene.
@@ -107,6 +129,17 @@ class TestMaterials(unittest.TestCase):
         plt.plot(energies, dos)
         plt.show()
 
+        # Test labels
+        prim_cell = tb.make_antimonene(with_soc=False)
+        label_ref = ["p11", "p12", "p13", "p21", "p22", "p23"]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
+
+        prim_cell = tb.make_antimonene(with_soc=True)
+        label_ref = ["p11+", "p12+", "p13+", "p11-", "p12-", "p13-",
+                     "p21+", "p22+", "p23+", "p21-", "p22-", "p23-"]
+        label_test = [orb.label for orb in prim_cell.orbital_list]
+
     def test03_tmdc(self):
         """
         Test utilities for constructing TMDC.
@@ -132,6 +165,13 @@ class TestMaterials(unittest.TestCase):
         energies, dos = prim_cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
+
+        # Test orbital labels
+        for material in ("MoS2", "MoSe2", "WS2", "WSe2"):
+            label_ref = _gen_orb_labels(material)
+            prim_cell = tb.make_tmdc(material)
+            label_test = [orb.label for orb in prim_cell.orbital_list]
+            self.assertListEqual(label_ref, label_test)
 
 
 if __name__ == "__main__":

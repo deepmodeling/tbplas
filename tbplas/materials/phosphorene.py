@@ -63,7 +63,7 @@ def make_black_phosphorus(c=1.0):
     # Since lattice vectors are already in nm, unit is set to 1.0.
     cell = PrimitiveCell(lat_vec=vectors, unit=NM)
     for coord in orbital_coords:
-        cell.add_orbital(coord)
+        cell.add_orbital(coord, label="P_pz")
 
     # Add hopping terms
     cell.add_hopping((0, 0), 0, 1, t_2)

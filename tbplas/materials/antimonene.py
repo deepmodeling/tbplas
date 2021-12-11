@@ -81,12 +81,17 @@ def make_antimonene(with_soc=True, soc_lambda=0.34, c=1.0):
     orbital_coords.extend([coord_site_2 for _ in range(num_orb_per_site)])
     orbital_coords = np.array(orbital_coords)
     orbital_coords = cart2frac(vectors, orbital_coords)
+    if with_soc:
+        orbital_labels = ["p11+", "p12+", "p13+", "p11-", "p12-", "p13-",
+                          "p21+", "p22+", "p23+", "p21-", "p22-", "p23-"]
+    else:
+        orbital_labels = ["p11", "p12", "p13", "p21", "p22", "p23"]
 
     # Create primitive cell and add orbital
     # Since lattice vectors are already in nm, unit is set to 1.0.
     cell = PrimitiveCell(lat_vec=vectors, unit=NM)
-    for coord in orbital_coords:
-        cell.add_orbital(coord)
+    for i_o, coord in enumerate(orbital_coords):
+        cell.add_orbital(coord, label=orbital_labels[i_o])
 
     # Build hop_dict
     if with_soc:

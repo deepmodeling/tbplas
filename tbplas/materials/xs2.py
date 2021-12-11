@@ -4,6 +4,8 @@ Utilities for constructing TMDC samples.
 Reference:
 https://journals.aps.org/prb/abstract/10.1103/PhysRevB.92.205108
 
+NOTE: We use unsymmetrical orbitals in constructing the model.
+
 Functions
 ---------
     make_tmdc: user function
@@ -365,6 +367,38 @@ def _gen_hop_dict(material="MoS2"):
     return hop_dict, on_site
 
 
+def _gen_orb_labels(material="MoS2"):
+    """
+    Generate orbital labels.
+
+    :param material: string
+        chemical label of material
+        Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
+    :return: orb_labels: list of strings
+        orbital labels
+    :raises NotImplementedError: if material has not been implemented
+    """
+    d_orbitals = ("dz2", "dxy", "dx2-y2", "dxz", "dyz")
+    p_orbitals = ("px", "py", "pz")
+    element_dict = {"MoS2": ("Mo", "SA", "SB"),
+                    "MoSe2": ("Mo", "SeA", "SeB"),
+                    "WS2": ("W", "SA", "SB"),
+                    "WSe2": ("W", "SeA", "SeB")}
+    try:
+        elements = element_dict[material]
+    except KeyError as err:
+        raise NotImplementedError(f"{material} not implemented yet") from err
+    else:
+        orb_labels = []
+        for orb in d_orbitals:
+            orb_labels.append(f"{elements[0]}_{orb}")
+        for orb in p_orbitals:
+            orb_labels.append(f"{elements[1]}_{orb}")
+        for orb in p_orbitals:
+            orb_labels.append(f"{elements[2]}_{orb}")
+    return orb_labels
+
+
 def make_tmdc(material="MoS2"):
     """
     Make TMDC primitive cell.
@@ -374,12 +408,14 @@ def make_tmdc(material="MoS2"):
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
     :return: cell: instance of 'PrimitiveCell' class
         TMDC primitive cell
+    :raises NotImplementedError: if material has not been implemented
     """
     vectors, orbital_coords = _gen_lattice(material)
     hop_dict, on_site = _gen_hop_dict(material)
     orbital_coords = cart2frac(vectors, orbital_coords)
+    orbital_labels = _gen_orb_labels(material)
     cell = PrimitiveCell(vectors, unit=NM)
     for i_o, coord in enumerate(orbital_coords):
-        cell.add_orbital(coord, on_site[i_o])
+        cell.add_orbital(coord, on_site[i_o], orbital_labels[i_o])
     cell.add_hopping_dict(hop_dict)
     return cell

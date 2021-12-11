@@ -27,8 +27,8 @@ def make_graphene_diamond(c=1.0):
     """
     vectors = gen_lattice_vectors(a=0.246, b=0.246, c=c, gamma=60)
     cell = PrimitiveCell(vectors, unit=NM)
-    cell.add_orbital([0.0, 0.0])
-    cell.add_orbital([1/3., 1/3.])
+    cell.add_orbital([0.0, 0.0], label="C_pz")
+    cell.add_orbital([1/3., 1/3.], label="C_pz")
     cell.add_hopping([0, 0], 0, 1, -2.7)
     cell.add_hopping([1, 0], 1, 0, -2.7)
     cell.add_hopping([0, 1], 1, 0, -2.7)
@@ -57,10 +57,10 @@ def make_graphene_rect(from_scratch=True, c=1.0):
 
         # Create cell and add orbitals
         cell = PrimitiveCell(vectors, unit=NM)
-        cell.add_orbital((0, 0))
-        cell.add_orbital((0, 2/3.))
-        cell.add_orbital((1/2., 1/6.))
-        cell.add_orbital((1/2., 1/2.))
+        cell.add_orbital((0, 0), label="C_pz")
+        cell.add_orbital((0, 2/3.), label="C_pz")
+        cell.add_orbital((1/2., 1/6.), label="C_pz")
+        cell.add_orbital((1/2., 1/2.), label="C_pz")
 
         # Add hopping terms
         cell.add_hopping([0, 0], 0, 2, -2.7)
