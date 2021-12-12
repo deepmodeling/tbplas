@@ -39,6 +39,51 @@ class Visualizer:
         else:
             self.rank = 0
 
+    def __output(self, fig_name=None, fig_dpi=300):
+        """
+        Show or save the figure and close.
+
+        :param fig_name: string
+            file name of figure to save
+        :param fig_dpi: integer
+            resolution of figure
+        :return: None
+        """
+        if self.rank == 0:
+            if fig_name is not None:
+                plt.savefig(fig_name, dpi=fig_dpi)
+            else:
+                plt.show()
+            plt.close()
+
+    def __plot_xy(self, x: np.ndarray, y: np.ndarray, x_label=None,
+                  y_label=None, fig_name=None, fig_dpi=300):
+        """
+        Plot y as function of x.
+
+        :param x: (num_data,) float64 array
+            data x for plot
+        :param y: (num_data,) float64 array
+            data y for plot
+        :param x_label: string
+            label for x-axis
+        :param y_label: string
+            label for y-axis
+        :param fig_name: string
+            file name of figure to save
+        :param fig_dpi: integer
+            resolution of figure
+        :return: None
+        """
+        if self.rank == 0:
+            plt.plot(x, y)
+            if x_label is not None:
+                plt.xlabel(x_label)
+            if y_label is not None:
+                plt.ylabel(y_label)
+            plt.tight_layout()
+            self.__output(fig_name, fig_dpi)
+
     def plot_band(self, k_len: np.ndarray, bands: np.ndarray,
                   k_idx: np.ndarray, k_label: List[str],
                   x_label: str = "k (1/nm)", y_label: str = "Energy (eV)",
@@ -62,8 +107,6 @@ class Visualizer:
             file name of figure to save
         :param fig_dpi: integer
             resolution of figure
-        :param solver: instance of 'BaseSolver' and derive classes
-            solver containing MPI environment
         :return: None
         """
         if self.rank == 0:
@@ -83,12 +126,30 @@ class Visualizer:
             plt.ylabel(y_label)
             plt.tight_layout()
 
-            # Show or save the figure
-            if fig_name is not None:
-                plt.savefig(fig_name, dpi=fig_dpi)
-            else:
-                plt.show()
-            plt.close()
+            # Output figure
+            self.__output(fig_name, fig_dpi)
+
+    def plot_dos(self, energies: np.ndarray, dos: np.ndarray,
+                 x_label="Energy (eV)", y_label="DOS (1/eV)",
+                 fig_name=None, fig_dpi=300):
+        """
+        Plot density of states.
+
+        :param energies: (num_eng,) float64 array
+            energy grids
+        :param dos: (num_eng,) float64 array
+            density of states
+        :param x_label: string
+            label for x-axis
+        :param y_label: string
+            label for y-axis
+        :param fig_name: string
+            file name of figure to save
+        :param fig_dpi: integer
+            resolution of figure
+        :return: None
+        """
+        self.__plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
 
     def plot_wf2(self, sample: Sample, wf2, site_size=5, with_colorbar=False,
                  fig_name=None, fig_dpi=300):
@@ -107,8 +168,6 @@ class Visualizer:
             image file name
         :param fig_dpi: float
             dpi of output figure
-        :param solver: instance of 'BaseSolver' and derive classes
-            solver containing MPI environment
         :return: None
         """
         if self.rank == 0:
@@ -132,9 +191,5 @@ class Visualizer:
             plt.tight_layout()
             plt.autoscale()
 
-            # Show or save
-            if fig_name is not None:
-                plt.savefig(fig_name, dpi=fig_dpi)
-            else:
-                plt.show()
-            plt.close()
+            # Output figure
+            self.__output(fig_name, fig_dpi)
