@@ -1,11 +1,10 @@
 #! /usr/bin/env python
 """
 In this tutorial we show how to build a fractal, Sierpinski carpet. We will try
-two approaches: top-down and bottom-up. The first approach is implemented by
-etching orbitals falling in void regions of a mask, while the second approach
-is implemented by replication of given pattern. Top-down approach is simpler in
-principle, but slower. Bottom-up approach is complicated in principle, but
-faster.
+two approaches, namely top-down and bottom-up. The first approach is implemented
+by etching orbitals falling in void regions of a mask, while the second approach
+is implemented by replication of lower order fractal according to give pattern.
+Both approaches produce the same sample.
 """
 
 import numpy as np
@@ -122,12 +121,12 @@ class Mask:
         """
         super_cell.sync_array()
         masked_id_pc = []
-        for id_pc in super_cell.orb_id_pc:
-            for box in self.boxes:
-                if (box.void
-                        and box.i0 <= id_pc.item(0) < box.i1
-                        and box.j0 <= id_pc.item(1) < box.j1):
-                    masked_id_pc.append(tuple(id_pc))
+        for box in self.boxes:
+            if box.void:
+                id_pc = [(ia, ib, 0, 0)
+                         for ia in range(box.i0, box.i1)
+                         for ib in range(box.j0, box.j1)]
+                masked_id_pc.extend(id_pc)
         super_cell.unlock()
         super_cell.vacancy_list = masked_id_pc
         super_cell.sync_array()
@@ -188,55 +187,35 @@ def bottom_up(prim_cell: tb.PrimitiveCell,
     """
     final_width = start_width * extension**iteration
 
-    # Index_good is the starting fractal (0-th order) and pattern
-    # replication.
-    index_good = []
-    for i in range(extension):
-        for j in range(extension):
-            if not (1 <= i < extension-1 and 1 <= j < extension-1):
-                index_good.append([i, j])
+    # Build 0-th order fractal
+    fractal = [(ia, ib)
+               for ia in range(start_width)
+               for ib in range(start_width)]
 
-    # Get grid coordinates of reserved orbitals
-    frac_index = []
-    frac_site = []
+    # Build pattern for replication.
+    pattern = [(ia, ib)
+               for ia in range(extension)
+               for ib in range(extension)
+               if not (1 <= ia < extension-1 and 1 <= ib < extension-1)]
+
+    # Build n-th order fractal by replicating (n-1)-th order according to
+    # pattern, which is a direct product mathematically.
     for i in range(iteration):
-        frac_index.append([0, 0])
-    for i in range((extension*extension)**len(frac_index)):
-        for j in range(len(frac_index)):
-            if frac_index[j] != [extension-1, extension-1]:
-                if frac_index[j][1] != extension-1:
-                    frac_index[j][1] = frac_index[j][1] + 1
-                else:
-                    frac_index[j][0] = frac_index[j][0] + 1
-                    frac_index[j][1] = 0
-                break
-            else:
-                frac_index[j] = [0, 0]
-
-        # Determine whether to replicate the fractal
-        add_point = True
-        for j in range(len(frac_index)):
-            if frac_index[j] not in index_good:
-                add_point = False
-                break
-
-        # Replicate the fractal
-        if add_point:
-            x0 = 0
-            y0 = 0
-            for j in range(len(frac_index)):
-                x0 = x0 + frac_index[j][0] * start_width * extension**j
-                y0 = y0 + frac_index[j][1] * start_width * extension**j
-            for x in range(x0, x0+start_width):
-                for y in range(y0, y0+start_width):
-                    frac_site.append((x, y, 0, 0))
-        i += 1
+        fractal_new = []
+        width = start_width * extension**i
+        for entry in pattern:
+            di = width * entry[0]
+            dj = width * entry[1]
+            replica = [(grid[0] + di, grid[1] + dj) for grid in fractal]
+            fractal_new.extend(replica)
+        fractal = fractal_new
 
     # Get grid coordinates of vacancies.
-    full_sites = [(ia, ib, 0, 0)
+    full_sites = [(ia, ib)
                   for ia in range(final_width)
                   for ib in range(final_width)]
-    vacancies = list(set(full_sites).difference(set(frac_site)))
+    vacancies = list(set(full_sites).difference(set(fractal)))
+    vacancies = [(grid[0], grid[1], 0, 0) for grid in vacancies]
 
     # Create the sample
     super_cell = tb.SuperCell(prim_cell, dim=(final_width, final_width, 1),
@@ -256,12 +235,18 @@ def main():
     prim_cell.add_hopping((1, -1), 0, 0, 1.0)
 
     # Create sample using top-down approach
-    sample = top_down(prim_cell, 2, 3, 3)
+    timer = tb.Timer()
+    timer.tic("top_down")
+    sample = top_down(prim_cell, 2, 4, 3)
+    timer.toc("top_down")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
 
     # Create sample using bottom-up approach
-    sample = bottom_up(prim_cell, 2, 3, 3)
+    timer.tic("bottom_up")
+    sample = bottom_up(prim_cell, 2, 4, 3)
+    timer.toc("bottom_up")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
+    timer.report_total_time()
 
 
 if __name__ == "__main__":
