@@ -448,8 +448,9 @@ class PrimitiveCell(LockableObject):
         :raises PCLockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
-        position = lat.cart2frac(self.lat_vec, np.array([position]) * unit)[0]
-        self.add_orbital(position, **kwargs)
+        position_cart = np.array([correct_coord(position)])
+        position_frac = lat.cart2frac(self.lat_vec, position_cart * unit)[0]
+        self.add_orbital(position_frac, **kwargs)
 
     def set_orbital(self, orb_i, position=None, energy=None, label=None,
                     sync_array=False, **kwargs):
@@ -526,9 +527,9 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         if position is not None:
-            position = lat.cart2frac(self.lat_vec,
-                                     np.array([position]) * unit)[0]
-        self.set_orbital(orb_i, position, **kwargs)
+            position_cart = np.array([correct_coord(position)])
+            position_frac = lat.cart2frac(self.lat_vec, position_cart * unit)[0]
+        self.set_orbital(orb_i, position_frac, **kwargs)
 
     def get_orbital(self, orb_i):
         """
