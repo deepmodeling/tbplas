@@ -21,7 +21,7 @@ except ImportError:
 
 # Generate f2py interface
 f90_dir = 'tbplas/fortran'
-os.system(f'f2py -h %s/f2py.pyf -m f2py --overwrite-signature '
+os.system(f'f2py -h {f90_dir}/f2py.pyf -m f2py --overwrite-signature '
           f'{f90_dir}/analysis.f90 {f90_dir}/tbpm.f90')
 
 # NOTE: DO NOT change the ordering of f90 files. Otherwise the
