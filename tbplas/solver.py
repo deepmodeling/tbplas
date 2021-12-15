@@ -370,7 +370,10 @@ class Solver(BaseSolver):
             self.config.generic['nr_time_steps'],
             num_sample,
             self.output['corr_DOS'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         corr_dos = self.average(corr_dos)
         self.__save_data(corr_dos, self.output["corr_DOS"])
         return corr_dos
@@ -397,7 +400,10 @@ class Solver(BaseSolver):
             self.config.generic['nr_time_steps'],
             num_sample,
             self.output['corr_LDOS'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         corr_ldos = self.average(corr_ldos)
         self.__save_data(corr_ldos, self.output["corr_LDOS"])
         return corr_ldos
@@ -429,7 +435,10 @@ class Solver(BaseSolver):
             self.config.generic['nr_Fermi_fft_steps'],
             self.config.generic['Fermi_cheb_precision'],
             self.output['corr_AC'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         corr_ac = self.average(corr_ac)
         self.__save_data(corr_ac, self.output["corr_AC"])
         return corr_ac
@@ -464,7 +473,10 @@ class Solver(BaseSolver):
             self.config.generic['Fermi_cheb_precision'],
             self.config.dyn_pol['q_points'],
             self.output['corr_dyn_pol'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         corr_dyn_pol = self.average(corr_dyn_pol)
         self.__save_data(corr_dyn_pol, self.output["corr_dyn_pol"])
         return corr_dyn_pol
@@ -507,7 +519,10 @@ class Solver(BaseSolver):
             time_step, energies_dos, qe_indices,
             self.output['corr_DOS'],
             self.output['corr_DC'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         corr_dos = self.average(corr_dos)
         corr_dc = self.average(corr_dc)
         self.__save_data(corr_dos, self.output["corr_DOS"])
@@ -565,7 +580,10 @@ class Solver(BaseSolver):
             num_sample,
             time_step,
             self.config.quasi_eigenstates['energies'],
-            self.rank)
+            self.rank,
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
         states = self.average(states)
         return states
 

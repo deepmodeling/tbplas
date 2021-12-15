@@ -5,7 +5,7 @@
 ! Get DOS
 SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
                     s_hop, n_hop, seed, n_timestep, n_ran_samples, &
-                    output_filename, corr, rank)
+                    output_filename, corr, rank, wfn_chk_step, wfn_chk_thr)
     USE math, ONLY: inner_prod
     USE random
     USE csr
@@ -21,6 +21,8 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
@@ -73,7 +75,7 @@ SUBROUTINE tbpm_dos(Bes, n_Bes, s_indptr, n_indptr, s_indices, n_indices, &
             IF (MODULO(t, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
             END IF
-            if (t == 128) call check_norm(wf_t, norm_ref)
+            if (t == wfn_chk_step) call check_norm(wf_t, norm_ref, wfn_chk_thr)
 
             wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
@@ -95,7 +97,7 @@ END SUBROUTINE tbpm_dos
 SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
                      s_indptr, n_indptr, s_indices, n_indices, &
                      s_hop, n_hop, seed, n_timestep, n_ran_samples, &
-                     output_filename, corr, rank)
+                     output_filename, corr, rank, wfn_chk_step, wfn_chk_thr)
     USE math, ONLY: inner_prod
     USE random
     USE csr
@@ -113,6 +115,8 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     CHARACTER*(*), INTENT(IN) :: output_filename
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(0:n_timestep) :: corr
 
@@ -163,7 +167,7 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
             IF (MODULO(k, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", k, " of ", n_timestep
             END IF
-            if (k == 128) call check_norm(wf_t, norm_ref)
+            if (k == wfn_chk_step) call check_norm(wf_t, norm_ref, wfn_chk_thr)
 
             wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
             corrval = inner_prod(wf0, wf_t)
@@ -186,7 +190,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                        s_indices, n_indices, s_hop, n_hop, H_rescale, &
                        s_dx, n_dx, s_dy, n_dy, seed, n_timestep, &
                        n_ran_samples, nr_Fermi, Fermi_precision, &
-                       output_filename, corr, rank)
+                       output_filename, corr, rank, wfn_chk_step, wfn_chk_thr)
     USE math, ONLY: inner_prod
     USE random
     USE csr
@@ -207,6 +211,8 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     REAL(KIND=8), INTENT(IN), DIMENSION(n_dy) :: s_dy
     CHARACTER*(*), INTENT(IN) :: output_filename
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(4, n_timestep) :: corr
     ! corr has 4 elements, respectively: corr_xx, corr_xy, corr_yx, corr_yy
@@ -299,7 +305,7 @@ SUBROUTINE tbpm_accond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             IF (MODULO(t, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
             END IF
-            if (t == 128) call check_norm(psi2, norm_ref)
+            if (t == wfn_chk_step) call check_norm(psi2, norm_ref, wfn_chk_thr)
 
             ! calculate time evolution
             psi1_x = cheb_wf_timestep(H_csr, Bes, psi1_x, .true.)
@@ -347,7 +353,8 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                         s_dx, n_dx, s_dy, n_dy, s_site_x, n_site_x, &
                         s_site_y, n_site_y, s_site_z, n_site_z, seed, &
                         n_timestep, n_ran_samples, nr_Fermi, Fermi_precision, &
-                        q_points, n_q_points, output_filename, corr, rank)
+                        q_points, n_q_points, output_filename, corr, rank, &
+                        wfn_chk_step, wfn_chk_thr)
     USE math
     USE random
     USE csr
@@ -371,6 +378,8 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     REAL(KIND=8), INTENT(IN), DIMENSION(n_q_points, 3) :: q_points
     CHARACTER*(*), INTENT(IN) :: output_filename
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     REAL(KIND=8), INTENT(OUT), DIMENSION(n_q_points, n_timestep) :: corr
 
@@ -456,7 +465,7 @@ SUBROUTINE tbpm_dyn_pol(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                 IF (MODULO(t, 64) == 0) THEN
                     if (rank == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
                 END IF
-                if (t == 128) call check_norm(psi2, norm_ref)
+                if (t == wfn_chk_step) call check_norm(psi2, norm_ref, wfn_chk_thr)
 
                 ! call time and density operators
                 psi1 = cheb_wf_timestep(H_csr, Bes, psi1, .true.)
@@ -487,7 +496,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
                        n_timestep, n_ran_samples, t_step, &
                        energies, n_energies, en_inds, n_en_inds, &
                        output_filename_dos, output_filename_dc, &
-                       dos_corr, dc_corr, rank)
+                       dos_corr, dc_corr, rank, wfn_chk_step, wfn_chk_thr)
     USE const
     USE math
     USE random
@@ -511,6 +520,8 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     CHARACTER*(*), INTENT(IN) :: output_filename_dos
     CHARACTER*(*), INTENT(IN) :: output_filename_dc
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(n_timestep) :: dos_corr
     COMPLEX(KIND=8), INTENT(OUT), DIMENSION(2,n_energies,n_timestep) :: dc_corr
@@ -588,9 +599,9 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             IF (MODULO(t, 64) == 0) THEN
                 if (rank == 0) PRINT *, "Getting DOS/QE for timestep ", t, " of ", n_timestep
             END IF
-            if (t == 128) then
-                call check_norm(wf_t_pos, norm_ref)
-                call check_norm(wf_t_neg, norm_ref)
+            if (t == wfn_chk_step) then
+                call check_norm(wf_t_pos, norm_ref, wfn_chk_thr)
+                call check_norm(wf_t_neg, norm_ref, wfn_chk_thr)
             endif
 
             ! time evolution
@@ -715,7 +726,8 @@ END SUBROUTINE tbpm_dccond
 SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
                             s_indices, n_indices, s_hop, n_hop, &
                             seed, n_timestep, n_ran_samples, t_step, &
-                            energies, n_energies, wf_QE, rank)
+                            energies, n_energies, wf_QE, rank, &
+                            wfn_chk_step, wfn_chk_thr)
     USE const
     USE math
     USE random
@@ -733,6 +745,8 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_hop) :: s_hop
     REAL(KIND=8), INTENT(IN), DIMENSION(n_energies) :: energies
     INTEGER, INTENT(IN) :: rank
+    INTEGER, INTENT(IN) :: wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
     ! output
     REAL(KIND=8), INTENT(OUT), DIMENSION(n_energies, n_indptr - 1) :: wf_QE
 
@@ -778,9 +792,9 @@ SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
             IF (MODULO(k, 64) == 0) THEN
                 if (rank == 0) PRINT *, "    Timestep ", k, " of ", n_timestep
             END IF
-            if (k == 128) then
-                call check_norm(wf_t_pos, norm_ref)
-                call check_norm(wf_t_neg, norm_ref)
+            if (k == wfn_chk_step) then
+                call check_norm(wf_t_pos, norm_ref, wfn_chk_thr)
+                call check_norm(wf_t_neg, norm_ref, wfn_chk_thr)
             endif
 
             wf_t_pos = cheb_wf_timestep(H_csr, Bes, wf_t_pos, .true.)

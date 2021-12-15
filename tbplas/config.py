@@ -77,16 +77,18 @@ class Config:
     """
     def __init__(self):
         # generic standard values
-        self.generic = {'Bessel_max': 100,
-                        'Bessel_precision': 1.0e-13,
+        self.generic = {'Bessel_max': 250,
+                        'Bessel_precision': 1.0e-14,
                         'correct_spin': False,
                         'nr_time_steps': 1024,
                         'nr_random_samples': 1,
                         'beta': 11604.505 / 300,
                         'mu': 0.,
                         'nr_Fermi_fft_steps': 2 ** 15,
-                        'Fermi_cheb_precision': 1.0e-10,
-                        'seed': 1337}
+                        'Fermi_cheb_precision': 1.0e-12,
+                        'seed': 1337,
+                        'wfn_check_steps': 128,
+                        'wfn_check_thr': 1.0e-9}
 
         # LDOS
         self.LDOS = {'site_indices': 0,
