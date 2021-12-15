@@ -33,6 +33,8 @@ pairs = kd_tree.query_pairs(r=1.45)
 #     prim_cell.add_hopping((0, 0, 0), pair[0], pair[1], energy=-2.7)
 
 # Dangerous but fast (10^4 times faster)
+# Luckily enough, KDTree returns only pairs with i < j. So there is no
+# need to worry about redundant hopping terms.
 hop_list = [Hopping((0, 0, 0), pair[0], pair[1], -2.7) for pair in pairs]
 prim_cell.hopping_list = hop_list
 
