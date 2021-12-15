@@ -527,9 +527,9 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         if position is not None:
-            position_cart = np.array([correct_coord(position)])
-            position_frac = lat.cart2frac(self.lat_vec, position_cart * unit)[0]
-        self.set_orbital(orb_i, position_frac, **kwargs)
+            position = np.array([correct_coord(position)])
+            position = lat.cart2frac(self.lat_vec, position * unit)[0]
+        self.set_orbital(orb_i, position, **kwargs)
 
     def get_orbital(self, orb_i):
         """
