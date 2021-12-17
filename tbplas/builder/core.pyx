@@ -8,7 +8,7 @@
 # cython: warn.multiple_declarators=True
 
 import cython
-from libc.math cimport cos, sin, pi, sqrt
+from libc.math cimport cos, sin, pi, sqrt, exp
 import numpy as np
 
 
@@ -1957,3 +1957,62 @@ def test_speed_sc2pc(int [:,::1] orb_id_pc):
     cdef int [::1] id_pc
     for id_sc in range(orb_id_pc.shape[0]):
         id_pc = orb_id_pc[id_sc]
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
+              long [::1] kq_map, double beta, double mu, double [::1] omegas,
+              long iq, double complex [:,::1] dyn_pol):
+    """
+    Calculate dynamic polarizability for given q-point, for cross-validation
+    with FORTRAN version.
+
+    Parmaters
+    ---------
+    bands: (num_kpt, num_orb) float64 array
+        eigenvalues on regular k-grid
+    states: (num_kpt, num_orb, num_orb) complex128 array
+        eigenstates on regular k-grid
+    kq_map: (num_kpt,) int64 array
+        map of k+q grid to k-grid
+    beta: double
+        Lindhard.beta
+    mu: double
+        Lindhard.mu
+    omegas: (num_omega,) float64 array
+        frequencies on which dyn_pol is evaluated
+    iq: int64
+        index of q-point
+    dyn_pol: (num_qpt, num_omega)
+        dynamic polarizability
+
+    Returns
+    -------
+    None. Results are saved in dyn_pol.
+    """
+    cdef long num_omega, num_kpt, num_orb
+    cdef long iw, ik, ikqp, jj, ll, ib
+    cdef double omega, f_q, f
+    cdef double complex prod, dp_sum
+
+    num_omega = omegas.shape[0]
+    num_kpt = bands.shape[0]
+    num_orb = bands.shape[1]
+
+    for iw in range(num_omega):
+        omega = omegas[iw]
+        dp_sum = 0.0
+        for ik in range(num_kpt):
+            ikqp = kq_map[ik]
+            for jj in range(num_orb):
+                for ll in range(num_orb):
+                    f_q = 1.0 / (1.0 + exp(beta * (bands[ikqp, jj] - mu)))
+                    f = 1.0 / (1.0 + exp(beta * (bands[ik, ll] - mu)))
+                    prod = 0.0
+                    for ib in range(num_orb):
+                        prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib]
+                    prod *= prod.conjugate()
+                    dp_sum += prod * (f_q - f) / \
+                              (bands[ikqp, jj] - bands[ik, ll] - omega - 0.005j)
+        dyn_pol[iq, iw] = dp_sum
