@@ -251,7 +251,7 @@ class Lindhard:
         kq_map = np.array(kq_map, dtype=np.int64)
         return kq_map
 
-    def calc_dyn_pol_regular(self, q_points, use_fortran=False):
+    def calc_dyn_pol_regular(self, q_points, use_fortran=True):
         """
         Calculate dynamic polarizability for regular q-points on k-mesh.
 
@@ -305,7 +305,7 @@ class Lindhard:
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
 
-    def calc_dyn_pol_arbitrary(self, q_points, use_fortran=False, wrap=True):
+    def calc_dyn_pol_arbitrary(self, q_points, use_fortran=True, wrap=False):
         """
         Calculate dynamic polarizability for arbitrary q-points.
 
