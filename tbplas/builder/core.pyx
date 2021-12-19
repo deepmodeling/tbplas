@@ -1965,8 +1965,8 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
               long [::1] kq_map, double beta, double mu, double [::1] omegas,
               long iq, double complex [:,::1] dyn_pol):
     """
-    Calculate dynamic polarizability for given q-point, for cross-validation
-    with FORTRAN version.
+    Calculate dynamic polarizability for regubands[ik,lar q-point on k-mesh using
+    Lindhard function, for cross-validation with FORTRAN version.
 
     Parmaters
     ---------
@@ -2015,4 +2015,65 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
                     prod *= prod.conjugate()
                     dp_sum += prod * (f_q - f) / \
                               (bands[ikqp, jj] - bands[ik, ll] - omega - 0.005j)
+        dyn_pol[iq, iw] = dp_sum
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
+                  double [:,::1] bands_kq, double complex [:,:,::1] states_kq,
+                  double beta, double mu, double [::1] omegas,
+                  long iq, double complex [:,::1] dyn_pol):
+    """
+    Calculate dynamic polarizability for arbitrary q-point using Lindhard
+    function, for cross-validation with FORTRAN version.
+
+    Parmaters
+    ---------
+    bands: (num_kpt, num_orb) float64 array
+        eigenvalues on regular k-grid
+    states: (num_kpt, num_orb, num_orb) complex128 array
+        eigenstates on regular k-grid
+    bands_kq: (num_kpt, num_orb) float64 array
+        eigenvalues on k+q grid
+    states_kq: (num_kpt, num_orb, num_orb) complex128 array
+        eigenstates on k+q grid
+    beta: double
+        Lindhard.beta
+    mu: double
+        Lindhard.mu
+    omegas: (num_omega,) float64 array
+        frequencies on which dyn_pol is evaluated
+    iq: int64
+        index of q-point
+    dyn_pol: (num_qpt, num_omega)
+        dynamic polarizability
+
+    Returns
+    -------
+    None. Results are saved in dyn_pol.
+    """
+    cdef long num_omega, num_kpt, num_orb
+    cdef long iw, ik, jj, ll, ib
+    cdef double omega, f_q, f
+    cdef double complex prod, dp_sum
+
+    num_omega = omegas.shape[0]
+    num_kpt = bands.shape[0]
+    num_orb = bands.shape[1]
+
+    for iw in range(num_omega):
+        omega = omegas[iw]
+        dp_sum = 0.0
+        for ik in range(num_kpt):
+            for jj in range(num_orb):
+                for ll in range(num_orb):
+                    f_q = 1.0 / (1.0 + exp(beta * (bands_kq[ik, jj] - mu)))
+                    f = 1.0 / (1.0 + exp(beta * (bands[ik, ll] - mu)))
+                    prod = 0.0
+                    for ib in range(num_orb):
+                        prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib]
+                    prod *= prod.conjugate()
+                    dp_sum += prod * (f_q - f) / \
+                              (bands_kq[ik, jj] - bands[ik, ll] - omega - 0.005j)
         dyn_pol[iq, iw] = dp_sum

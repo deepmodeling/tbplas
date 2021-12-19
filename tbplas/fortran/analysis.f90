@@ -62,7 +62,8 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
 END SUBROUTINE cond_from_trace
 
 
-! calculate dynamic polarizability using Lindhard function
+! calculate dynamic polarizability for regular q-point on k-mesh using
+! Lindhard function
 subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, beta, mu, &
                      omegas, num_omega, i_q, dyn_pol, num_qpt)
     implicit none
@@ -104,3 +105,47 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, beta, mu, &
         dyn_pol(i_w, i_q) = dp_sum
     end do
 end subroutine dyn_pol_q
+
+
+! calculate dynamic polarizability for arbitrary q-point using Lindhard function
+subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, beta, mu, &
+                         omegas, num_omega, i_q, dyn_pol, num_qpt)
+    implicit none
+
+    ! input and output
+    real(kind=8), intent(in) :: eng(num_orb, num_kpt)
+    integer, intent(in) :: num_orb, num_kpt
+    complex(kind=8), intent(in) :: wfn(num_orb, num_orb, num_kpt)
+    real(kind=8), intent(in) :: eng_kq(num_orb, num_kpt)
+    complex(kind=8), intent(in) :: wfn_kq(num_orb, num_orb, num_kpt)
+    real(kind=8), intent(in) :: beta, mu
+    real(kind=8), intent(in) :: omegas(num_omega)
+    integer, intent(in) :: num_omega, i_q
+    complex(kind=8), intent(inout) :: dyn_pol(num_omega, num_qpt)
+    integer, intent(in) :: num_qpt
+
+    ! local variables
+    integer :: i_w, i_k, jj, ll
+    real(kind=8) :: omega, f_q, f
+    complex(kind=8) :: prod, dp_sum
+    complex(kind=8), parameter :: eta = (0.0D0, 0.005D0)
+
+    do i_w = 1, num_omega
+        omega = omegas(i_w)
+        dp_sum = (0.0D0, 0.0D0)
+        !$OMP PARALLEL DO PRIVATE(jj, ll, f_q, f, prod) REDUCTION(+: dp_sum)
+        do i_k = 1, num_kpt
+            do jj = 1, num_orb
+                do ll = 1, num_orb
+                    f_q = 1.0 / (1.0 + exp(beta * (eng_kq(jj, i_k) - mu)))
+                    f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
+                    prod = abs(dot_product(wfn_kq(:, jj, i_k), wfn(:, ll, i_k)))**2
+                    dp_sum = dp_sum + prod * (f_q - f) &
+                           / (eng_kq(jj, i_k) - eng(ll, i_k) - omega - eta)
+                end do
+            end do
+        end do
+        !$OMP END PARALLEL DO
+        dyn_pol(i_w, i_q) = dp_sum
+    end do
+end subroutine dyn_pol_q_arb
