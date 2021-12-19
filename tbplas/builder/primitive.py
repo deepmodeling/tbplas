@@ -10,16 +10,16 @@ Functions
 Classes
 -------
     Orbital: developer class
-        class for representing an orbital in TB model
+        abstraction for orbitals in TB model
     Hopping: developer class
-        class for representing a hopping term in TB model
+        abstraction for hopping terms in TB model
     LockableObject: developer class
         base class for all lockable classes
     HopDict: user class
-        class for holding hopping terms
+        container for holding hopping terms
         reserved for compatibility with old version of TBPlaS
     PrimitiveCell: user class
-        class for representing a primitive cell from which a super cell
+        abstraction for  primitive cell from which a super cell
         can be created
 """
 
@@ -348,7 +348,7 @@ class PrimitiveCell(LockableObject):
         Conjugate terms are added automatically when constructing
         the Hamiltonian.
     hash_dict: dictionary
-        dictionary of hashes of tuple(orbital_list) and tuple(hopping_list)
+        hashes of tuple(orbital_list) and tuple(hopping_list)
         Keys should be either 'orb' or 'hop'.
         Method 'sync_array' will use this dictionary to update the arrays.
         Should only be accessed within that method!
@@ -938,7 +938,7 @@ class PrimitiveCell(LockableObject):
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
         :param hop_eng_cutoff: float
-            cutoff for showing hopping terms
+            cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
         :param view: string
@@ -1093,7 +1093,7 @@ class PrimitiveCell(LockableObject):
             energy grid corresponding to e_min, e_max and e_step
         :return: dos: (num_grid,) float64 array
             density of states in states/eV
-        :raises BasisError: if basis is neither Gaussian or Lorentzian
+        :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
         # Get the band energies
         k_len, bands = self.calc_bands(k_points)

@@ -334,7 +334,7 @@ class Solver(BaseSolver):
         :param data: numpy array
             data to save
         :param file_name: string
-            name of file to which data will be saved WITHOUT suffix
+            name of file to which data will be saved WITHOUT suffix.
             Suffix will be added automatically depending on the format.
         :param output_format: string
             format of output data

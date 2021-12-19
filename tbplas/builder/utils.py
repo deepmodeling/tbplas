@@ -3,8 +3,8 @@ Helper classes and functions used among builder package.
 
 Classes
 -------
-    ModelViewer: developer api
-        class for viewing primitive cells and samples
+    ModelViewer: developer class
+        viewer for showing primitive cells and samples from different views
 
 Functions
 ---------

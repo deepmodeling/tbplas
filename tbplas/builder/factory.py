@@ -130,8 +130,8 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
         tolerance on positions for identifying equivalent orbitals
     :return: res_cell: instance of 'PrimitiveCell' class
         reshaped cell
-    :raises LatVecError: if lat_frac.shape != (3, 3)
-    :raises ValueError: if origin.shape != (3,)
+    :raises LatVecError: if shape of lat_frac.shape is not (3, 3)
+    :raises ValueError: if length of origin is not 3
     """
     # Check lattice vectors and origin
     if lat_frac.shape != (3, 3):
@@ -417,7 +417,7 @@ def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
     :raises ValueError: if no arg is given, or any arg is not instance of
         PrimitiveCell or InterHopDict, or any inter_hop_dict involves primitive
         cells not included in args
-    :raises PCOrbIndexError: if any orbital indice in any inter_hop_dict is out
+    :raises PCOrbIndexError: if any orbital index in any inter_hop_dict is out
         of range
     """
     # Check arguments

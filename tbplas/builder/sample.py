@@ -8,8 +8,8 @@ Functions
 Classes
 -------
     InterHopping: user class
-        container class for hopping terms between different super cells within
-        the sample
+        container class for hopping terms between different supercells within
+        the sample.
     Sample: user class
         interface class to FORTRAN backend
 """
@@ -34,7 +34,7 @@ from .utils import ModelViewer
 
 class InterHopping(LockableObject):
     """
-    Container class for hopping terms between different super cells within the
+    Container class for hopping terms between different supercells within the
     sample.
 
     Attributes
@@ -266,11 +266,11 @@ class InterHopping(LockableObject):
         Plot hopping terms to axes.
 
         :param axes: instance of matplotlib 'Axes' class
-            axes on which the figure will be plot
+            axes on which the figure will be plotted
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
         :param hop_eng_cutoff: float
-            cutoff for showing hopping terms
+            cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
         :param view: string
@@ -665,7 +665,7 @@ class Sample:
         for TBPM calculations. Use the 'build_ham_dxy' method instead.
 
         :return: dx_csr, dy_csr
-            sparse dx an dy matrices in CSR format
+            sparse dx and dy matrices in CSR format
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -756,7 +756,7 @@ class Sample:
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
         :param hop_eng_cutoff: float
-            cutoff for showing hopping terms
+            cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
         :param view: string

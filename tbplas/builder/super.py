@@ -12,7 +12,7 @@ Classes
     IntraHopping: user class
         container class for modifications to hopping terms in the super cell
     SuperCell: user class
-        class for representing a super cell from which the sample is constructed
+        abstraction for a super cell from which the sample is constructed
 """
 
 from typing import Callable
@@ -84,7 +84,7 @@ class OrbitalSet(LockableObject):
     It's unnecessary to have the orb_id_sc array, as it can be generated from
     orb_id_pc on-the-fly. Actually, the vac_id_sc array is also unnecessary,
     as it can also be generated from vac_id_pc. We keep it just to accelerate
-    some operations. For orb_id_sc, there is no such need and we do not keep
+    some operations. For orb_id_sc, there is no such need, and we do not keep
     it for reduce memory usage.
 
     However, it should be noted that vac_id_sc and orb_id_sc are generated via
@@ -275,7 +275,7 @@ class OrbitalSet(LockableObject):
         vacancy_list.
 
         NOTE: The core function '_id_pc2sc_vac' requires vac_id_sc to be sorted
-        in increasing order. Otherwise it won't work properly! So we must sort
+        in increasing order. Otherwise, it won't work properly! So we must sort
         it here. We also re-order vac_id_pc accordingly to avoid potential bugs.
 
         :param verbose: boolean
@@ -876,7 +876,7 @@ class SuperCell(OrbitalSet):
         Plot lattice vectors, orbitals, and hopping terms to axes.
 
         :param axes: instance of matplotlib 'Axes' class
-            axes on which the figure will be plot
+            axes on which the figure will be plotted
         :param with_orbitals: boolean
             whether to plot orbitals as filled circles
         :param with_cells: boolean
@@ -884,7 +884,7 @@ class SuperCell(OrbitalSet):
         :param hop_as_arrows: boolean
             whether to plot hopping terms as arrows
         :param hop_eng_cutoff: float
-            cutoff for showing hopping terms
+            cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
         :param view: string

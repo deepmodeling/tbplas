@@ -35,11 +35,11 @@ def gen_lattice_vectors(a=1.0, b=1.0, c=1.0, alpha=90.0, beta=90.0, gamma=90.0):
     http://www.quantum-espresso.org/Doc/INPUT_PW.html
 
     :param a: float
-        lattice constant a in angstrom or nm
+        lattice constant 'a' in angstrom or nm
     :param b: float
-        lattice constant b in angstrom or nm
+        lattice constant 'b' in angstrom or nm
     :param c: float
-        lattice constant c in angstrom or nm
+        lattice constant 'c' in angstrom or nm
     :param alpha: float
         angle between a2 and a3 in DEGREE
     :param beta: float

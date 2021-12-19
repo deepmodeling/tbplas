@@ -9,7 +9,7 @@ Functions
 Classes
 -------
     Config: user class
-        class for representing TBPM parameters
+        abstraction for representing TBPM parameters
 """
 
 import math
@@ -18,7 +18,7 @@ import pickle
 
 class Config:
     """
-    Class for for representing TBPM parameters.
+    Class for representing TBPM parameters.
 
     Attributes
     ----------
