@@ -83,21 +83,36 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, beta, mu, &
     integer :: i_w, i_k, i_kpq, jj, ll
     real(kind=8) :: omega, f_q, f
     complex(kind=8) :: prod, dp_sum
+    real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
+    complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
     complex(kind=8), parameter :: eta = (0.0D0, 0.005D0)
 
+    ! build reusable arrays
+    !$OMP PARALLEL DO PRIVATE(i_kpq, jj, ll, f_q, f, prod)
+    do i_k = 1, num_kpt
+        i_kpq = kq_map(i_k)
+        do jj = 1, num_orb
+            do ll = 1, num_orb
+                delta_eng(ll, jj, i_k) = eng(jj, i_kpq) - eng(ll, i_k)
+                f_q = 1.0 / (1.0 + exp(beta * (eng(jj, i_kpq) - mu)))
+                f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
+                prod = dot_product(wfn(:, jj, i_kpq), wfn(:, ll, i_k))
+                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f_q - f)
+            end do
+        end do
+    end do
+    !$OMP END PARALLEL DO
+
+    ! calculate dyn_pol
     do i_w = 1, num_omega
         omega = omegas(i_w)
         dp_sum = (0.0D0, 0.0D0)
-        !$OMP PARALLEL DO PRIVATE(i_kpq, jj, ll, f_q, f, prod) REDUCTION(+: dp_sum)
+        !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
-            i_kpq = kq_map(i_k)
             do jj = 1, num_orb
                 do ll = 1, num_orb
-                    f_q = 1.0 / (1.0 + exp(beta * (eng(jj, i_kpq) - mu)))
-                    f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
-                    prod = abs(dot_product(wfn(:, jj, i_kpq), wfn(:, ll, i_k)))**2
-                    dp_sum = dp_sum + prod * (f_q - f) &
-                           / (eng(jj, i_kpq) - eng(ll, i_k) - omega - eta)
+                dp_sum = dp_sum + prod_df(ll, jj, i_k) &
+                       / (delta_eng(ll, jj, i_k) - omega - eta)
                 end do
             end do
         end do
@@ -128,20 +143,35 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, beta, mu, &
     integer :: i_w, i_k, jj, ll
     real(kind=8) :: omega, f_q, f
     complex(kind=8) :: prod, dp_sum
+    real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
+    complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
     complex(kind=8), parameter :: eta = (0.0D0, 0.005D0)
 
+    ! build reusable arrays
+    !$OMP PARALLEL DO PRIVATE(jj, ll, f_q, f, prod)
+    do i_k = 1, num_kpt
+        do jj = 1, num_orb
+            do ll = 1, num_orb
+                delta_eng(ll, jj, i_k) = eng_kq(jj, i_k) - eng(ll, i_k)
+                f_q = 1.0 / (1.0 + exp(beta * (eng_kq(jj, i_k) - mu)))
+                f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
+                prod = dot_product(wfn_kq(:, jj, i_k), wfn(:, ll, i_k))
+                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f_q - f)
+            end do
+        end do
+    end do
+    !$OMP END PARALLEL DO
+
+    ! calculate dyn_pol
     do i_w = 1, num_omega
         omega = omegas(i_w)
         dp_sum = (0.0D0, 0.0D0)
-        !$OMP PARALLEL DO PRIVATE(jj, ll, f_q, f, prod) REDUCTION(+: dp_sum)
+        !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
             do jj = 1, num_orb
                 do ll = 1, num_orb
-                    f_q = 1.0 / (1.0 + exp(beta * (eng_kq(jj, i_k) - mu)))
-                    f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
-                    prod = abs(dot_product(wfn_kq(:, jj, i_k), wfn(:, ll, i_k)))**2
-                    dp_sum = dp_sum + prod * (f_q - f) &
-                           / (eng_kq(jj, i_k) - eng(ll, i_k) - omega - eta)
+                dp_sum = dp_sum + prod_df(ll, jj, i_k) &
+                       / (delta_eng(ll, jj, i_k) - omega - eta)
                 end do
             end do
         end do

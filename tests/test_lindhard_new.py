@@ -20,7 +20,7 @@ def main():
 
     regular = False
     use_fortran = True
-    wrap = True
+    wrap = False
     if regular:
         q_points = [(1, 1, 0)]
     else:

@@ -258,8 +258,8 @@ class Lindhard:
         :param q_points: list of (iq_a, iq_b, iq_c)
             GRID coordinates of q-points
         :param use_fortran: boolean
-            whether to use FORTRAN backed, set to False to enable cython
-            backed for debugging
+            whether to use FORTRAN backend, set to False to enable cython
+            backend for debugging
         :return: omegas: (num_omega,) float64 array
             angular frequencies
             TODO: what unit? rename to energies?
@@ -312,8 +312,8 @@ class Lindhard:
         :param q_points: list of (fq_a, fq_b, fq_c)
             FRACTIONAL coordinates of q-points
         :param use_fortran: boolean
-            whether to use FORTRAN backed, set to False to enable cython
-            backed for debugging
+            whether to use FORTRAN backend, set to False to enable cython
+            backend for debugging
         :param wrap: boolean
             whether to wrap k+q points back into 1st Brillouin zone
         :return: omegas: (num_omega,) float64 array
