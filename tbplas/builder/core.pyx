@@ -1993,28 +1993,41 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     """
     cdef long num_omega, num_kpt, num_orb
     cdef long iw, ik, ikqp, jj, ll, ib
-    cdef double omega, f_q, f
+    cdef double omega, eng_q, eng, f_q, f
     cdef double complex prod, dp_sum
+    cdef double [:,:,::1] delta_eng
+    cdef double complex [:,:,::1] prod_df
 
     num_omega = omegas.shape[0]
     num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
+    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
+    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
+    # Build reusable arrays
+    for ik in range(num_kpt):
+        ikqp = kq_map[ik]
+        for jj in range(num_orb):
+            for ll in range(num_orb):
+                eng_q = bands[ikqp, jj]
+                eng = bands[ik, ll]
+                delta_eng[ik, jj, ll] = eng_q - eng
+                f_q = 1.0 / (1.0 + exp(beta * (eng_q - mu)))
+                f = 1.0 / (1.0 + exp(beta * (eng - mu)))
+                prod = 0.0
+                for ib in range(num_orb):
+                    prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib]
+                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
+
+    # Evaluate dyn_pol
     for iw in range(num_omega):
         omega = omegas[iw]
         dp_sum = 0.0
         for ik in range(num_kpt):
-            ikqp = kq_map[ik]
             for jj in range(num_orb):
                 for ll in range(num_orb):
-                    f_q = 1.0 / (1.0 + exp(beta * (bands[ikqp, jj] - mu)))
-                    f = 1.0 / (1.0 + exp(beta * (bands[ik, ll] - mu)))
-                    prod = 0.0
-                    for ib in range(num_orb):
-                        prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib]
-                    prod *= prod.conjugate()
-                    dp_sum += prod * (f_q - f) / \
-                              (bands[ikqp, jj] - bands[ik, ll] - omega - 0.005j)
+                    dp_sum += prod_df[ik, jj, ll] / \
+                              (delta_eng[ik, jj, ll] - omega - 0.005j)
         dyn_pol[iq, iw] = dp_sum
 
 
@@ -2055,25 +2068,38 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     """
     cdef long num_omega, num_kpt, num_orb
     cdef long iw, ik, jj, ll, ib
-    cdef double omega, f_q, f
+    cdef double omega, eng_q, eng, f_q, f
     cdef double complex prod, dp_sum
+    cdef double [:,:,::1] delta_eng
+    cdef double complex [:,:,::1] prod_df
 
     num_omega = omegas.shape[0]
     num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
+    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
+    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
+    # Build reusable arrays
+    for ik in range(num_kpt):
+        for jj in range(num_orb):
+            for ll in range(num_orb):
+                eng_q = bands_kq[ik, jj]
+                eng = bands[ik, ll]
+                delta_eng[ik, jj, ll] = eng_q - eng
+                f_q = 1.0 / (1.0 + exp(beta * (eng_q - mu)))
+                f = 1.0 / (1.0 + exp(beta * (eng - mu)))
+                prod = 0.0
+                for ib in range(num_orb):
+                    prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib]
+                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
+
+    # Evaluate dyn_pol
     for iw in range(num_omega):
         omega = omegas[iw]
         dp_sum = 0.0
         for ik in range(num_kpt):
             for jj in range(num_orb):
                 for ll in range(num_orb):
-                    f_q = 1.0 / (1.0 + exp(beta * (bands_kq[ik, jj] - mu)))
-                    f = 1.0 / (1.0 + exp(beta * (bands[ik, ll] - mu)))
-                    prod = 0.0
-                    for ib in range(num_orb):
-                        prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib]
-                    prod *= prod.conjugate()
-                    dp_sum += prod * (f_q - f) / \
-                              (bands_kq[ik, jj] - bands[ik, ll] - omega - 0.005j)
+                    dp_sum += prod_df[ik, jj, ll] / \
+                              (delta_eng[ik, jj, ll] - omega - 0.005j)
         dyn_pol[iq, iw] = dp_sum
