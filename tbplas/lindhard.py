@@ -47,7 +47,7 @@ class Lindhard:
     g_s: int
         spin degeneracy?
         TODO: check the meaning of this parameter
-    chi_factor: float
+    dyn_pol_factor: float
         prefactor for dynamic polarizability
     eps_factor: float
         prefactor for dielectric function
@@ -93,7 +93,7 @@ class Lindhard:
         dk_a = recip_vectors[0] / self.kmesh_size[0]
         dk_b = recip_vectors[1] / self.kmesh_size[1]
         dk_area = np.linalg.norm(np.cross(dk_a, dk_b))
-        self.chi_factor = self.g_s * dk_area / (2 * math.pi)**2
+        self.dyn_pol_factor = self.g_s * dk_area / (2 * math.pi)**2
         self.eps_factor = 1.4399644 * 2 * math.pi / back_epsilon
 
     @staticmethod
@@ -224,9 +224,9 @@ class Lindhard:
 
         for i_k, k_point in enumerate(k_points):
             ham_k *= 0.0
-            core.set_ham(self.cell.orb_pos, self.cell.orb_eng,
-                         self.cell.hop_ind, self.cell.hop_eng,
-                         k_point, ham_k)
+            core.set_ham2(self.cell.orb_eng,
+                          self.cell.hop_ind, self.cell.hop_eng,
+                          k_point, ham_k)
             eigenvalues, eigenstates, info = spla.zheev(ham_k)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T
@@ -266,6 +266,10 @@ class Lindhard:
         :return: dyn_pol: (num_qpt, num_omega) complex128 array
             dynamic polarizability
         """
+        # Prepare q-points and orbital positions
+        q_points_cart = self.grid2cart(q_points, unit=NM)
+        orb_pos = self.cell.orb_pos_nm
+
         # Allocate dyn_pol
         num_qpt = len(q_points)
         num_omega = self.omegas.shape[0]
@@ -277,6 +281,7 @@ class Lindhard:
 
         # Transpose arrays for compatibility with FORTRAN backend
         if use_fortran:
+            orb_pos = orb_pos.T
             bands = bands.T
             states = states.T
             dyn_pol = dyn_pol.T
@@ -291,37 +296,44 @@ class Lindhard:
             # kq_map and i_q by 1.
             if use_fortran:
                 kq_map += 1
-                f2py.dyn_pol_q(bands, states, kq_map, self.beta, self.mu,
-                               self.omegas, i_q+1, dyn_pol)
+                f2py.dyn_pol_q(bands, states, kq_map,
+                               self.beta, self.mu, self.omegas,
+                               i_q+1, q_points_cart[i_q], orb_pos,
+                               dyn_pol)
             else:
-                core.dyn_pol_q(bands, states, kq_map, self.beta, self.mu,
-                               self.omegas, i_q, dyn_pol)
+                core.dyn_pol_q(bands, states, kq_map,
+                               self.beta, self.mu, self.omegas,
+                               i_q, q_points_cart[i_q], orb_pos,
+                               dyn_pol)
 
         # Multiply dyn_pol by prefactor
-        dyn_pol *= self.chi_factor
+        dyn_pol *= self.dyn_pol_factor
 
         # Transpose dyn_pol back
         if use_fortran:
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
 
-    def calc_dyn_pol_arbitrary(self, q_points, use_fortran=True, wrap=False):
+    def calc_dyn_pol_arbitrary(self, q_points, use_fortran=True):
         """
         Calculate dynamic polarizability for arbitrary q-points.
 
-        :param q_points: list of (fq_a, fq_b, fq_c)
-            FRACTIONAL coordinates of q-points
+        :param q_points: list of (q_x, q_y, q_z)
+            CARTESIAN coordinates of q-points in 1/NM
         :param use_fortran: boolean
             whether to use FORTRAN backend, set to False to enable cython
             backend for debugging
-        :param wrap: boolean
-            whether to wrap k+q points back into 1st Brillouin zone
         :return: omegas: (num_omega,) float64 array
             angular frequencies
             TODO: what unit? rename to energies?
         :return: dyn_pol: (num_qpt, num_omega) complex128 array
             dynamic polarizability
         """
+        # Prepare q-points and orbital positions
+        q_points = np.array(q_points, dtype=np.float64)
+        q_points_frac = self.cart2frac(q_points, unit=NM)
+        orb_pos = self.cell.orb_pos_nm
+
         # Allocate dyn_pol
         num_qpt = len(q_points)
         num_omega = self.omegas.shape[0]
@@ -333,6 +345,7 @@ class Lindhard:
 
         # Transpose arrays for compatibility with FORTRAN backend
         if use_fortran:
+            orb_pos = orb_pos.T
             bands = bands.T
             states = states.T
             dyn_pol = dyn_pol.T
@@ -340,9 +353,7 @@ class Lindhard:
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
             # Get eigenvalues and eigenstates on k+q grid
-            kq_mesh_frac = kmesh_frac + q_point
-            if wrap:
-                kq_mesh_frac = self._wrap_k_frac(kq_mesh_frac)
+            kq_mesh_frac = kmesh_frac + q_points_frac[i_q]
             bands_kq, states_kq = self._get_eigen_states(kq_mesh_frac)
             if use_fortran:
                 bands_kq = bands_kq.T
@@ -353,15 +364,17 @@ class Lindhard:
             # by 1.
             if use_fortran:
                 f2py.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas, i_q+1,
+                                   self.beta, self.mu, self.omegas,
+                                   i_q+1, q_point, orb_pos,
                                    dyn_pol)
             else:
                 core.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas, i_q,
+                                   self.beta, self.mu, self.omegas,
+                                   i_q, q_point, orb_pos,
                                    dyn_pol)
 
         # Multiply dyn_pol by prefactor
-        dyn_pol *= self.chi_factor
+        dyn_pol *= self.dyn_pol_factor
 
         # Transpose dyn_pol back
         if use_fortran:

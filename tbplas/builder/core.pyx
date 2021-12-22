@@ -21,7 +21,8 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
             int [:,::1] hop_ind, double complex [::1] hop_eng,
             double [::1] kpt, double complex [:,::1] ham_k):
     """
-    Set up Hamiltonian for given k-point.
+    Set up Hamiltonian for given k-point using convention I:
+        phase = exp(i*dot(k, R+rj-ri))
 
     Parameters
     ----------
@@ -47,10 +48,6 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
     -----
     hop_ind and hop_eng contains only half of the full hopping terms.
     Conjugate terms are added automatically to ensure Hermitianity.
-
-    There is another convention which only takes relative cell index to
-    evaluate the phase factor. This can be achieved by replacing k_dot_r
-    with k_dot_r = kpt[0] * ra + kpt[1] * rb + kpt[2] * rc.
     """
     cdef int ra, rb, rc
     cdef double k_dot_r, phase
@@ -71,6 +68,64 @@ def set_ham(double [:,::1] orb_pos, double [::1] orb_eng,
         k_dot_r = kpt[0] * (ra + orb_pos[jj, 0] - orb_pos[ii, 0]) + \
                   kpt[1] * (rb + orb_pos[jj, 1] - orb_pos[ii, 1]) + \
                   kpt[2] * (rc + orb_pos[jj, 2] - orb_pos[ii, 2])
+        phase = 2 * pi * k_dot_r
+
+        # Set Hamiltonian
+        # Conjugate terms are added automatically.
+        hij = hop_eng[ih] * (cos(phase) + 1j * sin(phase))
+        ham_k[ii, jj] = ham_k[ii, jj] + hij
+        ham_k[jj, ii] = ham_k[jj, ii] + hij.conjugate()
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def set_ham2(double [::1] orb_eng,
+             int [:,::1] hop_ind, double complex [::1] hop_eng,
+             double [::1] kpt, double complex [:,::1] ham_k):
+    """
+    Set up Hamiltonian for given k-point using convention II:
+        phase = exp(i*dot(k, R))
+
+    Parameters
+    ----------
+    orb_eng: (num_orb,) float64 array
+        onsite energies of orbitals in eV
+    hop_ind: (num_hop, 5) int32 array
+        reduced hopping indices
+    hop_eng: (num_hop,) complex128 array
+        reduced hopping energies in eV
+    kpt: (3,) float64 array
+        FRACTIONAL coordinate of k-point
+    ham_k: (num_orb, num_orb) complex128 array
+        incoming Hamiltonian in eV
+        Should be initialized as a zero matrix before calling this function.
+
+    Returns
+    -------
+    None. Results are stored in ham_k.
+
+    NOTES
+    -----
+    hop_ind and hop_eng contains only half of the full hopping terms.
+    Conjugate terms are added automatically to ensure Hermitianity.
+    """
+    cdef int ra, rb, rc
+    cdef double k_dot_r, phase
+    cdef double complex hij
+    cdef int ii, jj, ih
+
+    # Set on-site energies
+    for ii in range(orb_eng.shape[0]):
+        ham_k[ii, ii] = orb_eng[ii]
+
+    # Set hopping terms
+    for ih in range(hop_ind.shape[0]):
+        # Extract data
+        ra, rb, rc = hop_ind[ih, 0], hop_ind[ih, 1], hop_ind[ih, 2]
+        ii, jj = hop_ind[ih, 3], hop_ind[ih, 4]
+
+        # Calculate phase
+        k_dot_r = kpt[0] * ra + kpt[1] * rb + kpt[2] * rc
         phase = 2 * pi * k_dot_r
 
         # Set Hamiltonian
@@ -1962,10 +2017,12 @@ def test_speed_sc2pc(int [:,::1] orb_id_pc):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
-              long [::1] kq_map, double beta, double mu, double [::1] omegas,
-              long iq, double complex [:,::1] dyn_pol):
+              long [::1] kq_map,
+              double beta, double mu, double [::1] omegas,
+              long iq, double [::1] q_point, double [:,::1] orb_pos,
+              double complex [:,::1] dyn_pol):
     """
-    Calculate dynamic polarizability for regubands[ik,lar q-point on k-mesh using
+    Calculate dynamic polarizability for regular q-point on k-mesh using
     Lindhard function, for cross-validation with FORTRAN version.
 
     Parmaters
@@ -1984,6 +2041,10 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
         frequencies on which dyn_pol is evaluated
     iq: int64
         index of q-point
+    q_point: (3,) float64
+        CARTESIAN coordinates of q-point in 1/NM
+    orb_pos: (num_orb, 3) float64
+        CARTESIAN coordinates of orbitals in NM
     dyn_pol: (num_qpt, num_omega)
         dynamic polarizability
 
@@ -1993,6 +2054,8 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     """
     cdef long num_omega, num_kpt, num_orb
     cdef long iw, ik, ikqp, jj, ll, ib
+    cdef double k_dot_r
+    cdef double complex [::1] phase
     cdef double omega, eng_q, eng, f_q, f
     cdef double complex prod, dp_sum
     cdef double [:,:,::1] delta_eng
@@ -2001,10 +2064,17 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     num_omega = omegas.shape[0]
     num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
+    phase = np.zeros(num_orb, dtype=np.complex128)
     delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
     prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
     # Build reusable arrays
+    for ib in range(num_orb):
+        k_dot_r = q_point[0] * orb_pos[ib, 0] \
+                + q_point[1] * orb_pos[ib, 1] \
+                + q_point[2] * orb_pos[ib, 2]
+        phase[ib] = cos(k_dot_r) + 1j * sin(k_dot_r)
+
     for ik in range(num_kpt):
         ikqp = kq_map[ik]
         for jj in range(num_orb):
@@ -2016,7 +2086,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
                 f = 1.0 / (1.0 + exp(beta * (eng - mu)))
                 prod = 0.0
                 for ib in range(num_orb):
-                    prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib]
+                    prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib] * phase[ib]
                 prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
 
     # Evaluate dyn_pol
@@ -2036,7 +2106,8 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
 def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
                   double [:,::1] bands_kq, double complex [:,:,::1] states_kq,
                   double beta, double mu, double [::1] omegas,
-                  long iq, double complex [:,::1] dyn_pol):
+                  long iq, double [::1] q_point, double [:,::1] orb_pos,
+                  double complex [:,::1] dyn_pol):
     """
     Calculate dynamic polarizability for arbitrary q-point using Lindhard
     function, for cross-validation with FORTRAN version.
@@ -2059,6 +2130,10 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
         frequencies on which dyn_pol is evaluated
     iq: int64
         index of q-point
+    q_point: (3,) float64
+        CARTESIAN coordinates of q-point in 1/NM
+    orb_pos: (num_orb, 3) float64
+        CARTESIAN coordinates of orbitals in NM
     dyn_pol: (num_qpt, num_omega)
         dynamic polarizability
 
@@ -2068,6 +2143,8 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     """
     cdef long num_omega, num_kpt, num_orb
     cdef long iw, ik, jj, ll, ib
+    cdef double k_dot_r
+    cdef double complex [::1] phase
     cdef double omega, eng_q, eng, f_q, f
     cdef double complex prod, dp_sum
     cdef double [:,:,::1] delta_eng
@@ -2076,10 +2153,17 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     num_omega = omegas.shape[0]
     num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
+    phase = np.zeros(num_orb, dtype=np.complex128)
     delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
     prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
     # Build reusable arrays
+    for ib in range(num_orb):
+        k_dot_r = q_point[0] * orb_pos[ib, 0] \
+                + q_point[1] * orb_pos[ib, 1] \
+                + q_point[2] * orb_pos[ib, 2]
+        phase[ib] = cos(k_dot_r) + 1j * sin(k_dot_r)
+
     for ik in range(num_kpt):
         for jj in range(num_orb):
             for ll in range(num_orb):
@@ -2090,7 +2174,7 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
                 f = 1.0 / (1.0 + exp(beta * (eng - mu)))
                 prod = 0.0
                 for ib in range(num_orb):
-                    prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib]
+                    prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib] * phase[ib]
                 prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
 
     # Evaluate dyn_pol
