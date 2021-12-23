@@ -15,7 +15,6 @@ def main():
     # Set parameter for Lindhard function
     energy_max = 10
     energy_step = 2048
-    mesh_size = (1200, 1200, 1)
     mu = 0.0
     temp = 300
     back_epsilon = 1
@@ -24,13 +23,14 @@ def main():
     # Test 0: reproducing Phys. Rev. B 84, 035439 (2011)
     # |q| = 1/a with theta = 30 degrees
     if itest == 0:
+        mesh_size = (1200, 1200, 1)
         regular = False
         use_fortran = True
         q_points = 1 / 0.142 * np.array([[0.86602540, 0.5, 0.0]])
-        print(q_points)
 
     # Test 1: cross-reference of Fortran and cython extension
     else:
+        mesh_size = (1200, 1200, 1)
         regular = False
         use_fortran = True
         if regular:
@@ -49,7 +49,7 @@ def main():
 
     # Plot
     for i in range(len(q_points)):
-        plt.plot(omegas/t, -dyn_pol.imag[i])
+        plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
     plt.savefig("lindhard_im_dyn_pol.png")
     plt.close()
 

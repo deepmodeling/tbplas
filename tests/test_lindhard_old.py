@@ -21,7 +21,7 @@ def main():
     back_epsilon = 1
     # q-point for reproducing Phys. Rev. B 84, 035439 (2011)
     # |q| = 1/a with theta = 30 degrees
-    q_points = [[6.09877042, 3.52112676, 0.]]
+    q_points = 1 / 0.142 * np.array([[0.86602540, 0.5, 0.0]])
 
     # Calculating with lindhard function
     lindhard = Lindhard(cell, en_range, step, mesh, mu, temp, back_epsilon)
@@ -30,7 +30,7 @@ def main():
     # Plot
     omegas = np.array(omegas)
     for i in range(len(q_points)):
-        plt.plot(omegas/t, -dyn_pol.imag[i])
+        plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
     plt.savefig("lindhard_im_dyn_pol.png")
     plt.close()
 
