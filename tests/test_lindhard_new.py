@@ -15,11 +15,11 @@ def main():
     # Set parameter for Lindhard function
     energy_max = 10
     energy_step = 2048
-    mesh_size = (120, 120, 1)
+    mesh_size = (1200, 1200, 1)
     mu = 0.0
     temp = 300
     back_epsilon = 1
-    itest = 1
+    itest = 0
 
     # Test 0: reproducing Phys. Rev. B 84, 035439 (2011)
     # |q| = 1/a with theta = 30 degrees
@@ -49,7 +49,7 @@ def main():
 
     # Plot
     for i in range(len(q_points)):
-        plt.plot(omegas/t, -dyn_pol.imag[i]/(t*a**2))
+        plt.plot(omegas/t, -dyn_pol.imag[i])
     plt.savefig("lindhard_im_dyn_pol.png")
     plt.close()
 

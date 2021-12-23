@@ -30,7 +30,7 @@ def main():
     # Plot
     omegas = np.array(omegas)
     for i in range(len(q_points)):
-        plt.plot(omegas/t, -dyn_pol.imag[i]/(t*a**2))
+        plt.plot(omegas/t, -dyn_pol.imag[i])
     plt.savefig("lindhard_im_dyn_pol.png")
     plt.close()
 
