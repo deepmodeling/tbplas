@@ -9,8 +9,6 @@ from tbplas.lindhard import Lindhard
 def main():
     # Construct primitive cell
     cell = tb.make_graphene_diamond()
-    t = 2.7  # Absolute hopping energy
-    a = 0.142  # C-C distance in NM
 
     # Set parameter for Lindhard function
     energy_max = 10
@@ -18,39 +16,23 @@ def main():
     mu = 0.0
     temp = 300
     back_epsilon = 1
-    itest = 0
+    mesh_size = (1200, 1200, 1)
+    use_fortran = True
+    q_points = np.array([[4.122280922013927, 2.38, 0.0]])
 
-    # Test 0: reproducing Phys. Rev. B 84, 035439 (2011)
-    # |q| = 1/a with theta = 30 degrees
-    if itest == 0:
-        mesh_size = (1200, 1200, 1)
-        regular = False
-        use_fortran = True
-        q_points = 1 / 0.142 * np.array([[0.86602540, 0.5, 0.0]])
-
-    # Test 1: cross-reference of Fortran and cython extension
-    else:
-        mesh_size = (1200, 1200, 1)
-        regular = False
-        use_fortran = True
-        if regular:
-            q_points = [(1000, 1000, 0)]
-        else:
-            q_points = np.array([[8.51380123, 4.91544543, 0.]])
-
-    # Calculate dyn_pol using Lindhard function
+    # Instantiate Lindhard calculator
     lindhard = Lindhard(cell=cell, energy_max=energy_max,
                         energy_step=energy_step, kmesh_size=mesh_size,
                         mu=mu, temperature=temp, back_epsilon=back_epsilon)
-    if regular:
-        omegas, dyn_pol = lindhard.calc_dyn_pol_regular(q_points, use_fortran)
-    else:
-        omegas, dyn_pol = lindhard.calc_dyn_pol_arbitrary(q_points, use_fortran)
+
+    # Evaluate dielectric function
+    omegas, epsilon = lindhard.calc_epsilon_arbitrary(q_points, use_fortran)
 
     # Plot
     for i in range(len(q_points)):
-        plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
-    plt.savefig("lindhard_im_dyn_pol.png")
+        plt.plot(omegas, epsilon[i].real, color="r")
+    plt.minorticks_on()
+    plt.savefig("epsilon.png")
     plt.close()
 
 

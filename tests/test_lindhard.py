@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import scipy.linalg.lapack as lapack
+import matplotlib.pyplot as plt
 
 import tbplas as tb
 import tbplas.builder.core as core
@@ -198,6 +199,146 @@ class TestLindhard(unittest.TestCase):
         kq_map = lindhard._gen_kq_map(q_point)
         th.test_equal_array(bands_k[kq_map], bands_kq)
         th.test_equal_array(states_k[kq_map], states_kq)
+
+    def test_dyn_pol_consistency(self):
+        """
+        Test if dyn_pol produced by cython and fortran backends, and by
+        regular/arbitrary q-point algorithms are consistent.
+
+        :return: None
+        """
+        cell = tb.make_graphene_diamond()
+        energy_max = 10
+        energy_step = 2048
+        mu = 0.0
+        temp = 300
+        back_epsilon = 1
+        mesh_size = (120, 120, 1)
+        q_points_grid = [(100, 100, 0)]
+        q_points_cart = np.array([[21.28450307, 12.28861358, 0.]])
+        th = TestHelper(self)
+
+        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
+                               energy_step=energy_step, kmesh_size=mesh_size,
+                               mu=mu, temperature=temp,
+                               back_epsilon=back_epsilon)
+
+        # Test calc_dyn_pol_regular
+        dyn_pol_ref = lindhard.calc_dyn_pol_regular(q_points_grid,
+                                                    use_fortran=False)[1]
+        dyn_pol_test = lindhard.calc_dyn_pol_regular(q_points_grid,
+                                                     use_fortran=True)[1]
+        th.test_equal_array(dyn_pol_ref, dyn_pol_test, almost=True)
+
+        # Test calc_dyn_pol_arb
+        dyn_pol_ref = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                      use_fortran=True)[1]
+        dyn_pol_test = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                       use_fortran=True)[1]
+        th.test_equal_array(dyn_pol_ref, dyn_pol_test, almost=True)
+
+        # Test regular and arbitrary algorithms
+        dyn_pol_ref = lindhard.calc_dyn_pol_regular(q_points_grid,
+                                                    use_fortran=True)[1]
+        dyn_pol_test = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                       use_fortran=True)[1]
+        diff = np.sum(np.abs(dyn_pol_ref - dyn_pol_test)).item(0)
+        self.assertAlmostEqual(diff, 0.0, delta=1e-3)
+
+    def test_dyn_pol_prb(self):
+        """
+        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 1/a and theta = 30
+        degrees.
+
+        :return: None
+        """
+        # Construct primitive cell
+        cell = tb.make_graphene_diamond()
+        t = 2.7  # Absolute hopping energy
+        a = 0.142  # C-C distance in NM
+
+        # Set parameter for Lindhard function
+        energy_max = 10
+        energy_step = 2048
+        mu = 0.0
+        temp = 300
+        back_epsilon = 1
+        mesh_size = (1200, 1200, 1)
+        use_fortran = True
+        q_points = 1 / 0.142 * np.array([[0.86602540, 0.5, 0.0]])
+
+        # Instantiate Lindhard calculator
+        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
+                               energy_step=energy_step, kmesh_size=mesh_size,
+                               mu=mu, temperature=temp,
+                               back_epsilon=back_epsilon)
+
+        # Calculate and plot dyn_pol
+        omegas, dyn_pol = lindhard.calc_dyn_pol_arbitrary(q_points, use_fortran)
+        for i in range(len(q_points)):
+            plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
+        plt.savefig("lindhard_im_dyn_pol.png")
+        plt.close()
+
+    def test_epsilon_consistency(self):
+        """
+        Test if regular and arbitrary algorithms produce consistent results.
+
+        :return: None
+        """
+        cell = tb.make_graphene_diamond()
+        energy_max = 10
+        energy_step = 2048
+        mu = 0.0
+        temp = 300
+        back_epsilon = 1
+        mesh_size = (120, 120, 1)
+        q_points_grid = [(100, 100, 0)]
+        q_points_cart = np.array([[21.28450307, 12.28861358, 0.]])
+
+        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
+                               energy_step=energy_step, kmesh_size=mesh_size,
+                               mu=mu, temperature=temp,
+                               back_epsilon=back_epsilon)
+        eps_ref = lindhard.calc_epsilon_regular(q_points_grid)[1]
+        eps_test = lindhard.calc_epsilon_arbitrary(q_points_cart)[1]
+        diff = np.sum(np.abs(eps_test - eps_ref)).item(0)
+        self.assertAlmostEqual(diff, 0.0, delta=1e-3)
+
+    def test_epsilon_prb(self):
+        """
+        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 4.76/ Angstrom and
+        theta = 30 degrees.
+
+        :return: None
+        """
+        # Construct primitive cell
+        cell = tb.make_graphene_diamond()
+
+        # Set parameter for Lindhard function
+        energy_max = 10
+        energy_step = 2048
+        mu = 0.0
+        temp = 300
+        back_epsilon = 1
+        mesh_size = (1200, 1200, 1)
+        use_fortran = True
+        q_points = np.array([[4.122280922013927, 2.38, 0.0]])
+
+        # Instantiate Lindhard calculator
+        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
+                               energy_step=energy_step, kmesh_size=mesh_size,
+                               mu=mu, temperature=temp, back_epsilon=back_epsilon)
+
+        # Evaluate dielectric function
+        omegas, epsilon = lindhard.calc_epsilon_arbitrary(q_points, use_fortran)
+
+        # Plot
+        for i in range(len(q_points)):
+            plt.plot(omegas, epsilon[i].real, color="r")
+        plt.minorticks_on()
+        plt.savefig("epsilon.png")
+        plt.close()
 
 
 if __name__ == "__main__":

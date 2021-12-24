@@ -17,8 +17,8 @@ import math
 import numpy as np
 import scipy.linalg.lapack as spla
 
-from .builder import (PrimitiveCell, gen_reciprocal_vectors,
-                      frac2cart, cart2frac, NM)
+from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
+                      frac2cart, cart2frac, NM, kB)
 from .fortran import f2py
 import tbplas.builder.core as core
 
@@ -32,50 +32,74 @@ class Lindhard:
     cell: instance of 'PrimitiveCell' class
         primitive cell under investigation
     omegas: (num_omega,) float64 array
-        angular frequencies for which properties will be evaluated
-        TODO: what unit? rename to energies? move it to functions?
+        energies in eV for which properties will be evaluated
     kmesh_size: (nk_a, nk_b, nk_c)
         dimension of mesh grid in 1st Brillouin zone
     kmesh_grid: list of (ik_a, ik_n, ik_c)
         grid coordinates of k-points on mesh grid
     mu: float
         chemical potential in eV
-        TODO: check the unit
     beta: float
-        value for 1/kT in 1/eV
-        TODO: check the unit
+        value for 1/kBT in 1/eV
     g_s: int
-        spin degeneracy?
-        TODO: check the meaning of this parameter
-    dyn_pol_factor: float
-        prefactor for dynamic polarizability
-    eps_factor: float
-        prefactor for dielectric function
+        spin degeneracy
+    back_epsilon: float
+        background dielectric constant (eps_r in notes)
+    dimension: int
+        dimension of the system
+
+    NOTES
+    -----
+    1. Unit system
+
+    Lindhard class uses eV for energies, elementary charge of electron for
+    charges and nm for lengths. So the unit for dynamic polarization is
+    1 / (eV * nm**2) in 2d case and 1 / (eV * nm**3) in 3d case.
+
+    2. Coulomb potential and dielectric function
+
+    The Coulomb potential in Lindhard class takes the following form:
+        V(r) = 1 / (eps_0 * eps_r) * e**2 / r
+    where eps_0 = 1 is the dielectric constant of vacuum. There is no 4*pi
+    factor to eps_0 as in Hartree or Rydberg units, i.e.,
+        V(r) = 1 / (4 * pi * eps_0 * eps_r) * e**2 / r
+    Function calc_epsilon_* evaluates relative dielectric constant eps_r.
+
+    3. Fourier transform of Coulomb potential
+
+    The 3D Fourier transform of Coulomb potential V(r) as defined in section 2
+    takes the following form:
+        V(q) = 4 * pi * e**2 / (eps_0 * eps_r * q**2)
+    For the derivation, see pp. 19 of Many-Particle Physics by Gerald D. Mahan.
+
+    The 2D Fourier transform takes the form:
+        V(q) = 2 * pi * e**2 / (eps_0 * eps_r * q)
+    See the following url for the derivation:
+    https://math.stackexchange.com/questions/3627267/fourier-transform-of-the-2d-coulomb-potential
     """
     def __init__(self, cell: PrimitiveCell,
                  energy_max: float, energy_step: int,
                  kmesh_size: Tuple[int, int, int],
-                 mu=0.0, temperature=300.0, back_epsilon=1.0) -> None:
+                 mu=0.0, temperature=300.0, back_epsilon=1.0,
+                 dimension=2) -> None:
         """
         :param cell: instance of 'PrimitiveCell' class
             primitive cell under investigation
         :param energy_max: float
             upper bound of energy range for evaluating energy-dependent
             properties
-            TODO: check the unit
         :param energy_step: integer
             resolution of energy grid
         :param kmesh_size: (nk_a, nk_b, nk_c)
             dimension of mesh grid in 1st Brillouin zone
         :param mu: float
             chemical potential in eV
-            TODO: check the unit
         :param temperature: float
             temperature in Kelvin
-            TODO: check the unit
         :param back_epsilon: float
             background dielectric constant
-            TODO: what should the default value be? It has been 23.6 for TBPM.
+        :param dimension: int
+            dimension of the system
         """
         self.cell = cell
         self.cell.lock()
@@ -87,14 +111,10 @@ class Lindhard:
                            for kb in range(self.kmesh_size[1])
                            for kc in range(self.kmesh_size[2])]
         self.mu = mu
-        self.beta = 11604.505 / temperature
+        self.beta = 1 / (kB * temperature)
         self.g_s = 2
-        recip_vectors = gen_reciprocal_vectors(self.cell.lat_vec)
-        dk_a = recip_vectors[0] / self.kmesh_size[0]
-        dk_b = recip_vectors[1] / self.kmesh_size[1]
-        dk_area = np.linalg.norm(np.cross(dk_a, dk_b))
-        self.dyn_pol_factor = self.g_s * dk_area / (2 * math.pi)**2
-        self.eps_factor = 1.4399644 * 2 * math.pi / back_epsilon
+        self.back_epsilon = back_epsilon
+        self.dimension = dimension
 
     @staticmethod
     def _wrap_k_frac(k_points: np.ndarray):
@@ -251,6 +271,28 @@ class Lindhard:
         kq_map = np.array(kq_map, dtype=np.int64)
         return kq_map
 
+    def _get_dyn_pol_factor(self):
+        """
+        Get prefactor for dynamic polarizability.
+
+        :return: dyn_pol_factor: float
+            prefactor for dynamic polarizability
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        g_vec = gen_reciprocal_vectors(self.cell.lat_vec)
+        for i_dim in range(3):
+            g_vec[i_dim] /= self.kmesh_size[i_dim]
+        if self.dimension == 2:
+            dk_area = np.linalg.norm(np.cross(g_vec[0], g_vec[1]))
+            dyn_pol_factor = self.g_s * dk_area / (2 * math.pi)**2
+        elif self.dimension == 3:
+            dk_volume = get_lattice_volume(g_vec)
+            dyn_pol_factor = self.g_s * dk_volume / (2 * math.pi)**3
+        else:
+            raise NotImplementedError(f"Dimension {self.dimension} not "
+                                      f"implemented")
+        return dyn_pol_factor
+
     def calc_dyn_pol_regular(self, q_points, use_fortran=True):
         """
         Calculate dynamic polarizability for regular q-points on k-mesh.
@@ -261,10 +303,10 @@ class Lindhard:
             whether to use FORTRAN backend, set to False to enable cython
             backend for debugging
         :return: omegas: (num_omega,) float64 array
-            angular frequencies
-            TODO: what unit? rename to energies?
+            energies in eV
         :return: dyn_pol: (num_qpt, num_omega) complex128 array
-            dynamic polarizability
+            dynamic polarizability in 1/(eV*nm**2) or 1/(eV*nm**3)
+        :raises NotImplementedError: if system dimension is not 2 or 3
         """
         # Prepare q-points and orbital positions
         q_points_cart = self.grid2cart(q_points, unit=NM)
@@ -307,7 +349,7 @@ class Lindhard:
                                dyn_pol)
 
         # Multiply dyn_pol by prefactor
-        dyn_pol *= self.dyn_pol_factor
+        dyn_pol *= self._get_dyn_pol_factor()
 
         # Transpose dyn_pol back
         if use_fortran:
@@ -324,10 +366,10 @@ class Lindhard:
             whether to use FORTRAN backend, set to False to enable cython
             backend for debugging
         :return: omegas: (num_omega,) float64 array
-            angular frequencies
-            TODO: what unit? rename to energies?
+            energies in eV
         :return: dyn_pol: (num_qpt, num_omega) complex128 array
-            dynamic polarizability
+            dynamic polarizability in 1/(eV*nm**2) or 1/(eV*nm**3)
+        :raises NotImplementedError: if system dimension is not 2 or 3
         """
         # Prepare q-points and orbital positions
         q_points = np.array(q_points, dtype=np.float64)
@@ -374,9 +416,96 @@ class Lindhard:
                                    dyn_pol)
 
         # Multiply dyn_pol by prefactor
-        dyn_pol *= self.dyn_pol_factor
+        dyn_pol *= self._get_dyn_pol_factor()
 
         # Transpose dyn_pol back
         if use_fortran:
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
+
+    def _get_coulomb_factor(self):
+        """
+        Get prefactor for Coulomb interaction in momentum space.
+
+        factor = 10**9 * elementary_charge / (4 * pi * epsilon_0) in SI units
+
+        :return: coulomb_factor: float
+            prefactor for Coulomb interaction
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        factor = 1.439964548
+        if self.dimension == 2:
+            coulomb_factor = factor * 2 * math.pi / self.back_epsilon
+        elif self.dimension == 3:
+            coulomb_factor = factor * 4 * math.pi / self.back_epsilon
+        else:
+            raise NotImplementedError(f"Dimension {self.dimension} not "
+                                      f"implemented")
+        return coulomb_factor
+
+    def _calc_epsilon(self, q_points_nm: np.ndarray, dyn_pol: np.ndarray):
+        """
+        Core function for evaluating dielectric function.
+
+        :param q_points_nm: (num_qpt, 3) float64 array
+            CARTESIAN coordinates of q-points in NM
+        :param dyn_pol: (num_qpt, num_omega) complex128 array
+            dynamic polarization from calc_dyn_pol_*
+        :return: epsilon: (num_qpt, num_omega) complex128 array
+            relative dielectric function
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        num_qpt = len(q_points_nm)
+        num_omega = self.omegas.shape[0]
+        epsilon = np.zeros((num_qpt, num_omega), dtype=np.complex128)
+        prefactor = self._get_coulomb_factor()
+        for i_q, q_point in enumerate(q_points_nm):
+            q_norm = np.linalg.norm(q_point)
+            if self.dimension == 2:
+                v_q = prefactor / q_norm
+            elif self.dimension == 3:
+                v_q = prefactor / q_norm**2
+            else:
+                raise NotImplementedError(f"Dimension {self.dimension} not "
+                                          f"implemented")
+            epsilon[i_q] = 1.0 - v_q * dyn_pol[i_q]
+        return epsilon
+
+    def calc_epsilon_regular(self, q_points, use_fortran=True):
+        """
+        Calculate dielectric function (eps_r) for regular q-points on k-mesh.
+
+        :param q_points: list of (iq_a, iq_b, iq_c)
+            GRID coordinates of q-points
+        :param use_fortran: boolean
+            whether to use FORTRAN backend, set to False to enable cython
+            backend for debugging
+        :return: omegas: (num_omega,) float64 array
+            energies in eV
+        :return: epsilon: (num_qpt, num_omega) complex128 array
+            relative dielectric function
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        omegas, dyn_pol = self.calc_dyn_pol_regular(q_points, use_fortran)
+        q_points_nm = self.grid2cart(q_points, unit=NM)
+        epsilon = self._calc_epsilon(q_points_nm, dyn_pol)
+        return omegas, epsilon
+
+    def calc_epsilon_arbitrary(self, q_points, use_fortran=True):
+        """
+        Calculate dielectric function (eps_r) for arbitrary q-points.
+
+        :param q_points: list of (q_x, q_y, q_z)
+            CARTESIAN coordinates of q-points in 1/NM
+        :param use_fortran: boolean
+            whether to use FORTRAN backend, set to False to enable cython
+            backend for debugging
+        :return: omegas: (num_omega,) float64 array
+            energies in eV
+        :return: epsilon: (num_qpt, num_omega) complex128 array
+            relative dielectric function
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        omegas, dyn_pol = self.calc_dyn_pol_arbitrary(q_points, use_fortran)
+        epsilon = self._calc_epsilon(q_points, dyn_pol)
+        return omegas, epsilon
