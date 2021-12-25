@@ -2056,7 +2056,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     cdef long iw, ik, ikqp, jj, ll, ib
     cdef double k_dot_r
     cdef double complex [::1] phase
-    cdef double omega, eng_q, eng, f_q, f
+    cdef double omega, eng, eng_q, f, f_q
     cdef double complex prod, dp_sum
     cdef double [:,:,::1] delta_eng
     cdef double complex [:,:,::1] prod_df
@@ -2078,16 +2078,16 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     for ik in range(num_kpt):
         ikqp = kq_map[ik]
         for jj in range(num_orb):
+            eng = bands[ik, jj]
+            f = 1.0 / (1.0 + exp(beta * (eng - mu)))
             for ll in range(num_orb):
-                eng_q = bands[ikqp, jj]
-                eng = bands[ik, ll]
-                delta_eng[ik, jj, ll] = eng_q - eng
+                eng_q = bands[ikqp, ll]
+                delta_eng[ik, jj, ll] = eng - eng_q
                 f_q = 1.0 / (1.0 + exp(beta * (eng_q - mu)))
-                f = 1.0 / (1.0 + exp(beta * (eng - mu)))
                 prod = 0.0
                 for ib in range(num_orb):
-                    prod += states[ikqp, jj, ib].conjugate() * states[ik, ll, ib] * phase[ib]
-                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
+                    prod += states[ikqp, ll, ib].conjugate() * states[ik, jj, ib] * phase[ib]
+                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f - f_q)
 
     # Evaluate dyn_pol
     for iw in range(num_omega):
@@ -2097,7 +2097,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
             for jj in range(num_orb):
                 for ll in range(num_orb):
                     dp_sum += prod_df[ik, jj, ll] / \
-                              (delta_eng[ik, jj, ll] - omega - 0.005j)
+                              (delta_eng[ik, jj, ll] + omega + 0.005j)
         dyn_pol[iq, iw] = dp_sum
 
 
@@ -2145,7 +2145,7 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     cdef long iw, ik, jj, ll, ib
     cdef double k_dot_r
     cdef double complex [::1] phase
-    cdef double omega, eng_q, eng, f_q, f
+    cdef double omega, eng, eng_q, f, f_q
     cdef double complex prod, dp_sum
     cdef double [:,:,::1] delta_eng
     cdef double complex [:,:,::1] prod_df
@@ -2166,16 +2166,16 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
 
     for ik in range(num_kpt):
         for jj in range(num_orb):
+            eng = bands[ik, jj]
+            f = 1.0 / (1.0 + exp(beta * (eng - mu)))
             for ll in range(num_orb):
-                eng_q = bands_kq[ik, jj]
-                eng = bands[ik, ll]
-                delta_eng[ik, jj, ll] = eng_q - eng
+                eng_q = bands_kq[ik, ll]
+                delta_eng[ik, jj, ll] = eng - eng_q
                 f_q = 1.0 / (1.0 + exp(beta * (eng_q - mu)))
-                f = 1.0 / (1.0 + exp(beta * (eng - mu)))
                 prod = 0.0
                 for ib in range(num_orb):
-                    prod += states_kq[ik, jj, ib].conjugate() * states[ik, ll, ib] * phase[ib]
-                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f_q - f)
+                    prod += states_kq[ik, ll, ib].conjugate() * states[ik, jj, ib] * phase[ib]
+                prod_df[ik, jj, ll] = prod * prod.conjugate() * (f - f_q)
 
     # Evaluate dyn_pol
     for iw in range(num_omega):
@@ -2185,5 +2185,5 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
             for jj in range(num_orb):
                 for ll in range(num_orb):
                     dp_sum += prod_df[ik, jj, ll] / \
-                              (delta_eng[ik, jj, ll] - omega - 0.005j)
+                              (delta_eng[ik, jj, ll] + omega + 0.005j)
         dyn_pol[iq, iw] = dp_sum

@@ -87,7 +87,7 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
     integer :: i_w, i_k, i_kpq, jj, ll
     real(kind=8) :: k_dot_r
     complex(kind=8) :: phase(num_orb)
-    real(kind=8) :: omega, f_q, f
+    real(kind=8) :: omega, f, f_q
     complex(kind=8) :: prod, dp_sum
     real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
     complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
@@ -101,16 +101,16 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
     end do
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(i_kpq, jj, ll, f_q, f, prod)
+    !$OMP PARALLEL DO PRIVATE(i_kpq, jj, f, ll, f_q, prod)
     do i_k = 1, num_kpt
         i_kpq = kq_map(i_k)
         do jj = 1, num_orb
+            f = 1.0 / (1.0 + exp(beta * (eng(jj, i_k) - mu)))
             do ll = 1, num_orb
-                delta_eng(ll, jj, i_k) = eng(jj, i_kpq) - eng(ll, i_k)
-                f_q = 1.0 / (1.0 + exp(beta * (eng(jj, i_kpq) - mu)))
-                f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
-                prod = dot_product(wfn(:, jj, i_kpq), wfn(:, ll, i_k)*phase(:))
-                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f_q - f)
+                delta_eng(ll, jj, i_k) = eng(jj, i_k) - eng(ll, i_kpq)
+                f_q = 1.0 / (1.0 + exp(beta * (eng(ll, i_kpq) - mu)))
+                prod = dot_product(wfn(:, ll, i_kpq), wfn(:, jj, i_k)*phase(:))
+                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f - f_q)
             end do
         end do
     end do
@@ -125,7 +125,7 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
             do jj = 1, num_orb
                 do ll = 1, num_orb
                 dp_sum = dp_sum + prod_df(ll, jj, i_k) &
-                       / (delta_eng(ll, jj, i_k) - omega - eta)
+                       / (delta_eng(ll, jj, i_k) + omega + eta)
                 end do
             end do
         end do
@@ -160,7 +160,7 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
     integer :: i_w, i_k, jj, ll
     real(kind=8) :: k_dot_r
     complex(kind=8) :: phase(num_orb)
-    real(kind=8) :: omega, f_q, f
+    real(kind=8) :: omega, f, f_q
     complex(kind=8) :: prod, dp_sum
     real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
     complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
@@ -174,15 +174,15 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
     end do
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(jj, ll, f_q, f, prod)
+    !$OMP PARALLEL DO PRIVATE(jj, f, ll, f_q, prod)
     do i_k = 1, num_kpt
         do jj = 1, num_orb
+            f = 1.0 / (1.0 + exp(beta * (eng(jj, i_k) - mu)))
             do ll = 1, num_orb
-                delta_eng(ll, jj, i_k) = eng_kq(jj, i_k) - eng(ll, i_k)
-                f_q = 1.0 / (1.0 + exp(beta * (eng_kq(jj, i_k) - mu)))
-                f = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
-                prod = dot_product(wfn_kq(:, jj, i_k), wfn(:, ll, i_k)*phase(:))
-                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f_q - f)
+                delta_eng(ll, jj, i_k) = eng(jj, i_k) - eng_kq(ll, i_k)
+                f_q = 1.0 / (1.0 + exp(beta * (eng_kq(ll, i_k) - mu)))
+                prod = dot_product(wfn_kq(:, ll, i_k), wfn(:, jj, i_k)*phase(:))
+                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f - f_q)
             end do
         end do
     end do
@@ -197,7 +197,7 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
             do jj = 1, num_orb
                 do ll = 1, num_orb
                 dp_sum = dp_sum + prod_df(ll, jj, i_k) &
-                       / (delta_eng(ll, jj, i_k) - omega - eta)
+                       / (delta_eng(ll, jj, i_k) + omega + eta)
                 end do
             end do
         end do
