@@ -219,3 +219,94 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
         dyn_pol(i_w, i_q) = dp_sum
     end do
 end subroutine dyn_pol_q_arb
+
+
+! calculate real part of ac conductivity using Lindhard function
+subroutine ac_cond_real(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
+                        hop_dr, kmesh, beta, mu, omegas, num_omega, delta, &
+                        ac_cond)
+    implicit none
+
+    ! input and output
+    real(kind=8), intent(in) :: eng(num_orb, num_kpt)
+    integer, intent(in) :: num_orb, num_kpt
+    complex(kind=8), intent(in) :: wfn(num_orb, num_orb, num_kpt)
+    integer(kind=4), intent(in) :: hop_ind(2, num_hop)
+    integer, intent(in) :: num_hop
+    complex(kind=8), intent(in) :: hop_eng(num_hop)
+    real(kind=8), intent(in) :: hop_dr(3, num_hop)
+    real(kind=8), intent(in) :: kmesh(3, num_kpt)
+    real(kind=8), intent(in) :: beta, mu
+    real(kind=8), intent(in) :: omegas(num_omega)
+    integer, intent(in) :: num_omega
+    real(kind=8), intent(in) :: delta
+    real(kind=8), intent(inout) :: ac_cond(num_omega)
+
+    ! local variables
+    integer :: i_w, i_k, i_h, jj, ll, ib1, ib2
+    real(kind=8) :: k_dot_r
+    complex(kind=8) :: phase
+    complex(kind=8) :: jmat(num_orb, num_orb)
+    real(kind=8) :: omega, f_j, f_l
+    complex(kind=8) :: prod, ac_sum
+    real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
+    complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
+    complex(kind=8), parameter :: m1j = (0.0D0, -1.0D0)
+    complex(kind=8) :: cdelta
+
+    ! build reusable arrays
+    do i_k = 1, num_kpt
+        ! build jmat in Bloch basis via Fourier transform
+        ! NOTE: this must be done in serial mode bdecause different threads
+        ! may have the same ib1 and ib2.
+        ! NOTE: jmat should be initialzed as exactly zero. jmat = jmat * 0.0
+        ! is incorrect under GCC.
+        jmat = 0.0
+        do i_h = 1, num_hop
+            k_dot_r = kmesh(1, i_k) * hop_dr(1, i_h) &
+                    + kmesh(2, i_k) * hop_dr(2, i_h) &
+                    + kmesh(3, i_k) * hop_dr(3, i_h)
+            phase = dcmplx(cos(k_dot_r), sin(k_dot_r)) * hop_eng(i_h) * hop_dr(1, i_h)
+            ib1 = hop_ind(1, i_h)
+            ib2 = hop_ind(2, i_h)
+            jmat(ib1, ib2) = jmat(ib1, ib2) + m1j * phase
+            jmat(ib2, ib1) = jmat(ib2, ib1) - m1j * conjg(phase)
+        end do
+
+        ! build delta_eng and prod_df
+        !$OMP PARALLEL DO PRIVATE(f_j, ll, f_l, prod, ib1, ib2)
+        do jj = 1, num_orb
+            f_j = 1.0 / (1.0 + exp(beta * (eng(jj, i_k) - mu)))
+            do ll = 1, num_orb
+                delta_eng(ll, jj, i_k) = eng(jj, i_k) - eng(ll, i_k)
+                f_l = 1.0 / (1.0 + exp(beta * (eng(ll, i_k) - mu)))
+                prod = 0.0
+                do ib1 = 1, num_orb
+                    do ib2 = 1, num_orb
+                        prod = prod + conjg(wfn(ib1, jj, i_k)) * jmat(ib1, ib2) * wfn(ib2, ll, i_k)
+                    end do
+                end do
+                prod_df(ll, jj, i_k) = prod * conjg(prod) * (f_j - f_l)
+            end do
+        end do
+        !$OMP END PARALLEL DO
+    end do
+
+    ! calculate real part of ac_cond
+    cdelta = dcmplx(0.0D0, delta)
+    do i_w = 1, num_omega
+        omega = omegas(i_w)
+        ac_sum = dcmplx(0.0D0, 0.0D0)
+        !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: ac_sum)
+        do i_k = 1, num_kpt
+            do jj = 1, num_orb
+                do ll = 1, num_orb
+                ac_sum = ac_sum + prod_df(ll, jj, i_k) &
+                       / (delta_eng(ll, jj, i_k) + omega + cdelta)
+                end do
+            end do
+        end do
+        !$OMP END PARALLEL DO
+        ac_cond(i_w) = aimag(ac_sum)
+    end do
+end subroutine ac_cond_real

@@ -526,3 +526,87 @@ class Lindhard:
         omegas, dyn_pol = self.calc_dyn_pol_arbitrary(q_points, use_fortran)
         epsilon = self._calc_epsilon(q_points, dyn_pol)
         return omegas, epsilon
+
+    def calc_ac_cond(self):
+        """
+        Calculate AC conductivity.
+
+        WARNING: the units in the reference is confusing. The units seems to be
+        in SI units in some formulae, i.e. eV and nm, while in other formulae
+        atomic units are employed, i.e. h_bar = 1. We have to unify them into
+        Hartree atomic units for security. Also for that reason, omegas returned
+        by this function are not in eV, but in Hartree, as an indication to the
+        user to pay special attention to the units.
+
+        Reference:
+        https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.155411
+
+        TODO: fix the unit problem.
+
+        :return: omegas_au: (num_omega,) float64 array
+            energies in HARTREE, not in eV
+        :return: ac_cond: (num_omega,) complex128 array
+            AC conductivity in ATOMIC UNITS
+        """
+        # Convert all necessary quantities to atomic units
+        omegas_au = self.omegas / HAR2EV + 0.001  # to avoid divergence at w=0
+        mu_au = self.mu / HAR2EV
+        beta_au = self.beta * HAR2EV
+        delta_au = self.delta / HAR2EV
+        kmesh_au = self.grid2cart(self.kmesh_grid, unit=NM) * BOHR2NM
+        area_au = self.cell.get_lattice_area(direction="c") / BOHR2NM**2
+        lat_vec_au = self.cell.lat_vec / BOHR2NM
+        orb_pos_au = self.cell.orb_pos_nm / BOHR2NM
+        hop_eng_au = self.cell.hop_eng / HAR2EV
+
+        # Build hopping distances
+        num_hop = self.cell.hop_ind.shape[0]
+        hop_dr_au = np.zeros((num_hop, 3), dtype=np.float64)
+        for i_h, ind in enumerate(self.cell.hop_ind):
+            rn_au = np.matmul(ind[0:3], lat_vec_au)
+            orb_i, orb_j = ind.item(3), ind.item(4)
+            hop_dr_au[i_h] = orb_pos_au[orb_j] + rn_au - orb_pos_au[orb_i]
+
+        # Get eigenvalues and eigenstates
+        kmesh_frac = self.grid2frac(self.kmesh_grid)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=1)
+        bands /= HAR2EV
+
+        # Allocate ac conductivity
+        num_omega = omegas_au.shape[0]
+        ac_cond_real = np.zeros(num_omega, dtype=np.float64)
+
+        # Call C/FORTRAN backend to evaluate real part of optical conductivity
+        use_fortran = True
+        if use_fortran:
+            bands = bands.T
+            states = states.T
+            # FORTRAN array indices begin from 1!
+            hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
+            hop_ind = hop_ind.T
+            # hop_eng_au is a vector and needs no transposing
+            hop_dr_au = hop_dr_au.T
+            kmesh_au = kmesh_au.T
+            f2py.ac_cond_real(bands, states, hop_ind, hop_eng_au,
+                              hop_dr_au, kmesh_au, beta_au, mu_au, omegas_au,
+                              delta_au, ac_cond_real)
+        else:
+            hop_ind = self.cell.hop_ind[:, 3:5].copy()
+            core.ac_cond_real(bands, states, hop_ind, hop_eng_au,
+                              hop_dr_au, kmesh_au, beta_au, mu_au, omegas_au,
+                              delta_au, ac_cond_real)
+
+        # Multiply prefactor
+        prefactor = -(2 * math.pi)**2 * self._get_dyn_pol_factor() / area_au
+        ac_cond_real *= prefactor
+        ac_cond_real = ac_cond_real / omegas_au
+
+        # Get imaginary part via Kramers-Kronig relation
+        sigma = np.zeros(2 * num_omega, dtype=float)
+        for i_w in range(num_omega):
+            sigma[num_omega + i_w] = ac_cond_real.item(i_w)
+            sigma[num_omega - i_w] = ac_cond_real.item(i_w)
+        ac_cond_imag = np.imag(hilbert(sigma))[num_omega:2 * num_omega]
+        ac_cond_imag *= (omegas_au.item(1) - omegas_au.item(0))
+        ac_cond = ac_cond_real + 1j * ac_cond_imag
+        return omegas_au, ac_cond
