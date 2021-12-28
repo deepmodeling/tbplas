@@ -2,5 +2,8 @@
 
 NM = 1.0  # Scaling factor from nano-meter to nano-meter
 ANG = 0.1  # Scaling factor from Angstrom to nano-meter
-BOHR2ANG = 0.529177210671212  # Scaling factor from Bohr to nm
-kB = 8.617333262e-5  # Boltzmann constant in eV/K
+BOHR2ANG = 0.529177210671212  # Scaling factor from Bohr to Angstrom
+BOHR2NM = BOHR2ANG * ANG  # Scaling factor from Bohr to nano-meter
+KB = 8.617333262e-5  # Boltzmann constant in eV/K
+HAR2EV = 27.21138602  # Scaling factor from Hartree to eV
+H_BAR_EV = 6.582119514e-16  # Reduced Plank constant in eV*s

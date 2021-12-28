@@ -16,9 +16,10 @@ import math
 
 import numpy as np
 import scipy.linalg.lapack as spla
+from scipy.signal import hilbert
 
 from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
-                      frac2cart, cart2frac, NM, kB)
+                      frac2cart, cart2frac, NM, KB, BOHR2NM, HAR2EV)
 from .fortran import f2py
 import tbplas.builder.core as core
 
@@ -47,6 +48,8 @@ class Lindhard:
         background dielectric constant (eps_r in notes)
     dimension: int
         dimension of the system
+    delta: float
+        broadening parameter in eV
 
     NOTES
     -----
@@ -81,7 +84,7 @@ class Lindhard:
                  energy_max: float, energy_step: int,
                  kmesh_size: Tuple[int, int, int],
                  mu=0.0, temperature=300.0, back_epsilon=1.0,
-                 dimension=2) -> None:
+                 dimension=2, delta=0.005) -> None:
         """
         :param cell: instance of 'PrimitiveCell' class
             primitive cell under investigation
@@ -100,6 +103,8 @@ class Lindhard:
             background dielectric constant
         :param dimension: int
             dimension of the system
+        :param delta: float
+            broadening parameter in eV
         """
         self.cell = cell
         self.cell.lock()
@@ -111,10 +116,11 @@ class Lindhard:
                            for kb in range(self.kmesh_size[1])
                            for kc in range(self.kmesh_size[2])]
         self.mu = mu
-        self.beta = 1 / (kB * temperature)
+        self.beta = 1 / (KB * temperature)
         self.g_s = 2
         self.back_epsilon = back_epsilon
         self.dimension = dimension
+        self.delta = delta
 
     @staticmethod
     def _wrap_k_frac(k_points: np.ndarray):
@@ -225,16 +231,19 @@ class Lindhard:
         cart_coord = self.frac2cart(frac_coord, unit=unit)
         return cart_coord
 
-    def _get_eigen_states(self, k_points: np.ndarray):
+    def _get_eigen_states(self, k_points: np.ndarray, convention=1):
         """
         Calculate eigenstates and eigenvalues for given k-points.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
+        :param convention: integer
+            convention to construct Hamiltonian
         :return: bands: (num_kpt, num_orb) float64 array
             eigenvalues of states on k-points in eV
         :return: states: (num_kpt, num_orb, num_orb) complex128 array
             eigenstates on k-points
+        :raises ValueError: if convention is neither 1 nor 2
         """
         num_kpt = k_points.shape[0]
         num_orb = self.cell.num_orb
@@ -244,9 +253,16 @@ class Lindhard:
 
         for i_k, k_point in enumerate(k_points):
             ham_k *= 0.0
-            core.set_ham2(self.cell.orb_eng,
-                          self.cell.hop_ind, self.cell.hop_eng,
-                          k_point, ham_k)
+            if convention == 1:
+                core.set_ham(self.cell.orb_pos, self.cell.orb_eng,
+                             self.cell.hop_ind, self.cell.hop_eng,
+                             k_point, ham_k)
+            elif convention == 2:
+                core.set_ham2(self.cell.orb_eng,
+                              self.cell.hop_ind, self.cell.hop_eng,
+                              k_point, ham_k)
+            else:
+                raise ValueError(f"Illegal convention {convention}")
             eigenvalues, eigenstates, info = spla.zheev(ham_k)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T
@@ -319,7 +335,7 @@ class Lindhard:
 
         # Get eigenvalues and eigenstates
         kmesh_frac = self.grid2frac(self.kmesh_grid)
-        bands, states = self._get_eigen_states(kmesh_frac)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=2)
 
         # Transpose arrays for compatibility with FORTRAN backend
         if use_fortran:
@@ -339,12 +355,12 @@ class Lindhard:
             if use_fortran:
                 kq_map += 1
                 f2py.dyn_pol_q(bands, states, kq_map,
-                               self.beta, self.mu, self.omegas,
+                               self.beta, self.mu, self.omegas, self.delta,
                                i_q+1, q_points_cart[i_q], orb_pos,
                                dyn_pol)
             else:
                 core.dyn_pol_q(bands, states, kq_map,
-                               self.beta, self.mu, self.omegas,
+                               self.beta, self.mu, self.omegas, self.delta,
                                i_q, q_points_cart[i_q], orb_pos,
                                dyn_pol)
 
@@ -383,7 +399,7 @@ class Lindhard:
 
         # Get eigenvalues and eigenstates
         kmesh_frac = self.grid2frac(self.kmesh_grid)
-        bands, states = self._get_eigen_states(kmesh_frac)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=2)
 
         # Transpose arrays for compatibility with FORTRAN backend
         if use_fortran:
@@ -396,7 +412,8 @@ class Lindhard:
         for i_q, q_point in enumerate(q_points):
             # Get eigenvalues and eigenstates on k+q grid
             kq_mesh_frac = kmesh_frac + q_points_frac[i_q]
-            bands_kq, states_kq = self._get_eigen_states(kq_mesh_frac)
+            bands_kq, states_kq = self._get_eigen_states(kq_mesh_frac,
+                                                         convention=2)
             if use_fortran:
                 bands_kq = bands_kq.T
                 states_kq = states_kq.T
@@ -406,12 +423,12 @@ class Lindhard:
             # by 1.
             if use_fortran:
                 f2py.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas,
+                                   self.beta, self.mu, self.omegas, self.delta,
                                    i_q+1, q_point, orb_pos,
                                    dyn_pol)
             else:
                 core.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas,
+                                   self.beta, self.mu, self.omegas, self.delta,
                                    i_q, q_point, orb_pos,
                                    dyn_pol)
 

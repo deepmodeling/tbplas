@@ -65,7 +65,7 @@ END SUBROUTINE cond_from_trace
 ! calculate dynamic polarizability for regular q-point on k-mesh using
 ! Lindhard function
 subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
-                     beta, mu, omegas, num_omega, &
+                     beta, mu, omegas, num_omega, delta, &
                      i_q, q_point, orb_pos, &
                      dyn_pol, num_qpt)
     implicit none
@@ -77,6 +77,7 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
     integer, intent(in) :: kq_map(num_kpt)
     real(kind=8), intent(in) :: beta, mu
     real(kind=8), intent(in) :: omegas(num_omega)
+    real(kind=8), intent(in) :: delta
     integer, intent(in) :: num_omega, i_q
     real(kind=8), intent(in) :: q_point(3)
     real(kind=8), intent(in) :: orb_pos(3, num_orb)
@@ -84,24 +85,26 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
     integer, intent(in) :: num_qpt
 
     ! local variables
-    integer :: i_w, i_k, i_kpq, jj, ll
+    integer :: i_w, i_k, i_kpq, jj, ll, ib
     real(kind=8) :: k_dot_r
     complex(kind=8) :: phase(num_orb)
     real(kind=8) :: omega, f, f_q
     complex(kind=8) :: prod, dp_sum
     real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
     complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
-    complex(kind=8), parameter :: eta = (0.0D0, 0.005D0)
+    complex(kind=8) :: cdelta
 
     ! build reusable arrays
     !$OMP PARALLEL DO PRIVATE(k_dot_r)
-    do jj = 1, num_orb
-        k_dot_r = dot_product(q_point, orb_pos(:, jj))
-        phase(jj) = dcmplx(cos(k_dot_r), sin(k_dot_r))
+    do ib = 1, num_orb
+        k_dot_r = q_point(1) * orb_pos(1, ib) &
+                + q_point(2) * orb_pos(2, ib) &
+                + q_point(3) * orb_pos(3, ib)
+        phase(ib) = dcmplx(cos(k_dot_r), sin(k_dot_r))
     end do
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(i_kpq, jj, f, ll, f_q, prod)
+    !$OMP PARALLEL DO PRIVATE(i_kpq, jj, f, ll, f_q, prod, ib)
     do i_k = 1, num_kpt
         i_kpq = kq_map(i_k)
         do jj = 1, num_orb
@@ -109,7 +112,10 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
             do ll = 1, num_orb
                 delta_eng(ll, jj, i_k) = eng(jj, i_k) - eng(ll, i_kpq)
                 f_q = 1.0 / (1.0 + exp(beta * (eng(ll, i_kpq) - mu)))
-                prod = dot_product(wfn(:, ll, i_kpq), wfn(:, jj, i_k)*phase(:))
+                prod = 0.0
+                do ib = 1, num_orb
+                    prod = prod + conjg(wfn(ib, ll, i_kpq)) * wfn(ib, jj, i_k) * phase(ib)
+                end do
                 prod_df(ll, jj, i_k) = prod * conjg(prod) * (f - f_q)
             end do
         end do
@@ -117,15 +123,16 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
     !$OMP END PARALLEL DO
 
     ! calculate dyn_pol
+    cdelta = dcmplx(0.0D0, delta)
     do i_w = 1, num_omega
         omega = omegas(i_w)
-        dp_sum = (0.0D0, 0.0D0)
+        dp_sum = dcmplx(0.0D0, 0.0D0)
         !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
             do jj = 1, num_orb
                 do ll = 1, num_orb
                 dp_sum = dp_sum + prod_df(ll, jj, i_k) &
-                       / (delta_eng(ll, jj, i_k) + omega + eta)
+                       / (delta_eng(ll, jj, i_k) + omega + cdelta)
                 end do
             end do
         end do
@@ -137,7 +144,7 @@ end subroutine dyn_pol_q
 
 ! calculate dynamic polarizability for arbitrary q-point using Lindhard function
 subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
-                         beta, mu, omegas, num_omega, &
+                         beta, mu, omegas, num_omega, delta, &
                          i_q, q_point, orb_pos, &
                          dyn_pol, num_qpt)
     implicit none
@@ -150,6 +157,7 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
     complex(kind=8), intent(in) :: wfn_kq(num_orb, num_orb, num_kpt)
     real(kind=8), intent(in) :: beta, mu
     real(kind=8), intent(in) :: omegas(num_omega)
+    real(kind=8), intent(in) :: delta
     integer, intent(in) :: num_omega, i_q
     real(kind=8), intent(in) :: q_point(3)
     real(kind=8), intent(in) :: orb_pos(3, num_orb)
@@ -157,31 +165,36 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
     integer, intent(in) :: num_qpt
 
     ! local variables
-    integer :: i_w, i_k, jj, ll
+    integer :: i_w, i_k, jj, ll, ib
     real(kind=8) :: k_dot_r
     complex(kind=8) :: phase(num_orb)
     real(kind=8) :: omega, f, f_q
     complex(kind=8) :: prod, dp_sum
     real(kind=8) :: delta_eng(num_orb, num_orb, num_kpt)
     complex(kind=8) :: prod_df(num_orb, num_orb, num_kpt)
-    complex(kind=8), parameter :: eta = (0.0D0, 0.005D0)
+    complex(kind=8) :: cdelta
 
     ! build reusable arrays
     !$OMP PARALLEL DO PRIVATE(k_dot_r)
-    do jj = 1, num_orb
-        k_dot_r = dot_product(q_point, orb_pos(:, jj))
-        phase(jj) = dcmplx(cos(k_dot_r), sin(k_dot_r))
+    do ib = 1, num_orb
+        k_dot_r = q_point(1) * orb_pos(1, ib) &
+                + q_point(2) * orb_pos(2, ib) &
+                + q_point(3) * orb_pos(3, ib)
+        phase(ib) = dcmplx(cos(k_dot_r), sin(k_dot_r))
     end do
     !$OMP END PARALLEL DO
 
-    !$OMP PARALLEL DO PRIVATE(jj, f, ll, f_q, prod)
+    !$OMP PARALLEL DO PRIVATE(jj, f, ll, f_q, prod, ib)
     do i_k = 1, num_kpt
         do jj = 1, num_orb
             f = 1.0 / (1.0 + exp(beta * (eng(jj, i_k) - mu)))
             do ll = 1, num_orb
                 delta_eng(ll, jj, i_k) = eng(jj, i_k) - eng_kq(ll, i_k)
                 f_q = 1.0 / (1.0 + exp(beta * (eng_kq(ll, i_k) - mu)))
-                prod = dot_product(wfn_kq(:, ll, i_k), wfn(:, jj, i_k)*phase(:))
+                prod = 0.0
+                do ib = 1, num_orb
+                    prod = prod + conjg(wfn_kq(ib, ll, i_k)) * wfn(ib, jj, i_k) * phase(ib)
+                end do
                 prod_df(ll, jj, i_k) = prod * conjg(prod) * (f - f_q)
             end do
         end do
@@ -189,15 +202,16 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
     !$OMP END PARALLEL DO
 
     ! calculate dyn_pol
+    cdelta = dcmplx(0.0D0, delta)
     do i_w = 1, num_omega
         omega = omegas(i_w)
-        dp_sum = (0.0D0, 0.0D0)
+        dp_sum = dcmplx(0.0D0, 0.0D0)
         !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
             do jj = 1, num_orb
                 do ll = 1, num_orb
                 dp_sum = dp_sum + prod_df(ll, jj, i_k) &
-                       / (delta_eng(ll, jj, i_k) + omega + eta)
+                       / (delta_eng(ll, jj, i_k) + omega + cdelta)
                 end do
             end do
         end do

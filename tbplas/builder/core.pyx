@@ -2018,7 +2018,7 @@ def test_speed_sc2pc(int [:,::1] orb_id_pc):
 @cython.wraparound(False)
 def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
               long [::1] kq_map,
-              double beta, double mu, double [::1] omegas,
+              double beta, double mu, double [::1] omegas, double delta,
               long iq, double [::1] q_point, double [:,::1] orb_pos,
               double complex [:,::1] dyn_pol):
     """
@@ -2028,7 +2028,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     Parmaters
     ---------
     bands: (num_kpt, num_orb) float64 array
-        eigenvalues on regular k-grid
+        eigenvalues on regular k-grid in eV
     states: (num_kpt, num_orb, num_orb) complex128 array
         eigenstates on regular k-grid
     kq_map: (num_kpt,) int64 array
@@ -2038,7 +2038,9 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
     mu: double
         Lindhard.mu
     omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated
+        frequencies on which dyn_pol is evaluated in eV
+    delta: double
+        broadening parameter in eV
     iq: int64
         index of q-point
     q_point: (3,) float64
@@ -2097,7 +2099,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
             for jj in range(num_orb):
                 for ll in range(num_orb):
                     dp_sum += prod_df[ik, jj, ll] / \
-                              (delta_eng[ik, jj, ll] + omega + 0.005j)
+                              (delta_eng[ik, jj, ll] + omega + 1j * delta)
         dyn_pol[iq, iw] = dp_sum
 
 
@@ -2105,7 +2107,7 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
 @cython.wraparound(False)
 def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
                   double [:,::1] bands_kq, double complex [:,:,::1] states_kq,
-                  double beta, double mu, double [::1] omegas,
+                  double beta, double mu, double [::1] omegas, double delta,
                   long iq, double [::1] q_point, double [:,::1] orb_pos,
                   double complex [:,::1] dyn_pol):
     """
@@ -2115,11 +2117,11 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     Parmaters
     ---------
     bands: (num_kpt, num_orb) float64 array
-        eigenvalues on regular k-grid
+        eigenvalues on regular k-grid in eV
     states: (num_kpt, num_orb, num_orb) complex128 array
         eigenstates on regular k-grid
     bands_kq: (num_kpt, num_orb) float64 array
-        eigenvalues on k+q grid
+        eigenvalues on k+q grid in eV
     states_kq: (num_kpt, num_orb, num_orb) complex128 array
         eigenstates on k+q grid
     beta: double
@@ -2127,7 +2129,9 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
     mu: double
         Lindhard.mu
     omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated
+        frequencies on which dyn_pol is evaluated in eV
+    delta: double
+        broadening parameter in eV
     iq: int64
         index of q-point
     q_point: (3,) float64
@@ -2185,5 +2189,5 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
             for jj in range(num_orb):
                 for ll in range(num_orb):
                     dp_sum += prod_df[ik, jj, ll] / \
-                              (delta_eng[ik, jj, ll] + omega + 0.005j)
+                              (delta_eng[ik, jj, ll] + omega + 1j * delta)
         dyn_pol[iq, iw] = dp_sum

@@ -151,7 +151,8 @@ class TestLindhard(unittest.TestCase):
                                kmesh_size=kmesh_size)
         k_grid_frac = lindhard.grid2frac(lindhard.kmesh_grid)
         bands_ref, states_ref = _calc_bands(prim_cell, k_grid_frac)
-        bands_test, states_test = lindhard._get_eigen_states(k_grid_frac)
+        bands_test, states_test = lindhard._get_eigen_states(k_grid_frac,
+                                                             convention=1)
         th.test_equal_array(bands_ref, bands_test)
         th.test_equal_array(states_ref, states_test)
 
@@ -191,8 +192,10 @@ class TestLindhard(unittest.TestCase):
         # Evaluate energies and wave functions
         k_mesh_frac = lindhard.grid2frac(k_grid)
         kq_grid_frac = lindhard.grid2frac(kq_grid)
-        bands_k, states_k = lindhard._get_eigen_states(k_mesh_frac)
-        bands_kq, states_kq = lindhard._get_eigen_states(kq_grid_frac)
+        bands_k, states_k = lindhard._get_eigen_states(k_mesh_frac,
+                                                       convention=2)
+        bands_kq, states_kq = lindhard._get_eigen_states(kq_grid_frac,
+                                                         convention=2)
 
         # Check remap
         th = TestHelper(self)
