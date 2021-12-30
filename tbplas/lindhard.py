@@ -287,6 +287,27 @@ class Lindhard:
         kq_map = np.array(kq_map, dtype=np.int64)
         return kq_map
 
+    def _get_dnk(self):
+        """
+        Get elementary area/volume in reciprocal space depending on system
+        dimension.
+
+        :return: dnk: float
+            elementary area/volume in 1/nm**2 or 1/nm**3
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        g_vec = gen_reciprocal_vectors(self.cell.lat_vec)
+        for i_dim in range(3):
+            g_vec[i_dim] /= self.kmesh_size[i_dim]
+        if self.dimension == 2:
+            dnk = np.linalg.norm(np.cross(g_vec[0], g_vec[1]))
+        elif self.dimension == 3:
+            dnk = get_lattice_volume(g_vec)
+        else:
+            raise NotImplementedError(f"Dimension {self.dimension} not "
+                                      f"implemented")
+        return dnk
+
     def _get_dyn_pol_factor(self):
         """
         Get prefactor for dynamic polarizability.
@@ -295,18 +316,8 @@ class Lindhard:
             prefactor for dynamic polarizability
         :raises NotImplementedError: if system dimension is not 2 or 3
         """
-        g_vec = gen_reciprocal_vectors(self.cell.lat_vec)
-        for i_dim in range(3):
-            g_vec[i_dim] /= self.kmesh_size[i_dim]
-        if self.dimension == 2:
-            dk_area = np.linalg.norm(np.cross(g_vec[0], g_vec[1]))
-            dyn_pol_factor = self.g_s * dk_area / (2 * math.pi)**2
-        elif self.dimension == 3:
-            dk_volume = get_lattice_volume(g_vec)
-            dyn_pol_factor = self.g_s * dk_volume / (2 * math.pi)**3
-        else:
-            raise NotImplementedError(f"Dimension {self.dimension} not "
-                                      f"implemented")
+        dnk = self._get_dnk()
+        dyn_pol_factor = self.g_s * dnk / (2 * math.pi)**self.dimension
         return dyn_pol_factor
 
     def calc_dyn_pol_regular(self, q_points, use_fortran=True):
@@ -527,55 +538,47 @@ class Lindhard:
         epsilon = self._calc_epsilon(q_points, dyn_pol)
         return omegas, epsilon
 
-    def calc_ac_cond(self):
+    def calc_ac_cond_prb(self):
         """
         Calculate AC conductivity.
 
-        WARNING: the units in the reference is confusing. The units seems to be
-        in SI units in some formulae, i.e. eV and nm, while in other formulae
-        atomic units are employed, i.e. h_bar = 1. We have to unify them into
-        Hartree atomic units for security. Also for that reason, omegas returned
-        by this function are not in eV, but in Hartree, as an indication to the
-        user to pay special attention to the units.
-
         Reference:
         https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.155411
-
-        TODO: fix the unit problem.
-
-        :return: omegas_au: (num_omega,) float64 array
-            energies in HARTREE, not in eV
+    
+        :return: omegas: (num_omega,) float64 array
+            energies in eV
         :return: ac_cond: (num_omega,) complex128 array
-            AC conductivity in ATOMIC UNITS
+            AC conductivity
+        :raises NotImplementedError: if system dimension is not 2
         """
-        # Convert all necessary quantities to atomic units
-        omegas_au = self.omegas / HAR2EV + 0.001  # to avoid divergence at w=0
-        mu_au = self.mu / HAR2EV
-        beta_au = self.beta * HAR2EV
-        delta_au = self.delta / HAR2EV
-        kmesh_au = self.grid2cart(self.kmesh_grid, unit=NM) * BOHR2NM
-        area_au = self.cell.get_lattice_area(direction="c") / BOHR2NM**2
-        lat_vec_au = self.cell.lat_vec / BOHR2NM
-        orb_pos_au = self.cell.orb_pos_nm / BOHR2NM
-        hop_eng_au = self.cell.hop_eng / HAR2EV
-
+        if self.dimension != 2:
+            raise NotImplementedError(f"Dimension {self.dimension} not "
+                                      f"implemented")
+    
+        # Aliases for variables
+        omegas = self.omegas + 0.001  # to avoid divergence at w=0
+        kmesh = self.grid2cart(self.kmesh_grid, unit=NM)
+        area = self.cell.get_lattice_area("c")
+        lat_vec = self.cell.lat_vec
+        orb_pos = self.cell.orb_pos_nm
+        hop_eng = self.cell.hop_eng
+    
         # Build hopping distances
         num_hop = self.cell.hop_ind.shape[0]
-        hop_dr_au = np.zeros((num_hop, 3), dtype=np.float64)
+        hop_dr = np.zeros((num_hop, 3), dtype=np.float64)
         for i_h, ind in enumerate(self.cell.hop_ind):
-            rn_au = np.matmul(ind[0:3], lat_vec_au)
+            rn = np.matmul(ind[0:3], lat_vec)
             orb_i, orb_j = ind.item(3), ind.item(4)
-            hop_dr_au[i_h] = orb_pos_au[orb_j] + rn_au - orb_pos_au[orb_i]
-
+            hop_dr[i_h] = orb_pos[orb_j] + rn - orb_pos[orb_i]
+    
         # Get eigenvalues and eigenstates
         kmesh_frac = self.grid2frac(self.kmesh_grid)
         bands, states = self._get_eigen_states(kmesh_frac, convention=1)
-        bands /= HAR2EV
-
+    
         # Allocate ac conductivity
-        num_omega = omegas_au.shape[0]
+        num_omega = omegas.shape[0]
         ac_cond_real = np.zeros(num_omega, dtype=np.float64)
-
+    
         # Call C/FORTRAN backend to evaluate real part of optical conductivity
         use_fortran = True
         if use_fortran:
@@ -584,22 +587,23 @@ class Lindhard:
             # FORTRAN array indices begin from 1!
             hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
             hop_ind = hop_ind.T
-            # hop_eng_au is a vector and needs no transposing
-            hop_dr_au = hop_dr_au.T
-            kmesh_au = kmesh_au.T
-            f2py.ac_cond_real(bands, states, hop_ind, hop_eng_au,
-                              hop_dr_au, kmesh_au, beta_au, mu_au, omegas_au,
-                              delta_au, ac_cond_real)
+            # hop_eng is a vector and needs no transposing
+            hop_dr = hop_dr.T
+            kmesh = kmesh.T
+            f2py.ac_cond_real(bands, states, hop_ind, hop_eng,
+                              hop_dr, kmesh, self.beta, self.mu, omegas,
+                              self.delta, ac_cond_real)
         else:
             hop_ind = self.cell.hop_ind[:, 3:5].copy()
-            core.ac_cond_real(bands, states, hop_ind, hop_eng_au,
-                              hop_dr_au, kmesh_au, beta_au, mu_au, omegas_au,
-                              delta_au, ac_cond_real)
+            core.ac_cond_real(bands, states, hop_ind, hop_eng,
+                              hop_dr, kmesh, self.beta, self.mu, omegas,
+                              self.delta, ac_cond_real)
 
         # Multiply prefactor
-        prefactor = -(2 * math.pi)**2 * self._get_dyn_pol_factor() / area_au
+        dnk = self._get_dnk() * BOHR2NM**2
+        prefactor = -self.g_s * dnk / area
         ac_cond_real *= prefactor
-        ac_cond_real = ac_cond_real / omegas_au
+        ac_cond_real = ac_cond_real / omegas
 
         # Get imaginary part via Kramers-Kronig relation
         sigma = np.zeros(2 * num_omega, dtype=float)
@@ -607,6 +611,74 @@ class Lindhard:
             sigma[num_omega + i_w] = ac_cond_real.item(i_w)
             sigma[num_omega - i_w] = ac_cond_real.item(i_w)
         ac_cond_imag = np.imag(hilbert(sigma))[num_omega:2 * num_omega]
-        ac_cond_imag *= (omegas_au.item(1) - omegas_au.item(0))
         ac_cond = ac_cond_real + 1j * ac_cond_imag
-        return omegas_au, ac_cond
+        return omegas, ac_cond
+
+    def calc_ac_cond_kg(self):
+        """
+        Calculate AC conductivity using Kubo-Greenwood formula.
+
+        Reference: section 12.2 of Wannier90 user guide.
+
+        :return: omegas: (num_omega,) float64 array
+            energies in eV
+        :return: ac_cond: (num_omega,) complex128 array
+            AC conductivity in e**2/(h_bar*nm) in 3d case and e**2/h_bar
+            in 2d case
+        :raises NotImplementedError: if system dimension is not 2 or 3
+        """
+        # Aliases for variables
+        omegas = self.omegas + 0.001  # to avoid divergence at w=0
+        kmesh = self.grid2cart(self.kmesh_grid, unit=NM)
+        lat_vec = self.cell.lat_vec
+        orb_pos = self.cell.orb_pos_nm
+        hop_eng = self.cell.hop_eng
+
+        # Build hopping distances
+        num_hop = self.cell.hop_ind.shape[0]
+        hop_dr = np.zeros((num_hop, 3), dtype=np.float64)
+        for i_h, ind in enumerate(self.cell.hop_ind):
+            rn = np.matmul(ind[0:3], lat_vec)
+            orb_i, orb_j = ind.item(3), ind.item(4)
+            hop_dr[i_h] = orb_pos[orb_j] + rn - orb_pos[orb_i]
+
+        # Get eigenvalues and eigenstates
+        kmesh_frac = self.grid2frac(self.kmesh_grid)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=1)
+
+        # Allocate ac conductivity
+        num_omega = omegas.shape[0]
+        ac_cond = np.zeros(num_omega, dtype=np.complex128)
+
+        # Call C/FORTRAN backend to evaluate optical conductivity
+        use_fortran = True
+        if use_fortran:
+            bands = bands.T
+            states = states.T
+            # FORTRAN array indices begin from 1!
+            hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
+            hop_ind = hop_ind.T
+            # hop_eng is a vector and needs no transposing
+            hop_dr = hop_dr.T
+            kmesh = kmesh.T
+            f2py.ac_cond_kg(bands, states, hop_ind, hop_eng,
+                            hop_dr, kmesh, self.beta, self.mu, omegas,
+                            self.delta, ac_cond)
+        else:
+            hop_ind = self.cell.hop_ind[:, 3:5].copy()
+            core.ac_cond_kg(bands, states, hop_ind, hop_eng,
+                            hop_dr, kmesh, self.beta, self.mu, omegas,
+                            self.delta, ac_cond)
+
+        # Multiply prefactor
+        if self.dimension == 2:
+            area = self.cell.get_lattice_area("c")
+            prefactor = 1j / (area * len(self.kmesh_grid))
+        elif self.dimension == 3:
+            volume = self.cell.get_lattice_volume()
+            prefactor = 1j / (volume * len(self.kmesh_grid))
+        else:
+            raise NotImplementedError(f"Dimension {self.dimension} not "
+                                      f"implemented")
+        ac_cond *= prefactor
+        return omegas, ac_cond

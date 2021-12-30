@@ -2206,25 +2206,25 @@ def ac_cond_real(double [:,::1] bands, double complex [:,:,::1] states,
     Parameters
     ----------
     bands: (num_kpt, num_orb) float64 array
-        eigenvalues on regular k-grid in HARTREE
+        eigenvalues on regular k-grid in eV
     states: (num_kpt, num_orb, num_orb) complex128 array
         eigenstates on regular k-grid
     hop_ind: (num_hop, 2) int32 array
         orbital indices of reduced hopping terms
     hop_eng: (num_hop,) complex128 array
-        hopping energies of reduced hopping terms in HARTREE
+        hopping energies of reduced hopping terms in eV
     hop_dr: (num_hop, 3) float64 array
-        hopping distances in CARTESIAN coordiantes in BOHR
+        hopping distances in CARTESIAN coordiantes in NM
     kmesh: (num_kpt, 3) float64 array
-        CARTESIAN coordinates of k-points in 1/BOHR
+        CARTESIAN coordinates of k-points in 1/NM
     beta: double
         Lindhard.beta
     mu: double
         Lindhard.mu
     omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated in HARTREE
+        frequencies on which dyn_pol is evaluated in eV
     delta: double
-        broadening parameter in HARTREE
+        broadening parameter in eV
     ac_cond: (num_omega,) float64 array
         real part of ac conductivity
 
@@ -2266,7 +2266,7 @@ def ac_cond_real(double [:,::1] bands, double complex [:,:,::1] states,
             jmat[ib1, ib2] = jmat[ib1, ib2] - 1j * phase
             jmat[ib2, ib1] = jmat[ib2, ib1] + 1j * phase.conjugate()
 
-        # Build delta_eng and prod
+        # Build delta_eng and prod_df
         for jj in range(num_orb):
             eng_j = bands[ik, jj]
             f_j = 1.0 / (1.0 + exp(beta * (eng_j - mu)))
@@ -2290,3 +2290,105 @@ def ac_cond_real(double [:,::1] bands, double complex [:,:,::1] states,
                     ac_sum += prod_df[ik, jj, ll] / \
                               (delta_eng[ik, jj, ll] + omega + 1j * delta)
         ac_cond[iw] = ac_sum.imag
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def ac_cond_kg(double [:,::1] bands, double complex [:,:,::1] states,
+               int [:,::1] hop_ind, double complex [::1] hop_eng,
+               double [:,::1] hop_dr, double [:,::1] kmesh,
+               double beta, double mu, double [::1] omegas, double delta,
+               double complex [::1] ac_cond):
+    """
+    Evaluate full AC conductivity using Kubo-Greenwood formula.
+
+    Parmaters
+    ---------
+    bands: (num_kpt, num_orb) float64 array
+        eigenvalues on regular k-grid in eV
+    states: (num_kpt, num_orb, num_orb) complex128 array
+        eigenstates on regular k-grid
+    hop_ind: (num_hop, 2) int32 array
+        orbital indices of reduced hopping terms
+    hop_eng: (num_hop,) complex128 array
+        hopping energies of reduced hopping terms in eV
+    hop_dr: (num_hop, 3) float64 array
+        hopping distances in CARTESIAN coordiantes in NM
+    kmesh: (num_kpt, 3) float64 array
+        CARTESIAN coordinates of k-points in 1/NM
+    beta: double
+        Lindhard.beta
+    mu: double
+        Lindhard.mu
+    omegas: (num_omega,) float64 array
+        frequencies on which dyn_pol is evaluated in eV
+    delta: double
+        broadening parameter in eV
+    ac_cond: (num_omega,) complex128 array
+        full ac conductivity
+
+    Returns
+    -------
+    None. Results are saved in ac_cond.
+    """
+    cdef long num_omega, num_kpt, num_hop, num_orb
+    cdef long iw, ik, ih, mm, nn
+    cdef int ib1, ib2
+    cdef double k_dot_r
+    cdef double complex phase
+    cdef double complex [:,::1] vmat
+    cdef double omega, eng_m, eng_n, f_m, f_n
+    cdef double complex prod, ac_sum
+    cdef double [:,:,::1] delta_eng
+    cdef double complex [:,:,::1] prod_df
+
+    num_omega = omegas.shape[0]
+    num_kpt = bands.shape[0]
+    num_hop = hop_ind.shape[0]
+    num_orb = bands.shape[1]
+    vmat = np.zeros((num_orb, num_orb), dtype=np.complex128)
+    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
+    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
+
+    # Build reusable arrays
+    for ik in range(num_kpt):
+        # Build vmat in Bloch basis via Fourier transform
+        for ib1 in range(num_orb):
+            for ib2 in range(num_orb):
+                vmat[ib1, ib2] = 0.0
+        for ih in range(num_hop):
+            k_dot_r = kmesh[ik, 0] * hop_dr[ih, 0] + \
+                      kmesh[ik, 1] * hop_dr[ih, 1] + \
+                      kmesh[ik, 2] * hop_dr[ih, 2]
+            phase = (cos(k_dot_r) + 1j * sin(k_dot_r)) * hop_eng[ih] * hop_dr[ih, 0]
+            ib1, ib2 = hop_ind[ih, 0], hop_ind[ih, 1]
+            vmat[ib1, ib2] = vmat[ib1, ib2] + 1j * phase
+            vmat[ib2, ib1] = vmat[ib2, ib1] - 1j * phase.conjugate()
+
+        # Build delta_eng and prod_df
+        for mm in range(num_orb):
+            eng_m = bands[ik, mm]
+            f_m = 1.0 / (1.0 + exp(beta * (eng_m - mu)))
+            for nn in range(num_orb):
+                eng_n = bands[ik, nn]
+                delta_eng[ik, mm, nn] = eng_m - eng_n
+                f_n = 1.0 / (1.0 + exp(beta * (eng_n - mu)))
+                prod = 0.0
+                for ib1 in range(num_orb):
+                    for ib2 in range(num_orb):
+                        prod += states[ik, nn, ib1].conjugate() * vmat[ib1, ib2] * states[ik, mm, ib2]
+                if abs(eng_m - eng_n) >= 1.0e-7:
+                    prod_df[ik, mm, nn] = prod * prod.conjugate() * (f_m - f_n) / (eng_m - eng_n)
+                # else:
+                #     prod_df[ik, mm, nn] = prod * prod.conjugate() * beta * f_n * (1 - f_n)
+
+    # Evaluate ac_cond
+    for iw in range(num_omega):
+        omega = omegas[iw]
+        ac_sum = 0.0
+        for ik in range(num_kpt):
+            for mm in range(num_orb):
+                for nn in range(num_orb):
+                    ac_sum += prod_df[ik, mm, nn] / \
+                              (delta_eng[ik, mm, nn] - omega - 1j * delta)
+        ac_cond[iw] = ac_sum
