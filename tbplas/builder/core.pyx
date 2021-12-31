@@ -2380,7 +2380,7 @@ def ac_cond_kg(double [:,::1] bands, double complex [:,:,::1] states,
                 if abs(eng_m - eng_n) >= 1.0e-7:
                     prod_df[ik, mm, nn] = prod * prod.conjugate() * (f_m - f_n) / (eng_m - eng_n)
                 # else:
-                #     prod_df[ik, mm, nn] = prod * prod.conjugate() * beta * f_n * (1 - f_n)
+                #     prod_df[ik, mm, nn] = prod * prod.conjugate() * -beta * f_n * (1 - f_n)
 
     # Evaluate ac_cond
     for iw in range(num_omega):

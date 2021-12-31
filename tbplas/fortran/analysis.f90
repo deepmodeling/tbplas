@@ -384,10 +384,10 @@ subroutine ac_cond_kg(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
                         prod = prod + conjg(wfn(ib1, nn, i_k)) * vmat(ib1, ib2) * wfn(ib2, mm, i_k)
                     end do
                 end do
-                if (abs(eng_m - eng_n) .ge. 1.0D-7) then
+                if (abs(eng_m - eng_n) >= 1.0D-7) then
                     prod_df(nn, mm, i_k) = prod * conjg(prod) * (f_m - f_n) / (eng_m - eng_n)
                 ! else
-                !     prod_df(nn, mm, i_k) = prod * conjg(prod) * beta * f_n * (1 - f_n)
+                !     prod_df(nn, mm, i_k) = prod * conjg(prod) * -beta * f_n * (1 - f_n)
                 end if
             end do
         end do
