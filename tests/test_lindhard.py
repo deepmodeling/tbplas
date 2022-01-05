@@ -256,9 +256,15 @@ class TestLindhard(unittest.TestCase):
         :return: None
         """
         # Construct primitive cell
-        cell = tb.make_graphene_diamond()
-        t = 2.7  # Absolute hopping energy
+        t = 3.0  # Absolute hopping energy in eV
         a = 0.142  # C-C distance in NM
+        vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
+        cell = tb.PrimitiveCell(vectors, unit=tb.NM)
+        cell.add_orbital([0.0, 0.0], label="C_pz")
+        cell.add_orbital([1 / 3., 1 / 3.], label="C_pz")
+        cell.add_hopping([0, 0], 0, 1, t)
+        cell.add_hopping([1, 0], 1, 0, t)
+        cell.add_hopping([0, 1], 1, 0, t)
 
         # Set parameter for Lindhard function
         energy_max = 10
@@ -273,7 +279,7 @@ class TestLindhard(unittest.TestCase):
         # Instantiate Lindhard calculator
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
                                energy_step=energy_step, kmesh_size=mesh_size,
-                               mu=mu, temperature=temp,
+                               mu=mu, temperature=temp, g_s=1,
                                back_epsilon=back_epsilon)
 
         # Calculate and plot dyn_pol
@@ -310,13 +316,20 @@ class TestLindhard(unittest.TestCase):
 
     def test_epsilon_prb(self):
         """
-        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 4.76/ Angstrom and
-        theta = 30 degrees.
+        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 4.76 / Angstrom
+        and theta = 30 degrees.
 
         :return: None
         """
         # Construct primitive cell
-        cell = tb.make_graphene_diamond()
+        t = 3.0  # Absolute hopping energy in eV
+        vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
+        cell = tb.PrimitiveCell(vectors, unit=tb.NM)
+        cell.add_orbital([0.0, 0.0], label="C_pz")
+        cell.add_orbital([1 / 3., 1 / 3.], label="C_pz")
+        cell.add_hopping([0, 0], 0, 1, t)
+        cell.add_hopping([1, 0], 1, 0, t)
+        cell.add_hopping([0, 1], 1, 0, t)
 
         # Set parameter for Lindhard function
         energy_max = 10
@@ -331,7 +344,8 @@ class TestLindhard(unittest.TestCase):
         # Instantiate Lindhard calculator
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
                                energy_step=energy_step, kmesh_size=mesh_size,
-                               mu=mu, temperature=temp, back_epsilon=back_epsilon)
+                               mu=mu, temperature=temp, g_s=1,
+                               back_epsilon=back_epsilon)
 
         # Evaluate dielectric function
         omegas, epsilon = lindhard.calc_epsilon_arbitrary(q_points, use_fortran)

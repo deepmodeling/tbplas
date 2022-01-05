@@ -79,11 +79,13 @@ class Lindhard:
         V(q) = 2 * pi * e**2 / (eps_0 * eps_r * q)
     See the following url for the derivation:
     https://math.stackexchange.com/questions/3627267/fourier-transform-of-the-2d-coulomb-potential
+
+    TODO: notes on units of AC conductivity
     """
     def __init__(self, cell: PrimitiveCell,
                  energy_max: float, energy_step: int,
                  kmesh_size: Tuple[int, int, int],
-                 mu=0.0, temperature=300.0, back_epsilon=1.0,
+                 mu=0.0, temperature=300.0, g_s=2, back_epsilon=1.0,
                  dimension=2, delta=0.005) -> None:
         """
         :param cell: instance of 'PrimitiveCell' class
@@ -99,6 +101,8 @@ class Lindhard:
             chemical potential in eV
         :param temperature: float
             temperature in Kelvin
+        :param g_s: int
+            spin degeneracy
         :param back_epsilon: float
             background dielectric constant
         :param dimension: int
@@ -117,7 +121,7 @@ class Lindhard:
                            for kc in range(self.kmesh_size[2])]
         self.mu = mu
         self.beta = 1 / (KB * temperature)
-        self.g_s = 2
+        self.g_s = g_s
         self.back_epsilon = back_epsilon
         self.dimension = dimension
         self.delta = delta
