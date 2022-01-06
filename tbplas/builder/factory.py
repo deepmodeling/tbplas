@@ -38,7 +38,7 @@ import numpy as np
 from . import constants as consts
 from . import exceptions as exc
 from .lattice import frac2cart, cart2frac, rotate_coord
-from .primitive import correct_coord, PrimitiveCell
+from .primitive import correct_coord, PrimitiveCell, Hopping
 
 
 def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
@@ -90,6 +90,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
         return ji % ni, ji // ni
 
     # Add hopping terms
+    hopping_list = []
     for id_sc_i in range(extend_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
         for hopping in prim_cell.hopping_list:
@@ -101,7 +102,10 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
                 id_pc_j = (ja, jb, jc, hop_ind[4])
                 id_sc_j = orb_id_sc[id_pc_j]
                 rn = (na, nb, nc)
-                extend_cell.add_hopping(rn, id_sc_i, id_sc_j, hopping.energy)
+                # extend_cell.add_hopping(rn, id_sc_i, id_sc_j, hopping.energy)
+                hopping_list.append(Hopping(rn, id_sc_i, id_sc_j,
+                                            hopping.energy))
+    extend_cell.hopping_list = hopping_list
 
     extend_cell.sync_array()
     return extend_cell
@@ -188,6 +192,7 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
 
     # Add hopping terms
     res_cell.sync_array()
+    hopping_list = []
     for id_sc_i in range(res_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
         for i_h, hop in enumerate(prim_cell.hop_ind):
@@ -207,8 +212,12 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                         id_sc_j = orb_id_sc[id_pc_j]
                         chk_pos = res_cell.orb_pos[id_sc_j]
                         if np.linalg.norm(chk_pos - res_pos) <= pos_tol:
-                            res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
-                                                 prim_cell.hop_eng[i_h])
+                            # res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
+                            #                      prim_cell.hop_eng[i_h])
+                            hopping = Hopping(res_rn, id_sc_i, id_sc_j,
+                                              prim_cell.hop_eng.item(i_h))
+                            hopping_list.append(hopping)
+    res_cell.hopping_list = hopping_list
 
     # Subtract delta from orbital positions
     res_cell.orb_pos -= delta
