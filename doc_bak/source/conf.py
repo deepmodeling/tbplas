@@ -21,14 +21,14 @@ sys.path.insert(0, os.path.abspath('../../.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'TBPlaS'
-copyright = '2017-2022, Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang & Shengjun Yuan'
-author = 'Edo van Veen, Guus Slotman, Kaixiang Huang Yunhai Li, Xueheng Kuang & Shengjun Yuan'
+project = 'TiPSi'
+copyright = '2018, Edo van Veen, Guus Slotman, Kaixiang Huang & Shengjun Yuan'
+author = 'Edo van Veen, Guus Slotman, Kaixiang Huang & Shengjun Yuan'
 
 # The short X.Y version
-version = '1.0'
+version = '0.9'
 # The full version, including alpha/beta/rc tags
-release = '1.0.0-rc'
+release = '0.9.0-alpha'
 
 
 # -- General configuration ---------------------------------------------------
@@ -107,7 +107,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'TBPlaSdoc'
+htmlhelp_basename = 'TiPSidoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -135,8 +135,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'TBPlaS.tex', 'TBPlaS Documentation',
-     'Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang \\& Shengjun Yuan', 'manual'),
+    (master_doc, 'TiPSi.tex', 'TiPSi Documentation',
+     'Edo van Veen, Guus Slotman, Kaixiang Huang \\& Shengjun Yuan', 'manual'),
 ]
 
 
@@ -145,7 +145,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'tbplas', 'TBPlaS Documentation',
+    (master_doc, 'tbplas', 'TiPSi Documentation',
      [author], 1)
 ]
 
@@ -156,8 +156,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'TBPlaS', 'TBPlaS Documentation',
-     author, 'TBPlaS', 'One line description of project.',
+    (master_doc, 'TiPSi', 'TiPSi Documentation',
+     author, 'TiPSi', 'One line description of project.',
      'Miscellaneous'),
 ]
 

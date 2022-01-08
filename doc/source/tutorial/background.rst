@@ -1,0 +1,11 @@
+==========
+Background
+==========
+
+In this section we review briefly the formalism of tight-binding theory, since they are essential
+for understanding the concepts of TBPlaS. Since it is difficult to prepare the mathematical stuff
+within reStructuredText, we put the note in the attachment__. For a more detailed depiction of the
+theory, see the note of `PythTB <http://www.physics.rutgers.edu/pythtb/formalism.html>`_ or any
+formal textbooks on solid state physics.
+
+__ attachment: images/tight_binding.pdf
