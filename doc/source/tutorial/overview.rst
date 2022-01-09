@@ -1,14 +1,13 @@
-========
 Overview
 ========
 
-In this section we give an overview on the concepts of TBPlaS, as well as the common workflow, to provide
+In this section we give an overview on the concepts of TBPLaS, as well as the common workflow, to provide
 the users and developers a general picture of its design philosophy.
 
 Concepts
 --------
 
-TBPlaS has been implemented in an intuitive and comprehensible object-oriented manner, with classes directly
+TBPLaS has been implemented in an intuitive and comprehensible object-oriented manner, with classes directly
 related to concepts of tight-binding theory. The layout of classes, as well as a more detailed diagram are
 shown below. At the root of the hierarchy there are the classes of :class:`.Orbital` and :class:`.Hopping`,
 representing the orbitals and hopping terms in a tight-binding model, respectively. From the orbitals and
@@ -18,17 +17,17 @@ Many properties, including band structure, density of states, polarizability, di
 conductivity, can be obtained at primitive cell level, either by calling proper methods of :class:`.PrimitiveCell`
 class, or with the help of :class:`.Lindhard` class.
 
-.. image:: images/class_layout.png
+.. figure:: images/class_layout.png
     :alt: class layout
     :align: center
 
-Layout of user classes of TBPlaS. Classes of same level in the hierarchy share the same color.
+    Layout of user classes of TBPLaS. Classes of same level in the hierarchy share the same color.
 
-.. image:: images/class_diagram.png
+.. figure:: images/class_diagram.png
     :alt: class diagram
     :align: center
 
-User class diagram of TBPlaS. Only essential attributes are shown for clarity.
+    User class diagram of TBPLaS. Only essential attributes are shown for clarity.
 
 :class:`.SuperCell` / :class:`.InterHopping` / :class:`.Sample` are a set of classes specially designed
 for constructing large complex models, especially for TBPM calculations. The computational expensive parts
@@ -54,8 +53,8 @@ which is a wrapper over matplotlib functions.
 Workflow
 --------
 
-The common workflow of TBPlaS is shown below. All calculations using TBPlaS begin with creating the primitive cell,
-which involves specifying the lattice vectors, adding orbitals and adding hopping terms. TBPlaS uses translational
+The common workflow of TBPLaS is shown below. All calculations using TBPLaS begin with creating the primitive cell,
+which involves specifying the lattice vectors, adding orbitals and adding hopping terms. TBPLaS uses translational
 symmetry and conjugate relation to reduce the number of hopping terms, so only half of the terms are needed.
 From the primitive cell we can calculate the band structure, density of states, polarizability, dielectric function,
 and AC conductivity via exact diagonalization or Lindhard functions. We can also build complex models of moderate
@@ -68,8 +67,8 @@ classes to create a sample. Strains and external fields can be implemented in th
 From the sample we can band structure and density of states via exact diagonalization, or by TBPM with solver/analyzer.
 Finally, we can visualize the results with the help of visualizer.
 
-.. image:: images/workflow.png
+.. figure:: images/workflow.png
     :alt: workflow
     :align: center
 
-Workflow of TBPlaS
+    Workflow of TBPLaS

@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath('../../.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'TBPlaS'
+project = 'TBPLaS'
 copyright = '2017-2022, Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang & Shengjun Yuan'
 author = 'Edo van Veen, Guus Slotman, Kaixiang Huang Yunhai Li, Xueheng Kuang & Shengjun Yuan'
 
@@ -44,8 +44,18 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary',
 ]
+
+autodoc_member_order = 'groupwise'
+autodoc_default_options = {
+    'members': None,
+    'special-members': None,
+    'inherited-members': None
+}
+autodoc_allowed_special_members = ['__call__', '__getitem__']
+generate_from_files = ['api.rst']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -107,7 +117,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'TBPlaSdoc'
+htmlhelp_basename = 'TBPLaSdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -135,7 +145,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'TBPlaS.tex', 'TBPlaS Documentation',
+    (master_doc, 'TBPLaS.tex', 'TBPLaS Documentation',
      'Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang \\& Shengjun Yuan', 'manual'),
 ]
 
@@ -145,7 +155,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'tbplas', 'TBPlaS Documentation',
+    (master_doc, 'TBPLaS', 'TBPLaS Documentation',
      [author], 1)
 ]
 
@@ -156,8 +166,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'TBPlaS', 'TBPlaS Documentation',
-     author, 'TBPlaS', 'One line description of project.',
+    (master_doc, 'TBPLaS', 'TBPLaS Documentation',
+     author, 'TBPLaS', 'One line description of project.',
      'Miscellaneous'),
 ]
 
