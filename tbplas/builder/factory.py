@@ -34,6 +34,7 @@ import math
 from typing import Union
 
 import numpy as np
+from scipy.spatial import KDTree
 
 from . import constants as consts
 from . import exceptions as exc
@@ -102,7 +103,6 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
                 id_pc_j = (ja, jb, jc, hop_ind[4])
                 id_sc_j = orb_id_sc[id_pc_j]
                 rn = (na, nb, nc)
-                # extend_cell.add_hopping(rn, id_sc_i, id_sc_j, hopping.energy)
                 hopping_list.append(Hopping(rn, id_sc_i, id_sc_j,
                                             hopping.energy))
     extend_cell.hopping_list = hopping_list
@@ -193,6 +193,7 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     # Add hopping terms
     res_cell.sync_array()
     hopping_list = []
+    kd_tree = KDTree(res_cell.orb_pos)
     for id_sc_i in range(res_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
         for i_h, hop in enumerate(prim_cell.hop_ind):
@@ -207,16 +208,22 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                 res_pos -= res_rn
 
                 # Determine corresponding id_sc_j
-                for id_pc_j in orb_id_pc:
+                neighbours = kd_tree.query_ball_point(res_pos, r=pos_tol)
+                for id_sc_j in neighbours:
+                    id_pc_j = orb_id_pc[id_sc_j]
                     if id_pc_j[3] == hop.item(4):
-                        id_sc_j = orb_id_sc[id_pc_j]
-                        chk_pos = res_cell.orb_pos[id_sc_j]
-                        if np.linalg.norm(chk_pos - res_pos) <= pos_tol:
-                            # res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
-                            #                      prim_cell.hop_eng[i_h])
-                            hopping = Hopping(res_rn, id_sc_i, id_sc_j,
-                                              prim_cell.hop_eng.item(i_h))
-                            hopping_list.append(hopping)
+                        hopping = Hopping(res_rn, id_sc_i, id_sc_j,
+                                          prim_cell.hop_eng.item(i_h))
+                        hopping_list.append(hopping)
+
+                # for id_pc_j in orb_id_pc:
+                #     if id_pc_j[3] == hop.item(4):
+                #         id_sc_j = orb_id_sc[id_pc_j]
+                #         chk_pos = res_cell.orb_pos[id_sc_j]
+                #         if np.linalg.norm(chk_pos - res_pos) <= pos_tol:
+                #             hopping = Hopping(res_rn, id_sc_i, id_sc_j,
+                #                               prim_cell.hop_eng.item(i_h))
+                #             hopping_list.append(hopping)
     res_cell.hopping_list = hopping_list
 
     # Subtract delta from orbital positions
