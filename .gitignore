@@ -63,5 +63,5 @@ generate_wrapper.sh
 
 # Temporary dirs and files produced by sphinx
 /doc/build
-/doc/source/_api*
-/doc/source/_build*
+/doc/source/_api
+/doc/source/_build
