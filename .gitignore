@@ -60,3 +60,8 @@ generate_wrapper.sh
 # Automatically generated interfaces
 *.pyf
 *.c
+
+# Temporary dirs and files produced by sphinx
+/doc/build
+/doc/source/_api*
+/doc/source/_build*
