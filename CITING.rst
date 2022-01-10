@@ -1,4 +1,4 @@
-When using this software, please cite:
+Please cite the follow reference when using results from TBPLaS:
 
-E. Van Veen, G. Slotman, K. Huang, S. Yuan,
-"Tipsi: a tight-binding propagation simulator" [unpublished]
+    E. Van Veen, G. Slotman, K. Huang, Y. Li, X. Kuang, S. Yuan,
+    "TBPLaS: a tight-binding propagation simulator" [under preparation]

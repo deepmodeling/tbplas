@@ -28,7 +28,7 @@ author = 'Edo van Veen, Guus Slotman, Kaixiang Huang Yunhai Li, Xueheng Kuang & 
 # The short X.Y version
 version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '1.0.0-rc'
+release = '1.0-rc'
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,10 +42,10 @@ release = '1.0.0-rc'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx.ext.autosummary',
 ]
 
 autodoc_member_order = 'groupwise'
@@ -167,7 +167,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'TBPLaS', 'TBPLaS Documentation',
-     author, 'TBPLaS', 'One line description of project.',
+     author, 'TBPLaS', 'Tight-binding Package for Large-scale Simulation.',
      'Miscellaneous'),
 ]
 

@@ -28,5 +28,6 @@ the code following the :doc:`tutorial/index`.
     Install <install.rst>
     Tutorials <tutorial/index.rst>
     API Reference <api.rst>
+    Release Notes <release.rst>
 
 * :ref:`genindex`

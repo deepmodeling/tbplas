@@ -6,7 +6,7 @@ import configparser
 # Shared package information by FORTRAN and C extensions
 PKG_INFO = {
     'name': 'tbplas',
-    'version': '0.9.8',
+    'version': '1.0',
     'description': 'Tight-binding Package for Large-scale Simulation',
 }
 
