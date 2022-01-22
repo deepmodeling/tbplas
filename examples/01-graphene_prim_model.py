@@ -10,14 +10,18 @@ import tbplas as tb
 # In this tutorial we show how to create primitive cell. First, we need to
 # generate lattice vectors. Lengths are in Angstroms and angles are in degrees.
 vectors = tb.gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
+print(vectors)
 
 # Then we create a primitive cell and add orbitals. Note that coordinates of
 # orbitals should be fractional. Since we are lattice vectors with the angle
 # between a1 and a2 being 60 degrees, the fractional coordinates are (0, 0, 0)
 # and (1/3, 1/3, 0).
 cell = tb.PrimitiveCell(vectors)
-cell.add_orbital([0.0, 0.0], 0.0)
-cell.add_orbital([1. / 3, 1. / 3], 0.0)
+# cell.add_orbital([1./3, 1./3], 0.0)
+# cell.add_orbital([2./3, 2./3], 0.0)
+cell.add_orbital_cart([1.23, 0.71014083], energy=0.0)
+cell.add_orbital_cart([2.46, 1.42028166], energy=0.0)
+print(cell.orb_pos_ang)
 
 # Then we add hopping terms. Conjugate relation <i,0|H|j,R> = <j,0|H|i,-R> are
 # handled automatically. So we need to add only half of all the hopping terms.
