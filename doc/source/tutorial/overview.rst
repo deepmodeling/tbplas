@@ -17,13 +17,13 @@ Many properties, including band structure, density of states, polarizability, di
 conductivity, can be obtained at primitive cell level, either by calling proper methods of :class:`.PrimitiveCell`
 class, or with the help of :class:`.Lindhard` class.
 
-.. figure:: images/class_layout.png
+.. figure:: images/overview/class_layout.png
     :alt: class layout
     :align: center
 
     Layout of user classes of TBPLaS. Classes of same level in the hierarchy share the same color.
 
-.. figure:: images/class_diagram.png
+.. figure:: images/overview/class_diagram.png
     :alt: class diagram
     :align: center
 
@@ -57,7 +57,7 @@ The common workflow of TBPLaS is shown below. All calculations using TBPLaS begi
 which involves specifying the lattice vectors, adding orbitals and adding hopping terms. TBPLaS uses translational
 symmetry and conjugate relation to reduce the number of hopping terms, so only half of the terms are needed.
 From the primitive cell we can calculate the band structure, density of states, polarizability, dielectric function,
-and AC conductivity via exact diagonalization or Lindhard functions. We can also build complex models of moderate
+and AC conductivity via exact diagonalization or Lindhard functions. We can alsos build complex models of moderate
 size using Python-based tools, and evaluate properties like band structure and density of states in the same approach.
 Strains and external fields can be implemented by directly modifying the orbital positions, on-site energies,
 hopping terms and other attributes of the primitive cell instance.
@@ -67,7 +67,7 @@ classes to create a sample. Strains and external fields can be implemented in th
 From the sample we can band structure and density of states via exact diagonalization, or by TBPM with solver/analyzer.
 Finally, we can visualize the results with the help of visualizer.
 
-.. figure:: images/workflow.png
+.. figure:: images/overview/workflow.png
     :alt: workflow
     :align: center
 

@@ -91,6 +91,7 @@ Gallery
 .. figure:: images/fractal.png
     :alt: sierpinski carpet
     :align: center
+    :scale: 60%
 
     Sierpinski carpet generated with S=2, N=3, L=3.
 

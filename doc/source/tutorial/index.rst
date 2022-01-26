@@ -8,4 +8,4 @@ Tutorials
 
     Background <background.rst>
     Overview <overview.rst>
-    Setting up a primitive cell <prim_model.rst>
+    Setting up a primitive cell <prim_cell.rst>
