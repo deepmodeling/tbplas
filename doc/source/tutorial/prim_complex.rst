@@ -184,3 +184,76 @@ The band structures should look like:
 
 It is consistent with the literature: zigzag-edged graphene nano-ribbons are always metallic, while armchair-edged
 graphene nano-ribbons can be either metallic or semi-conducting.
+
+Remove orbitals and hopping terms
+---------------------------------
+
+.. rubric:: Remove orbitals
+
+To demonstrate the usage of :func:`remove_orbital` and :func:`remove_hopping` we need to import the diamond-shaped
+primitive cell of graphene and extend it by 3 times along :math:`a` and :math:`b` directions:
+
+.. code-block:: python
+
+    import tbplas as tb
+
+    cell = tb.make_graphene_diamond()
+    cell = tb.extend_prim_cell(cell, dim=(3, 3, 1))
+    cell.plot(with_conj=False)
+
+The output is shown in the right panel of the figure:
+
+.. figure:: images/prim_complex/rm_orb.png
+
+    Structure of extended graphene primitive cell before and after removing orbitals and after trimming dangling
+    terms. Blue circle indicates the dangling orbital.
+
+We remove orbital #8 and #14 with the following commands:
+
+.. code-block:: python
+
+    orb_to_remove = [8, 14]
+    for i, orb in enumerate(sorted(orb_to_remove)):
+        cell.remove_orbital(orb - i)
+    cell.plot(with_conj=False)
+
+The output is shown in the middle panel. Obviously, orbital #8 and #14 have been removed. However, orbital #9 becomes
+dangling, since there is only one hopping term associated with it. We can remove the orbital and associated hopping
+terms with the :func:`.trim_prim_cell` function:
+
+.. code-block:: python
+
+    tb.trim_prim_cell(cell)
+    cell.plot(with_conj=False)
+
+Note that :func:`.trim_prim_cell` does not return a new primitive cell, but modifies the original cell in-place. The
+ouput is shown in the right panel. The dangling orbital and hopping term are removed after calling the function.
+
+.. rubric:: Remove hopping terms
+
+From the extended cell we can also remove hopping terms, e.g. :math:`(0, 0) \rightarrow (0, 0), i=3, j=8` and
+:math:`(0, 0) \rightarrow (0, 0), i=8, j=9` with the following commands:
+
+.. code-block:: python
+
+    cell = tb.make_graphene_diamond()
+    cell = tb.extend_prim_cell(cell, dim=(3, 3, 1))
+    cell.remove_hopping(rn=(0, 0), orb_i=3, orb_j=8)
+    cell.remove_hopping(rn=(0, 0), orb_i=8, orb_j=9)
+    cell.plot(with_conj=False)
+
+The output is shown in the left panel of the figure:
+
+.. figure:: images/prim_complex/rm_hop.png
+
+    Structure of extended graphene primitive cell after removing hopping and after trimming dangling terms. Blue circle
+    indicates the dangling orbital.
+
+Similarly, we can remove dangling terms in the same way:
+
+.. code-block:: python
+
+    tb.trim_prim_cell(cell)
+    cell.plot(with_conj=False)
+
+The output is shown in the right panel.
