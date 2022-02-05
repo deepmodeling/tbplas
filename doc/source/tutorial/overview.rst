@@ -50,6 +50,8 @@ etc. The results from TBPM calculations, as well as the results from exact-diago
 or :class:`.Sample` level, can be visualized using matplotlib, or alternatively, with the :class:`.Visualizer` class,
 which is a wrapper over matplotlib functions.
 
+.. _workflow:
+
 Workflow
 --------
 

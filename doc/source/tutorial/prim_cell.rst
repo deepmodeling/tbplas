@@ -216,3 +216,5 @@ Try to make the rectangular cell or monolayer graphene:
 .. figure:: images/prim_cell/graph_rect.png
     :align: center
     :scale: 35%
+
+The answers can be found at :ref:`gnr`. 
