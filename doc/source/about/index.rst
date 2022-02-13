@@ -26,21 +26,21 @@ The main features of TBPLaS include:
     * Fields and strains
         * Homogeneous magnetic field via Peierls substitution
         * User-defined electric field and strain
-    * Efficiency
-        * FORTRAN and Cython (C-Extensions for Python) for performance-critical parts
-        * Hybrid parallelism based on MPI and OpenMP
-        * Sparse matrices for reducing memory cost
-        * Lazy-evaluation techniques to reduce unnecessary operations
-        * Interfaced to Intel MKL (Math Kernel Library)
-    * Easiness
-        * Intuitive user APIs (Application Programming Interface) and simple workflow
-        * Built-in materials database (Graphene, phosphorene, antimonene, TMDC)
-        * Interfaced to Wannier90 and LAMMPS
-        * Transparent code architecture with detailed documentation
-    * Security
-        * Automatic detection of illegal input
-        * Data inconsistency prevented via locking mechanism
-        * Carefully designed exception handling with precise error message
+* Efficiency
+    * FORTRAN and Cython (C-Extensions for Python) for performance-critical parts
+    * Hybrid parallelism based on MPI and OpenMP
+    * Sparse matrices for reducing memory cost
+    * Lazy-evaluation techniques to reduce unnecessary operations
+    * Interfaced to Intel MKL (Math Kernel Library)
+* Easiness
+    * Intuitive user APIs (Application Programming Interface) and simple workflow
+    * Built-in materials database (Graphene, phosphorene, antimonene, TMDC)
+    * Interfaced to Wannier90 and LAMMPS
+    * Transparent code architecture with detailed documentation
+* Security
+    * Automatic detection of illegal input
+    * Data inconsistency prevented via locking mechanism
+    * Carefully designed exception handling with precise error message
 
 .. _gallery:
 
