@@ -11,3 +11,4 @@ Tutorials
     Set up a primitive cell <prim_cell.rst>
     Bands and DOS of primitive cell <prim_bands.rst>
     Build complex primitive cells <prim_complex.rst>
+    Set up a sample <sample_model.rst>

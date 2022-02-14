@@ -1,3 +1,5 @@
+.. _complex_prim:
+
 Build complex primitive cells
 =============================
 
