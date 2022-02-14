@@ -1,15 +1,17 @@
+.. _sample_model:
+
 Build a sample
 ==============
 
 In this tutorial we show how to build a sample using the Cython-based modeling tools. Cython tools
 are orders of magnitudes faster than their Python counterparts, and are designed for constructing
 large models with thousands or millions of orbitals. We demonstrate the usages of these tools by
-reproducing the models in :ref:`complex_prim`.
+reproducing the models in :ref:`prim_complex`.
 
 Construct graphene nano-ribbon
 ------------------------------
 
-Similar as :ref:`complex_prim`, we need the rectangular primitive cell to construct graphene nano-ribbons.
+Similar as :ref:`prim_complex`, we need the rectangular primitive cell to construct graphene nano-ribbons.
 We import it from the repository by:
 
 .. code-block:: python
@@ -73,7 +75,7 @@ The output is shown in the left panel of the figure:
     Graphene samples without and with vacancies and after trimming dangling terms. Cells are labeled
     with blue texts. Removed and dangling orbitals are indicated with blue and green circles, respectively.
 
-In :ref:`complex_prim` we introduce vacancies into the model by removing orbital #8 and #14. However,
+In :ref:`prim_complex` we introduce vacancies into the model by removing orbital #8 and #14. However,
 in :class:`.SuperCell` class the orbitals are numbered in a different scheme. We identify orbital #8
 as :math:`(1, 1, 0, 0)` and #14 as :math:`(2, 1, 0, 0)`, where the first 3 integers indicate the cell
 index and the 4th integer is the orbital index. That's to say, orbital #8 is the 0th orbital in cell

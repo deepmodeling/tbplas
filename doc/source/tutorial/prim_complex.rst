@@ -1,4 +1,4 @@
-.. _complex_prim:
+.. _prim_complex:
 
 Build complex primitive cells
 =============================

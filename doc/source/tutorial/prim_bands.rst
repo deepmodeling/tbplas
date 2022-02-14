@@ -1,3 +1,5 @@
+.. _prim_bands:
+
 Bands and DOS of primitive cell
 ===============================
 
