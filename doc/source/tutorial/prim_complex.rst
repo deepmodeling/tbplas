@@ -30,7 +30,7 @@ may remain in the cell after the removal, and can be trimmed with the :func:`.tr
 will show the usage of these functions by constructing a large graphene cell with vacancies.
 
 :func:`.spiral_prim_cell`, :func:`.make_hetero_layer` and :func:`.merge_prim_cell` are functions specially
-designed for building twisted hetero-structures. Their usage will be discussed in a separate tutorial.
+designed for building hetero-structures. Their usage will be discussed in :ref:`hetero_model`.
 
 .. _gnr:
 
@@ -108,7 +108,7 @@ as three-dimensional internally. From the relation we can construct the rectangu
 
 Here ``cell`` is the diamond-shaped primitive cell. ``lat_sc`` is the conversion matrix of lattice vectors. By changing
 the conversion matrix we can reshape the primitive cell to different shapes, which is particular useful for constructing
-twisted hetero-structures. We will show it in a separate tutorial.
+hetero-structures. We will show it in :ref:`hetero_model`.
 
 .. rubric:: Extend rectangular cell
 
