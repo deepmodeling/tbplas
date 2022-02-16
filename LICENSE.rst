@@ -1,8 +1,4 @@
-Copyright (c) 2017-2022, E. N. W. van Veen (RU), G. J. Slotman (RU), K. Huang (WHU), Y. Li (WHU),
-X. Kuang (WHU), S. Yuan (WHU). All rights reserved.
-
-(RU: Radboud University, Nijmegen, the Netherlands)
-(WHU: Wuhan University, Wuhan, China)
+Copyright (c) 2017-2022, the TBPLaS development team. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided
 that the following conditions are met:

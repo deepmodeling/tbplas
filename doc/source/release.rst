@@ -1,4 +1,3 @@
-=============
 Release Notes
 =============
 
@@ -21,7 +20,7 @@ First public release of TBPLaS.
   classes.
 * Simplified :class:`.Config`. Now it is not dependent on the Sample.
 * Rewritten ``materials`` module with the new builder.
-* Converted output from txt files to numpy format. Add ``-DDEBUG`` to f90flags if tou don't
+* Converted output from txt files to numpy format. Add ``-DDEBUG`` to f90flags if you don't
   like this feature.
 * Many bug fixes, efficiency improvments and security enhancements.
 
