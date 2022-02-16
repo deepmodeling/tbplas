@@ -7,6 +7,7 @@
 .. figure:: logo.png
     :alt: logo
     :align: center
+    :scale: 25%
 
 Welcome to the homepage of TBPLaS (**T**\ ight-**b**\ inding **P**\ ackage for **La**\ rge-scale
 **S**\ imulation) !

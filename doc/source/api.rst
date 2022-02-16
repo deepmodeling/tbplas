@@ -6,4 +6,5 @@ API Reference
 .. autosummary::
     :toctree: _api
 
+    PrimitiveCell
     Sample
