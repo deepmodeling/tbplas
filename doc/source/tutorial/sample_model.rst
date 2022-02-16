@@ -5,7 +5,7 @@ Build a sample
 
 In this tutorial we show how to build a sample using the Cython-based modeling tools. Cython tools
 are orders of magnitudes faster than their Python counterparts, and are designed for constructing
-large models with thousands or millions of orbitals. We demonstrate the usages of these tools by
+large models with millions or billions of orbitals. We demonstrate the usages of these tools by
 reproducing the models in :ref:`prim_complex`.
 
 Construct graphene nano-ribbon

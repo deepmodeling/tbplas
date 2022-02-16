@@ -15,7 +15,7 @@ Welcome to the homepage of TBPLaS (**T**\ ight-**b**\ inding **P**\ ackage for *
 As indicated by its name, TBPLaS is a package for building and solving tight-binding models, with
 emphasis on handling large systems. Thanks to the utilization of tight-binding propagation method
 (TBPM), sparse matrices, C/FORTRAN extensions, and hybrid OpenMP+MPI parallelization, TBPLaS is
-capable of solving models with millions of orbitals on computers with moderate hardware.
+capable of solving models with billions of orbitals on computers with moderate hardware.
 
 See :ref:`features` for a summary of the features, or have look at the :ref:`gallery` for demonstrations.
 If you are interested, try installing TBPLaS with the instructions at :doc:`install` and start learning
