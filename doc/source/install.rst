@@ -84,11 +84,13 @@ MPICH3 or newer is preferred. See the following links for installing
 `OpenMPI <https://www.open-mpi.org//faq/?category=building>`_,
 and `MPI4PY <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
 
-Getting the source code
------------------------
+.. _get_src:
 
-The source code is available at `<https://yuan.whu.edu.cn/tbplas/>`_. If you have downloading problems,
-send an e-mail to the development team :ref:`developers`.
+Get the source code
+-------------------
+
+The source code is available at `this link <https://yuan.whu.edu.cn/tbplas.tar.bz2>`_.
+If you have downloading problems, send an e-mail to the development team at :ref:`developers`.
 
 Configuration
 -------------
