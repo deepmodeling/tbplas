@@ -89,7 +89,7 @@ and `MPI4PY <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
 Get the source code
 -------------------
 
-The source code is available at `this link <https://yuan.whu.edu.cn/tbplas.tar.bz2>`_.
+The source code is available at `this link <attachments/tbplas.zip>`_.
 If you have downloading problems, send an e-mail to the development team at :ref:`developers`.
 
 Configuration
@@ -102,9 +102,9 @@ The configuration of compilation is stored in ``setup.cfg`` in the top directory
 Some examples are placed under ``config`` subdirectory. A common ``setyp.cfg`` consists of the following
 sections:
 
-    * config_cc: C compiler configuration
-    * config_fc: FORTRAN compiler configuration
-    * build_ext: external library configuration
+* config_cc: C compiler configuration
+* config_fc: FORTRAN compiler configuration
+* build_ext: external library configuration
   
 You should adjust these settings according to your computer's hardware and software environment.
 Here is an example using Intel compilers and built-in sparse matrix library:

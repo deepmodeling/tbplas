@@ -21,7 +21,7 @@ Current developers
 
   * School of Physics and Technology, Wuhan University
 
-  * E-mail: liyunhai1016@hotmail.com
+  * E-mail: liyunhai1016@whu.edu.cn
 
 * Mr. Xueheng Kuang
 
