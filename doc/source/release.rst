@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-v1.0 | 2022-01-10
+v1.0 | 2022-02-18
 -----------------
 
 First public release of TBPLaS.

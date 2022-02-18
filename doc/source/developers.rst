@@ -12,7 +12,7 @@ Supervisor
   
   * E-mail: s.yuan@whu.edu.cn
   
-  * Group homepage: `<yuan.whu.edu.cn>`_
+  * Group homepage: `<http://yuan.whu.edu.cn/>`_
 
 Current developers
 ------------------
@@ -22,6 +22,10 @@ Current developers
   * School of Physics and Technology, Wuhan University
 
   * E-mail: liyunhai1016@whu.edu.cn
+
+* Dr. Zhen Zhan
+  
+  * School of Physics and Technology, Wuhan University
 
 * Mr. Xueheng Kuang
 
