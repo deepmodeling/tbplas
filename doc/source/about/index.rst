@@ -18,11 +18,11 @@ The main features of TBPLaS include:
         * Band structure, density of states (DOS), wave functions, Lindhard functions
     * Tight-binding propagation method
         * DOS and local DOS
-        * AC and DC conductivity
+        * Optical (AC) and electronic (DC) conductivity
         * Polarizability and dielectric function
         * Quasi-eigenstates
     * Kernel polynomial method
-        * DC and Hall Conductivity
+        * Electronic (DC) and Hall Conductivity
     * Fields and strains
         * Homogeneous magnetic field via Peierls substitution
         * User-defined electric field and strain

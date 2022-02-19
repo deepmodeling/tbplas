@@ -126,8 +126,8 @@ The output is shown in panel (a) of the figure:
     :align: center
     :scale: 75%
 
-    Density of states (a), AC conductivity (b), dynamic polarizability (c) and DC conductivity (d)
-    of graphene sample.
+    Density of states (a), optical (AC) conductivity (b), dynamic polarizability (c) and electronic (DC)
+    conductivity (d) of graphene sample.
 
 
 More properties from TBPM
@@ -151,8 +151,8 @@ And re-generate ``solver`` and ``analyzer`` since ``config`` changes:
     solver = tb.Solver(sample, config)
     analyzer = tb.Analyzer(sample, config)
 
-Other properties, i.e., DC/AC conductivity, dynamic polarizability, can be obtained in the same way
-as DOS:
+Other properties, i.e., optical (AC)/electronic (DC) conductivity, dynamic polarizability, can be obtained
+in the same way as DOS:
 
 .. code-block:: python
 

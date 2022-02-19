@@ -410,7 +410,7 @@ class Solver(BaseSolver):
 
     def calc_corr_ac_cond(self):
         """
-        Calculate correlation function of AC conductivity.
+        Calculate correlation function of optical (AC) conductivity.
 
         :return: corr_ac: (4, nr_time_steps) complex128 array
             AC correlation function in 4 directions:
@@ -483,7 +483,7 @@ class Solver(BaseSolver):
 
     def calc_corr_dc_cond(self):
         """
-        Calculate correlation function of DC conductivity.
+        Calculate correlation function of electronic (DC) conductivity.
 
         :return: corr_dos: (nr_time_steps,) complex128 array
             DOS correlation function

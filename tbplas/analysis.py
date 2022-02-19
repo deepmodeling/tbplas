@@ -146,7 +146,7 @@ class Analyzer(BaseSolver):
 
     def calc_ac_cond(self, corr_ac, window=window_exp):
         """
-        Calculate AC conductivity from correlation function.
+        Calculate optical (AC) conductivity from correlation function.
 
         :param corr_ac: (4, nr_time_steps) complex128 array
             AC correlation function in 4 directions:
@@ -302,7 +302,7 @@ class Analyzer(BaseSolver):
     def calc_dc_cond(self, corr_dos, corr_dc, window_dos=window_hanning,
                      window_dc=window_exp):
         """
-        Calculate DC conductivity from its correlation function.
+        Calculate electronic (DC) conductivity from its correlation function.
 
         :param corr_dos: (nr_time_steps,) complex128 array
             DOS correlation function

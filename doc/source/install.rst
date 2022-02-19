@@ -212,7 +212,7 @@ or
 
     export PYTHONPATH=/home/foo/bar/lib/python3.8/site-packages/TBPLaS-0.9.8-py3.8-linux-x86_64.egg:$PYTHONPATH
 
-depending on yourpython environment. Anyway, the TBPLaS sub-directory must reside under the directory you add to
+depending on your python environment. Anyway, the TBPLaS sub-directory must reside under the directory you add to
 ``PYTHONPATH``. You can also add this command into your ``~/.bashrc`` to make it permanently effective, i.e.,
 you will not need to type it every time you log in or open a new terminal.
 
