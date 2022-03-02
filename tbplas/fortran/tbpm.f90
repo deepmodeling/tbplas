@@ -641,17 +641,11 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         ! ------------
         ! then, get dc conductivity
         ! ------------
-
+		
+		wf0_J(:, 1) = cur_csr_y * wf0
         ! iterate over energies
         DO i = 1, n_en_inds
-            ! some output
-            IF (MODULO(i, 8) == 0) THEN
-                if (rank == 0) PRINT *, "Getting DC conductivity for energy: ", &
-                        i, " of ", n_en_inds
-            END IF
-#ifdef DEBUG
-            WRITE(28, *) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
-#endif
+
 
             ! get corresponding quasi-eigenstate
             ! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
@@ -662,7 +656,7 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             ! wf0_J(2, :) = copy(wf0_J(1, :))
             ! wfE_J(1, :) = cur_csr_y * wfE
             ! wfE_J(2, :) = copy(wfE_J(1, :))
-            wf0_J(:, 1) = cur_csr_y * wf0
+            
             wf0_J(:, 2) = copy(wf0_J(:, 1))
             wfE_J(:, 1) = cur_csr_y * wfE
             wfE_J(:, 2) = copy(wfE_J(:, 1))
@@ -673,54 +667,59 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
             dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
-#ifdef DEBUG
-            ! write to file
-            WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
-                1, &
-                REAL(dc_corrval(1)), AIMAG(dc_corrval(1)), &
-                REAL(dc_corrval(2)), AIMAG(dc_corrval(2))
-#endif
-
             ! update correlation functions
             dc_corr(1, i, 1) = dc_corr(1, i, 1) + dc_corrval(1)/n_ran_samples
-            dc_corr(2, i, 1) = dc_corr(2, i, 1) + dc_corrval(2)/n_ran_samples
+            dc_corr(2, i, 1) = dc_corr(2, i, 1) + dc_corrval(2)/n_ran_samples			
+		END DO
+		
+		DO t = 2, n_timestep
+			! POSITIVE time evolution
+			wf0_J(:, 1) = cheb_wf_timestep(H_csr, Bes, wf0_J(:, 1), .true.)
+			DO i = 1, n_en_inds
+				! get corresponding quasi-eigenstate
+				! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
+				wfE(:) = wf_QE(:, i) .pDiv. ABS(inner_prod(wf0, wf_QE(:, i)))
 
-            ! iterate over time
-            ! We may also need to check the norm of wfE_J here.
-            DO t = 2, n_timestep
-                ! NEGATIVE time evolution of QE state
-                ! wfE_J(1, :) = cheb_wf_timestep(H_csr, Bes, wfE_J(1, :), .false.)
-                ! wfE_J(2, :) = cheb_wf_timestep(H_csr, Bes, wfE_J(2, :), .false.)
-                wfE_J(:, 1) = cheb_wf_timestep(H_csr, Bes, wfE_J(:, 1), .false.)
-                wfE_J(:, 2) = cheb_wf_timestep(H_csr, Bes, wfE_J(:, 2), .false.)
+				! make psi1, psi2
+				! wf0_J(1, :) = cur_csr_y * wf0
+				! wf0_J(2, :) = copy(wf0_J(1, :))
+				! wfE_J(1, :) = cur_csr_y * wfE
+				! wfE_J(2, :) = copy(wfE_J(1, :))
+				
+				wf0_J(:, 2) = copy(wf0_J(:, 1))
+				wfE_J(:, 1) = cur_csr_y * wfE
+				wfE_J(:, 2) = copy(wfE_J(:, 1))
+				
+				dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
+				dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
+				
+				
 
-                ! get correlation values
-                ! dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
-                ! dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
-                dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
-                dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
-
-#ifdef DEBUG
-                ! write to file
-                WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
-                    t, &
-                    REAL(dc_corrval(1)), AIMAG(dc_corrval(1)), &
-                    REAL(dc_corrval(2)), AIMAG(dc_corrval(2))
-#endif
-
-                ! update correlation functions
-                dc_corr(1,i,t) = dc_corr(1,i,t) + dc_corrval(1)/n_ran_samples
-                dc_corr(2,i,t) = dc_corr(2,i,t) + dc_corrval(2)/n_ran_samples
-            END DO
-        END DO
+				! update correlation functions
+				dc_corr(1, i, t) = dc_corr(1, i, t) + dc_corrval(1)/n_ran_samples
+				dc_corr(2, i, t) = dc_corr(2, i, t) + dc_corrval(2)/n_ran_samples
+			END DO
+		END DO						
     END DO
+	
+#ifdef DEBUG
+    ! write to file
+	DO i = 1, n_en_inds
+		WRITE(28, *) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
+		DO t = 2, n_timestep
+			WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
+				t, &
+				REAL(dc_corr(1, i, t)), AIMAG(dc_corr(1, i, t)), &
+				REAL(dc_corr(2, i, t)), AIMAG(dc_corr(2, i, t))
+		END DO
+	END DO
+#endif	
 
 #ifdef DEBUG
     CLOSE(27)
     CLOSE(28)
 #endif
 END SUBROUTINE tbpm_dccond
-
 
 ! Get quasi-eigenstates
 SUBROUTINE tbpm_eigenstates(Bes, n_Bes, s_indptr, n_indptr, &
