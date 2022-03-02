@@ -53,34 +53,33 @@ The main features of TBPLaS include:
 Gallery
 -------
 
-.. figure:: images/distortion.png
-    :alt: distortiong
+.. figure:: images/fractal.png
+    :alt: sierpinski carpet
     :align: center
     :scale: 45%
 
-    Graphene with distortion.
-
-.. figure:: images/tbg.png
-    :alt: tbg
-    :align: center
-    :scale: 38%
-
-    Twisted bilayer graphene.
+    Fractal
 
 .. figure:: images/quasi-crystal.png
     :alt: quasi-crystal
     :align: center
     :scale: 23%
 
-    Graphene quasi-crystal.
+    Quasicrystal
 
-.. figure:: images/fractal.png
-    :alt: sierpinski carpet
+.. figure:: images/tbg.png
+    :alt: tbg
+    :align: center
+    :scale: 38%
+
+    Moire's Pattern
+
+.. figure:: images/distortion.png
+    :alt: distortiong
     :align: center
     :scale: 45%
 
-    Sierpinski carpet generated with S=2, N=3, L=3.
-
+    Arbitrary Deformation
 
 Citation
 --------
