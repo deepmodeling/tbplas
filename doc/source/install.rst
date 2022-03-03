@@ -159,7 +159,7 @@ Workaround for undefined symbol error
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You may run into errors complaining about ``undefined symbol: GOMP_parallel`` when testing your build and
-installation. In that case, find the location of libgomp.so, for instance, ``/usr/lib64``. Add it to
+installation. In that case, find the location of ``libgomp.so``, for instance, ``/usr/lib64``. Add it to
 ``build_ext`` section of ``setup.cfg`` and re-compile TBPLaS. This issue will be solved.
 
 .. code-block:: cfg
@@ -168,6 +168,16 @@ installation. In that case, find the location of libgomp.so, for instance, ``/us
     [build_ext]                                                                                                                                                                             
     library_dirs = /usr/lib64
     libraries = gomp
+
+Similarily, if you run into errors of ``undefined symbol: __kmpc_ok_to_fork`` when using Intel compilers,
+search for ``libiomp5.so`` add its path to ``build_ext``. Then re-compile TBPLaS.
+
+.. code-block:: cfg
+    :emphasize-lines: 0
+
+    [build_ext]
+    library_dirs = /opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin
+    libraries = iomp5
 
 Compilation
 -----------
