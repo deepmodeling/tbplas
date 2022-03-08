@@ -152,7 +152,7 @@ Another example using GCC and built-in sparse matrix library:
     [config_fc]
     fcompiler = gfortran
     arch = -march=native
-    opt = -fopenmp -O3 -flto -mtune=native
+    opt = -fopenmp -O3 -mtune=native
     f90flags = -fno-second-underscore -cpp
 
 Workaround for undefined symbol error
