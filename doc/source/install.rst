@@ -179,6 +179,49 @@ search for ``libiomp5.so`` add its path to ``build_ext``. Then re-compile TBPLaS
     library_dirs = /opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin
     libraries = iomp5
 
+64-bit integer
+^^^^^^^^^^^^^^
+
+TBPLaS uses 32-bit integer by default, even if it has been compiled and installed on a 64-bit host. While the RAM
+usage is reduced in this approach, segmentation fault may be raised if the model is very large (billions of orbitals).
+In that case, the version with 64-bit integer should be used.
+
+To compile the 64-bit version, first goto ``tbplas/fortran`` directory and pre-process the FORTRAN source files by:
+
+.. code-block:: bash
+
+    cd tbplas/fortran
+    ../../scripts/set_int.py
+
+Then add appropriate compilation flags to ``f90flags``. For ifort it should be ``-i8``:
+
+.. code-block:: cfg
+
+    [config_cc]                                                                                                                                                                             
+    compiler = intelem
+
+    [config_fc]
+    fcompiler = intelem
+    arch = -xHost
+    opt = -qopenmp -O3 -ipo -heap-arrays 32
+    f90flags = -fpp -i8
+
+
+while for gfortran it should be ``-fdefault-integer-8``:
+
+.. code-block:: cfg
+
+    [config_cc]
+    compiler = unix
+
+    [config_fc]
+    fcompiler = gfortran
+    arch = -march=native
+    opt = -fopenmp -O3 -mtune=native
+    f90flags = -fno-second-underscore -cpp -fdefault-integer-8
+
+Also, note that MKL does not work with 64-bit integer.
+
 Compilation
 -----------
 Once ``setup.cfg`` has been properly configured, you can build TBPLaS with this command: ``python setup.py build``.
