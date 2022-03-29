@@ -19,7 +19,7 @@ import scipy.linalg.lapack as spla
 from scipy.signal import hilbert
 
 from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
-                      frac2cart, cart2frac, NM, KB, BOHR2NM, HAR2EV)
+                      frac2cart, cart2frac, NM, KB, BOHR2NM)
 from .fortran import f2py
 import tbplas.builder.core as core
 
@@ -34,9 +34,9 @@ class Lindhard:
         primitive cell under investigation
     omegas: (num_omega,) float64 array
         energies in eV for which properties will be evaluated
-    kmesh_size: (nk_a, nk_b, nk_c)
+    kmesh_size: (3,) int64 array
         dimension of mesh grid in 1st Brillouin zone
-    kmesh_grid: list of (ik_a, ik_n, ik_c)
+    kmesh_grid: (num_kpt, 3) int64 array
         grid coordinates of k-points on mesh grid
     mu: float
         chemical potential in eV
@@ -53,7 +53,7 @@ class Lindhard:
 
     NOTES
     -----
-    1. Unit system
+    1. Units
 
     Lindhard class uses eV for energies, elementary charge of electron for
     charges and nm for lengths. So the unit for dynamic polarization is
@@ -114,11 +114,8 @@ class Lindhard:
         self.cell.lock()
         self.cell.sync_array()
         self.omegas = np.linspace(0, energy_max, energy_step+1)
-        self.kmesh_size = kmesh_size
-        self.kmesh_grid = [(ka, kb, kc)
-                           for ka in range(self.kmesh_size[0])
-                           for kb in range(self.kmesh_size[1])
-                           for kc in range(self.kmesh_size[2])]
+        self.kmesh_size = np.array(kmesh_size, dtype=np.int64)
+        self.kmesh_grid = core.build_kmesh_grid(self.kmesh_size)
         self.mu = mu
         self.beta = 1 / (KB * temperature)
         self.g_s = g_s
@@ -127,39 +124,45 @@ class Lindhard:
         self.delta = delta
 
     @staticmethod
-    def _wrap_k_frac(k_points: np.ndarray):
+    def wrap_frac(k_points: np.ndarray):
         """
-        Wrap k-points back into 1st Brillouin zone.
+        Wrap fractional coordinates of k-points back into 1st Brillouin zone.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
-        :return: k_points: (num_kpt, 3) float64 array
-            FRACTIONAL coordinates of wrapped k_points
+        :return: k_wrap: (num_kpt, 3) float64 array
+            wrapped FRACTIONAL coordinates of k-points
         """
-        for i_k in range(k_points.shape[0]):
+        if not isinstance(k_points, np.ndarray):
+            k_points = np.array(k_points, dtype=np.float64)
+        k_wrap = k_points.copy()
+        for i_k in range(k_wrap.shape[0]):
             for i_dim in range(3):
-                k = k_points.item(i_k, i_dim)
+                k = k_wrap.item(i_k, i_dim)
                 while k < 0.0:
                     k += 1.0
                 while k >= 1.0:
                     k -= 1.0
-                k_points[i_k, i_dim] = k
-        return k_points
+                k_wrap[i_k, i_dim] = k
+        return k_wrap
 
-    def _wrap_k_grid(self, k_points):
+    def wrap_grid(self, k_points: np.ndarray):
         """
-        Wrap k-points back into 1st Brillouin zone.
+        Wrap grid coordinates of k-points back into 1st Brillouin zone.
 
-        :param k_points: list of (ik_a, ik_b, ik_c)
+        :param k_points: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :return: k_points: list of (ik_a, ik_b, ik_c)
-            GRID coordinates of wrapped k_points
+        :return: k_wrap: (num_kpt, 3) int64 array
+            wrapped GRID coordinates of k-points
         """
-        k_points = [(ka % self.kmesh_size[0],
-                     kb % self.kmesh_size[1],
-                     kc % self.kmesh_size[2])
-                    for (ka, kb, kc) in k_points]
-        return k_points
+        if not isinstance(k_points, np.ndarray):
+            k_points = np.array(k_points, dtype=np.int64)
+        k_wrap = k_points.copy()
+        for i_k in range(k_wrap.shape[0]):
+            for i_dim in range(3):
+                k = k_wrap.item(i_k, i_dim)
+                k_wrap[i_k, i_dim] = k % self.kmesh_size.item(i_dim)
+        return k_wrap
 
     def frac2cart(self, frac_coord: np.ndarray, unit=NM):
         """
@@ -173,6 +176,8 @@ class Lindhard:
         :return: cart_coord: (num_kpt, 3) float64 array
             CARTESIAN coordinates of k-points in 1/unit
         """
+        if not isinstance(frac_coord, np.ndarray):
+            frac_coord = np.array(frac_coord, dtype=np.float64)
         recip_lat_vec = gen_reciprocal_vectors(self.cell.lat_vec)
         cart_coord_nm = frac2cart(recip_lat_vec, frac_coord)
         cart_coord = cart_coord_nm * unit
@@ -190,48 +195,44 @@ class Lindhard:
         :return: frac_coord: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
         """
+        if not isinstance(cart_coord, np.ndarray):
+            cart_coord = np.array(cart_coord, dtype=np.float64)
         recip_lat_vec = gen_reciprocal_vectors(self.cell.lat_vec)
         cart_coord_nm = cart_coord / unit
         frac_coord = cart2frac(recip_lat_vec, cart_coord_nm)
         return frac_coord
 
-    def grid2frac(self, grid_coord, wrap=True):
+    def grid2frac(self, grid_coord: np.ndarray):
         """
         Convert GRID coordinates of k-points to FRACTIONAL coordinates.
 
-        :param grid_coord: list of (ik_a, ik_b, ik_c)
+        :param grid_coord: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :param wrap: boolean
-            whether to wrap k-points if they fall out of 1st
-            Brillouin zone
         :return: frac_coord: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
         """
-        if wrap:
-            grid_coord = self._wrap_k_grid(grid_coord)
-        frac_coord = [(ka / self.kmesh_size[0],
-                       kb / self.kmesh_size[1],
-                       kc / self.kmesh_size[2])
-                      for (ka, kb, kc) in grid_coord]
-        frac_coord = np.array(frac_coord, dtype=np.float64)
+        if not isinstance(grid_coord, np.ndarray):
+            grid_coord = np.array(grid_coord, dtype=np.int64)
+        frac_coord = np.array(grid_coord, dtype=np.float64)
+        for i_dim in range(3):
+            frac_coord[:, i_dim] /= self.kmesh_size.item(i_dim)
         return frac_coord
 
-    def grid2cart(self, grid_coord, wrap=True, unit=NM):
+    def grid2cart(self, grid_coord: np.ndarray, unit=NM):
         """
         Convert GRID coordinates of k-points to CARTESIAN coordinates in
         1/unit.
 
-        :param grid_coord: list of (ik_a, ik_b, ik_c)
+        :param grid_coord: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :param wrap: boolean
-            whether to wrap k-points if they fall out of 1st
-            Brillouin zone
         :param unit: float
             scaling factor from unit to NANOMETER, e.g. unit=0.1 for ANGSTROM
         :return: cart_coord: (num_kpt, 3) float64 array
             CARTESIAN coordinates of k-points in 1/unit
         """
-        frac_coord = self.grid2frac(grid_coord, wrap=wrap)
+        if not isinstance(grid_coord, np.ndarray):
+            grid_coord = np.array(grid_coord, dtype=np.int64)
+        frac_coord = self.grid2frac(grid_coord)
         cart_coord = self.frac2cart(frac_coord, unit=unit)
         return cart_coord
 
@@ -272,25 +273,6 @@ class Lindhard:
             states[i_k] = eigenstates.T
         return bands, states
 
-    def _gen_kq_map(self, q_point):
-        """
-        Map k-points on k+q grid to k-grid.
-
-        :param q_point: (iq_a, iq_b, iq_c)
-            GRID coordinate of q-point
-        :return: kq_map: int64 array
-            map of k-points on k+q grid to k-grid, e.g.  kq_map[0] = 3 means
-            the 0th k-point on k+q grid is the 3rd k-point on k grid.
-        """
-        kq_map = []
-        for k_point in self.kmesh_grid:
-            kq_a = (k_point[0] + q_point[0]) % self.kmesh_size[0]
-            kq_b = (k_point[1] + q_point[1]) % self.kmesh_size[1]
-            kq_c = (k_point[2] + q_point[2]) % self.kmesh_size[2]
-            kq_map.append(self.kmesh_grid.index((kq_a, kq_b, kq_c)))
-        kq_map = np.array(kq_map, dtype=np.int64)
-        return kq_map
-
     def _get_dnk(self):
         """
         Get elementary area/volume in reciprocal space depending on system
@@ -302,7 +284,7 @@ class Lindhard:
         """
         g_vec = gen_reciprocal_vectors(self.cell.lat_vec)
         for i_dim in range(3):
-            g_vec[i_dim] /= self.kmesh_size[i_dim]
+            g_vec[i_dim] /= self.kmesh_size.item(i_dim)
         if self.dimension == 2:
             dnk = np.linalg.norm(np.cross(g_vec[0], g_vec[1]))
         elif self.dimension == 3:
@@ -324,11 +306,11 @@ class Lindhard:
         dyn_pol_factor = self.g_s * dnk / (2 * math.pi)**self.dimension
         return dyn_pol_factor
 
-    def calc_dyn_pol_regular(self, q_points, use_fortran=True):
+    def calc_dyn_pol_regular(self, q_points: np.ndarray, use_fortran=True):
         """
         Calculate dynamic polarizability for regular q-points on k-mesh.
 
-        :param q_points: list of (iq_a, iq_b, iq_c)
+        :param q_points: (num_qpt, 3) int64 array
             GRID coordinates of q-points
         :param use_fortran: boolean
             whether to use FORTRAN backend, set to False to enable cython
@@ -340,6 +322,8 @@ class Lindhard:
         :raises NotImplementedError: if system dimension is not 2 or 3
         """
         # Prepare q-points and orbital positions
+        if not isinstance(q_points, np.ndarray):
+            q_points = np.array(q_points, dtype=np.int64)
         q_points_cart = self.grid2cart(q_points, unit=NM)
         orb_pos = self.cell.orb_pos_nm
 
@@ -362,7 +346,8 @@ class Lindhard:
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
             # Remap k+q to k
-            kq_map = self._gen_kq_map(q_point)
+            kq_map = core.build_kq_map(self.kmesh_size, self.kmesh_grid,
+                                       q_point)
 
             # Evaluate dyn_pol for this q-point
             # FORTRAN array indices begin from 1. So we need to increase
@@ -387,11 +372,11 @@ class Lindhard:
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
 
-    def calc_dyn_pol_arbitrary(self, q_points, use_fortran=True):
+    def calc_dyn_pol_arbitrary(self, q_points: np.ndarray, use_fortran=True):
         """
         Calculate dynamic polarizability for arbitrary q-points.
 
-        :param q_points: list of (q_x, q_y, q_z)
+        :param q_points: (num_qpt, 3) float64 array
             CARTESIAN coordinates of q-points in 1/NM
         :param use_fortran: boolean
             whether to use FORTRAN backend, set to False to enable cython
@@ -403,7 +388,8 @@ class Lindhard:
         :raises NotImplementedError: if system dimension is not 2 or 3
         """
         # Prepare q-points and orbital positions
-        q_points = np.array(q_points, dtype=np.float64)
+        if not isinstance(q_points, np.ndarray):
+            q_points = np.array(q_points, dtype=np.float64)
         q_points_frac = self.cart2frac(q_points, unit=NM)
         orb_pos = self.cell.orb_pos_nm
 
@@ -503,11 +489,11 @@ class Lindhard:
             epsilon[i_q] = 1.0 - v_q * dyn_pol[i_q]
         return epsilon
 
-    def calc_epsilon_regular(self, q_points, use_fortran=True):
+    def calc_epsilon_regular(self, q_points: np.ndarray, use_fortran=True):
         """
         Calculate dielectric function (eps_r) for regular q-points on k-mesh.
 
-        :param q_points: list of (iq_a, iq_b, iq_c)
+        :param q_points: (num_qpt, 3) int64 array
             GRID coordinates of q-points
         :param use_fortran: boolean
             whether to use FORTRAN backend, set to False to enable cython
@@ -518,16 +504,18 @@ class Lindhard:
             relative dielectric function
         :raises NotImplementedError: if system dimension is not 2 or 3
         """
+        if not isinstance(q_points, np.ndarray):
+            q_points = np.array(q_points, dtype=np.int64)
         omegas, dyn_pol = self.calc_dyn_pol_regular(q_points, use_fortran)
         q_points_nm = self.grid2cart(q_points, unit=NM)
         epsilon = self._calc_epsilon(q_points_nm, dyn_pol)
         return omegas, epsilon
 
-    def calc_epsilon_arbitrary(self, q_points, use_fortran=True):
+    def calc_epsilon_arbitrary(self, q_points: np.ndarray, use_fortran=True):
         """
         Calculate dielectric function (eps_r) for arbitrary q-points.
 
-        :param q_points: list of (q_x, q_y, q_z)
+        :param q_points: (num_qpt, 3) float64 array
             CARTESIAN coordinates of q-points in 1/NM
         :param use_fortran: boolean
             whether to use FORTRAN backend, set to False to enable cython
@@ -538,6 +526,8 @@ class Lindhard:
             relative dielectric function
         :raises NotImplementedError: if system dimension is not 2 or 3
         """
+        if not isinstance(q_points, np.ndarray):
+            q_points = np.array(q_points, dtype=np.float64)
         omegas, dyn_pol = self.calc_dyn_pol_arbitrary(q_points, use_fortran)
         epsilon = self._calc_epsilon(q_points, dyn_pol)
         return omegas, epsilon
@@ -545,6 +535,10 @@ class Lindhard:
     def calc_ac_cond_prb(self):
         """
         Calculate AC conductivity.
+
+        CAUTION: The unit of output of this method is ambiguous. DO NOT use
+        this method to calculate AC conductivity. Use 'calc_ac_cond_kg'
+        instead.
 
         Reference:
         https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.155411
@@ -623,6 +617,7 @@ class Lindhard:
         Calculate AC conductivity using Kubo-Greenwood formula.
 
         Reference: section 12.2 of Wannier90 user guide.
+        NOTE: there is not such g_s factor in the reference.
 
         :return: omegas: (num_omega,) float64 array
             energies in eV
@@ -675,12 +670,13 @@ class Lindhard:
                             self.delta, ac_cond)
 
         # Multiply prefactor
+        # NOTE: there is not such g_s factor in the reference.
         if self.dimension == 2:
             area = self.cell.get_lattice_area("c")
-            prefactor = 1j / (area * len(self.kmesh_grid))
+            prefactor = self.g_s * 1j / (area * len(self.kmesh_grid))
         elif self.dimension == 3:
             volume = self.cell.get_lattice_volume()
-            prefactor = 1j / (volume * len(self.kmesh_grid))
+            prefactor = self.g_s * 1j / (volume * len(self.kmesh_grid))
         else:
             raise NotImplementedError(f"Dimension {self.dimension} not "
                                       f"implemented")

@@ -32,14 +32,11 @@ class TestLindhard(unittest.TestCase):
         th = TestHelper(self)
         omegas = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0,
                            10.0])
-        kmesh_grid = [(0, 0, 0), (0, 0, 1),
-                      (0, 1, 0), (0, 1, 1),
-                      (0, 2, 0), (0, 2, 1),
-                      (1, 0, 0), (1, 0, 1),
-                      (1, 1, 0), (1, 1, 1),
-                      (1, 2, 0), (1, 2, 1)]
+        kmesh_grid = np.array([
+            (0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (0, 2, 0), (0, 2, 1),
+            (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1), (1, 2, 0), (1, 2, 1)])
         th.test_equal_array(omegas, lindhard.omegas)
-        self.assertListEqual(kmesh_grid, lindhard.kmesh_grid)
+        th.test_equal_array(kmesh_grid, lindhard.kmesh_grid)
 
     def test_grid_conversion(self):
         """
@@ -53,43 +50,35 @@ class TestLindhard(unittest.TestCase):
         lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
                                kmesh_size=kmesh_size)
 
-        def _test(wrap):
-            # Test grid2frac
-            frac_coord_test = lindhard.grid2frac(grid_coord, wrap=wrap)
+        def _test_grid2frac():
+            frac_coord_test = lindhard.grid2frac(grid_coord)
             th.test_equal_array(frac_coord_ref, frac_coord_test)
 
-            # Test grid2cart in nm
+        def _test_grid2cart_nm():
             recip_lattice = tb.gen_reciprocal_vectors(prim_cell.lat_vec)
             cart_coord_nm_ref = tb.frac2cart(recip_lattice, frac_coord_ref)
-            cart_coord_nm_test = lindhard.grid2cart(grid_coord, wrap=wrap,
-                                                    unit=tb.NM)
+            cart_coord_nm_test = lindhard.grid2cart(grid_coord, unit=tb.NM)
             th.test_equal_array(cart_coord_nm_ref, cart_coord_nm_test)
 
-            # Test grid2cart in ang
+        def _test_grid2cart_ang():
             recip_lattice = tb.gen_reciprocal_vectors(prim_cell.lat_vec * 10)
             cart_coord_ang_ref = tb.frac2cart(recip_lattice, frac_coord_ref)
-            cart_coord_ang_test = lindhard.grid2cart(grid_coord, wrap=wrap,
-                                                     unit=tb.ANG)
+            cart_coord_ang_test = lindhard.grid2cart(grid_coord, unit=tb.ANG)
             th.test_equal_array(cart_coord_ang_ref, cart_coord_ang_test)
 
-        # Test grid2frac with wrap=True
+        # Test with wrap=True
         th = TestHelper(self)
-        grid_coord = [(0, 0, 0), (1, 1, 0), (5, 0, 1),
-                      (1, 3, 2), (2, 3, 3), (1, 1, 1)]
-        frac_coord_ref = np.array([
-            [0/5, 0/3, 0/2], [1/5, 1/3, 0/2], [0/5, 0/3, 1/2],
-            [1/5, 0/3, 0/2], [2/5, 0/3, 1/2], [1/5, 1/3, 1/2],
-        ])
-        _test(wrap=True)
-
-        # Test grid2frac with wrap=False
+        grid_coord = np.array([(0, 0, 0), (1, 1, 0), (5, 0, 1),
+                               (1, 3, 2), (2, 3, 3), (1, 1, 1)])
         frac_coord_ref = np.array([
             [0/5, 0/3, 0/2], [1/5, 1/3, 0/2], [5/5, 0/3, 1/2],
             [1/5, 3/3, 2/2], [2/5, 3/3, 3/2], [1/5, 1/3, 1/2],
         ])
-        _test(wrap=False)
+        _test_grid2frac()
+        _test_grid2cart_nm()
+        _test_grid2cart_ang()
 
-    def test_coord_conversion(self):
+    def test_cart_frac_conversion(self):
         """
         Test frac2cart and cart2frac.
 
@@ -167,14 +156,31 @@ class TestLindhard(unittest.TestCase):
         kmesh_size = (2, 3, 2)
         lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
                                kmesh_size=kmesh_size)
-        kq_map_test = list(lindhard._gen_kq_map((3, 1, 2)))
-        kq_map_ref = [8, 9, 10, 11, 6, 7, 2, 3, 4, 5, 0, 1]
-        self.assertListEqual(kq_map_ref, kq_map_test)
 
-    def test_reg_arb(self):
+        th = TestHelper(self)
+        q_point = np.array([3, 1, 2], dtype=np.int64)
+        kq_map_test = core.build_kq_map(lindhard.kmesh_size,
+                                        lindhard.kmesh_grid, q_point)
+
+        # Hand-crafted reference
+        kq_map_ref = np.array([8, 9, 10, 11, 6, 7, 2, 3, 4, 5, 0, 1])
+        th.test_equal_array(kq_map_ref, kq_map_test)
+
+        # Auto-generated reference
+        kq_map_ref = []
+        k_mesh_grid = [tuple(row) for row in lindhard.kmesh_grid]
+        for k_point in k_mesh_grid:
+            kq_a = (k_point[0] + q_point[0]) % kmesh_size[0]
+            kq_b = (k_point[1] + q_point[1]) % kmesh_size[1]
+            kq_c = (k_point[2] + q_point[2]) % kmesh_size[2]
+            kq_map_ref.append(k_mesh_grid.index((kq_a, kq_b, kq_c)))
+        kq_map_ref = np.array(kq_map_ref, dtype=np.int64)
+        th.test_equal_array(kq_map_ref, kq_map_test)
+
+    def test_eigen_remap(self):
         """
-        Check if the energies and wave functions are consistent for regular
-        and arbitrary q-point.
+        Check if the energies and wave functions are correctly remapped for
+        dyn_pol_regular.
 
         :return: None
         """
@@ -184,24 +190,21 @@ class TestLindhard(unittest.TestCase):
                                kmesh_size=kmesh_size)
 
         # Get k-grid and k+q grid
-        q_point = (2, 3, 1)
+        q_point = np.array([2, 3, 0], dtype=np.int64)
         k_grid = lindhard.kmesh_grid
-        kq_grid = [(k[0]+q_point[0], k[1]+q_point[1], k[2]+q_point[2])
-                   for k in k_grid]
+        kq_grid = q_point + k_grid
+        k_frac = lindhard.grid2frac(k_grid)
+        kq_frac = lindhard.grid2frac(kq_grid)
 
-        # Evaluate energies and wave functions
-        k_mesh_frac = lindhard.grid2frac(k_grid)
-        kq_grid_frac = lindhard.grid2frac(kq_grid)
-        bands_k, states_k = lindhard._get_eigen_states(k_mesh_frac,
-                                                       convention=2)
-        bands_kq, states_kq = lindhard._get_eigen_states(kq_grid_frac,
-                                                         convention=2)
+        # Get energies and wave functions
+        bands_k, states_k = lindhard._get_eigen_states(k_frac, convention=2)
+        band_kq, states_kq = lindhard._get_eigen_states(kq_frac, convention=2)
 
-        # Check remap
+        # Compare results
+        kq_map = core.build_kq_map(lindhard.kmesh_size, lindhard.kmesh_grid,
+                                   q_point)
         th = TestHelper(self)
-        kq_map = lindhard._gen_kq_map(q_point)
-        th.test_equal_array(bands_k[kq_map], bands_kq)
-        th.test_equal_array(states_k[kq_map], states_kq)
+        th.test_equal_array(bands_k[kq_map], band_kq, almost=True)
 
     def test_dyn_pol_consistency(self):
         """
@@ -217,7 +220,7 @@ class TestLindhard(unittest.TestCase):
         temp = 300
         back_epsilon = 1
         mesh_size = (120, 120, 1)
-        q_points_grid = [(100, 100, 0)]
+        q_points_grid = np.array([[100, 100, 0]], dtype=np.int64)
         q_points_cart = np.array([[21.28450307, 12.28861358, 0.]])
         th = TestHelper(self)
 
@@ -226,26 +229,26 @@ class TestLindhard(unittest.TestCase):
                                mu=mu, temperature=temp,
                                back_epsilon=back_epsilon)
 
-        # Test calc_dyn_pol_regular
-        dyn_pol_ref = lindhard.calc_dyn_pol_regular(q_points_grid,
-                                                    use_fortran=False)[1]
-        dyn_pol_test = lindhard.calc_dyn_pol_regular(q_points_grid,
-                                                     use_fortran=True)[1]
-        th.test_equal_array(dyn_pol_ref, dyn_pol_test, almost=True)
+        # Test regular algorithm of cython and fortran versions
+        dyn_pol_c = lindhard.calc_dyn_pol_regular(q_points_grid,
+                                                  use_fortran=False)[1]
+        dyn_pol_f = lindhard.calc_dyn_pol_regular(q_points_grid,
+                                                  use_fortran=True)[1]
+        th.test_equal_array(dyn_pol_c, dyn_pol_f, almost=True)
 
-        # Test calc_dyn_pol_arb
-        dyn_pol_ref = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
-                                                      use_fortran=True)[1]
-        dyn_pol_test = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
-                                                       use_fortran=True)[1]
-        th.test_equal_array(dyn_pol_ref, dyn_pol_test, almost=True)
+        # Test arbitrary algorithm of cython and fortran versions
+        dyn_pol_c = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                    use_fortran=False)[1]
+        dyn_pol_f = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                    use_fortran=True)[1]
+        th.test_equal_array(dyn_pol_c, dyn_pol_f, almost=True)
 
         # Test regular and arbitrary algorithms
-        dyn_pol_ref = lindhard.calc_dyn_pol_regular(q_points_grid,
+        dyn_pol_reg = lindhard.calc_dyn_pol_regular(q_points_grid,
                                                     use_fortran=True)[1]
-        dyn_pol_test = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
-                                                       use_fortran=True)[1]
-        diff = np.sum(np.abs(dyn_pol_ref - dyn_pol_test)).item(0)
+        dyn_pol_arb = lindhard.calc_dyn_pol_arbitrary(q_points_cart,
+                                                      use_fortran=True)[1]
+        diff = np.sum(np.abs(dyn_pol_reg - dyn_pol_arb)).item(0)
         self.assertAlmostEqual(diff, 0.0, delta=1e-3)
 
     def test_dyn_pol_prb(self):
@@ -286,7 +289,7 @@ class TestLindhard(unittest.TestCase):
         omegas, dyn_pol = lindhard.calc_dyn_pol_arbitrary(q_points, use_fortran)
         for i in range(len(q_points)):
             plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
-        plt.savefig("lindhard_im_dyn_pol.png")
+        plt.savefig("dyn_pol.png")
         plt.close()
 
     def test_epsilon_consistency(self):
@@ -302,7 +305,7 @@ class TestLindhard(unittest.TestCase):
         temp = 300
         back_epsilon = 1
         mesh_size = (120, 120, 1)
-        q_points_grid = [(100, 100, 0)]
+        q_points_grid = np.array([[100, 100, 0]], dtype=np.int64)
         q_points_cart = np.array([[21.28450307, 12.28861358, 0.]])
 
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
@@ -355,6 +358,34 @@ class TestLindhard(unittest.TestCase):
             plt.plot(omegas, epsilon[i].real, color="r")
         plt.minorticks_on()
         plt.savefig("epsilon.png")
+        plt.close()
+
+    def test_ac_cond(self):
+        """
+        Calculate the AC conductivity of monolayer graphene.
+
+        :return: None
+        """
+        cell = tb.make_graphene_diamond()
+
+        energy_max = 10
+        energy_step = 2048
+        mu = 0.0
+        temp = 300
+        back_epsilon = 1.0
+        mesh_size = (2048, 2048, 1)
+
+        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
+                               energy_step=energy_step, kmesh_size=mesh_size,
+                               mu=mu, temperature=temp,
+                               back_epsilon=back_epsilon, delta=0.005, g_s=2)
+
+        omegas, ac_cond = lindhard.calc_ac_cond_kg()
+        omegas /= 2.7
+
+        plt.plot(omegas, ac_cond.real, color="r")
+        plt.minorticks_on()
+        plt.savefig("sigma_xx.png")
         plt.close()
 
 

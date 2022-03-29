@@ -2014,6 +2014,76 @@ def test_speed_sc2pc(int [:,::1] orb_id_pc):
         id_pc = orb_id_pc[id_sc]
 
 
+#-------------------------------------------------------------------------------
+#                            Functions for lindhard                            
+#-------------------------------------------------------------------------------
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_kmesh_grid(long [::1] kmesh_size):
+    """
+    Build the 'kmesh_grid' attribute of 'Lindhard' class.
+
+    Parameters
+    ----------
+    kmesh_size: (3,) int64 array
+        dimension of kmesh
+
+    Returns
+    -------
+    kmesh_grid: (num_kpt, 3) int64 array
+        grid coordinates of k-points on kmesh
+    """
+    cdef long num_kpt, ka, kb, kc, ptr
+    cdef long [:,::1] kmesh_grid
+
+    num_kpt = np.prod(kmesh_size)
+    kmesh_grid = np.zeros((num_kpt, 3), dtype=np.int64)
+    ptr = 0
+
+    for ka in range(kmesh_size[0]):
+        for kb in range(kmesh_size[1]):
+            for kc in range(kmesh_size[2]):
+                kmesh_grid[ptr, 0] = ka
+                kmesh_grid[ptr, 1] = kb
+                kmesh_grid[ptr, 2] = kc
+                ptr += 1
+    return np.asarray(kmesh_grid)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_kq_map(long [::1] kmesh_size, long [:,::1] kmesh_grid,
+                 long [::1] q_point):
+    """
+    Remap k-points on k+q mesh to kmesh.
+
+    Parameters
+    ----------
+    kmesh_size: (3,) int64 array
+        dimension of kmesh
+    kmesh_grid: (num_kpt, 3) int64 array
+        grid coordinates of k-points on kmesh
+    q_point: (3,) int64 array
+        grid coordinate of q-point
+
+    Returns
+    -------
+    kq_map: (num_kpt,) int64 array
+        indices of k+q points in kmesh
+    """
+    cdef long num_kpt, ik, ka, kb, kc
+    cdef long [::1] kq_map
+    
+    num_kpt = kmesh_grid.shape[0]
+    kq_map = np.zeros(num_kpt, dtype=np.int64)
+    for ik in range(num_kpt):
+        ka = (q_point[0] + kmesh_grid[ik, 0]) % kmesh_size[0]
+        kb = (q_point[1] + kmesh_grid[ik, 1]) % kmesh_size[1]
+        kc = (q_point[2] + kmesh_grid[ik, 2]) % kmesh_size[2]
+        kq_map[ik] = ka * kmesh_size[1] * kmesh_size[2] + kb * kmesh_size[2] + kc
+    return np.asarray(kq_map)
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
