@@ -23,7 +23,7 @@ SUBROUTINE fft1d_inplace(x, sgn)
     INTEGER, INTENT(IN) :: sgn
 #ifdef FFTW
     ! declare vars
-    INTEGER(KIND=8) :: plan
+    INTEGER :: plan
 
     CALL dfftw_plan_dft_1d(plan, SIZE(x), x, x, sgn, FFTW_FLAG)
     CALL dfftw_execute_dft(plan, x, x)

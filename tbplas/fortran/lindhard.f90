@@ -171,7 +171,7 @@ subroutine ac_cond_real(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
     real(kind=8), intent(in) :: eng(num_orb, num_kpt)
     integer, intent(in) :: num_orb, num_kpt
     complex(kind=8), intent(in) :: wfn(num_orb, num_orb, num_kpt)
-    integer(kind=4), intent(in) :: hop_ind(2, num_hop)
+    integer, intent(in) :: hop_ind(2, num_hop)
     integer, intent(in) :: num_hop
     complex(kind=8), intent(in) :: hop_eng(num_hop)
     real(kind=8), intent(in) :: hop_dr(3, num_hop)
@@ -262,7 +262,7 @@ subroutine ac_cond_kg(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
     real(kind=8), intent(in) :: eng(num_orb, num_kpt)
     integer, intent(in) :: num_orb, num_kpt
     complex(kind=8), intent(in) :: wfn(num_orb, num_orb, num_kpt)
-    integer(kind=4), intent(in) :: hop_ind(2, num_hop)
+    integer, intent(in) :: hop_ind(2, num_hop)
     integer, intent(in) :: num_hop
     complex(kind=8), intent(in) :: hop_eng(num_hop)
     real(kind=8), intent(in) :: hop_dr(3, num_hop)
