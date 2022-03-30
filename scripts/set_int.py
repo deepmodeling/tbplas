@@ -4,10 +4,10 @@ import glob
 
 
 def convert_int(src):
-    patterns = [re.compile(r"^[\t ]*INTEGER[ ]*\:\:"),
-                re.compile(r"^[\t ]*INTEGER[ ]*\,"),
-                re.compile(r"^[\t ]*integer[ ]*\:\:"),
-                re.compile(r"^[\t ]*integer[ ]*\,")]
+    patterns = [re.compile(r"^[\t ]*INTEGER[ ]*::"),
+                re.compile(r"^[\t ]*INTEGER[ ]*,"),
+                re.compile(r"^[\t ]*integer[ ]*::"),
+                re.compile(r"^[\t ]*integer[ ]*,")]
 
     with open(src, "r") as src_file:
         content = src_file.readlines()
