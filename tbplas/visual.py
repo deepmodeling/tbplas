@@ -183,7 +183,7 @@ class Visualizer:
 
             # make plot
             fig, ax = plt.subplots()
-            sc = ax.scatter(x, y, c=z, s=site_size, edgecolor='')
+            sc = ax.scatter(x, y, c=z, s=site_size)
             plt.axis('equal')
             plt.axis('off')
             if with_colorbar:
