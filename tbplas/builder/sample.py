@@ -313,23 +313,23 @@ class Sample:
 
     Attributes
     ----------
-    _sc_list: list of 'SuperCell' instances
+    sc_list: list of 'SuperCell' instances
         list of supercells within the sample
-    _hop_list: list of 'IntraHopping' instances
+    hop_list: list of 'IntraHopping' instances
         list of inter-hopping sets between supercells within the sample
-    _orb_eng: (num_orb_sc,) float64 array
+    orb_eng: (num_orb_sc,) float64 array
         on-site energies of orbitals in the super cell in eV
-    _orb_pos: (num_orb_sc, 3) float64 array
+    orb_pos: (num_orb_sc, 3) float64 array
         Cartesian coordinates of orbitals in the super cell in nm
-    _hop_i: (num_hop_sc,) int64 array
+    hop_i: (num_hop_sc,) int64 array
         row indices of hopping terms reduced by conjugate relation
-    _hop_j: (num_hop_sc,) int64 array
+    hop_j: (num_hop_sc,) int64 array
         column indices of hopping terms reduced by conjugate relation
-    _hop_v: (num_hop_sc,) complex128 array
+    hop_v: (num_hop_sc,) complex128 array
         energies of hopping terms in accordance with hop_i and hop_j in eV
-    _dr: (num_hop_sc, 3) float64 array
+    dr: (num_hop_sc, 3) float64 array
         distances of hopping terms in accordance with hop_i and hop_j in nm
-    _rescale: float
+    rescale: float
         rescaling factor for the Hamiltonian
         reserved for compatibility with old version of TBPlaS
 
