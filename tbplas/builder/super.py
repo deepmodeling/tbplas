@@ -442,10 +442,10 @@ class IntraHopping(LockableObject):
 
     Attributes
     ----------
-    _indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
+    indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
         where (ia, ib, ic, io) is the index of bra in primitive cell
         representation and (ia', ib', ic', io') is the index of ket
-    _energies: list of complex numbers
+    energies: list of complex numbers
         hopping energies corresponding to indices in eV
 
     NOTES
@@ -476,8 +476,8 @@ class IntraHopping(LockableObject):
     """
     def __init__(self):
         super().__init__()
-        self._indices = []
-        self._energies = []
+        self.indices = []
+        self.energies = []
 
     def __find_equiv_hopping(self, bra, ket):
         """
@@ -498,12 +498,12 @@ class IntraHopping(LockableObject):
         hop_same = (bra, ket)
         hop_conj = (ket, bra)
         try:
-            id_same = self._indices.index(hop_same)
+            id_same = self.indices.index(hop_same)
         except ValueError:
             pass
         if id_same is None:
             try:
-                id_conj = self._indices.index(hop_conj)
+                id_conj = self.indices.index(hop_conj)
             except ValueError:
                 pass
         return id_same, id_conj
@@ -554,12 +554,12 @@ class IntraHopping(LockableObject):
         # Update existing hopping term, or add the new term to hopping_list.
         id_same, id_conj = self.__find_equiv_hopping(bra, ket)
         if id_same is not None:
-            self._energies[id_same] = energy
+            self.energies[id_same] = energy
         elif id_conj is not None:
-            self._energies[id_conj] = energy.conjugate()
+            self.energies[id_conj] = energy.conjugate()
         else:
-            self._indices.append((bra, ket))
-            self._energies.append(energy)
+            self.indices.append((bra, ket))
+            self.energies.append(energy)
 
     def get_orb_ind(self):
         """
@@ -571,8 +571,8 @@ class IntraHopping(LockableObject):
         :return id_ket: (num_hop,) int32 array
             indices of ket
         """
-        id_bra = np.array([_[0] for _ in self._indices], dtype=np.int32)
-        id_ket = np.array([_[1] for _ in self._indices], dtype=np.int32)
+        id_bra = np.array([_[0] for _ in self.indices], dtype=np.int32)
+        id_ket = np.array([_[1] for _ in self.indices], dtype=np.int32)
         return id_bra, id_ket
 
     def trim(self, orb_id_trim):
@@ -595,7 +595,7 @@ class IntraHopping(LockableObject):
 
         remain_terms = []
         orb_id_trim = [tuple(orb_id) for orb_id in orb_id_trim]
-        for i, ind in enumerate(self._indices):
+        for i, ind in enumerate(self.indices):
             to_trim = False
             for orb_id in orb_id_trim:
                 if orb_id == ind[0] or orb_id == ind[1]:
@@ -603,24 +603,10 @@ class IntraHopping(LockableObject):
                     break
             if not to_trim:
                 remain_terms.append(i)
-        new_indices = [self._indices[i] for i in remain_terms]
-        new_energies = [self._energies[i] for i in remain_terms]
-        self._indices = new_indices
-        self._energies = new_energies
-
-    @property
-    def indices(self):
-        """
-        :return: self._indices
-        """
-        return self._indices
-
-    @property
-    def energies(self):
-        """
-        :return: self._energies
-        """
-        return self._energies
+        new_indices = [self.indices[i] for i in remain_terms]
+        new_energies = [self.energies[i] for i in remain_terms]
+        self.indices = new_indices
+        self.energies = new_energies
 
 
 class SuperCell(OrbitalSet):
@@ -629,9 +615,9 @@ class SuperCell(OrbitalSet):
 
     Attributes
     ----------
-    _hop_modifier: instance of 'IntraHopping' class
+    hop_modifier: instance of 'IntraHopping' class
         modification to hopping terms in the super cell
-    _orb_pos_modifier: function
+    orb_pos_modifier: function
         modification to orbital positions in the super cell
     """
     def __init__(self, prim_cell: PrimitiveCell, dim, pbc=(False, False, False),
@@ -664,12 +650,12 @@ class SuperCell(OrbitalSet):
         self.lock()
 
         # Assign and Lock hop_modifier
-        self._hop_modifier = hop_modifier
-        if self._hop_modifier is not None:
-            self._hop_modifier.lock()
+        self.hop_modifier = hop_modifier
+        if self.hop_modifier is not None:
+            self.hop_modifier.lock()
 
         # Assign orb_pos_modifier
-        self._orb_pos_modifier = orb_pos_modifier
+        self.orb_pos_modifier = orb_pos_modifier
 
     def set_hop_modifier(self, hop_modifier: IntraHopping = None):
         """
@@ -680,13 +666,13 @@ class SuperCell(OrbitalSet):
         :return: None
         """
         # Release old hop_modifier
-        if self._hop_modifier is not None:
-            self._hop_modifier.unlock()
+        if self.hop_modifier is not None:
+            self.hop_modifier.unlock()
 
         # Assign and lock new hop_modifier
-        self._hop_modifier = hop_modifier
-        if self._hop_modifier is not None:
-            self._hop_modifier.lock()
+        self.hop_modifier = hop_modifier
+        if self.hop_modifier is not None:
+            self.hop_modifier.lock()
 
     def set_orb_pos_modifier(self, orb_pos_modifier: Callable = None):
         """
@@ -696,7 +682,7 @@ class SuperCell(OrbitalSet):
             modifier to orbital positions
         :return: None
         """
-        self._orb_pos_modifier = orb_pos_modifier
+        self.orb_pos_modifier = orb_pos_modifier
 
     def get_orb_eng(self):
         """
@@ -718,8 +704,8 @@ class SuperCell(OrbitalSet):
         self.sync_array()
         orb_pos = core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
                                      self.orb_id_pc)
-        if self._orb_pos_modifier is not None:
-            self._orb_pos_modifier(orb_pos)
+        if self.orb_pos_modifier is not None:
+            self.orb_pos_modifier(orb_pos)
         return orb_pos
 
     def get_hop(self):
@@ -751,10 +737,10 @@ class SuperCell(OrbitalSet):
                            data_kind=0)
 
         # Apply hopping modifier
-        if self._hop_modifier is not None \
-                and len(self._hop_modifier.indices) != 0:
+        if self.hop_modifier is not None \
+                and len(self.hop_modifier.indices) != 0:
             # Convert hopping indices to sc representation
-            id_bra_pc, id_ket_pc = self._hop_modifier.get_orb_ind()
+            id_bra_pc, id_ket_pc = self.hop_modifier.get_orb_ind()
             id_bra_sc = self.orb_id_pc2sc_array(id_bra_pc)
             id_ket_sc = self.orb_id_pc2sc_array(id_ket_pc)
 
@@ -767,7 +753,7 @@ class SuperCell(OrbitalSet):
                     core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
 
                 # If the hopping term already exists, update it.
-                hop_energy = self._hop_modifier.energies[ih]
+                hop_energy = self.hop_modifier.energies[ih]
                 if id_same != -1:
                     hop_v[id_same] = hop_energy
 
@@ -865,10 +851,10 @@ class SuperCell(OrbitalSet):
         self.sync_array(force_sync=True)
 
         # Also trim hop_modifier
-        if self._hop_modifier is not None:
-            self._hop_modifier.unlock()
-            self._hop_modifier.trim(orb_id_trim)
-            self._hop_modifier.lock()
+        if self.hop_modifier is not None:
+            self.hop_modifier.unlock()
+            self.hop_modifier.trim(orb_id_trim)
+            self.hop_modifier.lock()
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
              hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):

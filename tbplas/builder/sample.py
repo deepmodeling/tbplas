@@ -39,14 +39,14 @@ class InterHopping(LockableObject):
 
     Attributes
     ----------
-    _sc_bra: instance of 'SuperCell' class
+    sc_bra: instance of 'SuperCell' class
         the 'bra' super cell from which the hopping terms exist
-    _sc_ket: instance of 'SuperCell' class
+    sc_ket: instance of 'SuperCell' class
         the 'ket' super cell to which the hopping terms exist
-    _indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
+    indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
         where (ia, ib, ic, io) is the index of bra in primitive cell
         representation and (ia', ib', ic', io') is the index of ket
-    _energies: list of complex numbers
+    energies: list of complex numbers
         hopping energies corresponding to indices in eV
 
     NOTES
@@ -78,10 +78,10 @@ class InterHopping(LockableObject):
             the 'ket' super cell to which the hopping terms exist
         """
         super().__init__()
-        self._sc_bra = sc_bra
-        self._sc_ket = sc_ket
-        self._indices = []
-        self._energies = []
+        self.sc_bra = sc_bra
+        self.sc_ket = sc_ket
+        self.indices = []
+        self.energies = []
 
     def __find_equiv_hopping(self, bra, ket):
         """
@@ -98,7 +98,7 @@ class InterHopping(LockableObject):
         id_same = None
         hop_same = (bra, ket)
         try:
-            id_same = self._indices.index(hop_same)
+            id_same = self.indices.index(hop_same)
         except ValueError:
             pass
         return id_same
@@ -118,7 +118,7 @@ class InterHopping(LockableObject):
         :param energy: complex
             hopping energy in eV
         :return: None.
-            self._indices and self._energies are modified.
+            self.indices and self.energies are modified.
         :raises InterHopLockError: if the object is locked
         :raises IDPCLenError: if len(rn_i) or len(rn_j) not in (2, 3)
         """
@@ -144,10 +144,10 @@ class InterHopping(LockableObject):
         # Update existing hopping term, or add the new term to hopping_list.
         id_same = self.__find_equiv_hopping(bra, ket)
         if id_same is not None:
-            self._energies[id_same] = energy
+            self.energies[id_same] = energy
         else:
-            self._indices.append((bra, ket))
-            self._energies.append(energy)
+            self.indices.append((bra, ket))
+            self.energies.append(energy)
 
     def __get_ket_dim_min(self):
         """
@@ -158,9 +158,9 @@ class InterHopping(LockableObject):
             minimal dimension of sc_ket
         """
         ket_dim_min = [1, 1, 1]
-        id_bra_set = set([_[0] for _ in self._indices])
+        id_bra_set = set([_[0] for _ in self.indices])
         for id_bra in id_bra_set:
-            id_ket_array = np.array([_[1] for _ in self._indices
+            id_ket_array = np.array([_[1] for _ in self.indices
                                      if _[0] == id_bra], dtype=np.int32)
             for i in range(3):
                 ri = id_ket_array[:, i]
@@ -176,7 +176,7 @@ class InterHopping(LockableObject):
         NOTE: we need to check if there are duplicate terms in hop_i and hop_j.
         Two algorithms have been implemented. algo=1 uses a Cython function to
         check orbital index pairs for exactly duplicate terms, while algo=2
-        checks the dimension of _sc_ket for potential duplicate terms. Both
+        checks the dimension of sc_ket for potential duplicate terms. Both
         algorithms are considered to be slow for large systems. Set algo=0
         to turn it off to reduce time cost, at your own risk.
 
@@ -191,26 +191,26 @@ class InterHopping(LockableObject):
             energies of hopping terms in accordance with hop_i and hop_j in eV
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
-        :raises IDPCIndexError: if cell or orbital index of ket in self._indices
+        :raises IDPCIndexError: if cell or orbital index of ket in self.indices
             is out of range
-        :raises IDPCVacError: if bra or ket in self._indices corresponds to a
+        :raises IDPCVacError: if bra or ket in self.indices corresponds to a
             vacancy
         :raises ValueError: if duplicate terms have been detected in hop_i
-            and hop_j, or dimension of _sc_ket is too small
+            and hop_j, or dimension of sc_ket is too small
         """
-        if len(self._indices) == 0:
+        if len(self.indices) == 0:
             raise exc.InterHopVoidError()
-        id_bra_pc = np.array([_[0] for _ in self._indices], dtype=np.int32)
-        id_ket_pc = np.array([_[1] for _ in self._indices], dtype=np.int32)
+        id_bra_pc = np.array([_[0] for _ in self.indices], dtype=np.int32)
+        id_ket_pc = np.array([_[1] for _ in self.indices], dtype=np.int32)
 
         # NOTE: id_ket_pc needs to be wrapped back into (0, 0, 0) super cell
         # since it can reside at any super cell. On the contrary, id_bra_ket
         # is restricted (0, 0, 0) super cell and need on wrap. Errors will
         # be raised by orb_id_pc2sc_array it falls out of (0, 0, 0).
-        self._sc_ket.wrap_id_pc_array(id_ket_pc)
-        hop_i = self._sc_bra.orb_id_pc2sc_array(id_bra_pc)
-        hop_j = self._sc_ket.orb_id_pc2sc_array(id_ket_pc)
-        hop_v = np.array(self._energies, dtype=np.complex128)
+        self.sc_ket.wrap_id_pc_array(id_ket_pc)
+        hop_i = self.sc_bra.orb_id_pc2sc_array(id_bra_pc)
+        hop_j = self.sc_ket.orb_id_pc2sc_array(id_ket_pc)
+        hop_v = np.array(self.energies, dtype=np.complex128)
 
         # Check for duplicate terms
         if algo == 0:
@@ -223,7 +223,7 @@ class InterHopping(LockableObject):
         else:
             dim_min = self.__get_ket_dim_min()
             for i in range(3):
-                current_dim = self._sc_ket.dim[i]
+                current_dim = self.sc_ket.dim[i]
                 if current_dim < dim_min[i]:
                     raise ValueError(f"Dimension of sc_ket {current_dim} is "
                                      f"smaller than {dim_min[i]}")
@@ -243,21 +243,21 @@ class InterHopping(LockableObject):
             distances of hopping terms in accordance with hop_i and hop_j in nm
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
-        :raises IDPCIndexError: if cell or orbital index of ket in self._indices
+        :raises IDPCIndexError: if cell or orbital index of ket in self.indices
             is out of range
-        :raises IDPCVacError: if bra or ket in self._indices corresponds
+        :raises IDPCVacError: if bra or ket in self.indices corresponds
             to a vacancy
         :raises ValueError: if duplicate terms have been detected in hop_i
-            and hop_j, or dimension of _sc_ket is too small
+            and hop_j, or dimension of sc_ket is too small
         """
-        if len(self._indices) == 0:
+        if len(self.indices) == 0:
             raise exc.InterHopVoidError()
         hop_i, hop_j, hop_v = self.get_hop()
-        pos_bra = self._sc_bra.get_orb_pos()
-        pos_ket = self._sc_ket.get_orb_pos()
-        id_ket_pc = np.array([_[1] for _ in self._indices], dtype=np.int32)
+        pos_bra = self.sc_bra.get_orb_pos()
+        pos_ket = self.sc_ket.get_orb_pos()
+        id_ket_pc = np.array([_[1] for _ in self.indices], dtype=np.int32)
         dr = core.build_inter_dr(hop_i, hop_j, pos_bra, pos_ket, id_ket_pc,
-                                 self._sc_ket.dim, self._sc_ket.sc_lat_vec)
+                                 self.sc_ket.dim, self.sc_ket.sc_lat_vec)
         return dr
 
     def plot(self, axes: plt.Axes, hop_as_arrows=True, hop_eng_cutoff=1e-5,
@@ -280,16 +280,16 @@ class InterHopping(LockableObject):
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            self._indices is out of range
-        :raises IDPCVacError: if bra or ket in self._indices corresponds
+            self.indices is out of range
+        :raises IDPCVacError: if bra or ket in self.indices corresponds
             to a vacancy
         :raises ValueError: if view is illegal
         """
-        viewer = ModelViewer(axes, self._sc_bra.pc_lat_vec, view)
+        viewer = ModelViewer(axes, self.sc_bra.pc_lat_vec, view)
 
         # Plot hopping terms
-        orb_pos_i = self._sc_bra.get_orb_pos()
-        # orb_pos_j = self._sc_ket.get_orb_pos()
+        orb_pos_i = self.sc_bra.get_orb_pos()
+        # orb_pos_j = self.sc_ket.get_orb_pos()
         hop_i, hop_j, hop_v = self.get_hop()
         dr = self.get_dr()
         for i_h in range(hop_i.shape[0]):
@@ -305,34 +305,6 @@ class InterHopping(LockableObject):
                     viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
             viewer.plot_line(color="r")
-
-    @property
-    def indices(self):
-        """
-        :return: self._indices
-        """
-        return self._indices
-
-    @property
-    def energies(self):
-        """
-        :return: self._energies
-        """
-        return self._energies
-
-    @property
-    def sc_bra(self):
-        """
-        :return: self._sc_bra
-        """
-        return self._sc_bra
-
-    @property
-    def sc_ket(self):
-        """
-        :return: self._sc_ket
-        """
-        return self._sc_ket
 
 
 class Sample:
@@ -384,33 +356,33 @@ class Sample:
             raise exc.SampleVoidError()
 
         # Parse supercells and inter-hopping terms
-        self._sc_list = []
-        self._hop_list = []
+        self.sc_list = []
+        self.hop_list = []
         for i_arg, arg in enumerate(args):
             if isinstance(arg, SuperCell):
-                self._sc_list.append(arg)
+                self.sc_list.append(arg)
             elif isinstance(arg, InterHopping):
-                self._hop_list.append(arg)
+                self.hop_list.append(arg)
                 arg.lock()
             else:
                 raise exc.SampleCompError(i_arg)
 
         # Check closure of inter-hopping instances
-        for i_h, hop in enumerate(self._hop_list):
-            if hop.sc_bra not in self._sc_list:
+        for i_h, hop in enumerate(self.hop_list):
+            if hop.sc_bra not in self.sc_list:
                 raise exc.SampleClosureError(i_h, "sc_bra")
-            if hop.sc_ket not in self._sc_list:
+            if hop.sc_ket not in self.sc_list:
                 raise exc.SampleClosureError(i_h, "sc_ket")
 
         # Declare arrays
         # The actual initialization will be done on-demand in init_* methods.
-        self._orb_eng = None
-        self._orb_pos = None
-        self._hop_i = None
-        self._hop_j = None
-        self._hop_v = None
-        self._dr = None
-        self._rescale = 1.0
+        self.orb_eng = None
+        self.orb_pos = None
+        self.hop_i = None
+        self.hop_j = None
+        self.hop_v = None
+        self.dr = None
+        self.rescale = 1.0
 
     def __get_num_orb(self):
         """
@@ -436,41 +408,41 @@ class Sample:
 
     def init_orb_eng(self, force_init=False):
         """
-        Initialize self._orb_eng on demand.
+        Initialize self.orb_eng on demand.
 
-        If self._orb_eng is None, build it from scratch. Otherwise, build it
+        If self.orb_eng is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self._orb_eng is modified.
+            self.orb_eng is modified.
         """
-        if force_init or self._orb_eng is None:
+        if force_init or self.orb_eng is None:
             orb_eng = [sc.get_orb_eng() for sc in self.sc_list]
-            self._orb_eng = np.concatenate(orb_eng)
+            self.orb_eng = np.concatenate(orb_eng)
 
     def init_orb_pos(self, force_init=False):
         """
-        Initialize self._orb_pos on demand.
+        Initialize self.orb_pos on demand.
 
-        If self._orb_pos is None, build it from scratch. Otherwise, build it
+        If self.orb_pos is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self._orb_pos is modified.
+            self.orb_pos is modified.
         """
-        if force_init or self._orb_pos is None:
+        if force_init or self.orb_pos is None:
             orb_pos = [sc.get_orb_pos() for sc in self.sc_list]
-            self._orb_pos = np.concatenate(orb_pos)
+            self.orb_pos = np.concatenate(orb_pos)
 
     def init_hop(self, force_init=False):
         """
-        Initialize self._hop_i, self._hop_j, self._hop_v and reset self._rescale
+        Initialize self.hop_i, self.hop_j, self.hop_v and reset self.rescale
         on demand.
 
         If the arrays are None, build them from scratch. Otherwise, build them
@@ -480,7 +452,7 @@ class Sample:
             whether to force initializing the arrays from scratch even if they
             have already been initialized
         :return: None
-            self._hop_i, self._hop_j and self._hop_j are modified.
+            self.hop_i, self.hop_j and self.hop_j are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -488,7 +460,7 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_init or self._hop_i is None:
+        if force_init or self.hop_i is None:
             hop_i_tot, hop_j_tot, hop_v_tot = [], [], []
             ind_start = self.__get_ind_start()
 
@@ -511,22 +483,22 @@ class Sample:
                 hop_v_tot.append(hop_v)
 
             # Assemble hopping terms
-            self._hop_i = np.concatenate(hop_i_tot)
-            self._hop_j = np.concatenate(hop_j_tot)
-            self._hop_v = np.concatenate(hop_v_tot)
+            self.hop_i = np.concatenate(hop_i_tot)
+            self.hop_j = np.concatenate(hop_j_tot)
+            self.hop_v = np.concatenate(hop_v_tot)
 
     def init_dr(self, force_init=False):
         """
-        Initialize self._dr on demand.
+        Initialize self.dr on demand.
 
-        If self._dr is None, build it from scratch. Otherwise, build it only when
+        If self.dr is None, build it from scratch. Otherwise, build it only when
         force_init is True.
 
         :param force_init: boolean
             whether to force initializing the array from scratch even if it
             has already been initialized
         :returns: None
-            self._dr is modified.
+            self.dr is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -534,23 +506,23 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_init or self._dr is None:
+        if force_init or self.dr is None:
             dr_tot = []
             for sc in self.sc_list:
                 dr_tot.append(sc.get_dr())
             for hop in self.hop_list:
                 dr_tot.append(hop.get_dr())
-            self._dr = np.concatenate(dr_tot)
+            self.dr = np.concatenate(dr_tot)
 
     def reset_array(self, force_reset=False):
         """
-        Reset all modifications to self._orb_*, self._hop_* and self._dr.
+        Reset all modifications to self._orb_*, self._hop_* and self.dr.
 
         :param force_reset: boolean
             whether to force resetting the arrays even if they have not been
             initialized or modified
         :return: None
-            self._orb_*, self._hop_* and self._dr are modified.
+            self._orb_*, self._hop_* and self.dr are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -558,13 +530,13 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_reset or self._orb_eng is not None:
+        if force_reset or self.orb_eng is not None:
             self.init_orb_eng(force_init=True)
-        if force_reset or self._orb_pos is not None:
+        if force_reset or self.orb_pos is not None:
             self.init_orb_pos(force_init=True)
-        if force_reset or self._hop_i is not None:
+        if force_reset or self.hop_i is not None:
             self.init_hop(force_init=True)
-        if force_reset or self._dr is not None:
+        if force_reset or self.dr is not None:
             self.init_dr(force_init=True)
 
     def rescale_ham(self, factor=None):
@@ -582,7 +554,7 @@ class Sample:
             is smaller than 1 after rescaling. If no value is chosen,
             a reasonable value will be estimated from the Hamiltonian.
         :returns: None
-            self._orb_eng, self._hop_v and self._rescale are modified.
+            self.orb_eng, self.hop_v and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -595,9 +567,9 @@ class Sample:
         if factor is None:
             factor = core.get_rescale(self.orb_eng, self.hop_i, self.hop_j,
                                       self.hop_v)
-        self._orb_eng /= (factor / self.rescale)
-        self._hop_v /= (factor / self.rescale)
-        self._rescale = factor
+        self.orb_eng /= (factor / self.rescale)
+        self.hop_v /= (factor / self.rescale)
+        self.rescale = factor
 
     def set_magnetic_field(self, intensity):
         """
@@ -620,7 +592,7 @@ class Sample:
         :param intensity: float
             magnetic B field in Tesla
         :return: None
-            self._hop_v is modified.
+            self.hop_v is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -631,7 +603,7 @@ class Sample:
         self.init_orb_pos()
         self.init_hop()
         self.init_dr()
-        core.set_mag_field(self.hop_i, self.hop_j, self._hop_v, self.dr,
+        core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
                            self.orb_pos, intensity)
 
     def build_ham_csr(self):
@@ -1028,66 +1000,3 @@ class Sample:
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
-
-    @property
-    def sc_list(self):
-        """
-        :return: self._sc_list
-        """
-        return self._sc_list
-
-    @property
-    def hop_list(self):
-        """
-        :return: self._hop_list
-        """
-        return self._hop_list
-
-    @property
-    def orb_eng(self):
-        """
-        :return: self._orb_eng
-        """
-        return self._orb_eng
-
-    @property
-    def orb_pos(self):
-        """
-        :return: self._orb_pos
-        """
-        return self._orb_pos
-
-    @property
-    def hop_i(self):
-        """
-        :return: self._hop_i
-        """
-        return self._hop_i
-
-    @property
-    def hop_j(self):
-        """
-        :return: self._hop_j
-        """
-        return self._hop_j
-
-    @property
-    def hop_v(self):
-        """
-        :return: self._hop_v
-        """
-        return self._hop_v
-
-    @property
-    def dr(self):
-        """
-        :return: self._dr
-        """
-        return self._dr
-
-    @property
-    def rescale(self):
-        """
-        :return: self._rescale
-        """
-        return self._rescale
