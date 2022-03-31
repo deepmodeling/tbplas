@@ -158,7 +158,7 @@ class Visualizer:
 
         :param sample: instance of 'Sample' class
             sample under study
-        :param wf2: (n_indptr-1,) float64 array
+        :param wf2: (num_orb_sample,) float64 array
             squared projection of wave function on all the sites
         :param site_size: float
             site size
