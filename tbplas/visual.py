@@ -15,6 +15,7 @@ from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
 
 from .builder import Sample
 
@@ -151,8 +152,9 @@ class Visualizer:
         """
         self.__plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
 
-    def plot_wf2(self, sample: Sample, wf2, site_size=5, with_colorbar=False,
-                 fig_name=None, fig_dpi=300):
+    def plot_wf2(self, sample: Sample, wf2: np.ndarray, scatter=False,
+                 site_size=5, num_grid=(200, 200), cmap="viridis",
+                 with_colorbar=False, fig_name=None, fig_dpi=300):
         """
         Plot squared wave function in real space.
 
@@ -160,8 +162,15 @@ class Visualizer:
             sample under study
         :param wf2: (num_orb_sample,) float64 array
             squared projection of wave function on all the sites
+        :param scatter: boolean
+            whether to plot the wave function as scatter
         :param site_size: float
             site size
+        :param num_grid: (num_grid_x, num_grid_y)
+            number of grid-points for interpolation along x and y directions
+            when plotting the wave function
+        :param cmap: string
+            color map for plotting the wave function
         :param with_colorbar: boolean
             whether to add colorbar to figure
         :param fig_name: string
@@ -176,18 +185,27 @@ class Visualizer:
             x = np.array(sample.orb_pos[:, 0])
             y = np.array(sample.orb_pos[:, 1])
 
-            # Get absolute square of wave function and sort
-            z = wf2
-            sorted_idx = z.argsort()
-            x, y, z = x[sorted_idx], y[sorted_idx], z[sorted_idx]
-
-            # make plot
+            # Plot data
             fig, ax = plt.subplots()
-            sc = ax.scatter(x, y, c=z, s=site_size)
+            if scatter:
+                img = ax.scatter(x, y, c=wf2, s=site_size)
+            else:
+                x_min, x_max = np.min(x), np.max(x)
+                y_min, y_max = np.min(y), np.max(y)
+                x_fi = np.linspace(x_min, x_max, num_grid[0])
+                y_fi = np.linspace(y_min, y_max, num_grid[1])
+                x_grid, y_grid = np.meshgrid(x_fi, y_fi)
+                xy_fi = np.c_[x_grid.ravel(), y_grid.ravel()]
+                z_fi = griddata((x, y), wf2, xy_fi,
+                                method="cubic").reshape(num_grid)
+                img = ax.imshow(z_fi, cmap=cmap, interpolation="none",
+                                origin="lower",
+                                extent=(x_min, x_max, y_min, y_max))
+
+            if with_colorbar:
+                plt.colorbar(img)
             plt.axis('equal')
             plt.axis('off')
-            if with_colorbar:
-                plt.colorbar(sc)
             plt.tight_layout()
             plt.autoscale()
 

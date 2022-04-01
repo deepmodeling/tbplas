@@ -1027,3 +1027,66 @@ SUBROUTINE ldos_haydock(site_indices, n_siteind, delta, E_range, &
     END DO
     !$OMP END PARALLEL DO
 END SUBROUTINE ldos_haydock
+
+
+! Get time-dependent wave function
+SUBROUTINE tbpm_psi_t(Bes, n_Bes, indptr, n_indptr, indices, n_indices, &
+                      hop, n_hop, psi0, n_psi0, time_log, n_time_log, &
+                      n_timestep, wfn_chk_step, wfn_chk_thr, psi_t)
+    USE math, ONLY: inner_prod
+    USE csr, ONLY: SPARSE_MATRIX_T, make_csr_matrix
+    USE propagation, ONLY: cheb_wf_timestep
+    use funcs, only : check_norm
+
+    IMPLICIT NONE
+
+    ! input
+    INTEGER, INTENT(IN) :: n_Bes
+    REAL(KIND=8), INTENT(IN) :: Bes(n_Bes)
+    INTEGER, INTENT(IN) :: n_indptr, n_indices, n_hop
+    INTEGER, INTENT(IN) :: indptr(n_indptr)
+    INTEGER, INTENT(IN) :: indices(n_indices)
+    COMPLEX(KIND=8), INTENT(IN) :: hop(n_hop)
+    INTEGER, INTENT(IN) :: n_psi0, n_time_log
+    COMPLEX(KIND=8), INTENT(IN) :: psi0(n_psi0)
+    INTEGER, INTENT(IN) :: time_log(n_time_log)
+    INTEGER, INTENT(IN) :: n_timestep, wfn_chk_step
+    REAL(KIND=8), INTENT(IN) :: wfn_chk_thr
+
+    ! output
+    COMPLEX(KIND=8), INTENT(OUT) :: psi_t(n_psi0, n_time_log)
+
+    ! declare vars
+    INTEGER :: t, ptr
+    COMPLEX(KIND=8), DIMENSION(n_psi0) :: wf_t
+    TYPE(SPARSE_MATRIX_T) :: H_csr
+    complex(kind=8) :: norm_ref
+
+    ! Create sparse Hamiltonian
+    H_csr = make_csr_matrix(indptr, indices, hop)
+
+    ! Propagate the wave function
+    PRINT *, "Propagating wave function."
+
+    wf_t(:) = psi0(:)
+    norm_ref = inner_prod(wf_t, wf_t)
+    ptr = 1
+
+    DO t = 1, n_timestep
+        ! Check and log wave function
+        IF (time_log(ptr) == t - 1) THEN
+            psi_t(:, ptr) = wf_t(:)
+            IF (ptr < n_time_log) ptr = ptr + 1
+        END IF
+
+        ! Echo which step we are at
+        IF (MODULO(t, 64) == 0) PRINT *, "    Timestep ", t, " of ", n_timestep
+
+        ! Check if the wave function gets diverged
+        IF (t == wfn_chk_step) CALL check_norm(wf_t, norm_ref, wfn_chk_thr)
+
+        ! Propagate forward
+        wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
+    END DO
+
+END SUBROUTINE tbpm_psi_t

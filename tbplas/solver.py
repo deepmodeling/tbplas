@@ -614,3 +614,48 @@ class Solver(BaseSolver):
             self.output['corr_LDOS'])
         self.__save_data(ldos, self.output["corr_LDOS"])
         return energies, ldos
+
+    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray):
+        """
+        Calculate propagation of wave function from given initial state.
+
+        :param psi_0: (num_orb_sample,) complex128 array
+            expansion coefficients of initial wave function
+        :param time_log: (num_time,) int64 array
+            steps on which time the time-dependent wave function will be logged
+            For example, t=0 stands for the initial wave function, while t=1
+            indicates the wave function after the 1st propagation.
+        :return: psi_t: (num_time, num_orb_sample) complex128 array
+            time-dependent wave function according to time_log
+        :raises RuntimeError: if more than 1 mpi process is used
+        :raises ValueError: if any time in time_log not in [0, nr_time_steps-1].
+        """
+        # For now wave function propagation is compatible with MPI
+        if self.size != 1:
+            raise RuntimeError("Using more than 1 mpi process is not allowed"
+                               " for wave function propagation")
+
+        # Check and convert parameters
+        psi_0 = np.array(psi_0, dtype=np.complex128)
+        psi_0 /= np.linalg.norm(psi_0)
+        time_log = np.array(time_log, dtype=np.int64)
+        time_log.sort()
+        for it in time_log:
+            if it not in range(self.config.generic['nr_time_steps']):
+                raise ValueError(f"time {it} out of range")
+
+        # Get quantities for propagation
+        time_step = self.__get_time_step()
+        bessel_series = self.__get_bessel_series(time_step)
+        ham_csr = self.sample.build_ham_csr()
+
+        # Propagate the wave function
+        psi_t = f2py.tbpm_psi_t(
+            bessel_series,
+            ham_csr.indptr, ham_csr.indices, ham_csr.data,
+            psi_0, time_log,
+            self.config.generic['nr_time_steps'],
+            self.config.generic['wfn_check_steps'],
+            self.config.generic['wfn_check_thr']
+        )
+        return psi_t.T
