@@ -152,7 +152,7 @@ class Visualizer:
         """
         self.__plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
 
-    def plot_wf2(self, sample: Sample, wf2: np.ndarray, scatter=False,
+    def plot_wf2(self, sample: Sample, wf2: np.ndarray, scatter=True,
                  site_size=5, num_grid=(200, 200), cmap="viridis",
                  with_colorbar=False, fig_name=None, fig_dpi=300):
         """
@@ -188,7 +188,7 @@ class Visualizer:
             # Plot data
             fig, ax = plt.subplots()
             if scatter:
-                img = ax.scatter(x, y, c=wf2, s=site_size)
+                img = ax.scatter(x, y, c=wf2, s=site_size, cmap=cmap)
             else:
                 x_min, x_max = np.min(x), np.max(x)
                 y_min, y_max = np.min(y), np.max(y)
