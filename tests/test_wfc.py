@@ -1,17 +1,16 @@
 #! /usr/bin/env python
 
-from math import cos, sin, pi, exp
+from math import cos, sin, exp
 import numpy as np
 import tbplas as tb
 
 
-def init_wfc_pw(sample):
+def init_wfc_pw(sample, kpt):
     sample.init_orb_pos()
     orb_pos = sample.orb_pos
     wfc = np.zeros(orb_pos.shape[0], dtype=np.complex128)
-    x_max = orb_pos[:, 0].max()
     for i, pos in enumerate(orb_pos):
-        phi = 2 * pi * pos.item(0) / x_max * 3
+        phi = np.dot(pos, kpt)
         wfc[i] = cos(phi) + 1j * sin(phi)
     wfc /= np.linalg.norm(wfc)
     return wfc
@@ -31,7 +30,7 @@ def init_wfc_gaussian(sample, mu, sigma, scale=None):
     return wfc
 
 
-def add_scatter(sample, mu, sigma, scale=None):
+def add_scatter_gaussian(sample, mu, sigma, scale=None):
     if scale is None:
         scale = [1.0, 1.0]
     sample.init_orb_pos()
@@ -48,30 +47,34 @@ def main():
     # Build the sample
     prim_cell = tb.make_graphene_rect()
     sample = tb.Sample(tb.SuperCell(prim_cell, dim=(50, 20, 1),
-                                    pbc=(False, False, False)))
+                                    pbc=(True, True, False)))
 
-    # Get orbital positions
-    sample.init_orb_pos()
-    orb_pos = sample.orb_pos
-    x_max = np.max(orb_pos[:, 0])
-    y_max = np.max(orb_pos[:, 1])
+    # Common quantities
+    r_vectors = sample.sc_list[0].sc_lat_vec
+    g_vectors = tb.gen_reciprocal_vectors(r_vectors)
+    x_max, y_max = np.max(r_vectors[:, 0]), np.max(r_vectors[:, 1])
 
-    # Initialize and plot wave function
-    vis = tb.Visualizer()
-    wfc = init_wfc_gaussian(sample, [0, y_max/2], 0.5)
+    # Initialize the wave function
+    wfc = init_wfc_gaussian(sample, mu=[x_max/2, y_max/2], sigma=0.5,
+                            scale=[1.0, 0.0])
+    # kpt = np.matmul((2, 2, 0), g_vectors)
+    # wfc = init_wfc_pw(sample, kpt)
 
     # Add scatting center
-    add_scatter(sample, [x_max/2, y_max/2], 1.0)
-    sample.rescale_ham()
+    add_scatter_gaussian(sample, mu=[x_max/4, y_max/2], sigma=0.5)
 
     # Propagate the wave function
     config = tb.Config()
     config.generic['nr_time_steps'] = 256
-    time_log = np.array([0, 16, 32, 48, 64, 80, 96, 112, 128, 255])
+    time_log = np.array([0, 16, 32, 48, 64, 80, 96, 128, 255])
+    sample.rescale_ham()
     solver = tb.Solver(sample, config)
     psi_t = solver.calc_psi_t(wfc, time_log)
+
+    # Plot the wave function
+    vis = tb.Visualizer()
     for i in range(len(time_log)):
-        vis.plot_wf2(sample, np.abs(psi_t[i]), cmap="hot")
+        vis.plot_wf2(sample, np.abs(psi_t[i]), cmap="hot", scatter=False)
 
 
 if __name__ == "__main__":
