@@ -640,7 +640,7 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, int [:,::1] vac_id_pc):
 
 
 #-------------------------------------------------------------------------------
-#       Functions for building arrays for SuperCell/InterHopping classes
+#              Functions for building arrays for SuperCell class
 #-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -1049,6 +1049,48 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
+    """
+    Find the index of equivalent hopping term of <bra|H|ket> in hop_i and hop_j,
+    i.e. the same term or its conjugate counterpart.
+
+    Parameters
+    ----------
+    hop_i, hop_j: (num_hop_sc,) int64 array
+        row and column indices of hopping terms
+        reduced by a half using the conjugate relation
+    bra: int64
+        index of bra of the hopping term in sc representation
+    ket: int64
+        index of ket of the hopping term in sc representation
+
+    Returns
+    -------
+    id_same: int64
+        index of the same hopping term, -1 if not found
+    id_conj: int64
+        index of the conjugate hopping term, -1 if not found
+    """
+    cdef long num_hop_sc, ih, bra_old, ket_old
+    cdef long id_same, id_conj
+
+    id_same, id_conj = -1, -1
+    num_hop_sc = hop_i.shape[0]
+    for ih in range(num_hop_sc):
+        bra_old, ket_old = hop_i[ih], hop_j[ih]
+        if bra_old == bra and ket_old == ket:
+            id_same = ih
+            break
+        elif bra_old == ket and ket_old == bra:
+            id_conj = ih
+            break
+        else:
+            pass
+    return id_same, id_conj
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def check_hop(long [::1] hop_i, long [::1] hop_j):
     """
     Check if there are diagonal, duplicate or conjugate terms in hop_i and hop_j
@@ -1158,6 +1200,9 @@ def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
     return np.asarray(orb_id_trim)
 
 
+#-------------------------------------------------------------------------------
+#             Functions for building arrays for InterHopping class
+#-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def check_inter_hop(long [::1] hop_i, long [::1] hop_j):
@@ -1259,48 +1304,6 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
                   + nb * sc_lat_ket[1, 2] \
                   + nc * sc_lat_ket[2, 2]
     return np.asarray(dr)
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
-    """
-    Find the index of equivalent hopping term of <bra|H|ket> in hop_i and hop_j,
-    i.e. the same term or its conjugate counterpart.
-
-    Parameters
-    ----------
-    hop_i, hop_j: (num_hop_sc,) int64 array
-        row and column indices of hopping terms
-        reduced by a half using the conjugate relation
-    bra: int64
-        index of bra of the hopping term in sc representation
-    ket: int64
-        index of ket of the hopping term in sc representation
-
-    Returns
-    -------
-    id_same: int64
-        index of the same hopping term, -1 if not found
-    id_conj: int64
-        index of the conjugate hopping term, -1 if not found
-    """
-    cdef long num_hop_sc, ih, bra_old, ket_old
-    cdef long id_same, id_conj
-
-    id_same, id_conj = -1, -1
-    num_hop_sc = hop_i.shape[0]
-    for ih in range(num_hop_sc):
-        bra_old, ket_old = hop_i[ih], hop_j[ih]
-        if bra_old == bra and ket_old == ket:
-            id_same = ih
-            break
-        elif bra_old == ket and ket_old == bra:
-            id_conj = ih
-            break
-        else:
-            pass
-    return id_same, id_conj
 
 
 #-------------------------------------------------------------------------------
@@ -2015,7 +2018,7 @@ def test_speed_sc2pc(int [:,::1] orb_id_pc):
 
 
 #-------------------------------------------------------------------------------
-#                            Functions for lindhard                            
+#                         Functions for Lindhard class
 #-------------------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
