@@ -13,21 +13,21 @@ cell level. Here are the summary of the Python-based tools:
 * apply_pbc
 * remove_orbital
 * remove_hopping
-* trim_prim_cell
+* trim
 * spiral_prim_cell
 * make_hetero_layer
 * merge_prim_cell
 
 :func:`.reshape_prim_cell` reshapes the primitive cell to new lattice vectors. :func:`.extend_prim_cell`
-replicates the primitive cell along :math:`a`, :math:`b`, and :math:`c`` directions. :func:`.apply_pbc`
-makes a periodic primitive cell non-periodic by removing hopping terms to neighbouring cells along given
-directions. We will show the usage of these functions by constructing graphene nano-ribbon with armchair
-and zigzag edges from the primitive cell.
+replicates the primitive cell along :math:`a`, :math:`b`, and :math:`c`` directions. :func:`apply_pbc`
+is a method of the :class:`PrimitiveCell` class, and makes a periodic primitive cell non-periodic by
+removing hopping terms to neighbouring cells along given directions. We will show the usage of these
+functions by constructing graphene nano-ribbon with armchair and zigzag edges from the primitive cell.
 
-:func:`remove_orbital` and :func:`remove_hopping` are all methods of the :class:`PrimitiveCell` class, and
+:func:`remove_orbital` and :func:`remove_hopping` are also methods of the :class:`PrimitiveCell` class, and
 remove an orbital or hopping term from the primitive cell, respectively. Dangling orbitals and hopping terms
-may remain in the cell after the removal, and can be trimmed with the :func:`.trim_prim_cell` function. We
-will show the usage of these functions by constructing a large graphene cell with vacancies.
+may remain in the cell after the removal, and can be trimmed with the :func:`trim` method. We will show the
+usage of these functions by constructing a large graphene cell with vacancies.
 
 :func:`.spiral_prim_cell`, :func:`.make_hetero_layer` and :func:`.merge_prim_cell` are functions specially
 designed for building hetero-structures. Their usage will be discussed in :ref:`hetero_model`.
@@ -117,7 +117,7 @@ To produce a graphene nano-ribbon with desired width we need to extend the recta
 
 .. code-block:: python
 
-    gnr = tb.extend_prim_cell(cell, dim=(3, 3, 1))
+    gnr = tb.extend_prim_cell(rect_cell, dim=(3, 3, 1))
     gnr.plot()
 
 Here we extend the rectangular cell along :math:`a` and :math:`b` directions by 3 times through the ``dim`` parameter.
@@ -132,11 +132,11 @@ The output is shown as below:
 
 The extend rectangular cell is periodic along :math:`a` and :math:`b` directions, i.e., it is two-dimensional. But
 graphene nano-ribbons are one-dimensional. We can impose non-periodic boundary conditions along specific
-direction by calling the :func:`.apply_pbc` function:
+direction by calling the :func:`apply_pbc` method:
 
 .. code-block:: python
 
-    tb.apply_pbc(gnr, pbc=(False, True, False))
+    gnr.apply_pbc(pbc=(False, True, False))
     gnr.plot(with_conj=False)
 
 Here we enforce the cell to be periodic only along :math:`b` direction, yielding a nano-ribbon with armchair edges,
@@ -145,12 +145,12 @@ direction to make a nano-ribbon with zigzag edges:
 
 .. code-block:: python
 
-    gnr = tb.extend_prim_cell(cell, dim=(3, 3, 1))
-    tb.apply_pbc(gnr, pbc=(True, False, False))
+    gnr = tb.extend_prim_cell(rect_cell, dim=(3, 3, 1))
+    gnr.apply_pbc(pbc=(True, False, False))
     gnr.plot(with_conj=False)
 
-Note that :func:`.apply_pbc` does not return a new primitive cell as other functions. Instead, the original primitive
-cell is modified. So we need to extend the rectangular cell again before calling :func:`.apply_pbc`.
+Note that :func:`apply_pbc` does not return a new primitive cell as other functions. Instead, the original primitive
+cell is modified. So we need to extend the rectangular cell again before calling :func:`apply_pbc`.
 
 Finally we can evaluate the band structure of armchair-edged nano-ribbon with:
 
@@ -221,15 +221,15 @@ We remove orbital #8 and #14 with the following commands:
 
 The output is shown in the middle panel. Obviously, orbital #8 and #14 have been removed. However, orbital #9 becomes
 dangling, since there is only one hopping term associated with it. We can remove the orbital and associated hopping
-terms with the :func:`.trim_prim_cell` function:
+terms with the :func:`trim` method:
 
 .. code-block:: python
 
-    tb.trim_prim_cell(cell)
+    cell.trim()
     cell.plot(with_conj=False)
 
-Note that :func:`.trim_prim_cell` does not return a new primitive cell, but modifies the original cell in-place. The
-ouput is shown in the right panel. The dangling orbital and hopping term are removed after calling the function.
+Note that :func:`trim` does not return a new primitive cell, but modifies the original cell in-place. The
+output is shown in the right panel. The dangling orbital and hopping term are removed after calling the function.
 
 .. rubric:: Remove hopping terms
 
@@ -255,7 +255,7 @@ Similarly, we can remove dangling terms in the same way:
 
 .. code-block:: python
 
-    tb.trim_prim_cell(cell)
+    cell.trim()
     cell.plot(with_conj=False)
 
 The output is shown in the right panel.

@@ -834,6 +834,64 @@ class PrimitiveCell(LockableObject):
         else:
             raise exc.PCHopNotFoundError(new_hopping.index)
 
+    def trim(self):
+        """
+        Trim dangling orbitals and associated hopping terms.
+
+        :return: None
+            self.orbital_list and self.hopping_list is modified.
+        :raises PCLockError: if the primitive cell is locked
+        """
+        # Count the number of hopping terms of each orbital
+        hop_count = np.zeros(self.num_orb, dtype=np.int32)
+        for hop in self.hopping_list:
+            hop_count[hop.index[3]] += 1
+            hop_count[hop.index[4]] += 1
+
+        # Get indices of orbitals to remove
+        orb_id_trim = [i_o for i_o, count in enumerate(hop_count) if count <= 1]
+
+        # Remove orbitals and hopping terms
+        # Orbital indices should be sorted in increasing order.
+        orb_id_trim = sorted(orb_id_trim)
+        for i, orb_id in enumerate(orb_id_trim):
+            self.remove_orbital(orb_id - i)
+        self.sync_array()
+
+    def apply_pbc(self, pbc=(True, True, True)):
+        """
+        Apply periodic boundary conditions by removing hopping terms between
+        cells along non-periodic direction.
+
+        :param pbc: tuple of 3 booleans
+            whether pbc is enabled along 3 directions
+        :return: None
+            Incoming prim_cell is modified.
+        :raises PCLockError: if the primitive cell is locked
+        :raises ValueError: if len(pbc) != 3
+        """
+        try:
+            self.check_lock_state()
+        except exc.LockError as err:
+            raise exc.PCLockError() from err
+        if len(pbc) != 3:
+            raise ValueError("Length of pbc is not 3")
+
+        # Get the list of hopping terms to keep
+        hop_to_keep = []
+        for hop in self.hopping_list:
+            to_keep = True
+            for i_dim in range(3):
+                if not pbc[i_dim] and hop.index[i_dim] != 0:
+                    to_keep = False
+                    break
+            if to_keep:
+                hop_to_keep.append(hop)
+
+        # Reset hopping_list
+        self.hopping_list = hop_to_keep
+        self.sync_array()
+
     def sync_array(self, verbose=False, force_sync=False):
         """
         Synchronize orb_pos, orb_eng, hop_ind and hop_eng according to
@@ -1100,9 +1158,9 @@ class PrimitiveCell(LockableObject):
 
         # Create energy grid
         if e_min is None:
-            e_min = bands.min()
+            e_min = np.min(bands)
         if e_max is None:
-            e_max = bands.max()
+            e_max = np.max(bands)
         num_grid = int((e_max - e_min) / e_step)
         energies = np.linspace(e_min, e_max, num_grid+1)
 

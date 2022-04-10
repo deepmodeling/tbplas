@@ -899,9 +899,9 @@ class Sample:
     
         # Create energy grid
         if e_min is None:
-            e_min = bands.min()
+            e_min = np.min(bands)
         if e_max is None:
-            e_max = bands.max()
+            e_max = np.max(bands)
         num_grid = int((e_max - e_min) / e_step)
         energies = np.linspace(e_min, e_max, num_grid+1)
     

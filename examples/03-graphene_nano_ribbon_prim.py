@@ -14,13 +14,13 @@ gnr_am = tb.extend_prim_cell(rect_cell, dim=(3, 3, 1))
 
 # We make an armchair graphene nano-ribbon by removing hopping terms along x
 # direction.
-tb.apply_pbc(gnr_am, pbc=(False, True, False))
+gnr_am.apply_pbc(pbc=(False, True, False))
 gnr_am.plot()
 
 # Similarly, we can make a zigzag nano-ribbon by removing hopping terms along
 # y direction.
 gnr_zz = tb.extend_prim_cell(rect_cell, dim=(3, 3, 1))
-tb.apply_pbc(gnr_zz, pbc=(True, False, False))
+gnr_zz.apply_pbc(pbc=(True, False, False))
 gnr_zz.plot()
 
 # Now we evaluate their band structures. It is well known in the literature that

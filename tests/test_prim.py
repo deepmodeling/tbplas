@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, HopDict, extend_prim_cell,
-                    reshape_prim_cell, trim_prim_cell, apply_pbc,
-                    ANG, NM, Visualizer, frac2cart)
+                    reshape_prim_cell, ANG, NM, Visualizer, frac2cart)
 import tbplas.builder.exceptions as exc
 from tbplas.utils import TestHelper
 
@@ -797,9 +796,9 @@ class TestPrimitive(unittest.TestCase):
         # GNR along AM direction
         gnr = extend_prim_cell(rect_cell, dim=(3, 3, 1))
         gnr.plot(with_conj=False)
-        apply_pbc(gnr, pbc=(False, True, False))
+        gnr.apply_pbc(pbc=(False, True, False))
         gnr.plot(with_conj=False)
-        trim_prim_cell(gnr)
+        gnr.trim()
         gnr.plot(with_conj=False)
 
         k_points = np.array([
@@ -815,9 +814,9 @@ class TestPrimitive(unittest.TestCase):
         # GNR along ZZ direction
         gnr = extend_prim_cell(rect_cell, dim=(3, 3, 1))
         gnr.plot(with_conj=False)
-        apply_pbc(gnr, pbc=(True, False, False))
+        gnr.apply_pbc(pbc=(True, False, False))
         gnr.plot(with_conj=False)
-        trim_prim_cell(gnr)
+        gnr.trim()
         gnr.plot(with_conj=False)
 
         k_points = np.array([
