@@ -277,7 +277,7 @@ class TestLindhard(unittest.TestCase):
         back_epsilon = 1
         mesh_size = (1200, 1200, 1)
         use_fortran = True
-        q_points = 1 / 0.142 * np.array([[0.86602540, 0.5, 0.0]])
+        q_points = 1 / a * np.array([[0.86602540, 0.5, 0.0]])
 
         # Instantiate Lindhard calculator
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
@@ -319,7 +319,7 @@ class TestLindhard(unittest.TestCase):
 
     def test_epsilon_prb(self):
         """
-        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 4.76 / Angstrom
+        Reproducing Phys. Rev. B 84, 035439 (2011) with |q| = 0.476 / Angstrom
         and theta = 30 degrees.
 
         :return: None

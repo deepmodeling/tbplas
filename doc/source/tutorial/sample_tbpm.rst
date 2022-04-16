@@ -1,3 +1,5 @@
+.. _sample_tbpm:
+
 Properties from TBPM
 ====================
 

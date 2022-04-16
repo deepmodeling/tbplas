@@ -58,7 +58,7 @@ which is defined as:
         wfc /= np.linalg.norm(wfc)
         return wfc
 
-Here ``sample`` is an instance of :class:`Sample`, the sample for which initial wave function will be
+Here ``sample`` is an instance of :class:`.Sample`, the sample for which initial wave function will be
 generated. ``mu`` controlls the center of the Gaussian wave, while ``sigma`` and ``scale`` controlls
 the spatial extension. By wisely choosing ``mu``, ``sigma`` and ``scale`` we can generate different
 types of Gaussian waves. For example, a two-dimensional Gaussian wave can be generated and visualized
