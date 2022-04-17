@@ -20,8 +20,8 @@ from scipy.signal import hilbert
 
 from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
                       frac2cart, cart2frac, NM, KB, BOHR2NM)
+from .builder import core
 from .fortran import f2py
-import tbplas.builder.core as core
 
 
 class Lindhard:
@@ -532,93 +532,19 @@ class Lindhard:
         epsilon = self._calc_epsilon(q_points, dyn_pol)
         return omegas, epsilon
 
-    def calc_ac_cond_prb(self):
-        """
-        Calculate AC conductivity.
-
-        CAUTION: The unit of output of this method is ambiguous. DO NOT use
-        this method to calculate AC conductivity. Use 'calc_ac_cond_kg'
-        instead.
-
-        Reference:
-        https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.155411
-    
-        :return: omegas: (num_omega,) float64 array
-            energies in eV
-        :return: ac_cond: (num_omega,) complex128 array
-            AC conductivity
-        :raises NotImplementedError: if system dimension is not 2
-        """
-        if self.dimension != 2:
-            raise NotImplementedError(f"Dimension {self.dimension} not "
-                                      f"implemented")
-    
-        # Aliases for variables
-        omegas = self.omegas + 0.001  # to avoid divergence at w=0
-        kmesh = self.grid2cart(self.kmesh_grid, unit=NM)
-        area = self.cell.get_lattice_area("c")
-        lat_vec = self.cell.lat_vec
-        orb_pos = self.cell.orb_pos_nm
-        hop_eng = self.cell.hop_eng
-    
-        # Build hopping distances
-        num_hop = self.cell.hop_ind.shape[0]
-        hop_dr = np.zeros((num_hop, 3), dtype=np.float64)
-        for i_h, ind in enumerate(self.cell.hop_ind):
-            rn = np.matmul(ind[0:3], lat_vec)
-            orb_i, orb_j = ind.item(3), ind.item(4)
-            hop_dr[i_h] = orb_pos[orb_j] + rn - orb_pos[orb_i]
-    
-        # Get eigenvalues and eigenstates
-        kmesh_frac = self.grid2frac(self.kmesh_grid)
-        bands, states = self._get_eigen_states(kmesh_frac, convention=1)
-    
-        # Allocate ac conductivity
-        num_omega = omegas.shape[0]
-        ac_cond_real = np.zeros(num_omega, dtype=np.float64)
-    
-        # Call C/FORTRAN backend to evaluate real part of optical conductivity
-        use_fortran = True
-        if use_fortran:
-            bands = bands.T
-            states = states.T
-            # FORTRAN array indices begin from 1!
-            hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
-            hop_ind = hop_ind.T
-            # hop_eng is a vector and needs no transposing
-            hop_dr = hop_dr.T
-            kmesh = kmesh.T
-            f2py.ac_cond_real(bands, states, hop_ind, hop_eng,
-                              hop_dr, kmesh, self.beta, self.mu, omegas,
-                              self.delta, ac_cond_real)
-        else:
-            hop_ind = self.cell.hop_ind[:, 3:5].copy()
-            core.ac_cond_real(bands, states, hop_ind, hop_eng,
-                              hop_dr, kmesh, self.beta, self.mu, omegas,
-                              self.delta, ac_cond_real)
-
-        # Multiply prefactor
-        dnk = self._get_dnk() * BOHR2NM**2
-        prefactor = -self.g_s * dnk / area
-        ac_cond_real *= prefactor
-        ac_cond_real = ac_cond_real / omegas
-
-        # Get imaginary part via Kramers-Kronig relation
-        sigma = np.zeros(2 * num_omega, dtype=float)
-        for i_w in range(num_omega):
-            sigma[num_omega + i_w] = ac_cond_real.item(i_w)
-            sigma[num_omega - i_w] = ac_cond_real.item(i_w)
-        ac_cond_imag = np.imag(hilbert(sigma))[num_omega:2 * num_omega]
-        ac_cond = ac_cond_real + 1j * ac_cond_imag
-        return omegas, ac_cond
-
-    def calc_ac_cond_kg(self):
+    def calc_ac_cond_kg(self, direction="xx", use_fortran=True):
         """
         Calculate AC conductivity using Kubo-Greenwood formula.
 
         Reference: section 12.2 of Wannier90 user guide.
         NOTE: there is not such g_s factor in the reference.
 
+        :param direction: string
+            which component of conductivity to evaluate
+            should be combination of  "x", "y" and "z"
+        :param use_fortran: boolean
+            whether to use FORTRAN backend, set to False to enable cython
+            backend for debugging
         :return: omegas: (num_omega,) float64 array
             energies in eV
         :return: ac_cond: (num_omega,) complex128 array
@@ -632,6 +558,7 @@ class Lindhard:
         lat_vec = self.cell.lat_vec
         orb_pos = self.cell.orb_pos_nm
         hop_eng = self.cell.hop_eng
+        comp = np.array(["xyz".index(_) for _ in direction], dtype=np.int32)
 
         # Build hopping distances
         num_hop = self.cell.hop_ind.shape[0]
@@ -650,24 +577,25 @@ class Lindhard:
         ac_cond = np.zeros(num_omega, dtype=np.complex128)
 
         # Call C/FORTRAN backend to evaluate optical conductivity
-        use_fortran = True
+        # FORTRAN array indices begin from 1. So we need to increase
+        # hop_ind and comp by 1.
         if use_fortran:
             bands = bands.T
             states = states.T
-            # FORTRAN array indices begin from 1!
             hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
             hop_ind = hop_ind.T
             # hop_eng is a vector and needs no transposing
             hop_dr = hop_dr.T
             kmesh = kmesh.T
+            comp += 1
             f2py.ac_cond_kg(bands, states, hop_ind, hop_eng,
                             hop_dr, kmesh, self.beta, self.mu, omegas,
-                            self.delta, ac_cond)
+                            self.delta, comp, ac_cond)
         else:
             hop_ind = self.cell.hop_ind[:, 3:5].copy()
             core.ac_cond_kg(bands, states, hop_ind, hop_eng,
                             hop_dr, kmesh, self.beta, self.mu, omegas,
-                            self.delta, ac_cond)
+                            self.delta, comp, ac_cond)
 
         # Multiply prefactor
         # NOTE: there is not such g_s factor in the reference.
