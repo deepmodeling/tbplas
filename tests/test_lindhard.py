@@ -283,7 +283,7 @@ class TestLindhard(unittest.TestCase):
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
                                energy_step=energy_step, kmesh_size=mesh_size,
                                mu=mu, temperature=temp, g_s=1,
-                               back_epsilon=back_epsilon)
+                               back_epsilon=back_epsilon, dimension=2)
 
         # Calculate and plot dyn_pol
         omegas, dyn_pol = lindhard.calc_dyn_pol_arbitrary(q_points, use_fortran)
@@ -291,31 +291,6 @@ class TestLindhard(unittest.TestCase):
             plt.plot(omegas/t, -dyn_pol.imag[i]*t*a**2)
         plt.savefig("dyn_pol.png")
         plt.close()
-
-    def test_epsilon_consistency(self):
-        """
-        Test if regular and arbitrary algorithms produce consistent results.
-
-        :return: None
-        """
-        cell = tb.make_graphene_diamond()
-        energy_max = 10
-        energy_step = 2048
-        mu = 0.0
-        temp = 300
-        back_epsilon = 1
-        mesh_size = (120, 120, 1)
-        q_points_grid = np.array([[100, 100, 0]], dtype=np.int64)
-        q_points_cart = np.array([[21.28450307, 12.28861358, 0.]])
-
-        lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
-                               energy_step=energy_step, kmesh_size=mesh_size,
-                               mu=mu, temperature=temp,
-                               back_epsilon=back_epsilon)
-        eps_ref = lindhard.calc_epsilon_regular(q_points_grid)[1]
-        eps_test = lindhard.calc_epsilon_arbitrary(q_points_cart)[1]
-        diff = np.sum(np.abs(eps_test - eps_ref)).item(0)
-        self.assertAlmostEqual(diff, 0.0, delta=1e-3)
 
     def test_epsilon_prb(self):
         """
@@ -348,10 +323,11 @@ class TestLindhard(unittest.TestCase):
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
                                energy_step=energy_step, kmesh_size=mesh_size,
                                mu=mu, temperature=temp, g_s=1,
-                               back_epsilon=back_epsilon)
+                               back_epsilon=back_epsilon, dimension=2)
 
         # Evaluate dielectric function
-        omegas, epsilon = lindhard.calc_epsilon_arbitrary(q_points, use_fortran)
+        omegas, dyn_pol = lindhard.calc_dyn_pol_arbitrary(q_points, use_fortran)
+        epsilon = lindhard.calc_epsilon(q_points, dyn_pol)
 
         # Plot
         for i in range(len(q_points)):
@@ -378,9 +354,10 @@ class TestLindhard(unittest.TestCase):
         lindhard = tb.Lindhard(cell=cell, energy_max=energy_max,
                                energy_step=energy_step, kmesh_size=mesh_size,
                                mu=mu, temperature=temp,
-                               back_epsilon=back_epsilon, delta=0.005, g_s=2)
+                               back_epsilon=back_epsilon, delta=0.005, g_s=2,
+                               dimension=2)
 
-        omegas, ac_cond = lindhard.calc_ac_cond_kg()
+        omegas, ac_cond = lindhard.calc_ac_cond()
         omegas /= 2.7
 
         plt.plot(omegas, ac_cond.real, color="r")
