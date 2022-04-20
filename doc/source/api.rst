@@ -7,6 +7,7 @@ API Reference
     :toctree: _api
 
     PrimitiveCell
+    Lindhard
     IntraHopping
     SuperCell
     InterHopping

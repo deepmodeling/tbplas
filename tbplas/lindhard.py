@@ -104,7 +104,7 @@ class Lindhard:
     supercell lengths of non-periodic directions are set to 1 nm, then the first
     approach yields the same results as the second approach.
 
-    For the dielectric constant, the situation is more complicated. From the
+    For the dielectric function, the situation is more complicated. From the
     equation
         epsilon(q) = 1 - V(q) * dyn_pol(q)
     we can see it is also affected by the Coulomb potential V(q). Since
