@@ -68,7 +68,7 @@ If TBPLaS has been compiled with MKL, also set ``MKL_NUM_THREADS``:
 
     export MKL_NUM_THREADS=8
 
-Then we create a graphene sample with 120*120*1 cells:
+Then we create a graphene sample with 480*480*1 cells:
 
 .. code-block:: python
 
@@ -76,7 +76,7 @@ Then we create a graphene sample with 120*120*1 cells:
     import tbplas as tb
 
     prim_cell = tb.make_graphene_diamond()
-    super_cell = tb.SuperCell(prim_cell, dim=(120, 120, 1), pbc=(True, True, False))
+    super_cell = tb.SuperCell(prim_cell, dim=(480, 480, 1), pbc=(True, True, False))
     sample = tb.Sample(super_cell)
     sample.rescale_ham(9.0)
 
@@ -117,7 +117,7 @@ And visualize the results:
 .. code-block:: python
 
     plt.plot(energies_dos, dos)
-    plt.xlabel("E (eV)")
+    plt.xlabel("Energy (eV)")
     plt.ylabel("DOS")
     plt.savefig("DOS.png")
     plt.close()
@@ -126,7 +126,6 @@ The output is shown in panel (a) of the figure:
 
 .. figure:: images/sample_tbpm/tbpm.png
     :align: center
-    :scale: 75%
 
     Density of states (a), optical (AC) conductivity (b), dynamic polarizability (c) and electronic (DC)
     conductivity (d) of graphene sample.
@@ -141,7 +140,7 @@ We then demonstrate more capabilities of TBPM. Firstly, we add more settings to 
 
     config.generic['correct_spin'] = True
     config.dyn_pol['q_points'] = [[1., 0., 0.]]
-    config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
+    config.DC_conductivity['energy_limits'] = (-5, 5)
     config.LDOS['site_indices'] = [0]
     config.LDOS['delta'] = 0.1
     config.LDOS['recursion_depth'] = 2000
@@ -162,8 +161,8 @@ in the same way as DOS:
     corr_ac = solver.calc_corr_ac_cond()
     omegas_ac, ac = analyzer.calc_ac_cond(corr_ac)
     plt.plot(omegas_ac, ac[0])
-    plt.xlabel("h_bar * omega (eV)")
-    plt.ylabel("sigma_xx (sigma_0)")
+    plt.xlabel("Energy (eV)")
+    plt.ylabel("sigma_xx")
     plt.savefig("ACxx.png")
     plt.close()
 
@@ -171,7 +170,7 @@ in the same way as DOS:
     corr_dyn_pol = solver.calc_corr_dyn_pol()
     q_val, omegas, dyn_pol = analyzer.calc_dyn_pol(corr_dyn_pol)
     plt.plot(omegas, -1 * dyn_pol[0, :].imag)
-    plt.xlabel("h_bar * omega (eV)")
+    plt.xlabel("Energy (eV)")
     plt.ylabel("-Im(dp)")
     plt.savefig("dp_imag.png")
     plt.close()
@@ -180,7 +179,7 @@ in the same way as DOS:
     corr_dos, corr_dc = solver.calc_corr_dc_cond()
     energies_dc, dc = analyzer.calc_dc_cond(corr_dos, corr_dc)
     plt.plot(energies_dc, dc[0, :])
-    plt.xlabel("E (eV)")
+    plt.xlabel("Energy (eV)")
     plt.ylabel("DC conductivity")
     plt.savefig("DC.png")
     plt.close()
