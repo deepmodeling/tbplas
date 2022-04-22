@@ -540,10 +540,10 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1, n_en_inds) :: wf_QE
     COMPLEX(KIND=8), DIMENSION(n_indptr - 1, 2) :: wf0_J, wfE_J
     ! coefs for current
-    COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_y
+    COMPLEX(KIND=8), DIMENSION(n_hop) :: sys_current_x, sys_current_y
     COMPLEX(KIND=8) :: dos_corrval, P
     COMPLEX(KIND=8), DIMENSION(2) :: dc_corrval
-    TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_y
+    TYPE(SPARSE_MATRIX_T) :: H_csr, cur_csr_x, cur_csr_y
     COMPLEX(KIND=8) :: norm_ref
 
     ! set some values
@@ -565,7 +565,12 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
 #endif
 
     ! get current coefficients
+	! for xx direction
+    CALL current_coefficient(s_hop, s_dx, n_hop, H_rescale, sys_current_x)
+    ! for yy direction	
     CALL current_coefficient(s_hop, s_dy, n_hop, H_rescale, sys_current_y)
+    ! get current operator
+    cur_csr_x = make_csr_matrix(s_indptr, s_indices, sys_current_x)
     cur_csr_y = make_csr_matrix(s_indptr, s_indices, sys_current_y)
 
     if (rank == 0) PRINT *, "Calculating DC conductivity correlation function."
@@ -575,7 +580,6 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         if (rank == 0) PRINT *, "Calculating for sample ", i_sample, " of ", n_ran_samples
 #ifdef DEBUG
         WRITE(27, *) "Sample =", i_sample
-        WRITE(28, *) "Sample =", i_sample
 #endif
 
         ! make random state
@@ -642,28 +646,20 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
         ! then, get dc conductivity
         ! ------------
 		
-		wf0_J(:, 1) = cur_csr_y * wf0
+		! make psi_x, psi_y
+		wf0_J(:, 1) = cur_csr_x * wf0
+		wf0_J(:, 2) = cur_csr_y * wf0
+		
+        ! timestep 0
         ! iterate over energies
         DO i = 1, n_en_inds
-
-
-            ! get corresponding quasi-eigenstate
-            ! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
-            wfE(:) = wf_QE(:, i) .pDiv. ABS(inner_prod(wf0, wf_QE(:, i)))
-
-            ! make psi1, psi2
-            ! wf0_J(1, :) = cur_csr_y * wf0
-            ! wf0_J(2, :) = copy(wf0_J(1, :))
-            ! wfE_J(1, :) = cur_csr_y * wfE
-            ! wfE_J(2, :) = copy(wfE_J(1, :))
-            
-            wf0_J(:, 2) = copy(wf0_J(:, 1))
-            wfE_J(:, 1) = cur_csr_y * wfE
-            wfE_J(:, 2) = copy(wfE_J(:, 1))
+		   ! make epsilon
+			wfE(:) = wf_QE(:, i) .pDiv. ABS(inner_prod(wf0, wf_QE(:, i)))
+			! multiply curreny operator
+			wfE_J(:, 1) = cur_csr_x * wfE
+			wfE_J(:, 2) = cur_csr_y * wfE
 
             ! get correlation values
-            ! dc_corrval(1) = inner_prod(wf0_J(1, :), wfE_J(1, :))
-            ! dc_corrval(2) = inner_prod(wf0_J(2, :), wfE_J(2, :))
             dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
             dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 
@@ -671,30 +667,26 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
             dc_corr(1, i, 1) = dc_corr(1, i, 1) + dc_corrval(1)/n_ran_samples
             dc_corr(2, i, 1) = dc_corr(2, i, 1) + dc_corrval(2)/n_ran_samples			
 		END DO
-		
+
+		! iterate over time
 		DO t = 2, n_timestep
 			! POSITIVE time evolution
 			wf0_J(:, 1) = cheb_wf_timestep(H_csr, Bes, wf0_J(:, 1), .true.)
+			wf0_J(:, 2) = cheb_wf_timestep(H_csr, Bes, wf0_J(:, 2), .true.)
+			
+			! iterate over energies
 			DO i = 1, n_en_inds
 				! get corresponding quasi-eigenstate
-				! wfE(:) = wf_QE(i, :) .pDiv. ABS(inner_prod(wf0, wf_QE(i, :)))
+				! make epsilon
 				wfE(:) = wf_QE(:, i) .pDiv. ABS(inner_prod(wf0, wf_QE(:, i)))
-
-				! make psi1, psi2
-				! wf0_J(1, :) = cur_csr_y * wf0
-				! wf0_J(2, :) = copy(wf0_J(1, :))
-				! wfE_J(1, :) = cur_csr_y * wfE
-				! wfE_J(2, :) = copy(wfE_J(1, :))
+				! multiply curreny operator
+				wfE_J(:, 1) = cur_csr_x * wfE
+				wfE_J(:, 2) = cur_csr_y * wfE
 				
-				wf0_J(:, 2) = copy(wf0_J(:, 1))
-				wfE_J(:, 1) = cur_csr_y * wfE
-				wfE_J(:, 2) = copy(wfE_J(:, 1))
-				
+				! get correlation values
 				dc_corrval(1) = inner_prod(wf0_J(:, 1), wfE_J(:, 1))
 				dc_corrval(2) = inner_prod(wf0_J(:, 2), wfE_J(:, 2))
 				
-				
-
 				! update correlation functions
 				dc_corr(1, i, t) = dc_corr(1, i, t) + dc_corrval(1)/n_ran_samples
 				dc_corr(2, i, t) = dc_corr(2, i, t) + dc_corrval(2)/n_ran_samples
@@ -706,14 +698,14 @@ SUBROUTINE tbpm_dccond(Bes, n_Bes, beta, mu, s_indptr, n_indptr, &
     ! write to file
 	DO i = 1, n_en_inds
 		WRITE(28, *) "Energy ", i, en_inds(i), energies(en_inds(i) + 1)
-		DO t = 2, n_timestep
+		DO t = 1, n_timestep
 			WRITE(28, "(I7,ES24.14E3,ES24.14E3,ES24.14E3,ES24.14E3)") &
 				t, &
 				REAL(dc_corr(1, i, t)), AIMAG(dc_corr(1, i, t)), &
 				REAL(dc_corr(2, i, t)), AIMAG(dc_corr(2, i, t))
 		END DO
 	END DO
-#endif	
+#endif
 
 #ifdef DEBUG
     CLOSE(27)

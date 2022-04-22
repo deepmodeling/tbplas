@@ -21,6 +21,7 @@ from math import cos, sin, exp
 import numpy as np
 import numpy.linalg as npla
 from scipy.signal import hilbert
+from scipy.integrate import trapz
 
 from .builder import Sample
 from .config import Config
@@ -362,6 +363,50 @@ class Analyzer(BaseSolver):
         else:
             energies, dc = None, None
         return energies, dc
+
+    def calc_diff_coeff(self, corr_dc, window_dc=window_exp):
+        """
+        Calculate diffusion coefficient form DC correlation function.
+
+        :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
+            DC conductivity correlation function
+        :param window_dc: function, optional
+            window function for DC integral
+        :return time: (nr_time_steps,) float64 array
+            time for diffusion coefficient
+        :return diff_coeff: (2, n_energies, nr_time_steps) complex128 array
+            diffusion coefficient
+        """
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        en_range = self.sample.energy_range
+        t_step = 2 * np.pi / en_range
+        en_limit = self.config.DC_conductivity['energy_limits']
+        energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
+                             for i in range(tnr * 2)], dtype=float)
+        qe_indices = np.where((energies >= en_limit[0]) &
+                              (energies <= en_limit[1]))[0]
+        n_energies = len(qe_indices)
+        energies = energies[qe_indices]
+        time = np.linspace(0, tnr - 1, tnr) * t_step
+
+        if self.rank == 0:
+            diff_coeff = np.zeros((2, n_energies, tnr))
+            for i in range(2):
+                for j in range(n_energies):
+                    en = energies.item(j)
+                    temp = np.zeros((tnr))
+                    for k in range(tnr):
+                        w = window_dc(k + 1, tnr)
+                        phi = k * t_step * en
+                        c_exp = cos(phi) - 1j * sin(phi)
+                        temp[k] = w * (c_exp * corr_dc.item(i, j, k)).real
+                    for l in range(tnr):
+                        diff_coeff[i, j, l] = trapz(temp[:l + 1], time[:l + 1])
+
+        else:
+            time, diff_coeff = None, None
+        return time, diff_coeff
 
     def calc_hall_cond(self, mu_mn):
         """
