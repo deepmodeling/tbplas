@@ -121,6 +121,8 @@ Here is an example using Intel compilers and built-in sparse matrix library:
     opt = -qopenmp -O3 -ipo -heap-arrays 32
     f90flags = -fpp
 
+    [build_ext]
+    libraries = iomp5
 
 And here is the example using Intel compilers and MKL:
 
@@ -155,12 +157,15 @@ Another example using GCC and built-in sparse matrix library:
     opt = -fopenmp -O3 -mtune=native
     f90flags = -fno-second-underscore -cpp
 
+    [build_ext]
+    libraries = gomp
+
 Workaround for undefined symbol error
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You may run into errors complaining about ``undefined symbol: GOMP_parallel`` when testing your build and
 installation. In that case, find the location of ``libgomp.so``, for instance, ``/usr/lib64``. Add it to
-``build_ext`` section of ``setup.cfg`` and re-compile TBPLaS. This issue will be solved.
+``library_dirs`` of ``build_ext`` section and re-compile TBPLaS. This issue will be solved.
 
 .. code-block:: cfg
     :emphasize-lines: 0
@@ -170,7 +175,7 @@ installation. In that case, find the location of ``libgomp.so``, for instance, `
     libraries = gomp
 
 Similarily, if you run into errors of ``undefined symbol: __kmpc_ok_to_fork`` when using Intel compilers,
-search for ``libiomp5.so`` add its path to ``build_ext``. Then re-compile TBPLaS.
+search for ``libiomp5.so`` add its path to ``library_dirs``. Then re-compile TBPLaS.
 
 .. code-block:: cfg
     :emphasize-lines: 0
@@ -197,9 +202,6 @@ Then add appropriate compilation flags to ``f90flags``. For ifort it should be `
 
 .. code-block:: cfg
 
-    [config_cc]                                                                                                                                                                             
-    compiler = intelem
-
     [config_fc]
     fcompiler = intelem
     arch = -xHost
@@ -210,9 +212,6 @@ Then add appropriate compilation flags to ``f90flags``. For ifort it should be `
 while for gfortran it should be ``-fdefault-integer-8``:
 
 .. code-block:: cfg
-
-    [config_cc]
-    compiler = unix
 
     [config_fc]
     fcompiler = gfortran
@@ -243,7 +242,7 @@ Installing into default path
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Installing TBPLaS into the default path is as easy as ``python setup.py install``. After installation you can invoke
-Python and try ``import TBPLaS``. If no error occurs, then your installation is successful. If there are errors on
+Python and try ``import tbplas``. If no error occurs, then your installation is successful. If there are errors on
 undefined symbol, check the workaround in previous section.
 
 Installing into user-specified path
