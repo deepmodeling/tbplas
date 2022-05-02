@@ -619,16 +619,20 @@ class Solver(BaseSolver):
         """
         Calculate propagation of wave function from given initial state.
 
+        NOTES: a demo of nr_time_steps and time_log
+        nr_time_steps: 1, 2, 3, 4, 5, 6, 7, 8
+             time_log: 0, 1, 2, 3, 4, 5, 6, 7, 8
+
         :param psi_0: (num_orb_sample,) complex128 array
             expansion coefficients of initial wave function
         :param time_log: (num_time,) int64 array
             steps on which time the time-dependent wave function will be logged
             For example, t=0 stands for the initial wave function, while t=1
-            indicates the wave function after the 1st propagation.
+            indicates the wave function AFTER the 1st propagation.
         :return: psi_t: (num_time, num_orb_sample) complex128 array
             time-dependent wave function according to time_log
         :raises RuntimeError: if more than 1 mpi process is used
-        :raises ValueError: if any time in time_log not in [0, nr_time_steps-1].
+        :raises ValueError: if any time in time_log not in [0, nr_time_steps].
         """
         # For now wave function propagation is compatible with MPI
         if self.size != 1:
@@ -638,10 +642,10 @@ class Solver(BaseSolver):
         # Check and convert parameters
         psi_0 = np.array(psi_0, dtype=np.complex128)
         psi_0 /= np.linalg.norm(psi_0)
-        time_log = np.array(time_log, dtype=np.int64)
+        time_log = np.array(list(set(time_log)), dtype=np.int64)
         time_log.sort()
         for it in time_log:
-            if it not in range(self.config.generic['nr_time_steps']):
+            if it not in range(self.config.generic['nr_time_steps']+1):
                 raise ValueError(f"time {it} out of range")
 
         # Get quantities for propagation

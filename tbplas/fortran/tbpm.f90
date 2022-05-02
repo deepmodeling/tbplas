@@ -1066,6 +1066,9 @@ SUBROUTINE tbpm_psi_t(Bes, n_Bes, indptr, n_indptr, indices, n_indices, &
 
     DO t = 1, n_timestep
         ! Check and log wave function
+        ! a demo of n_timestep and time_log:
+        !   n_timestep: 1, 2, 3, 4, 5, 6, 7, 8
+        !     time_log: 0, 1, 2, 3, 4, 5, 6, 7, 8
         IF (time_log(ptr) == t - 1) THEN
             psi_t(:, ptr) = wf_t(:)
             IF (ptr < n_time_log) ptr = ptr + 1
@@ -1081,4 +1084,6 @@ SUBROUTINE tbpm_psi_t(Bes, n_Bes, indptr, n_indptr, indices, n_indices, &
         wf_t = cheb_wf_timestep(H_csr, Bes, wf_t, .true.)
     END DO
 
+    ! Log the last frame of wave function if required
+    IF (time_log(ptr) == n_timestep) psi_t(:, ptr) = wf_t(:)
 END SUBROUTINE tbpm_psi_t
