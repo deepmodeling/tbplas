@@ -152,16 +152,16 @@ class Visualizer:
         """
         self.__plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
 
-    def plot_wf2(self, sample: Sample, wf2: np.ndarray, scatter=True,
+    def plot_wfc(self, sample: Sample, wfc: np.ndarray, scatter=True,
                  site_size=5, num_grid=(200, 200), cmap="viridis",
                  with_colorbar=False, fig_name=None, fig_dpi=300):
         """
-        Plot squared wave function in real space.
+        Plot wave function in real space.
 
         :param sample: instance of 'Sample' class
             sample under study
-        :param wf2: (num_orb_sample,) float64 array
-            squared projection of wave function on all the sites
+        :param wfc: (num_orb_sample,) float64 array
+            projection of wave function on all the sites
         :param scatter: boolean
             whether to plot the wave function as scatter
         :param site_size: float
@@ -188,7 +188,7 @@ class Visualizer:
             # Plot data
             fig, ax = plt.subplots()
             if scatter:
-                img = ax.scatter(x, y, c=wf2, s=site_size, cmap=cmap)
+                img = ax.scatter(x, y, c=wfc, s=site_size, cmap=cmap)
             else:
                 x_min, x_max = np.min(x), np.max(x)
                 y_min, y_max = np.min(y), np.max(y)
@@ -196,7 +196,7 @@ class Visualizer:
                 y_fi = np.linspace(y_min, y_max, num_grid[1])
                 x_grid, y_grid = np.meshgrid(x_fi, y_fi)
                 xy_fi = np.c_[x_grid.ravel(), y_grid.ravel()]
-                z_fi = griddata((x, y), wf2, xy_fi,
+                z_fi = griddata((x, y), wfc, xy_fi,
                                 method="cubic").reshape(num_grid)
                 img = ax.imshow(z_fi, cmap=cmap, interpolation="none",
                                 origin="lower",

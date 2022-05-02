@@ -121,7 +121,7 @@ def main():
 
     # Visualize the initial wave function
     vis = tb.Visualizer()
-    vis.plot_wf2(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
 
     # Add scatting center
     add_scatter_gaussian(sample, mu=(x_max/4, y_max/2), sigma=0.5, v_pot=1.0)
@@ -136,7 +136,7 @@ def main():
 
     # Plot the wave function
     for i in range(len(time_log)):
-        vis.plot_wf2(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
+        vis.plot_wfc(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
 
 
 if __name__ == "__main__":

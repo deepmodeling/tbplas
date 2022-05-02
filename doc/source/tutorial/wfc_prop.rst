@@ -80,7 +80,7 @@ as:
 
     # Visualize the initial wave function
     vis = tb.Visualizer()
-    vis.plot_wf2(sample, np.abs(psi0)**2, cmap="hot", scatter=True)
+    vis.plot_wfc(sample, np.abs(psi0)**2, cmap="hot", scatter=True)
 
 The output is shown in the left panel of the figure. By default the initial wave function is shown
 as scatter plot. You can also plot it as an image by setting ``scatter`` to ``False``, which is shown
@@ -98,12 +98,12 @@ Meanwhile, one-dimensional Gaussian wave can be generate as:
     # 1D Gaussian along x-direction
     psi0 = init_wfc_gaussian(sample, mu=(x_max/2, y_max/2), sigma=0.5,
                              scale=(0.0, 1.0))
-    vis.plot_wf2(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
 
     # 1D Gaussian along y-direction
     psi0 = init_wfc_gaussian(sample, mu=(x_max/2, y_max/2), sigma=0.5,
                              cale=(1.0, 0.0))
-    vis.plot_wf2(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
 
 .. figure:: images/wfc_prop/gau_1d.png
     :align: center
@@ -150,9 +150,9 @@ We demonstrate the usage of this function by:
     kpt = np.matmul((3, 2, 0), g_vectors)
     psi0 = init_wfc_pw(sample, kpt)
 
-    vis.plot_wf2(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
-    vis.plot_wf2(sample, np.real(psi0), cmap="hot", scatter=False)
-    vis.plot_wf2(sample, np.imag(psi0), cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.abs(psi0)**2, cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.real(psi0), cmap="hot", scatter=False)
+    vis.plot_wfc(sample, np.imag(psi0), cmap="hot", scatter=False)
 
 Here we generate a plane wave with :math:`k=3b_1+2b_2`, with :math:`b_1` and :math:`b_2` being the basis
 vectors of reciprocal lattice. We plot the absolute value, as well as the real and imaginary part of the
@@ -193,7 +193,7 @@ We visualize ``psi_t`` as:
 
     # Plot the wave function
     for i in range(len(time_log)):
-        vis.plot_wf2(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
+        vis.plot_wfc(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
 
 .. rubric:: Propagation of 1D Gaussian wave
 
@@ -265,7 +265,7 @@ We try with the repulsive scattering center first:
 
     # Plot the wave function
     for i in range(len(time_log)):
-        vis.plot_wf2(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
+        vis.plot_wfc(sample, np.abs(psi_t[i])**2, cmap="hot", scatter=False)
 
 The argument ``mu=(x_max/4, y_max/2)`` specifies that the scattering center locates at the center of the
 left part of the sample. The output is shown as below:
