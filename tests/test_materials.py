@@ -40,7 +40,7 @@ class TestMaterials(unittest.TestCase):
         k_label = ["G", "K", "M", "G"]
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        tb.Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        tb.Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = tb.gen_kmesh((120, 120, 1))
@@ -83,7 +83,7 @@ class TestMaterials(unittest.TestCase):
         k_label = ["G", "X", "S", "Y", "G"]
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        tb.Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        tb.Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = tb.gen_kmesh((100, 100, 1))
@@ -121,7 +121,7 @@ class TestMaterials(unittest.TestCase):
         k_label = ["G", "M", "K", "G"]
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        tb.Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        tb.Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = tb.gen_kmesh((120, 120, 1))
@@ -158,7 +158,7 @@ class TestMaterials(unittest.TestCase):
         k_label = ["G", "M", "K", "G"]
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
         k_len, bands = prim_cell.calc_bands(k_path)
-        tb.Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        tb.Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
         # Test DOS
         k_points = tb.gen_kmesh((120, 120, 1))

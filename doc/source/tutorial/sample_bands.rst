@@ -34,7 +34,7 @@ The band structure of armchair-edged nano-ribbon can be obtained as:
     k_path, k_idx = tb.gen_kpath(k_points, [40, 40])
     k_len, bands = gnr_am.calc_bands(k_path)
     vis = tb.Visualizer()
-    vis.plot_band(k_len, bands, k_idx, k_label)
+    vis.plot_bands(k_len, bands, k_idx, k_label)
 
 For zigzag-edged nano-ribbon, ``k_points`` should be replaced with:
 

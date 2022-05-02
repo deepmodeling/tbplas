@@ -40,7 +40,7 @@ plt.show()
 
 # Alternatively, we can use the 'Visualizer' class.
 vis = tb.Visualizer()
-vis.plot_band(k_len, bands, k_idx, k_label)
+vis.plot_bands(k_len, bands, k_idx, k_label)
 
 # Now we calculate DOS. We need to create a mesh-grid in 1st Brillouin zone
 # first.

@@ -54,12 +54,12 @@ The band structure can be obtained by:
 
     k_len, bands = cell.calc_bands(k_path)
 
-and plotted by calling the :func:`plot_band` method of :class:`.Visualizer` class:
+and plotted by calling the :func:`plot_bands` method of :class:`.Visualizer` class:
 
 .. code-block:: python
 
     vis = tb.Visualizer()
-    vis.plot_band(k_len, bands, k_idx, k_label)
+    vis.plot_bands(k_len, bands, k_idx, k_label)
 
 or alternatively, using ``matplotlib`` directly:
 

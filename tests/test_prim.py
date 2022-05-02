@@ -809,7 +809,7 @@ class TestPrimitive(unittest.TestCase):
         k_label = ["X", "G", "X"]
         k_path, k_idx = gen_kpath(k_points, [40, 40])
         k_len, bands = gnr.calc_bands(k_path)
-        Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
         # GNR along ZZ direction
         gnr = extend_prim_cell(rect_cell, dim=(3, 3, 1))
@@ -827,7 +827,7 @@ class TestPrimitive(unittest.TestCase):
         k_label = ["X", "G", "X"]
         k_path, k_idx = gen_kpath(k_points, [40, 40])
         k_len, bands = gnr.calc_bands(k_path)
-        Visualizer().plot_band(k_len, bands, k_idx, k_label)
+        Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
     def test17_get_orbital_positions_cart(self):
         """

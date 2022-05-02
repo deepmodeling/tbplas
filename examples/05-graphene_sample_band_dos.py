@@ -25,7 +25,7 @@ k_label = ["G", "M", "K", "G"]
 k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
 k_len, bands = sample_pbc.calc_bands(k_path)
 vis = tb.Visualizer()
-vis.plot_band(k_len, bands, k_idx, k_label)
+vis.plot_bands(k_len, bands, k_idx, k_label)
 
 # Evaluation of DOS
 # NOTE: since we are already using a 6*6*1 sample, we need 20*20*1 k_mesh

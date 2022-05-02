@@ -85,10 +85,10 @@ class Visualizer:
             plt.tight_layout()
             self.__output(fig_name, fig_dpi)
 
-    def plot_band(self, k_len: np.ndarray, bands: np.ndarray,
-                  k_idx: np.ndarray, k_label: List[str],
-                  x_label: str = "k (1/nm)", y_label: str = "Energy (eV)",
-                  fig_name=None, fig_dpi=300):
+    def plot_bands(self, k_len: np.ndarray, bands: np.ndarray,
+                   k_idx: np.ndarray, k_label: List[str],
+                   x_label: str = "k (1/nm)", y_label: str = "Energy (eV)",
+                   fig_name=None, fig_dpi=300):
         """
         Plot band structure.
 
