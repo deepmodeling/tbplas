@@ -233,7 +233,7 @@ class TestGraphene(unittest.TestCase):
         corr_ac = solver.calc_corr_ac_cond()
         omegas_ac, ac = analyzer.calc_ac_cond(corr_ac)
         if analyzer.is_master:
-            plt.plot(omegas_ac, ac[0])
+            plt.plot(omegas_ac, ac[0].real)
             plt.xlabel("h_bar * omega (eV)")
             plt.ylabel("sigma_xx (sigma_0)")
             plt.savefig("ACxx.png")

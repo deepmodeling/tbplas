@@ -156,7 +156,7 @@ class Analyzer(BaseSolver):
             window function for integral
         :return: omegas: (nr_time_steps,) float64 array
             omega values
-        :return: ac: (4, nr_time_steps) float64 array
+        :return: ac_cond: (4, nr_time_steps) complex128 array
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
         """
@@ -171,8 +171,8 @@ class Analyzer(BaseSolver):
             omegas = np.array([i * en_range / tnr for i in range(tnr)],
                               dtype=float)
 
-            # Get AC conductivity
-            ac = np.zeros((4, tnr), dtype=float)
+            # Get real part of AC conductivity
+            ac_real = np.zeros((4, tnr), dtype=float)
             for j in range(4):
                 for i in range(tnr):
                     omega = omegas.item(i)
@@ -185,35 +185,25 @@ class Analyzer(BaseSolver):
                     else:
                         acv = ac_prefactor * t_step * acv \
                             * (exp(-beta * omega) - 1) / omega
-                    ac[j, i] = acv
+                    ac_real[j, i] = acv
+
+            # Get imaginary part of AC conductivity via Kramers-Kronig relations
+            # (Hilbert transformation).
+            ac_imag = np.zeros((4, tnr), dtype=float)
+            for j in range(4):
+                sigma = np.zeros(2 * tnr, dtype=float)
+                for i in range(tnr):
+                    sigma[tnr + i] = ac_real.item(j, i)
+                    sigma[tnr - i] = ac_real.item(j, i)
+                ac_imag[j, :] = np.imag(hilbert(sigma))[tnr:2 * tnr]
+            ac_cond = ac_real + 1j * ac_imag
 
             # Correct for spin
             if self.config.generic['correct_spin']:
-                ac = 2. * ac
+                ac_cond = 2. * ac_cond
         else:
-            omegas, ac = None, None
-        return omegas, ac
-
-    def calc_ac_cond_imag(self, ac_cond_real):
-        """
-        Calculate imaginary part of the AC conductivity from real part
-        using Kramers-Kronig relations (Hilbert transformation).
-
-        :param ac_cond_real: (num_data,) float64 array
-            real part of AC conductivity
-        :return: ac_imag: (num_data,) float64 array
-            imaginary part of AC conductivity
-        """
-        if self.rank == 0:
-            num_data = len(ac_cond_real)
-            sigma = np.zeros(2 * num_data, dtype=float)
-            for i in range(num_data):
-                sigma[num_data + i] = ac_cond_real.item(i)
-                sigma[num_data - i] = ac_cond_real.item(i)
-            ac_imag = np.imag(hilbert(sigma))[num_data:2 * num_data]
-        else:
-            ac_imag = None
-        return ac_imag
+            omegas, ac_cond = None, None
+        return omegas, ac_cond
 
     def calc_dyn_pol(self, corr_dyn_pol, window=window_exp_ten):
         """

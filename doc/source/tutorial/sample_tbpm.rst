@@ -160,7 +160,7 @@ in the same way as DOS:
     # Get AC conductivity
     corr_ac = solver.calc_corr_ac_cond()
     omegas_ac, ac = analyzer.calc_ac_cond(corr_ac)
-    plt.plot(omegas_ac, ac[0])
+    plt.plot(omegas_ac, ac[0].real)
     plt.xlabel("Energy (eV)")
     plt.ylabel("sigma_xx")
     plt.savefig("ACxx.png")
