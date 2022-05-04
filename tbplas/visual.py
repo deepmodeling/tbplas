@@ -57,8 +57,8 @@ class Visualizer:
                 plt.show()
             plt.close()
 
-    def __plot_xy(self, x: np.ndarray, y: np.ndarray, x_label=None,
-                  y_label=None, fig_name=None, fig_dpi=300):
+    def plot_xy(self, x: np.ndarray, y: np.ndarray, x_label=None,
+                y_label=None, fig_name=None, fig_dpi=300):
         """
         Plot y as function of x.
 
@@ -150,7 +150,7 @@ class Visualizer:
             resolution of figure
         :return: None
         """
-        self.__plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
+        self.plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
 
     def plot_wfc(self, sample: Sample, wfc: np.ndarray, scatter=True,
                  site_size=5, num_grid=(200, 200), cmap="viridis",
