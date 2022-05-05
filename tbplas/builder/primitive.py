@@ -1097,12 +1097,14 @@ class PrimitiveCell(LockableObject):
         for hopping in self.hopping_list:
             print(" ", hopping.index, hopping.energy)
 
-    def calc_bands(self, k_path: np.ndarray):
+    def calc_bands(self, k_path: np.ndarray, enable_mpi=False):
         """
         Calculate band structure along given k_path.
 
         :param k_path: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points along given path
+        :param enable_mpi: boolean
+            whether to enable parallelization over k-points using mpi
         :return: k_len: (num_kpt,) float64 array in 1/NM
             length of k-path in reciprocal space, for plotting band structure
         :return: bands: (num_kpt, num_orb) float64 array
@@ -1117,8 +1119,19 @@ class PrimitiveCell(LockableObject):
         # Get length of k-path in reciprocal space
         k_len = kpt.gen_kdist(self.lat_vec, k_path)
 
+        # Distribute k-points over processes
+        if enable_mpi:
+            from ..parallel import MPIEnv
+            mpi_env = MPIEnv()
+        else:
+            mpi_env = None
+        k_index = [_ for _ in range(num_k_points)]
+        if mpi_env is not None:
+            k_index = mpi_env.dist_list(k_index)
+
         # Loop over k-points to evaluate the energies
-        for i_k, k_point in enumerate(k_path):
+        for i_k in k_index:
+            k_point = k_path[i_k]
             ham_k *= 0.0
             core.set_ham(self.orb_pos, self.orb_eng,
                          self.hop_ind, self.hop_eng,
@@ -1127,10 +1140,14 @@ class PrimitiveCell(LockableObject):
             idx = eigenvalues.argsort()[::-1]
             eigenvalues = eigenvalues[idx]
             bands[i_k, :] = eigenvalues[:]
+
+        # Collect energies
+        if mpi_env is not None:
+            bands = mpi_env.all_reduce(bands)
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray, e_min=None, e_max=None,
-                 e_step=0.05, sigma=0.05, basis="Gaussian"):
+                 e_step=0.05, sigma=0.05, basis="Gaussian", enable_mpi=False):
         """
         Calculate density of states for given energy range and step.
 
@@ -1147,6 +1164,8 @@ class PrimitiveCell(LockableObject):
         :param basis: string
             basis function to approximate the Delta function
             should be either "Gaussian" or "Lorentzian"
+        :param enable_mpi: boolean
+            whether to enable parallelization over k-points using mpi
         :return: energies: (num_grid,) float64 array
             energy grid corresponding to e_min, e_max and e_step
         :return: dos: (num_grid,) float64 array
@@ -1154,7 +1173,7 @@ class PrimitiveCell(LockableObject):
         :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
         # Get the band energies
-        k_len, bands = self.calc_bands(k_points)
+        k_len, bands = self.calc_bands(k_points, enable_mpi)
 
         # Create energy grid
         if e_min is None:

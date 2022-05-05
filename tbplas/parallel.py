@@ -52,6 +52,50 @@ class MPIEnv:
             raise ValueError("Array is neither C nor FORTRAN contiguous")
         return order
 
+    def dist_list(self, raw_list, algorithm="range"):
+        """
+        Distribute a list over processes.
+
+        :param raw_list: list
+            raw list to distribute
+        :param algorithm: string
+            distribution algorithm, should be either "remainder" or "range"
+        :return sub_list: list
+            sublist assigned to this process
+        """
+        return split_list(raw_list, self.size, algorithm)[self.rank]
+
+    def reduce(self, data_local):
+        """
+        Reduce local data to master process.
+
+        :param data_local: numpy array
+            local results on each process
+        :return: data: numpy array
+            summed data from data_local
+        """
+        if self.rank == 0:
+            data = np.zeros(data_local.shape, dtype=data_local.dtype,
+                            order=self.__get_array_order(data_local))
+        else:
+            data = None
+        self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
+        return data
+
+    def all_reduce(self, data_local):
+        """
+        Reduce local data and broadcast to all processes.
+
+        :param data_local: numpy array
+            local results on each process
+        :return: data: numpy array
+            summed data from data_local
+        """
+        data = np.zeros(data_local.shape, dtype=data_local.dtype,
+                        order=self.__get_array_order(data_local))
+        self.comm.Allreduce(data_local, data, op=MPI.SUM)
+        return data
+
     def average(self, data_local):
         """
         Average results over random samples and store results to master process.

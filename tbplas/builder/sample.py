@@ -770,7 +770,8 @@ class Sample:
             plt.show()
         plt.close()
 
-    def calc_bands(self, k_path, solver="lapack", num_bands=None):
+    def calc_bands(self, k_path, solver="lapack", num_bands=None,
+                   enable_mpi=False):
         """
         Calculate band structure along given k_path.
 
@@ -784,6 +785,8 @@ class Sample:
             For arpack solver, the lowest num_bands bands will be calculated.
             If not given, default value is to calculate the lowest 60% of all
             bands.
+        :param enable_mpi: boolean
+            whether to enable parallelization over k-points using mpi
         :return: k_len: (num_kpt,) float64 array
             length of k-path in 1/nm in reciprocal space
             x-data for plotting band structure
@@ -824,10 +827,22 @@ class Sample:
         sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
         k_path = lat.frac2cart(sc_recip_vec, k_path)
 
+        # Distribute k-points over processes
+        if enable_mpi:
+            from ..parallel import MPIEnv
+            mpi_env = MPIEnv()
+        else:
+            mpi_env = None
+        k_index = [_ for _ in range(num_k_points)]
+        if mpi_env is not None:
+            k_index = mpi_env.dist_list(k_index)
+
         # Loop over k-points to evaluate the band structure
         if solver == "lapack":
             ham_dense = np.zeros(ham_shape, dtype=np.complex128)
-            for i_k, k_point in enumerate(k_path):
+            for i_k in k_index:
+                k_point = k_path[i_k]
+
                 # Update hop_k
                 core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
 
@@ -843,7 +858,9 @@ class Sample:
                 bands[i_k, :] = eigenvalues
         elif solver == "arpack":
             ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
-            for i_k, k_point in enumerate(k_path):
+            for i_k in k_index:
+                k_point = k_path[i_k]
+
                 # Update hop_k
                 core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
 
@@ -859,6 +876,10 @@ class Sample:
                 bands[i_k, :] = eigenvalues
         else:
             raise exc.SolverError(solver)
+
+        # Collect energies
+        if mpi_env is not None:
+            bands = mpi_env.all_reduce(bands)
         return k_len, bands
 
     def calc_dos(self, k_points, e_min=None, e_max=None, e_step=0.05,
