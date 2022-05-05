@@ -14,6 +14,8 @@ Classes
 from mpi4py import MPI
 import numpy as np
 
+from .utils import split_list
+
 
 class MPIEnv:
     """
@@ -33,6 +35,23 @@ class MPIEnv:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
 
+    @staticmethod
+    def __get_array_order(array: np.ndarray):
+        """
+        Get data order of array.
+
+        :param array: numpy array
+        :return: string, should be either "C" or "F"
+        :raise ValueError: if array is neither C nor FORTRAN contiguous
+        """
+        if array.flags.c_contiguous:
+            order = "C"
+        elif array.flags.f_contiguous:
+            order = "F"
+        else:
+            raise ValueError("Array is neither C nor FORTRAN contiguous")
+        return order
+
     def average(self, data_local):
         """
         Average results over random samples and store results to master process.
@@ -49,7 +68,8 @@ class MPIEnv:
         NOT remove the order=F argument below.
         """
         if self.rank == 0:
-            data = np.zeros(data_local.shape, dtype=data_local.dtype, order="F")
+            data = np.zeros(data_local.shape, dtype=data_local.dtype,
+                            order=self.__get_array_order(data_local))
         else:
             data = None
         self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
