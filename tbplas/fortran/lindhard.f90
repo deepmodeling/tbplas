@@ -64,10 +64,10 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
 
     ! calculate dyn_pol
     cdelta = dcmplx(0.0D0, delta)
+    !$OMP PARALLEL DO PRIVATE(omega, dp_sum, i_k, jj, ll)
     do i_w = 1, num_omega
         omega = omegas(i_w)
         dp_sum = dcmplx(0.0D0, 0.0D0)
-        !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
             do jj = 1, num_orb
                 do ll = 1, num_orb
@@ -76,9 +76,9 @@ subroutine dyn_pol_q(eng, num_orb, num_kpt, wfn, kq_map, &
                 end do
             end do
         end do
-        !$OMP END PARALLEL DO
         dyn_pol(i_w, i_q) = dp_sum
     end do
+    !$OMP END PARALLEL DO
 end subroutine dyn_pol_q
 
 
@@ -143,10 +143,10 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
 
     ! calculate dyn_pol
     cdelta = dcmplx(0.0D0, delta)
+    !$OMP PARALLEL DO PRIVATE(omega, dp_sum, i_k, jj, ll)
     do i_w = 1, num_omega
         omega = omegas(i_w)
         dp_sum = dcmplx(0.0D0, 0.0D0)
-        !$OMP PARALLEL DO PRIVATE(jj, ll) REDUCTION(+: dp_sum)
         do i_k = 1, num_kpt
             do jj = 1, num_orb
                 do ll = 1, num_orb
@@ -155,9 +155,9 @@ subroutine dyn_pol_q_arb(eng, num_orb, num_kpt, wfn, eng_kq, wfn_kq, &
                 end do
             end do
         end do
-        !$OMP END PARALLEL DO
         dyn_pol(i_w, i_q) = dp_sum
     end do
+    !$OMP END PARALLEL DO
 end subroutine dyn_pol_q_arb
 
 
@@ -252,10 +252,10 @@ subroutine ac_cond_kg(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
 
     ! calculate ac_cond
     cdelta = dcmplx(0.0D0, delta)
+    !$OMP PARALLEL DO PRIVATE(omega, ac_sum, i_k, mm, nn)
     do i_w = 1, num_omega
         omega = omegas(i_w)
         ac_sum = dcmplx(0.0D0, 0.0D0)
-        !$OMP PARALLEL DO PRIVATE(mm, nn) REDUCTION(+: ac_sum)
         do i_k = 1, num_kpt
             do mm = 1, num_orb
                 do nn = 1, num_orb
@@ -264,7 +264,7 @@ subroutine ac_cond_kg(eng, num_orb, num_kpt, wfn, hop_ind, num_hop, hop_eng, &
                 end do
             end do
         end do
-        !$OMP END PARALLEL DO
         ac_cond(i_w) = ac_sum
     end do
+    !$OMP END PARALLEL DO
 end subroutine ac_cond_kg

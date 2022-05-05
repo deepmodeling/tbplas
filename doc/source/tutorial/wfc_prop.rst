@@ -65,6 +65,7 @@ types of Gaussian waves. For example, a two-dimensional Gaussian wave can be gen
 as:
 
 .. code-block:: python
+
     # Build the sample
     prim_cell = tb.make_graphene_rect()
     sample = tb.Sample(tb.SuperCell(prim_cell, dim=(50, 20, 1),
