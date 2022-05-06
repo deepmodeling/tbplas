@@ -50,6 +50,8 @@ class Lindhard:
     delta: float
         broadening parameter in eV that appears in the denominator of Lindhard
         function
+    mpi_env: instance of 'MPIEnv' class
+        mpi environment
 
     NOTES
     -----
@@ -118,7 +120,7 @@ class Lindhard:
                  energy_max: float, energy_step: int,
                  kmesh_size: Tuple[int, int, int],
                  mu=0.0, temperature=300.0, g_s=2, back_epsilon=1.0,
-                 dimension=3, delta=0.005) -> None:
+                 dimension=3, delta=0.005, enable_mpi=False) -> None:
         """
         :param cell: instance of 'PrimitiveCell' class
             primitive cell for which properties will be evaluated
@@ -140,6 +142,9 @@ class Lindhard:
             dimension of the system
         :param delta: float
             broadening parameter in eV
+        :param enable_mpi: boolean
+            whether to enable parallelization over k-points and frequencies
+            using mpi
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
         self.cell = cell
@@ -160,6 +165,11 @@ class Lindhard:
             raise ValueError("2d specific algorithms require kmesh_size[2] == 1")
         self.dimension = dimension
         self.delta = delta
+        if enable_mpi:
+            from .parallel import MPIEnv
+            self.mpi_env = MPIEnv()
+        else:
+            self.mpi_env = None
 
     @staticmethod
     def wrap_frac(k_points: np.ndarray):
@@ -274,6 +284,24 @@ class Lindhard:
         cart_coord = self.frac2cart(frac_coord, unit=unit)
         return cart_coord
 
+    def _dist_job(self, n_max):
+        """
+        Distribute k-points and frequencies over processes.
+
+        NOTE: k-indices and omega-indices assigned to this process are
+        actually [k_min, k_max] and [omega_min, omega_max]. Keep that
+        in mind when using them in Cython/FORTRAN source code.
+
+        :param n_max: number of k-points or frequencies
+        :return: i_min, i_max: lower and upper bounds assigned to this process
+        """
+        if self.mpi_env is not None:
+            i_index = self.mpi_env.dist_range(n_max)
+        else:
+            i_index = range(n_max)
+        i_min, i_max = min(i_index), max(i_index)
+        return i_min, i_max
+
     def _get_eigen_states(self, k_points: np.ndarray, convention=1):
         """
         Calculate eigenstates and eigenvalues for given k-points.
@@ -294,7 +322,11 @@ class Lindhard:
         states = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
         ham_k = np.zeros((num_orb, num_orb), dtype=np.complex128)
 
-        for i_k, k_point in enumerate(k_points):
+        # Distribute k-points over processes
+        k_min, k_max = self._dist_job(num_kpt)
+
+        for i_k in range(k_min, k_max+1):
+            k_point = k_points[i_k]
             ham_k *= 0.0
             if convention == 1:
                 core.set_ham(self.cell.orb_pos, self.cell.orb_eng,
@@ -309,6 +341,11 @@ class Lindhard:
             eigenvalues, eigenstates, info = spla.zheev(ham_k)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T
+
+        # Collect energies and wave functions
+        if self.mpi_env is not None:
+            bands = self.mpi_env.all_reduce(bands)
+            states = self.mpi_env.all_reduce(states)
         return bands, states
 
     def _get_dnk(self):
@@ -358,9 +395,13 @@ class Lindhard:
         q_points_cart = self.grid2cart(q_points, unit=NM)
         orb_pos = self.cell.orb_pos_nm
 
-        # Allocate dyn_pol
-        num_qpt = len(q_points)
+        # Allocate working arrays
+        num_qpt = q_points.shape[0]
+        num_kpt = self.kmesh_grid.shape[0]
         num_omega = self.omegas.shape[0]
+        num_bands = self.cell.num_orb
+        delta_eng = np.zeros((num_kpt, num_bands, num_bands), dtype=np.float64)
+        prod_df = np.zeros((num_kpt, num_bands, num_bands), dtype=np.complex128)
         dyn_pol = np.zeros((num_qpt, num_omega), dtype=np.complex128)
 
         # Get eigenvalues and eigenstates
@@ -372,7 +413,13 @@ class Lindhard:
             orb_pos = orb_pos.T
             bands = bands.T
             states = states.T
+            delta_eng = delta_eng.T
+            prod_df = prod_df.T
             dyn_pol = dyn_pol.T
+
+        # Distribute k-points and frequencies
+        k_min, k_max = self._dist_job(num_kpt)
+        omega_min, omega_max = self._dist_job(num_omega)
 
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
@@ -380,20 +427,36 @@ class Lindhard:
             kq_map = core.build_kq_map(self.kmesh_size, self.kmesh_grid,
                                        q_point)
 
-            # Evaluate dyn_pol for this q-point
-            # FORTRAN array indices begin from 1. So we need to increase
-            # kq_map and i_q by 1.
+            # Setup working arrays
+            delta_eng *= 0.0
+            prod_df *= 0.0
             if use_fortran:
-                kq_map += 1
-                f2py.dyn_pol_q(bands, states, kq_map,
-                               self.beta, self.mu, self.omegas, self.delta,
-                               i_q+1, q_points_cart[i_q], orb_pos,
-                               dyn_pol)
+                raise NotImplementedError("Fortran dyn_pol not implemented")
+                # kq_map += 1
+                # FORTRAN array indices begin from 1. So we need to increase
+                # kq_map, i_q, omega_min and omega_max by 1.
+                ###### Python range +1 on omega max for fortran!
+                # f2py.dyn_pol_q(bands, states, kq_map,
+                #                self.beta, self.mu, self.omegas, self.delta,
+                #                omega_min+1, omega_max+1,
+                #                i_q+1, q_points_cart[i_q], orb_pos,
+                #                dyn_pol)
             else:
-                core.dyn_pol_q(bands, states, kq_map,
-                               self.beta, self.mu, self.omegas, self.delta,
-                               i_q, q_points_cart[i_q], orb_pos,
-                               dyn_pol)
+                core.prod_dp(bands, states, kq_map, self.beta, self.mu,
+                             q_points_cart[i_q], orb_pos, k_min, k_max,
+                             delta_eng, prod_df)
+            if self.mpi_env is not None:
+                delta_eng = self.mpi_env.all_reduce(delta_eng)
+                prod_df = self.mpi_env.all_reduce(prod_df)
+
+            # Evaluate dyn_pol
+            if use_fortran:
+                raise NotImplementedError("Fortran dyn_pol not implemented")
+            else:
+                core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
+                             omega_min, omega_max, i_q, dyn_pol)
+            if self.mpi_env is not None:
+                dyn_pol = self.mpi_env.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
@@ -422,9 +485,13 @@ class Lindhard:
         q_points_frac = self.cart2frac(q_points, unit=NM)
         orb_pos = self.cell.orb_pos_nm
 
-        # Allocate dyn_pol
+        # Allocate working arrays
         num_qpt = q_points.shape[0]
+        num_kpt = self.kmesh_grid.shape[0]
         num_omega = self.omegas.shape[0]
+        num_bands = self.cell.num_orb
+        delta_eng = np.zeros((num_kpt, num_bands, num_bands), dtype=np.float64)
+        prod_df = np.zeros((num_kpt, num_bands, num_bands), dtype=np.complex128)
         dyn_pol = np.zeros((num_qpt, num_omega), dtype=np.complex128)
 
         # Get eigenvalues and eigenstates
@@ -436,7 +503,13 @@ class Lindhard:
             orb_pos = orb_pos.T
             bands = bands.T
             states = states.T
+            delta_eng = delta_eng.T
+            prod_df = prod_df.T
             dyn_pol = dyn_pol.T
+
+        # Distribute k-points and frequencies
+        k_min, k_max = self._dist_job(num_kpt)
+        omega_min, omega_max = self._dist_job(num_omega)
 
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
@@ -444,23 +517,36 @@ class Lindhard:
             kq_mesh_frac = kmesh_frac + q_points_frac[i_q]
             bands_kq, states_kq = self._get_eigen_states(kq_mesh_frac,
                                                          convention=2)
-            if use_fortran:
-                bands_kq = bands_kq.T
-                states_kq = states_kq.T
 
-            # Evaluate dyn_pol for this q-point
-            # FORTRAN array indices begin from 1. So we need to increase i_q
-            # by 1.
+            # Setup working arrays
+            delta_eng *= 0.0
+            prod_df *= 0.0
             if use_fortran:
-                f2py.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas, self.delta,
-                                   i_q+1, q_point, orb_pos,
-                                   dyn_pol)
+                raise NotImplementedError("Fortran dyn_pol not implemented")
+                # FORTRAN array indices begin from 1. So we need to increase i_q
+                # by 1.
+                # bands_kq = bands_kq.T
+                # states_kq = states_kq.T
+                # f2py.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
+                #                    self.beta, self.mu, self.omegas, self.delta,
+                #                    i_q+1, q_point, orb_pos,
+                #                    dyn_pol)
             else:
-                core.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                                   self.beta, self.mu, self.omegas, self.delta,
-                                   i_q, q_point, orb_pos,
-                                   dyn_pol)
+                core.prod_dp_arb(bands, states, bands_kq, states_kq,
+                                 self.beta, self.mu, q_point, orb_pos,
+                                 k_min, k_max, delta_eng, prod_df)
+            if self.mpi_env is not None:
+                delta_eng = self.mpi_env.all_reduce(delta_eng)
+                prod_df = self.mpi_env.all_reduce(prod_df)
+
+            # Evaluate dyn_pol
+            if use_fortran:
+                raise NotImplementedError("Fortran dyn_pol not implemented")
+            else:
+                core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
+                             omega_min, omega_max, i_q, dyn_pol)
+            if self.mpi_env is not None:
+                dyn_pol = self.mpi_env.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
@@ -539,7 +625,16 @@ class Lindhard:
             raise ValueError(f"Illegal component {component}")
         comp = np.array(["xyz".index(_) for _ in component], dtype=np.int32)
 
-        # Build hopping distances
+        # Allocate working arrays
+        num_kpt = self.kmesh_grid.shape[0]
+        num_omega = self.omegas.shape[0]
+        num_bands = self.cell.num_orb
+        delta_eng = np.zeros((num_kpt, num_bands, num_bands), dtype=np.float64)
+        prod_df = np.zeros((num_kpt, num_bands, num_bands), dtype=np.complex128)
+        ac_cond = np.zeros(num_omega, dtype=np.complex128)
+
+        # Build hopping indices and distances
+        hop_ind = self.cell.hop_ind[:, 3:5].copy()
         num_hop = self.cell.hop_ind.shape[0]
         hop_dr = np.zeros((num_hop, 3), dtype=np.float64)
         for i_h, ind in enumerate(self.cell.hop_ind):
@@ -551,30 +646,49 @@ class Lindhard:
         kmesh_frac = self.grid2frac(self.kmesh_grid)
         bands, states = self._get_eigen_states(kmesh_frac, convention=1)
 
-        # Allocate ac conductivity
-        num_omega = self.omegas.shape[0]
-        ac_cond = np.zeros(num_omega, dtype=np.complex128)
+        # Transpose arrays for compatibility with FORTRAN backed
+        # hop_eng, ac_cond are vectors and need no transposing.
+        if use_fortran:
+            bands = bands.T
+            states = states.T
+            hop_ind = hop_ind.T
+            hop_dr = hop_dr.T
+            kmesh = kmesh.T
+            delta_eng = delta_eng.T
+            prod_df = prod_df.T
+
+        # Distribute k-points and frequencies
+        k_min, k_max = self._dist_job(num_kpt)
+        omega_min, omega_max = self._dist_job(num_omega)
 
         # Call C/FORTRAN backend to evaluate optical conductivity
         # FORTRAN array indices begin from 1. So we need to increase
         # hop_ind and comp by 1.
+
+        # Setup working arrays
         if use_fortran:
-            bands = bands.T
-            states = states.T
-            hop_ind = self.cell.hop_ind[:, 3:5].copy() + 1
-            hop_ind = hop_ind.T
-            # hop_eng is a vector and needs no transposing
-            hop_dr = hop_dr.T
-            kmesh = kmesh.T
-            comp += 1
-            f2py.ac_cond_kg(bands, states, hop_ind, hop_eng,
-                            hop_dr, kmesh, self.beta, self.mu, self.omegas,
-                            self.delta, comp, ac_cond)
+            raise NotImplementedError("fortran")
+            # hop_ind += 1
+            # comp += 1
+            # f2py.ac_cond_kg(bands, states, hop_ind, hop_eng,
+            #                 hop_dr, kmesh, self.beta, self.mu, self.omegas,
+            #                 self.delta, comp, ac_cond)
         else:
-            hop_ind = self.cell.hop_ind[:, 3:5].copy()
-            core.ac_cond_kg(bands, states, hop_ind, hop_eng,
-                            hop_dr, kmesh, self.beta, self.mu, self.omegas,
-                            self.delta, comp, ac_cond)
+            core.prod_ac(bands, states, hop_ind, hop_eng, hop_dr, kmesh,
+                         self.beta, self.mu, comp, k_min, k_max,
+                         delta_eng, prod_df)
+        if self.mpi_env is not None:
+            delta_eng = self.mpi_env.all_reduce(delta_eng)
+            prod_df = self.mpi_env.all_reduce(prod_df)
+
+        # Evaluate ac_cond
+        if use_fortran:
+            raise NotImplementedError("fortran")
+        else:
+            core.ac_cond(delta_eng, prod_df, self.omegas, self.delta,
+                         omega_min, omega_max, ac_cond)
+        if self.mpi_env is not None:
+            ac_cond = self.mpi_env.all_reduce(ac_cond)
 
         # Multiply prefactor
         # NOTE: there is not such g_s factor in the reference.

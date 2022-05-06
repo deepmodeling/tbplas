@@ -2089,17 +2089,17 @@ def build_kq_map(long [::1] kmesh_size, long [:,::1] kmesh_grid,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
-              long [::1] kq_map,
-              double beta, double mu, double [::1] omegas, double delta,
-              long iq, double [::1] q_point, double [:,::1] orb_pos,
-              double complex [:,::1] dyn_pol):
+def prod_dp(double [:,::1] bands, double complex [:,:,::1] states,
+            long [::1] kq_map, double beta, double mu,
+            double [::1] q_point, double [:,::1] orb_pos,
+            long k_min, long k_max,
+            double [:,:,::1] delta_eng,
+            double complex [:,:,::1] prod_df):
     """
-    Calculate dynamic polarizability for regular q-point on k-mesh using
-    Lindhard function, for cross-validation with FORTRAN version.
+    Calculate delta_eng and prod_df for regular q-point.
 
-    Parmaters
-    ---------
+    Parameters
+    ----------
     bands: (num_kpt, num_orb) float64 array
         eigenvalues on regular k-grid in eV
     states: (num_kpt, num_orb, num_orb) complex128 array
@@ -2110,47 +2110,41 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
         Lindhard.beta
     mu: double
         Lindhard.mu
-    omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated in eV
-    delta: double
-        broadening parameter in eV
-    iq: int64
-        index of q-point
     q_point: (3,) float64
         CARTESIAN coordinates of q-point in 1/NM
     orb_pos: (num_orb, 3) float64
         CARTESIAN coordinates of orbitals in NM
-    dyn_pol: (num_qpt, num_omega)
-        dynamic polarizability
+    k_min: int64
+        lower bound of k-index assigned to this process
+    k_max: int64
+        upper bound of k-index assigned to this process
+    delta_eng: (num_kpt, num_orb, num_orb) float64 array
+        energy difference for evaluating dyn_pol
+    prod_df: (num_kpt, num_orb, num_orb) complex128 array
+        prod_df for evaluating dyn_pol
 
     Returns
     -------
-    None. Results are saved in dyn_pol.
+    None. Results are saved in delta_eng and prod_df.
     """
-    cdef long num_omega, num_kpt, num_orb
-    cdef long iw, ik, ikqp, jj, ll, ib
+    cdef long num_orb
+    cdef long ik, ikqp, jj, ll, ib
     cdef double k_dot_r
     cdef double complex [::1] phase
-    cdef double omega, eng, eng_q, f, f_q
-    cdef double complex prod, dp_sum
-    cdef double [:,:,::1] delta_eng
-    cdef double complex [:,:,::1] prod_df
+    cdef double eng, eng_q, f, f_q
+    cdef double complex prod
 
-    num_omega = omegas.shape[0]
-    num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
     phase = np.zeros(num_orb, dtype=np.complex128)
-    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
-    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
-    # Build reusable arrays
     for ib in range(num_orb):
         k_dot_r = q_point[0] * orb_pos[ib, 0] \
                 + q_point[1] * orb_pos[ib, 1] \
                 + q_point[2] * orb_pos[ib, 2]
         phase[ib] = cos(k_dot_r) + 1j * sin(k_dot_r)
 
-    for ik in range(num_kpt):
+    # NOTE: the actual range of k_index is [k_min, k_max]
+    for ik in range(k_min, k_max+1):
         ikqp = kq_map[ik]
         for jj in range(num_orb):
             eng = bands[ik, jj]
@@ -2164,28 +2158,18 @@ def dyn_pol_q(double [:,::1] bands, double complex [:,:,::1] states,
                     prod += states[ikqp, ll, ib].conjugate() * states[ik, jj, ib] * phase[ib]
                 prod_df[ik, jj, ll] = prod * prod.conjugate() * (f - f_q)
 
-    # Evaluate dyn_pol
-    for iw in range(num_omega):
-        omega = omegas[iw]
-        dp_sum = 0.0
-        for ik in range(num_kpt):
-            for jj in range(num_orb):
-                for ll in range(num_orb):
-                    dp_sum += prod_df[ik, jj, ll] / \
-                              (delta_eng[ik, jj, ll] + omega + 1j * delta)
-        dyn_pol[iq, iw] = dp_sum
-
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
-                  double [:,::1] bands_kq, double complex [:,:,::1] states_kq,
-                  double beta, double mu, double [::1] omegas, double delta,
-                  long iq, double [::1] q_point, double [:,::1] orb_pos,
-                  double complex [:,::1] dyn_pol):
+def prod_dp_arb(double [:,::1] bands, double complex [:,:,::1] states,
+                double [:,::1] bands_kq, double complex [:,:,::1] states_kq, 
+                double beta, double mu,
+                double [::1] q_point, double [:,::1] orb_pos,
+                long k_min, long k_max,
+                double [:,:,::1] delta_eng,
+                double complex [:,:,::1] prod_df):
     """
-    Calculate dynamic polarizability for arbitrary q-point using Lindhard
-    function, for cross-validation with FORTRAN version.
+    Calculate delta_eng and prod_df for arbitrary q-point.
 
     Parmaters
     ---------
@@ -2201,47 +2185,41 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
         Lindhard.beta
     mu: double
         Lindhard.mu
-    omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated in eV
-    delta: double
-        broadening parameter in eV
-    iq: int64
-        index of q-point
     q_point: (3,) float64
         CARTESIAN coordinates of q-point in 1/NM
     orb_pos: (num_orb, 3) float64
         CARTESIAN coordinates of orbitals in NM
-    dyn_pol: (num_qpt, num_omega)
-        dynamic polarizability
+    k_min: int64
+        lower bound of k-index assigned to this process
+    k_max: int64
+        upper bound of k-index assigned to this process
+    delta_eng: (num_kpt, num_orb, num_orb) float64 array
+        energy difference for evaluating dyn_pol
+    prod_df: (num_kpt, num_orb, num_orb) complex128 array
+        prod_df for evaluating dyn_pol
 
     Returns
     -------
-    None. Results are saved in dyn_pol.
+    None. Results are saved in delta_eng and prod_df.
     """
-    cdef long num_omega, num_kpt, num_orb
-    cdef long iw, ik, jj, ll, ib
+    cdef long num_orb
+    cdef long ik, jj, ll, ib
     cdef double k_dot_r
     cdef double complex [::1] phase
-    cdef double omega, eng, eng_q, f, f_q
-    cdef double complex prod, dp_sum
-    cdef double [:,:,::1] delta_eng
-    cdef double complex [:,:,::1] prod_df
+    cdef double eng, eng_q, f, f_q
+    cdef double complex prod
 
-    num_omega = omegas.shape[0]
-    num_kpt = bands.shape[0]
     num_orb = bands.shape[1]
     phase = np.zeros(num_orb, dtype=np.complex128)
-    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
-    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
-    # Build reusable arrays
     for ib in range(num_orb):
         k_dot_r = q_point[0] * orb_pos[ib, 0] \
                 + q_point[1] * orb_pos[ib, 1] \
                 + q_point[2] * orb_pos[ib, 2]
         phase[ib] = cos(k_dot_r) + 1j * sin(k_dot_r)
 
-    for ik in range(num_kpt):
+    # NOTE: the actual range of k_index is [k_min, k_max]
+    for ik in range(k_min, k_max+1):
         for jj in range(num_orb):
             eng = bands[ik, jj]
             f = 1.0 / (1.0 + exp(beta * (eng - mu)))
@@ -2254,8 +2232,50 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
                     prod += states_kq[ik, ll, ib].conjugate() * states[ik, jj, ib] * phase[ib]
                 prod_df[ik, jj, ll] = prod * prod.conjugate() * (f - f_q)
 
-    # Evaluate dyn_pol
-    for iw in range(num_omega):
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def dyn_pol(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
+            double [::1] omegas, double delta,
+            long omega_min, long omega_max, long iq,
+            double complex [:,::1] dyn_pol):
+    """
+    Calculate dynamic polarizability using Lindhard function,
+    for cross-validation with FORTRAN version.
+
+    Parmaters
+    ---------
+    delta_eng: (num_kpt, num_orb, num_orb) float64 array
+        energy difference for evaluating dyn_pol
+    prod_df: (num_kpt, num_orb, num_orb) complex128 array
+        prod_df for evaluating dyn_pol
+    omegas: (num_omega,) float64 array
+        frequencies on which dyn_pol is evaluated in eV
+    delta: double
+        broadening parameter in eV
+    omega_min: int64
+        lower bound of omega index assigned to this process
+    omega_max: int64
+        upper bound of omega index assigned to this process
+    iq: int64
+        index of q-point
+    dyn_pol: (num_qpt, num_omega)
+        dynamic polarizability
+
+    Returns
+    -------
+    None. Results are saved in dyn_pol.
+    """
+    cdef long num_kpt, num_orb
+    cdef long iw, ik, jj, ll
+    cdef double omega
+    cdef double complex dp_sum
+
+    num_kpt = delta_eng.shape[0]
+    num_orb = delta_eng.shape[1]
+
+    # NOTE: the actual range of omega_index is [omega_min, omega_max]
+    for iw in range(omega_min, omega_max+1):
         omega = omegas[iw]
         dp_sum = 0.0
         for ik in range(num_kpt):
@@ -2268,16 +2288,17 @@ def dyn_pol_q_arb(double [:,::1] bands, double complex [:,:,::1] states,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def ac_cond_kg(double [:,::1] bands, double complex [:,:,::1] states,
-               int [:,::1] hop_ind, double complex [::1] hop_eng,
-               double [:,::1] hop_dr, double [:,::1] kmesh,
-               double beta, double mu, double [::1] omegas, double delta,
-               int [::1] comp, double complex [::1] ac_cond):
+def prod_ac(double [:,::1] bands, double complex [:,:,::1] states,
+            int [:,::1] hop_ind, double complex [::1] hop_eng,
+            double [:,::1] hop_dr, double [:,::1] kmesh,
+            double beta, double mu, int [::1] comp,
+            long k_min, long k_max,
+            double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df):
     """
-    Evaluate full AC conductivity using Kubo-Greenwood formula.
+    Calculate delta_eng and prod_df for ac_cond.
 
-    Parmaters
-    ---------
+    Parameters
+    ----------
     bands: (num_kpt, num_orb) float64 array
         eigenvalues on regular k-grid in eV
     states: (num_kpt, num_orb, num_orb) complex128 array
@@ -2294,40 +2315,36 @@ def ac_cond_kg(double [:,::1] bands, double complex [:,:,::1] states,
         Lindhard.beta
     mu: double
         Lindhard.mu
-    omegas: (num_omega,) float64 array
-        frequencies on which dyn_pol is evaluated in eV
-    delta: double
-        broadening parameter in eV
     comp: (2,) int32 array
         components of AC conductivity to calculate
-    ac_cond: (num_omega,) complex128 array
-        full ac conductivity
+    k_min: int64
+        lower bound of k-index assigned to this process
+    k_max: int64
+        upper bound of k-index assigned to this process
+    delta_eng: (num_kpt, num_orb, num_orb) float64 array
+        energy difference for evaluating ac_cond
+    prod_df: (num_kpt, num_orb, num_orb) complex128 array
+        prod_df for evaluating ac_cond
 
     Returns
     -------
-    None. Results are saved in ac_cond.
+    None. Results are saved in delta_eng and prod_df.
     """
-    cdef long num_omega, num_kpt, num_hop, num_orb
-    cdef long iw, ik, ih, mm, nn, ib1, ib2
+    cdef long num_hop, num_orb
+    cdef long ik, ih, mm, nn, ib1, ib2
     cdef double k_dot_r
     cdef double complex phase
     cdef double complex [:,::1] vmat1, vmat2
-    cdef double omega, eng_m, eng_n, f_m, f_n
-    cdef double complex prod1, prod2, ac_sum
-    cdef double [:,:,::1] delta_eng
-    cdef double complex [:,:,::1] prod_df
+    cdef double eng_m, eng_n, f_m, f_n
+    cdef double complex prod1, prod2
 
-    num_omega = omegas.shape[0]
-    num_kpt = bands.shape[0]
     num_hop = hop_ind.shape[0]
     num_orb = bands.shape[1]
     vmat1 = np.zeros((num_orb, num_orb), dtype=np.complex128)
     vmat2 = np.zeros((num_orb, num_orb), dtype=np.complex128)
-    delta_eng = np.zeros((num_kpt, num_orb, num_orb), dtype=np.float64)
-    prod_df = np.zeros((num_kpt, num_orb, num_orb), dtype=np.complex128)
 
-    # Build reusable arrays
-    for ik in range(num_kpt):
+    # NOTE: the actual range of k_index is [k_min, k_max]
+    for ik in range(k_min, k_max+1):
         # Build vmat in Bloch basis via Fourier transform
         for ib1 in range(num_orb):
             for ib2 in range(num_orb):
@@ -2362,8 +2379,46 @@ def ac_cond_kg(double [:,::1] bands, double complex [:,:,::1] states,
                 # else:
                 #     prod_df[ik, mm, nn] = prod1 * prod2 * -beta * f_n * (1 - f_n)
 
-    # Evaluate ac_cond
-    for iw in range(num_omega):
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def ac_cond(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
+            double [::1] omegas, double delta,
+            long omega_min, long omega_max, double complex [::1] ac_cond):
+    """
+    Evaluate full AC conductivity using Kubo-Greenwood formula.
+
+    Parmaters
+    ---------
+    delta_eng: (num_kpt, num_orb, num_orb) float64 array
+        energy difference for evaluating ac_cond
+    prod_df: (num_kpt, num_orb, num_orb) complex128 array
+        prod_df for evaluating ac_cond
+    omegas: (num_omega,) float64 array
+        frequencies on which dyn_pol is evaluated in eV
+    delta: double
+        broadening parameter in eV
+    omega_min: int64
+        lower bound of index of omega for this process
+    omega_max: int64
+        upper bound of index of omega for this process
+    ac_cond: (num_omega,) complex128 array
+        full ac conductivity
+
+    Returns
+    -------
+    None. Results are saved in ac_cond.
+    """
+    cdef long num_kpt, num_orb
+    cdef long iw, ik, mm, nn
+    cdef double omega
+    cdef double complex ac_sum
+
+    num_kpt = delta_eng.shape[0]
+    num_orb = delta_eng.shape[1]
+
+    # NOTE: the actual range of omega_index is [omega_min, omega_max]
+    for iw in range(omega_min, omega_max+1):
         omega = omegas[iw]
         ac_sum = 0.0
         for ik in range(num_kpt):
