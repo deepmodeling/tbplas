@@ -14,7 +14,7 @@ Classes
 from mpi4py import MPI
 import numpy as np
 
-from .utils import split_list
+from .utils import split_list, split_range
 
 
 class MPIEnv:
@@ -60,10 +60,19 @@ class MPIEnv:
             raw list to distribute
         :param algorithm: string
             distribution algorithm, should be either "remainder" or "range"
-        :return sub_list: list
-            sublist assigned to this process
+        :return: list: sublist assigned to this process
         """
         return split_list(raw_list, self.size, algorithm)[self.rank]
+
+    def dist_range(self, n_max):
+        """
+        Distribute range(n_max) over processes.
+
+        :param n_max: int
+            upper bound of range
+        :return: range: range assigned to this process
+        """
+        return split_range(n_max, num_group=self.size)[self.rank]
 
     def reduce(self, data_local):
         """

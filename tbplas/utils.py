@@ -343,6 +343,30 @@ def split_list(raw_list, num_group, algorithm="remainder"):
     return list_split
 
 
+def split_range(n_max, num_group=1):
+    """
+    Split range(n_max) into different groups.
+
+    Adapted from split_list with algorithm = "range".
+
+    :param n_max: int
+        upperbound of range, starting from 0
+    :param num_group: int
+        number of groups
+    :return: range_list: list of ranges split from range(n_max)
+    """
+    # Get the numbers of items for each group
+    num_item = [n_max // num_group for _ in range(num_group)]
+    for i in range(n_max % num_group):
+        num_item[i] += 1
+    range_list = []
+    for i in range(num_group):
+        j0 = sum(num_item[:i])
+        j1 = j0 + num_item[i]
+        range_list.append(range(j0, j1))
+    return range_list
+
+
 def print_banner_line(text, width=80, mark="-", end="#"):
     """
     Print a banner like '#--------------- FOO ---------------#' to stdout.

@@ -831,11 +831,10 @@ class Sample:
         if enable_mpi:
             from ..parallel import MPIEnv
             mpi_env = MPIEnv()
+            k_index = mpi_env.dist_range(num_k_points)
         else:
             mpi_env = None
-        k_index = [_ for _ in range(num_k_points)]
-        if mpi_env is not None:
-            k_index = mpi_env.dist_list(k_index)
+            k_index = range(num_k_points)
 
         # Loop over k-points to evaluate the band structure
         if solver == "lapack":
