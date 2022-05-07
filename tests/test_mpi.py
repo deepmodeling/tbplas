@@ -42,7 +42,7 @@ def test_dos(model, mpi_env):
         plt.show()
 
 
-def test_lind():
+def test_lind(itest=2, use_fortran=True):
     # Make graphene primitive cell
     t = 3.0
     vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
@@ -53,54 +53,56 @@ def test_lind():
     cell.add_hopping([1, 0], 1, 0, t)
     cell.add_hopping([0, 1], 1, 0, t)
 
-    # Create a Lindhard object
-    lind = tb.Lindhard(cell=cell, energy_max=10, energy_step=1000,
-                       kmesh_size=(600, 600, 1), mu=0.0, temperature=300, g_s=2,
-                       back_epsilon=1.0, dimension=2, enable_mpi=True)
+    if itest in (0, 1):
+        # Create a Lindhard object
+        lind = tb.Lindhard(cell=cell, energy_max=10, energy_step=1000,
+                           kmesh_size=(600, 600, 1), mu=0.0, temperature=300, g_s=2,
+                           back_epsilon=1.0, dimension=2, enable_mpi=True)
 
-    q_grid = np.array([[20, 20, 0]])
+        q_grid = np.array([[20, 20, 0]])
+        q_cart = lind.grid2cart(q_grid, unit=tb.NM)
 
-    ## Calculate dynamic polarization with calc_dyn_pol_regular
-    #timer = tb.Timer()
-    #timer.tic("regular")
-    #omegas, dp_reg = lind.calc_dyn_pol_regular(q_grid, use_fortran=True)
-    #timer.toc("regular")
-    #timer.report_total_time()
-    #if lind.mpi_env.rank == 0:
-    #    plt.plot(omegas, dp_reg[0].imag, color="red", label="Regular")
-    #    plt.legend()
-    #    plt.show()
-    #    plt.close()
-
-    ## Calculate dynamic polarization with calc_dyn_pol_arbitrary
-    #q_cart = lind.grid2cart(q_grid, unit=tb.NM)
-    #timer = tb.Timer()
-    #timer.tic("arbitrary")
-    #omegas, dp_arb = lind.calc_dyn_pol_arbitrary(q_cart, use_fortran=True)
-    #timer.toc("arbitrary")
-    #timer.report_total_time()
-    #if lind.mpi_env.rank == 0:
-    #    plt.plot(omegas, dp_arb[0].imag, color="blue", label="Arbitrary")
-    #    plt.legend()
-    #    plt.show()
-    #    plt.close()
-
-    # Calculate ac_cond
-    lind = tb.Lindhard(cell=cell, energy_max=t*3.5, energy_step=2048,
-                       kmesh_size=(600, 600, 1), mu=0.0, temperature=300.0,
-                       g_s=2, back_epsilon=1.0, dimension=2, enable_mpi=True)
-    timer = tb.Timer()
-    timer.tic("ac_cond")
-    omegas, ac_cond = lind.calc_ac_cond(component="xx", use_fortran=True)
-    timer.toc("ac_cond")
-    timer.report_total_time()
-    omegas /= t
-    ac_cond *= 4
-    if lind.mpi_env.rank == 0:
-        plt.plot(omegas, ac_cond.real, color="red")
-        plt.minorticks_on()
-        plt.show()
-        plt.close()
+    if itest == 0:
+        # Calculate dynamic polarization with calc_dyn_pol_regular
+        timer = tb.Timer()
+        timer.tic("regular")
+        omegas, dp_reg = lind.calc_dyn_pol_regular(q_grid, use_fortran=use_fortran)
+        timer.toc("regular")
+        timer.report_total_time()
+        if lind.mpi_env.rank == 0:
+            plt.plot(omegas, dp_reg[0].imag, color="red", label="Regular")
+            plt.legend()
+            plt.show()
+            plt.close()
+    elif itest == 1:
+        # Calculate dynamic polarization with calc_dyn_pol_arbitrary
+        timer = tb.Timer()
+        timer.tic("arbitrary")
+        omegas, dp_arb = lind.calc_dyn_pol_arbitrary(q_cart, use_fortran=use_fortran)
+        timer.toc("arbitrary")
+        timer.report_total_time()
+        if lind.mpi_env.rank == 0:
+            plt.plot(omegas, dp_arb[0].imag, color="blue", label="Arbitrary")
+            plt.legend()
+            plt.show()
+            plt.close()
+    else:
+        # Calculate ac_cond
+        lind = tb.Lindhard(cell=cell, energy_max=t*3.5, energy_step=2048,
+                        kmesh_size=(600, 600, 1), mu=0.0, temperature=300.0,
+                        g_s=2, back_epsilon=1.0, dimension=2, enable_mpi=True)
+        timer = tb.Timer()
+        timer.tic("ac_cond")
+        omegas, ac_cond = lind.calc_ac_cond(component="xx", use_fortran=use_fortran)
+        timer.toc("ac_cond")
+        timer.report_total_time()
+        omegas /= t
+        ac_cond *= 4
+        if lind.mpi_env.rank == 0:
+            plt.plot(omegas, ac_cond.real, color="red")
+            plt.minorticks_on()
+            plt.show()
+            plt.close()
 
 
 def main():
