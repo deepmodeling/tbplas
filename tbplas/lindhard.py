@@ -431,16 +431,11 @@ class Lindhard:
             delta_eng *= 0.0
             prod_df *= 0.0
             if use_fortran:
-                raise NotImplementedError("Fortran dyn_pol not implemented")
-                # kq_map += 1
-                # FORTRAN array indices begin from 1. So we need to increase
-                # kq_map, i_q, omega_min and omega_max by 1.
-                ###### Python range +1 on omega max for fortran!
-                # f2py.dyn_pol_q(bands, states, kq_map,
-                #                self.beta, self.mu, self.omegas, self.delta,
-                #                omega_min+1, omega_max+1,
-                #                i_q+1, q_points_cart[i_q], orb_pos,
-                #                dyn_pol)
+                # NOTE: FORTRAN array index begins from 1!
+                kq_map += 1
+                f2py.prod_dp(bands, states, kq_map, self.beta, self.mu,
+                             q_points_cart[i_q], orb_pos, k_min+1, k_max+1,
+                             delta_eng, prod_df)
             else:
                 core.prod_dp(bands, states, kq_map, self.beta, self.mu,
                              q_points_cart[i_q], orb_pos, k_min, k_max,
@@ -451,7 +446,9 @@ class Lindhard:
 
             # Evaluate dyn_pol
             if use_fortran:
-                raise NotImplementedError("Fortran dyn_pol not implemented")
+                # NOTE: FORTRAN array index begins from 1!
+                f2py.dyn_pol_f(delta_eng, prod_df, self.omegas, self.delta,
+                               omega_min+1, omega_max+1, i_q+1, dyn_pol)
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
                              omega_min, omega_max, i_q, dyn_pol)
@@ -522,15 +519,12 @@ class Lindhard:
             delta_eng *= 0.0
             prod_df *= 0.0
             if use_fortran:
-                raise NotImplementedError("Fortran dyn_pol not implemented")
-                # FORTRAN array indices begin from 1. So we need to increase i_q
-                # by 1.
-                # bands_kq = bands_kq.T
-                # states_kq = states_kq.T
-                # f2py.dyn_pol_q_arb(bands, states, bands_kq, states_kq,
-                #                    self.beta, self.mu, self.omegas, self.delta,
-                #                    i_q+1, q_point, orb_pos,
-                #                    dyn_pol)
+                # NOTE: FORTRAN array index begins from 1!
+                bands_kq = bands_kq.T
+                states_kq = states_kq.T
+                f2py.prod_dp_arb(bands, states, bands_kq, states_kq,
+                                 self.beta, self.mu, q_point, orb_pos,
+                                 k_min+1, k_max+1, delta_eng, prod_df)
             else:
                 core.prod_dp_arb(bands, states, bands_kq, states_kq,
                                  self.beta, self.mu, q_point, orb_pos,
@@ -541,7 +535,9 @@ class Lindhard:
 
             # Evaluate dyn_pol
             if use_fortran:
-                raise NotImplementedError("Fortran dyn_pol not implemented")
+                # NOTE: FORTRAN array index begins from 1!
+                f2py.dyn_pol_f(delta_eng, prod_df, self.omegas, self.delta,
+                               omega_min+1, omega_max+1, i_q+1, dyn_pol)
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
                              omega_min, omega_max, i_q, dyn_pol)
@@ -661,18 +657,14 @@ class Lindhard:
         k_min, k_max = self._dist_job(num_kpt)
         omega_min, omega_max = self._dist_job(num_omega)
 
-        # Call C/FORTRAN backend to evaluate optical conductivity
-        # FORTRAN array indices begin from 1. So we need to increase
-        # hop_ind and comp by 1.
-
         # Setup working arrays
         if use_fortran:
-            raise NotImplementedError("fortran")
-            # hop_ind += 1
-            # comp += 1
-            # f2py.ac_cond_kg(bands, states, hop_ind, hop_eng,
-            #                 hop_dr, kmesh, self.beta, self.mu, self.omegas,
-            #                 self.delta, comp, ac_cond)
+            # NOTE: FORTRAN array index begins from 1!
+            hop_ind += 1
+            comp += 1
+            f2py.prod_ac(bands, states, hop_ind, hop_eng, hop_dr, kmesh,
+                         self.beta, self.mu, comp, k_min+1, k_max+1,
+                         delta_eng, prod_df)
         else:
             core.prod_ac(bands, states, hop_ind, hop_eng, hop_dr, kmesh,
                          self.beta, self.mu, comp, k_min, k_max,
@@ -683,7 +675,9 @@ class Lindhard:
 
         # Evaluate ac_cond
         if use_fortran:
-            raise NotImplementedError("fortran")
+            # NOTE: FORTRAN array index begins from 1!
+            f2py.ac_cond_f(delta_eng, prod_df, self.omegas, self.delta,
+                          omega_min+1, omega_max+1, ac_cond)
         else:
             core.ac_cond(delta_eng, prod_df, self.omegas, self.delta,
                          omega_min, omega_max, ac_cond)
