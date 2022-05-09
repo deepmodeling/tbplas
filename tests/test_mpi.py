@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas as tb
+from tbplas.parallel import MPIEnv
 
 
 def test_band(model, mpi_env):
@@ -13,12 +14,16 @@ def test_band(model, mpi_env):
         [1./2, 0.0, 0.0],
         [0.0, 0.0, 0.0],
         ])
-    k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
+    if isinstance(model, tb.PrimitiveCell):
+        resolution = [8000, 8000, 8000]
+    else:
+        resolution = [40, 40, 40]
+    k_path, k_idx = tb.gen_kpath(k_points, resolution)
 
     timer = tb.Timer()
-    timer.tic("test")
+    timer.tic("band")
     k_len, bands = model.calc_bands(k_path, enable_mpi=True)
-    timer.toc("test")
+    timer.toc("band")
     timer.report_total_time()
 
     if mpi_env.rank == 0:
@@ -29,12 +34,15 @@ def test_band(model, mpi_env):
 
 
 def test_dos(model, mpi_env):
-    k_points = tb.gen_kmesh((10, 10, 1))
+    if isinstance(model, tb.PrimitiveCell):
+        k_points = tb.gen_kmesh((240, 240, 1))
+    else:
+        k_points = tb.gen_kmesh((20, 20, 1))
 
     timer = tb.Timer()
-    timer.tic("test")
+    timer.tic("dos")
     energies, dos = model.calc_dos(k_points, enable_mpi=True)
-    timer.toc("test")
+    timer.toc("dos")
     timer.report_total_time()
 
     if mpi_env.rank == 0:
@@ -106,12 +114,13 @@ def test_lind(itest=2, use_fortran=True):
 
 
 def main():
-    # from tbplas.parallel import MPIEnv
-    # mpi_env = MPIEnv()
-    # cell = tb.make_graphene_diamond()
-    # sample = tb.Sample(tb.SuperCell(cell, dim=(12, 12, 1), pbc=(True, True, False)))
+    cell = tb.make_graphene_diamond()
+    sample = tb.Sample(tb.SuperCell(cell, dim=(12, 12, 1), pbc=(True, True, False)))
+    mpi_env = MPIEnv()
 
-    test_lind()
+    test_band(sample, mpi_env)
+    # test_dos(sample, mpi_env)
+    # test_lind()
 
 
 if __name__ == "__main__":

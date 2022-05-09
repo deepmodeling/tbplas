@@ -882,7 +882,7 @@ class Sample:
         return k_len, bands
 
     def calc_dos(self, k_points, e_min=None, e_max=None, e_step=0.05,
-                 sigma=0.05, basis="Gaussian", **kwargs):
+                 sigma=0.05, basis="Gaussian", enable_mpi=False, **kwargs):
         """
         Calculate density of states for given energy range and step.
     
@@ -899,6 +899,8 @@ class Sample:
         :param basis: string
             basis function to approximate the Delta function
             should be either "Gaussian" or "Lorentzian"
+        :param enable_mpi: boolean
+            whether to enable parallelization over k-points using mpi
         :param kwargs: dictionary
             arguments for method 'calc_bands'
         :return: energies: (num_grid,) float64 array
@@ -915,7 +917,8 @@ class Sample:
             or in any inter-hopping set corresponds to a vacancy
         """
         # Get the band energies
-        k_len, bands = self.calc_bands(k_points, **kwargs)
+        k_len, bands = self.calc_bands(k_points, enable_mpi=enable_mpi,
+                                       **kwargs)
     
         # Create energy grid
         if e_min is None:
@@ -939,15 +942,28 @@ class Sample:
         # Evaluate DOS by collecting contributions from all energies
         dos = np.zeros(energies.shape, dtype=np.float64)
         if basis == "Gaussian":
-            for eng_k in bands:
-                for eng_i in eng_k:
-                    dos += _gaussian(energies, eng_i)
+            basis_func = _gaussian
         elif basis == "Lorentzian":
-            for eng_k in bands:
-                for eng_i in eng_k:
-                    dos += _lorentzian(energies, eng_i)
+            basis_func = _lorentzian
         else:
             raise exc.BasisError(basis)
+
+        # Distribute k-points over processes
+        num_kpt = bands.shape[0]
+        if enable_mpi:
+            from ..parallel import MPIEnv
+            mpi_env = MPIEnv()
+            k_index = mpi_env.dist_range(num_kpt)
+        else:
+            mpi_env = None
+            k_index = range(num_kpt)
+
+        # Collect contributions
+        for i_k in k_index:
+            for eng_i in bands[i_k]:
+                dos += basis_func(energies, eng_i)
+        if mpi_env is not None:
+            dos = mpi_env.all_reduce(dos)
     
         # Re-normalize dos
         # For each energy in bands, we use a normalized Gaussian or Lorentzian

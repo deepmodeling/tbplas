@@ -1201,9 +1201,23 @@ class PrimitiveCell(LockableObject):
             basis_func = _lorentzian
         else:
             raise exc.BasisError(basis)
-        for eng_k in bands:
-            for eng_i in eng_k:
+
+        # Distribute k-points over processes
+        num_kpt = bands.shape[0]
+        if enable_mpi:
+            from ..parallel import MPIEnv
+            mpi_env = MPIEnv()
+            k_index = mpi_env.dist_range(num_kpt)
+        else:
+            mpi_env = None
+            k_index = range(num_kpt)
+
+        # Collect contributions
+        for i_k in k_index:
+            for eng_i in bands[i_k]:
                 dos += basis_func(energies, eng_i)
+        if mpi_env is not None:
+            dos = mpi_env.all_reduce(dos)
 
         # Re-normalize dos
         # For each energy in bands, we use a normalized Gaussian or Lorentzian
