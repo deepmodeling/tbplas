@@ -50,7 +50,7 @@ def test_dos(model, mpi_env):
         plt.show()
 
 
-def test_lind(itest=2, use_fortran=True):
+def test_lind(itest, use_fortran):
     # Make graphene primitive cell
     t = 3.0
     vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
@@ -118,9 +118,9 @@ def main():
     sample = tb.Sample(tb.SuperCell(cell, dim=(12, 12, 1), pbc=(True, True, False)))
     mpi_env = MPIEnv()
 
-    test_band(sample, mpi_env)
+    # test_band(sample, mpi_env)
     # test_dos(sample, mpi_env)
-    # test_lind()
+    test_lind(2, True)
 
 
 if __name__ == "__main__":
