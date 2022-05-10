@@ -122,10 +122,8 @@ class InterHopping(LockableObject):
         :raises InterHopLockError: if the object is locked
         :raises IDPCLenError: if len(rn_i) or len(rn_j) not in (2, 3)
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.InterHopLockError() from err
+        if self.is_locked:
+            raise exc.InterHopLockError()
 
         # Assemble and check index of bra
         try:

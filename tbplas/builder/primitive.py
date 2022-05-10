@@ -154,16 +154,6 @@ class LockableObject:
         """
         self.is_locked = False
 
-    def check_lock_state(self):
-        """
-        Check and raise an error if the object is locked.
-
-        :return: None.
-        :raises LockError: if the object is locked
-        """
-        if self.is_locked:
-            raise exc.LockError()
-
 
 class HopDict:
     """
@@ -419,10 +409,8 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         # Check arguments
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
         try:
             position = correct_coord(position)
         except exc.CoordLenError as err:
@@ -480,10 +468,8 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         # Check arguments
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
         if position is not None:
             try:
                 position = correct_coord(position)
@@ -565,10 +551,8 @@ class PrimitiveCell(LockableObject):
         :raises PCOrbIndexError: if orb_i falls out of range
         """
         # Check arguments
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
 
         # Delete the orbital.
         try:
@@ -689,10 +673,8 @@ class PrimitiveCell(LockableObject):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
         new_hopping = self.__assemble_hopping(rn, orb_i, orb_j, energy)
         id_same, id_conj = self.__find_equiv_hopping(new_hopping)
 
@@ -807,10 +789,8 @@ class PrimitiveCell(LockableObject):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
         new_hopping = self.__assemble_hopping(rn, orb_i, orb_j)
         id_same, id_conj = self.__find_equiv_hopping(new_hopping)
 
@@ -870,10 +850,8 @@ class PrimitiveCell(LockableObject):
         :raises PCLockError: if the primitive cell is locked
         :raises ValueError: if len(pbc) != 3
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.PCLockError() from err
+        if self.is_locked:
+            raise exc.PCLockError()
         if len(pbc) != 3:
             raise ValueError("Length of pbc is not 3")
 

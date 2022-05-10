@@ -223,10 +223,8 @@ class OrbitalSet(LockableObject):
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.OrbSetLockError() from err
+        if self.is_locked:
+            raise exc.OrbSetLockError()
 
         # Convert and check vacancy
         if not isinstance(vacancy, tuple):
@@ -528,10 +526,8 @@ class IntraHopping(LockableObject):
         :raises IDPCLenError: if len(rn_i) or len(rn_j) not in (2, 3)
         :raises SCHopDiagonalError: if rn_i + (orb_i,) == rn_j + (orb_j,)
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.IntraHopLockError() from err
+        if self.is_locked:
+            raise exc.IntraHopLockError()
 
         # Assemble and check index of bra
         try:
@@ -588,10 +584,8 @@ class IntraHopping(LockableObject):
             self.energies and self.indices are modified.
         :raises IntraHopLockError: if the object is locked
         """
-        try:
-            self.check_lock_state()
-        except exc.LockError as err:
-            raise exc.IntraHopLockError() from err
+        if self.is_locked:
+            raise exc.IntraHopLockError()
 
         remain_terms = []
         orb_id_trim = [tuple(orb_id) for orb_id in orb_id_trim]
