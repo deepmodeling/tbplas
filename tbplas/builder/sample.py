@@ -27,7 +27,7 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .primitive import correct_coord, LockableObject
+from .base import correct_coord, LockableObject
 from .super import SuperCell
 from .utils import ModelViewer
 

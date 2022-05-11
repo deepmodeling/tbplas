@@ -4,7 +4,7 @@ from scipy.spatial import KDTree
 from ase import io
 
 import tbplas as tb
-from tbplas.builder.primitive import Hopping
+from tbplas.builder.base import Hopping
 
 # Read the last image of lammps dump
 atoms = io.read("struct.atom", format="lammps-dump-text", index=-1)

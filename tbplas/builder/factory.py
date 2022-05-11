@@ -34,7 +34,8 @@ from scipy.spatial import KDTree
 from . import constants as consts
 from . import exceptions as exc
 from .lattice import frac2cart, cart2frac, rotate_coord
-from .primitive import correct_coord, PrimitiveCell, Hopping
+from .base import correct_coord, Hopping
+from .primitive import PrimitiveCell
 
 
 def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):

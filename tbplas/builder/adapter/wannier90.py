@@ -24,7 +24,8 @@ import numpy as np
 from ..constants import BOHR2ANG
 from ..lattice import cart2frac
 from .. import core
-from ..primitive import Orbital, Hopping, PrimitiveCell
+from ..base import Orbital, Hopping
+from ..primitive import PrimitiveCell
 
 
 def read_lat_vec(seed_name="wannier90"):

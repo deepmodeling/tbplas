@@ -22,7 +22,8 @@ import matplotlib.pyplot as plt
 
 from . import exceptions as exc
 from . import core
-from .primitive import correct_coord, LockableObject, PrimitiveCell
+from .base import correct_coord, LockableObject
+from .primitive import PrimitiveCell
 from .utils import ModelViewer
 
 
