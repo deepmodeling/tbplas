@@ -89,6 +89,6 @@ Citation
 License
 -------
 
-TBPLaS is release under the BSE license 2.0, the complete content of which is as following:
+TBPLaS is release under the BSD license 2.0, the complete content of which is as following:
 
 .. include:: ../../../LICENSE.rst
