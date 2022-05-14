@@ -266,7 +266,7 @@ class TestPrimitive(unittest.TestCase):
         """
         Test if get_orbital works as expected.
 
-        :return:
+        :return: None
         """
         # Error handling
         cell = make_cell()
@@ -297,13 +297,13 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.remove_orbital(0)
         self.assertEqual(cell.num_orb, 1)
-        self.assertEqual(len(cell.hopping_list), 0)
+        self.assertEqual(cell.hopping_dict.num_hop, 0)
 
         # removing orbital #1
         cell = make_cell()
         cell.remove_orbital(1)
         self.assertEqual(cell.num_orb, 1)
-        self.assertEqual(len(cell.hopping_list), 0)
+        self.assertEqual(cell.hopping_dict.num_hop, 0)
 
         # adding orbital #2
         cell = make_cell()
@@ -314,8 +314,8 @@ class TestPrimitive(unittest.TestCase):
         # removing orbital #0
         cell.remove_orbital(0)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 1)
-        self.assertAlmostEqual(cell.hopping_list[-1].energy, -1.9)
+        self.assertEqual(cell.hopping_dict.num_hop, 1)
+        self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -1.9)
 
         # removing orbital #1
         cell = make_cell()
@@ -324,8 +324,8 @@ class TestPrimitive(unittest.TestCase):
         cell.add_hopping([0, 0], 1, 2, -1.9)
         cell.remove_orbital(1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 1)
-        self.assertAlmostEqual(cell.hopping_list[-1].energy, -1.5)
+        self.assertEqual(cell.hopping_dict.num_hop, 1)
+        self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -1.5)
 
         # removing orbital #2
         cell = make_cell()
@@ -334,12 +334,12 @@ class TestPrimitive(unittest.TestCase):
         cell.add_hopping([0, 0], 1, 2, -1.9)
         cell.remove_orbital(2)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 3)
-        self.assertAlmostEqual(cell.hopping_list[-1].energy, -2.7)
+        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.7)
 
     def test06_add_hopping(self):
         """
-        Test if add_hopping and add_hopping_matrix work as expected.
+        Test if add_hopping works as expected.
 
         :return: None
         """
@@ -356,28 +356,30 @@ class TestPrimitive(unittest.TestCase):
         self.assertRegex(str(cm.exception), r"hopping term .+ is diagonal")
 
         # The normal case
+        th = TestHelper(self)
         cell = make_cell()
-        hopping_list = cell.hopping_list
-        self.assertEqual(len(hopping_list), 3)
-        self.assertEqual(hopping_list[0].index, (0, 0, 0, 0, 1))
-        self.assertEqual(hopping_list[1].index, (1, 0, 0, 1, 0))
-        self.assertEqual(hopping_list[2].index, (0, 1, 0, 1, 0))
-        self.assertAlmostEqual(hopping_list[0].energy, -2.7)
-        self.assertAlmostEqual(hopping_list[1].energy, -2.7)
-        self.assertAlmostEqual(hopping_list[2].energy, -2.7)
+        hop_ind, hop_eng = cell.hopping_dict.to_array()
+        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        th.test_equal_array(hop_ind[0], (0, 0, 0, 0, 1))
+        th.test_equal_array(hop_ind[1], (1, 0, 0, 1, 0))
+        th.test_equal_array(hop_ind[2], (0, 1, 0, 1, 0))
+        self.assertAlmostEqual(hop_eng[0], -2.7)
+        self.assertAlmostEqual(hop_eng[1], -2.7)
+        self.assertAlmostEqual(hop_eng[2], -2.7)
 
         # Updating an existing hopping term
         cell = make_cell()
         cell.add_hopping(rn=(0, 0), orb_i=0, orb_j=1, energy=-2.8)
-        self.assertEqual(len(cell.hopping_list), 3)
-        self.assertAlmostEqual(cell.hopping_list[0].energy, -2.8)
+        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.8)
 
         # Updating an existing conjugate hopping term
         cell = make_cell()
-        cell.add_hopping(rn=(-1, 0), orb_i=0, orb_j=1, energy=-2.8)
+        cell.add_hopping(rn=(-1, 0), orb_i=0, orb_j=1, energy=-2.7)
         cell.add_hopping(rn=(0, 0), orb_i=1, orb_j=0, energy=-2.8)
-        self.assertEqual(len(cell.hopping_list), 3)
-        self.assertAlmostEqual(cell.hopping_list[1].energy, -2.8)
+        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertAlmostEqual(cell.get_hopping((-1, 0, 0), 0, 1), -2.7)
+        self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.8)
 
     def test06_get_hopping(self):
         """
@@ -392,16 +394,8 @@ class TestPrimitive(unittest.TestCase):
         self.assertRegex(str(cm.exception), r"hopping term .+ not found")
 
         # The normal case
-        hopping = cell.get_hopping([0, 0], 0, 1)
-        self.assertAlmostEqual(hopping.energy, -2.7)
-
-        # Get the conjugate part
-        def _test():
-            hopping_2 = cell.get_hopping([0, 0], 1, 0)
-            self.assertAlmostEqual(hopping_2.energy, -2.7)
-        th = TestHelper(self)
-        th.test_stdout(_test, ["INFO: given hopping term not found."
-                               " Returning conjugate counterpart instead."])
+        energy = cell.get_hopping([0, 0], 0, 1)
+        self.assertAlmostEqual(energy, -2.7)
 
     def test07_remove_hopping(self):
         """
@@ -415,20 +409,20 @@ class TestPrimitive(unittest.TestCase):
             cell.remove_hopping([-2, 0], 0, 1)
         self.assertRegex(str(cm.exception), r"hopping term .+ not found")
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 3)
+        self.assertEqual(cell.hopping_dict.num_hop, 3)
 
         # The normal case
         cell = make_cell()
         cell.remove_hopping([0, 0], 0, 1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 2)
+        self.assertEqual(cell.hopping_dict.num_hop, 2)
 
         # Remove conjugate part
         cell = make_cell()
         cell.remove_hopping([-1, 0], 0, 1)
         cell.remove_hopping([0, -1], 0, 1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(len(cell.hopping_list), 1)
+        self.assertEqual(cell.hopping_dict.num_hop, 1)
 
     def test08_sync_array(self):
         """
@@ -497,9 +491,9 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.hop_eng, None)
         # 3rd call, expected: updating nothing
         th.test_stdout(_test, update_none)
-        # 4th call, expected: updating orbitals
+        # 4th call, expected: updating both
         cell.remove_orbital(0)
-        th.test_stdout(_test, update_orb)
+        th.test_stdout(_test, update_both)
         self.assertEqual(cell.hop_ind, None)
         self.assertEqual(cell.hop_eng, None)
         self.assertEqual(cell.orb_pos, None)
@@ -531,7 +525,7 @@ class TestPrimitive(unittest.TestCase):
         # 7th call, expected: updating none
         th.test_stdout(_test, update_none)
         self.assertEqual(len(cell.orbital_list), 2)
-        self.assertEqual(len(cell.hopping_list), 0)
+        self.assertEqual(cell.hopping_dict.num_hop, 0)
         self.assertEqual(cell.hop_ind, None)
         self.assertEqual(cell.hop_eng, None)
         # 8th call, expected: updating both
@@ -774,15 +768,15 @@ class TestPrimitive(unittest.TestCase):
         hop_dict.set_mat([1, 0], hop_mat_10)
         hop_dict.set_mat([0, 1], hop_mat_01)
         cell.add_hopping_dict(hop_dict)
-        self.assertEqual(cell.get_hopping([0, 0], 0, 1).energy, -2.5)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 0).energy, 1.2)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 1).energy, 1.1)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 1).energy, -2.6)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 0).energy, -2.3)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 0).energy, 1.6)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 1).energy, 1.2)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 1).energy, -2.8)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 0).energy, -2.7)
+        self.assertEqual(cell.get_hopping([0, 0], 0, 1), -2.5)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 0), 1.2)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 1), 1.1)
+        self.assertEqual(cell.get_hopping([1, 0], 0, 1), -2.6)
+        self.assertEqual(cell.get_hopping([1, 0], 1, 0), -2.3)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 0), 1.6)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 1), 1.2)
+        self.assertEqual(cell.get_hopping([0, 1], 0, 1), -2.8)
+        self.assertEqual(cell.get_hopping([0, 1], 1, 0), -2.7)
 
     def test16_apply_pbc(self):
         """

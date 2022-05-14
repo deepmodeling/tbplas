@@ -34,7 +34,7 @@ from scipy.spatial import KDTree
 from . import constants as consts
 from . import exceptions as exc
 from .lattice import frac2cart, cart2frac, rotate_coord
-from .base import correct_coord, Hopping
+from .base import correct_coord
 from .primitive import PrimitiveCell
 
 
@@ -87,22 +87,23 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
         return ji % ni, ji // ni
 
     # Add hopping terms
-    hopping_list = []
+    pc_hop_dict = prim_cell.hopping_dict.dict
     for id_sc_i in range(extend_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
-        for hopping in prim_cell.hopping_list:
-            hop_ind = hopping.index
-            if id_pc_i[3] == hop_ind[3]:
-                ja, na = _wrap_pbc(id_pc_i[0] + hop_ind[0], dim[0])
-                jb, nb = _wrap_pbc(id_pc_i[1] + hop_ind[1], dim[1])
-                jc, nc = _wrap_pbc(id_pc_i[2] + hop_ind[2], dim[2])
-                id_pc_j = (ja, jb, jc, hop_ind[4])
-                id_sc_j = orb_id_sc[id_pc_j]
-                rn = (na, nb, nc)
-                hopping_list.append(Hopping(rn, id_sc_i, id_sc_j,
-                                            hopping.energy))
-    extend_cell.hopping_list = hopping_list
+        for rn, hop_rn in pc_hop_dict.items():
+            for pair, energy in hop_rn.items():
+                if id_pc_i[3] == pair[0]:
+                    ja, na = _wrap_pbc(id_pc_i[0] + rn[0], dim[0])
+                    jb, nb = _wrap_pbc(id_pc_i[1] + rn[1], dim[1])
+                    jc, nc = _wrap_pbc(id_pc_i[2] + rn[2], dim[2])
+                    id_pc_j = (ja, jb, jc, pair[1])
+                    id_sc_j = orb_id_sc[id_pc_j]
+                    rn = (na, nb, nc)
+                    extend_cell.add_hopping(rn, id_sc_i, id_sc_j, energy)
 
+    # NOTE: if you modify orbital_list and hopping_dict of extend_cell manually,
+    # then sync_array should be called with force_sync=True. Or alternatively,
+    # update the timestamps of orb_list and hop_dict.
     extend_cell.sync_array()
     return extend_cell
 
@@ -187,8 +188,7 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                                              prim_cell.orbital_list[i_o].label)
 
     # Add hopping terms
-    res_cell.sync_array()
-    hopping_list = []
+    res_cell.sync_array(force_sync=True)
     kd_tree = KDTree(res_cell.orb_pos)
     for id_sc_i in range(res_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
@@ -208,24 +208,17 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                 for id_sc_j in neighbours:
                     id_pc_j = orb_id_pc[id_sc_j]
                     if id_pc_j[3] == hop.item(4):
-                        hopping = Hopping(res_rn, id_sc_i, id_sc_j,
-                                          prim_cell.hop_eng.item(i_h))
-                        hopping_list.append(hopping)
-
-                # for id_pc_j in orb_id_pc:
-                #     if id_pc_j[3] == hop.item(4):
-                #         id_sc_j = orb_id_sc[id_pc_j]
-                #         chk_pos = res_cell.orb_pos[id_sc_j]
-                #         if np.linalg.norm(chk_pos - res_pos) <= pos_tol:
-                #             hopping = Hopping(res_rn, id_sc_i, id_sc_j,
-                #                               prim_cell.hop_eng.item(i_h))
-                #             hopping_list.append(hopping)
-    res_cell.hopping_list = hopping_list
+                        res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
+                                             prim_cell.hop_eng.item(i_h))
 
     # Subtract delta from orbital positions
     res_cell.orb_pos -= delta
     for i_o, pos in enumerate(res_cell.orb_pos):
-        res_cell.orbital_list[i_o].position = tuple(pos)
+        res_cell.set_orbital(i_o, position=tuple(pos))
+
+    # NOTE: if you modify orbital_list and hopping_dict of res_cell manually,
+    # then sync_array should be called with force_sync=True. Or alternatively,
+    # update the timestamps of orb_list and hop_dict.
     res_cell.sync_array()
     return res_cell
 
@@ -254,9 +247,11 @@ def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0, shift=0.0):
     orb_pos[:, 2] += shift
     orb_pos = cart2frac(prim_cell.lat_vec, orb_pos)
     for i, pos in enumerate(orb_pos):
-        prim_cell.orbital_list[i].position = tuple(pos)
+        prim_cell.set_orbital(i, position=tuple(pos))
 
-    # Update arrays
+    # NOTE: if you modify orbital_list and hopping_dict of prim_cell manually,
+    # then sync_array should be called with force_sync=True. Or alternatively,
+    # update the timestamps of orb_list and hop_dict.
     prim_cell.sync_array()
 
 
@@ -415,12 +410,13 @@ def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
     # Add intra-hopping terms
     for i_pc, pc in enumerate(pc_list):
         offset = ind_start[i_pc]
-        for hop in pc.hopping_list:
-            rn = hop.index[:3]
-            orb_i = hop.index[3] + offset
-            orb_j = hop.index[4] + offset
-            merged_cell.add_hopping(rn=rn, orb_i=orb_i, orb_j=orb_j,
-                                    energy=hop.energy)
+        hop_dict = pc.hopping_dict.dict
+        for rn, hop_rn in hop_dict.items():
+            for pair, energy in hop_rn.items():
+                orb_i = pair[0] + offset
+                orb_j = pair[1] + offset
+                merged_cell.add_hopping(rn=rn, orb_i=orb_i, orb_j=orb_j,
+                                        energy=energy)
 
     # Add inter-hopping terms
     for hop in hop_list:
@@ -433,6 +429,8 @@ def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
                 merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
                                         energy=energy)
 
-    # Clean up and return
+    # NOTE: if you modify orbital_list and hopping_dict of merged_cell manually,
+    # then sync_array should be called with force_sync=True. Or alternatively,
+    # update the timestamps of orb_list and hop_dict.
     merged_cell.sync_array()
     return merged_cell

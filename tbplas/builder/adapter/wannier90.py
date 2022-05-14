@@ -24,7 +24,6 @@ import numpy as np
 from ..constants import BOHR2ANG
 from ..lattice import cart2frac
 from .. import core
-from ..base import Orbital, Hopping
 from ..primitive import PrimitiveCell
 
 
@@ -226,11 +225,13 @@ def wan2pc(seed_name="wannier90", correct_hop=False, hop_eng_cutoff=1.0e-5):
     # since it is much faster.
     prim_cell = PrimitiveCell(lat_vec)
     for i_o, pos in enumerate(orb_pos):
-        orbital = Orbital(tuple(pos), orb_eng.item(i_o))
-        prim_cell.orbital_list.append(orbital)
+        prim_cell.add_orbital(tuple(pos), orb_eng.item(i_o))
     for i_h, hop in enumerate(hop_ind):
         ind, orb_i, orb_j = hop[:3], hop.item(3), hop.item(4)
-        hopping = Hopping(tuple(ind), orb_i, orb_j, hop_eng.item(i_h))
-        prim_cell.hopping_list.append(hopping)
-    prim_cell.sync_array(force_sync=True)
+        prim_cell.add_hopping(tuple(ind), orb_i, orb_j, hop_eng.item(i_h))
+
+    # NOTE: if you modify orbital_list and hopping_dict of prim_cell manually,
+    # then sync_array should be called with force_sync=True. Or alternatively,
+    # update the timestamps of orb_list and hop_dict.
+    prim_cell.sync_array()
     return prim_cell

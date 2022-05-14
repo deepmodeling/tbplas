@@ -6,17 +6,19 @@ Functions
     correct_coord: developer function
         check and auto-complete cell index, orbital coordinate,
         super-cell dimension and periodic condition
+    invert_rn: developer function
+        check if the cell index should be inverted
 
 Classes
 -------
     Orbital: developer class
         abstraction for orbitals in TB model
-    Hopping: developer class
-        abstraction for hopping terms in TB model
     LockableObject: developer class
         base class for all lockable classes
+    PCIntraHopping: developer class
+        container for holding hopping terms of a primitive cell
     HopDict: user class
-        container for holding hopping terms
+        container for holding hopping terms of a primitive cell
         reserved for compatibility with old version of TBPlaS
 """
 
@@ -46,6 +48,25 @@ def correct_coord(coord, complete_item=0):
         else:
             coord += (float(complete_item),)
     return coord
+
+
+def invert_rn(rn: tuple, i=0):
+    """
+    Check if the cell index should be inverted.
+
+    :param tuple rn: (r_a, r_b, r_c), cell index
+    :param int i: component index
+    :return: bool, True if to invert
+    """
+    if rn[i] > 0:
+        return False
+    elif rn[i] < 0:
+        return True
+    else:
+        if i < 2:
+            return invert_rn(rn, i+1)
+        else:
+            return False
 
 
 class Orbital:
@@ -81,38 +102,6 @@ class Orbital:
         return hash(self.position + (self.energy, self.label))
 
 
-class Hopping:
-    """
-    Class for representing a hopping term in TB model.
-
-    Attributes
-    ----------
-    index: (ra, rb, rc, orb_i, orb_j)
-        cell and orbital indices of the hopping term
-    energy: float or complex
-        hopping energy in eV
-    """
-    def __init__(self, rn, orb_i, orb_j, energy=0.0) -> None:
-        """
-        :param rn: (ra, rb, rc)
-            cell index of the hopping term
-        :param orb_i: integer
-            orbital index of bra of the hopping term
-        :param orb_j: integer
-            orbital index of ket of the hopping term
-        :param energy: float or complex
-            hopping energy of the hopping term in eV
-        :return: None
-        """
-        assert len(rn) == 3
-        self.index = rn + (orb_i, orb_j)
-        self.energy = energy
-
-    def __hash__(self):
-        """Return hash value of this instance."""
-        return hash(self.index + (self.energy,))
-
-
 class LockableObject:
     """
     Base class for all lockable objects.
@@ -141,6 +130,140 @@ class LockableObject:
         :return: None
         """
         self.is_locked = False
+
+
+class PCIntraHopping:
+    """
+    Container class for holding hopping terms of a primitive cell.
+
+    NOTE: this class is intended to constitute the 'hopping_dict' attribute of
+    'PrimitiveCell' class. It is assumed that the caller will take care of all
+     the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
+
+    Attributes
+    ----------
+    dict: dictionary containing the hopping terms
+        Keys are cell indices (rn), while values are also dictionaries.
+        Keys of value dictionary are orbital pairs, while values are hopping
+        energies.
+    """
+    def __init__(self):
+        self.dict = {}
+
+    @staticmethod
+    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+        """
+        Normalize cell index and orbital pair into permitted keys of self.dict.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: (rn, pair, conj)
+            where rn is the normalized cell index,
+            pair is the normalized orbital pair,
+            conj is the flag of whether to take the conjugate of hopping energy
+        """
+        if invert_rn(rn):
+            rn = (-rn[0], -rn[1], -rn[2])
+            pair = (orb_j, orb_i)
+            conj = True
+        elif rn == (0, 0, 0) and orb_i > orb_j:
+            rn = rn
+            pair = (orb_j, orb_i)
+            conj = True
+        else:
+            rn = rn
+            pair = (orb_i, orb_j)
+            conj = False
+        return rn, pair, conj
+
+    def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
+        """
+        Add a new hopping term or update existing term.
+
+        NOTE: conjugate terms are reduced by normalizing their cell indices and
+        orbital pairs.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :param complex energy: hopping energy
+        :return: None
+        """
+        rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
+        if conj:
+            energy = energy.conjugate()
+        try:
+            hop_rn = self.dict[rn]
+        except KeyError:
+            hop_rn = self.dict[rn] = dict()
+        hop_rn[pair] = energy
+
+    def get_hopping(self, rn: tuple, orb_i: int, orb_j: int):
+        """
+        Get an existing hopping term.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: (energy, status)
+            where energy is the hopping energy and status is the flag whether
+            the term has been found
+        """
+        rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
+        try:
+            energy = self.dict[rn][pair]
+            status = True
+        except KeyError:
+            energy = None
+            status = False
+        if status and conj:
+            energy = energy.conjugate()
+        return energy, status
+
+    def remove_hopping(self, rn: tuple, orb_i: int, orb_j: int):
+        """
+        Remove an existing hopping term.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: status
+            where the hopping term is removed, False if not found
+        """
+        rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
+        try:
+            self.dict[rn].pop(pair)
+            status = True
+        except KeyError:
+            status = False
+        return status
+
+    def to_array(self):
+        """
+        Convert hopping terms to array of 'hop_ind' and 'hop_eng',
+        for constructing attributes of 'PrimitiveCell'.
+
+        :return: (hop_ind, hop_eng)
+            hop_ind: (num_hop, 5) int32 array, hopping indices
+            hop_eng: (num_hop,) complex128 array, hopping energies
+        """
+        hop_ind, hop_eng = [], []
+        for rn, hop_rn in self.dict.items():
+            for pair, energy in hop_rn.items():
+                hop_ind.append(rn + pair)
+                hop_eng.append(energy)
+        hop_ind = np.array(hop_ind, dtype=np.int32)
+        hop_eng = np.array(hop_eng, dtype=np.complex128)
+        return hop_ind, hop_eng
+
+    @property
+    def num_hop(self):
+        """Count the number of hopping terms."""
+        num_hop = 0
+        for rn, hop_rn in self.dict.items():
+            num_hop += len(hop_rn)
+        return num_hop
 
 
 class HopDict:
