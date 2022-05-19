@@ -721,6 +721,10 @@ class PrimitiveCell(LockableObject):
 
         :return: None
         """
+        print("Lattice vectors (nm):")
+        for vec in self.lat_vec:
+            vec_format = "%10.5f%10.5f%10.5f" % (vec[0], vec[1], vec[2])
+            print(vec_format)
         print("Orbitals:")
         for orbital in self.orbital_list:
             pos = orbital.position
