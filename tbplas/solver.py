@@ -197,6 +197,7 @@ class Solver(BaseSolver):
         super().__init__(sample, config, enable_mpi)
         self.output = dict()
         self.set_output()
+        self.save_config()
 
     def set_output(self, directory="sim_data", prefix=None):
         """
