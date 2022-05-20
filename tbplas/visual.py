@@ -57,8 +57,9 @@ class Visualizer:
                 plt.show()
             plt.close()
 
-    def plot_xy(self, x: np.ndarray, y: np.ndarray, x_label=None,
-                y_label=None, fig_name=None, fig_dpi=300):
+    def plot_xy(self, x: np.ndarray, y: np.ndarray,
+                x_label=None, y_label=None, color="r", linewidth=1.2,
+                fig_name=None, fig_dpi=300):
         """
         Plot y as function of x.
 
@@ -70,6 +71,10 @@ class Visualizer:
             label for x-axis
         :param y_label: string
             label for y-axis
+        :param color: string
+            line color
+        :param linewidth: float
+            line width
         :param fig_name: string
             file name of figure to save
         :param fig_dpi: integer
@@ -77,7 +82,7 @@ class Visualizer:
         :return: None
         """
         if self.rank == 0:
-            plt.plot(x, y)
+            plt.plot(x, y, color=color, linewidth=linewidth)
             if x_label is not None:
                 plt.xlabel(x_label)
             if y_label is not None:
@@ -88,7 +93,7 @@ class Visualizer:
     def plot_bands(self, k_len: np.ndarray, bands: np.ndarray,
                    k_idx: np.ndarray, k_label: List[str],
                    x_label: str = "k (1/nm)", y_label: str = "Energy (eV)",
-                   fig_name=None, fig_dpi=300):
+                   color="r", linewidth=1.2,  fig_name=None, fig_dpi=300):
         """
         Plot band structure.
 
@@ -102,8 +107,12 @@ class Visualizer:
             labels of highly-symmetric k-points
         :param x_label: string
             label of x-axis
-        :param y_label:
+        :param y_label: string
             label of y-axis
+        :param color: string
+            line color
+        :param linewidth: float
+            line width
         :param fig_name: string
             file name of figure to save
         :param fig_dpi: integer
@@ -114,11 +123,12 @@ class Visualizer:
             # Plot band structure
             num_bands = bands.shape[1]
             for i in range(num_bands):
-                plt.plot(k_len, bands[:, i], color="r", linewidth=1.0)
+                plt.plot(k_len, bands[:, i], color=color, linewidth=linewidth)
 
             # Label highly-symmetric k-points
             for idx in k_idx:
-                plt.axvline(k_len[idx], color='k', linewidth=1.0)
+                plt.axvline(k_len[idx], color="k",
+                            linewidth=plt.rcParams['axes.linewidth'])
 
             # Adjustment
             plt.xlim((0, np.amax(k_len)))
@@ -132,7 +142,7 @@ class Visualizer:
 
     def plot_dos(self, energies: np.ndarray, dos: np.ndarray,
                  x_label="Energy (eV)", y_label="DOS (1/eV)",
-                 fig_name=None, fig_dpi=300):
+                 **kwargs):
         """
         Plot density of states.
 
@@ -144,13 +154,11 @@ class Visualizer:
             label for x-axis
         :param y_label: string
             label for y-axis
-        :param fig_name: string
-            file name of figure to save
-        :param fig_dpi: integer
-            resolution of figure
+        :param kwargs: dict
+            keyword arguments for plot_xy
         :return: None
         """
-        self.plot_xy(energies, dos, x_label, y_label, fig_name, fig_dpi)
+        self.plot_xy(energies, dos, x_label, y_label, **kwargs)
 
     def plot_wfc(self, sample: Sample, wfc: np.ndarray, scatter=True,
                  site_size=5, num_grid=(200, 200), cmap="viridis",
