@@ -705,9 +705,9 @@ class Sample:
             core.sort_col_csr(indptr, indices, hop, dx, dy)
         return indptr, indices, hop, dx, dy
 
-    def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, hop_as_arrows=True, hop_eng_cutoff=1e-5,
-             view="ab"):
+    def plot(self, fig_name=None, fig_size=None, fig_dpi=300,
+             with_orbitals=True, with_cells=True,
+             hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -716,6 +716,8 @@ class Sample:
 
         :param fig_name: string
             file name to which the figure will be saved
+        :param fig_size: (width, height)
+            size of the figure
         :param fig_dpi: integer
             resolution of the figure file
         :param with_orbitals: boolean
@@ -743,7 +745,7 @@ class Sample:
             or in any inter-hopping set corresponds to a vacancy
         :raises ValueError: if view is illegal
         """
-        fig, axes = plt.subplots()
+        fig, axes = plt.subplots(figsize=fig_size)
         axes.set_aspect('equal')
 
         # Plot supercells and hopping terms

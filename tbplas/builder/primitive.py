@@ -604,9 +604,9 @@ class PrimitiveCell(LockableObject):
         """
         return lat.gen_reciprocal_vectors(self.lat_vec)
 
-    def plot(self, fig_name=None, fig_dpi=300, with_orbitals=True,
-             with_cells=True, with_conj=True, hop_as_arrows=True,
-             hop_eng_cutoff=1e-5, view="ab"):
+    def plot(self, fig_name=None, fig_size=None, fig_dpi=300,
+             with_orbitals=True, with_cells=True, with_conj=True,
+             hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -615,6 +615,8 @@ class PrimitiveCell(LockableObject):
 
         :param fig_name: string
             file name to which the figure will be saved
+        :param fig_size: (width, height)
+            size of the figure
         :param fig_dpi: integer
             resolution of the figure file
         :param with_orbitals: boolean
@@ -639,7 +641,7 @@ class PrimitiveCell(LockableObject):
         :raises ValueError: if view is illegal
         """
         self.sync_array()
-        fig, axes = plt.subplots()
+        fig, axes = plt.subplots(figsize=fig_size)
         axes.set_aspect('equal')
         viewer = ModelViewer(axes, self.lat_vec, view)
 
