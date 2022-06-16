@@ -3,14 +3,15 @@
 import math
 
 import numpy as np
-from scipy.spatial import cKDTree
+from numpy.linalg import norm
+from scipy.spatial import KDTree
 
 import tbplas as tb
 
 
 def calc_twist_angle(i):
     """
-    Calculate twisting angle.
+    Calculate twisting angle according to ref. [1].
 
     :param i: integer
         parameter controlling the twisting angle
@@ -21,9 +22,25 @@ def calc_twist_angle(i):
     return math.acos(cos_ang)
 
 
+def calc_twist_angle2(n, m):
+    """
+    Calculate twisting angle according to ref. [2].
+
+    :param n: integer
+        parameter controlling the twisting angle
+    :param m: integer
+        parameter controlling the twisting angle
+    :return: float
+        twisting angle in RADIANs, NOT degrees
+    """
+    cos_ang = (n**2 + 4 * n * m + m**2) / (2* (n**2 + n * m + m**2))
+    return math.acos(cos_ang)
+
+
 def calc_hetero_lattice(i, prim_cell_fixed: tb.PrimitiveCell):
     """
-    Calculate Cartesian coordinates of lattice vectors of hetero-structure.
+    Calculate Cartesian coordinates of lattice vectors of hetero-structure
+    according to ref. [1].
 
     :param i: integer
         parameter controlling the twisting angle
@@ -39,16 +56,65 @@ def calc_hetero_lattice(i, prim_cell_fixed: tb.PrimitiveCell):
     return hetero_lattice
 
 
+def calc_hetero_lattice2(n, m, prim_cell_fixed: tb.PrimitiveCell):
+    """
+    Calculate Cartesian coordinates of lattice vectors of hetero-structure
+    according to ref. [2].
+
+    :param n: integer
+        parameter controlling the twisting angle
+    :param m: integer
+        parameter controlling the twisting angle
+    :param prim_cell_fixed: instance of 'PrimitiveCell' class
+        primitive cell of fixed layer
+    :return: hetero_lattice: (3, 3) float64 array
+        Cartesian coordinates of hetero-structure lattice vectors in NANOMETER
+    """
+    hetero_lattice = np.array([[n, m, 0],
+                               [-m, n + m, 0],
+                               [0, 0, 1]])
+    hetero_lattice = tb.frac2cart(prim_cell_fixed.lat_vec, hetero_lattice)
+    return hetero_lattice
+
+
+def calc_hop(rij: np.ndarray):
+    """
+    Calculate hopping parameter according to Slater-Koster relation.
+    See ref. [2] for the formulae.
+
+    :param rij: (3,) array
+        dispacement vector between two orbitals in NM
+    :return: hop: float
+        hopping parameter
+    """
+    a0 = 0.1418
+    a1 = 0.3349
+    r_c = 0.6140
+    l_c = 0.0265
+    gamma0 = 2.7
+    gamma1 = 0.48
+    decay_coeff = 22.18
+    q_pi = decay_coeff * a0
+    q_sigma = decay_coeff * a1
+    dr = norm(rij).item()
+    n = rij.item(2) / dr
+    V_pppi = - gamma0 * math.exp(q_pi * (1 - dr / a0))
+    V_ppsigma = gamma1 * math.exp(q_sigma * (1 - dr / a1))
+    fc = 1 / (1 + math.exp((dr - r_c) / l_c))
+    hop = (n**2 * V_ppsigma + (1 - n**2) * V_pppi) * fc
+    return hop
+
+
 def main():
     # In this tutorial we show how to build twisted bilayer graphene. Firstly, we need
     # to define the functions for evaluating twisting angle and coordinates of lattice
     # vectors. See the following papers for the formulae:
     #
     # [1] https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.99.256802
-    # [2] https://journals.aps.org/prb/pdf/10.1103/PhysRevB.81.161405
+    # [2] https://journals.aps.org/prb/abstract/10.1103/PhysRevB.86.125413
     #
-    # We employ the formulae in ref [1] and implement them in functions
-    # 'calc_twist_angle' and 'calc_hetero_lattice'.
+    # See function 'calc_twist_angle', 'calc_twist_angle2', 'calc_hetero_lattice' and
+    # 'calc_hetero_lattice2' for the implementation.
 
     # Evaluate twisting angle.
     i = 5
@@ -60,15 +126,15 @@ def main():
     prim_cell_fixed = tb.make_graphene_diamond()
 
     # On the contrary, the 'twisted' cell must be rotated counter-clockwise by
-    # the twisting angle and shifted towards +z by 0.5 nanometers, which is
+    # the twisting angle and shifted towards +z by 0.3349 nanometers, which is
     # done by calling the function 'spiral_prim_cell'.
     prim_cell_twisted = tb.make_graphene_diamond()
-    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=0.5)
+    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=0.3349)
 
-    # Calculate coordinates of lattice vectors.
-    # The reference paper gives the fractional lattice vectors in basis of
-    # 'fix' primitive cell. However, we want the Cartesian coordinates. This
-    # is done by calling the 'calc_hetero_lattice' function.
+    # Evaluate coordinates of lattice vectors of hetero-structure.
+    # The reference papers give the fractional coordinates in basis of 'fixed'
+    # primitive cell. However, we want the Cartesian coordinates. This is done
+    # by calling the 'calc_hetero_lattice' function.
     hetero_lattice = calc_hetero_lattice(i, prim_cell_fixed)
 
     # With all the primitive cells ready, we build the 'fixed' and 'twisted'
@@ -96,7 +162,7 @@ def main():
     # We utilize KDTree from scipy to detect interlayer neighbours up to cutoff
     # distance.
     inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)
-    tree_fixed = cKDTree(pos_fixed)
+    tree_fixed = KDTree(pos_fixed)
     for ia in range(-1, 2):
         for ib in range(-1, 2):
             rn = (ia, ib, 0)
@@ -104,20 +170,32 @@ def main():
             pos_rn = pos_twisted + np.matmul(rn, layer_twisted.lat_vec)
 
             # Get the distance matrix between fixed and twisted layers
-            tree_rn = cKDTree(pos_rn)
+            tree_rn = KDTree(pos_rn)
             dist_matrix = tree_fixed.sparse_distance_matrix(tree_rn,
-                                                            max_distance=0.55)
+                                                            max_distance=0.40)
 
             # Add terms to inter_hop
-            # We assume a simple Gaussian decay of hopping energies w.r.t
-            # 0.246 NANOMETER.
-            for index, distance in dist_matrix.items():
-                inter_hop.add_hopping(rn, index[0], index[1],
-                                      -2.7 * math.exp(-(distance - 0.246) ** 2))
+            for index in dist_matrix.keys():
+                rij = pos_rn[index[1]] - pos_fixed[index[0]]
+                inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
 
     # Finally, we merge layers and inter_hop to yield a hetero-structure
     merged_cell = tb.merge_prim_cell(layer_fixed, layer_twisted, inter_hop)
 
+    # Evaluate band structure of hetero-structure
+    k_points = np.array([
+        [0.0, 0.0, 0.0],
+        [2./3, 1./3, 0.0],
+        [1./2, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+    ])
+    k_label = ["G", "K", "M", "G"]
+    k_path, k_idx = tb.gen_kpath(k_points, [10, 10, 10])
+    k_len, bands = merged_cell.calc_bands(k_path)
+    vis = tb.Visualizer()
+    vis.plot_bands(k_len, bands, k_idx, k_label)
+
+    # Visualize Moire's pattern
     sample = tb.Sample(tb.SuperCell(merged_cell, dim=(3, 3, 1),
                                     pbc=(False, False, False)))
     sample.plot(with_orbitals=False, hop_as_arrows=False)

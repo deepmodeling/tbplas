@@ -10,7 +10,7 @@ example. The packages required by this tutorial can be imported by:
 
     import math
     import numpy as np
-    from scipy.spatial import cKDTree
+    from scipy.spatial import KDTree
     import tbplas as tb
 
 Overview of workflow
@@ -97,12 +97,12 @@ directly:
     prim_cell_fixed = tb.make_graphene_diamond()
 
 On the contrary, the *twisted* cell must be rotated counter-clockwise by the twisting angle and
-shifted towards +z by 0.5 nanometers, which can be one by calling the function :func:`.spiral_prim_cell`:
+shifted towards +z by 0.3349 nanometers, which can be one by calling the function :func:`.spiral_prim_cell`:
 
 .. code-block:: python
 
     prim_cell_twisted = tb.make_graphene_diamond()
-    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=0.5)
+    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=0.3349)
 
 The Cartesian coordinates of lattice vectors of hetero-structure can be evaluated as:
 
@@ -159,10 +159,41 @@ first:
 
 Then we loop over neighbouring cells to collect inter-layer hopping terms. We only need to take the
 hopping terms from :math:`(0, 0, 0)` cell of *fixed* layer to any cell of *twisted* layer. The
-conjugate terms are handled automatically. The hooping terms are stored in an instance of
+conjugate terms are handled automatically. The hopping terms are stored in an instance of
 :class:`.InterHopDict` class. We utilize ``KDTree`` from ``scipy`` to detect interlayer neighbours
-up to the cutoff distance of 0.55 nm. Moreover, we assume a simple Gaussian decay of hopping
-energies with respect to 0.246 nm. The code is as following:
+up to the cutoff distance of 0.75 nm. The hopping terms are determined via Slater-Koster relation,
+according to Phys. Rev. B 86, 125413 (2012). We define the following function:
+
+.. code-block:: python
+
+    def calc_hop(rij: np.ndarray):
+        """
+        Calculate hopping parameter according to Slater-Koster relation.
+        See Phys. Rev. B 86, 125413 (2012) for the formulae.
+
+        :param rij: (3,) array
+            dispacement vector between two orbitals in NM
+        :return: hop: float
+            hopping parameter
+        """
+        a0 = 0.1418
+        a1 = 0.3349
+        r_c = 0.6140
+        l_c = 0.0265
+        gamma0 = 2.7
+        gamma1 = 0.48
+        decay_coeff = 22.18
+        q_pi = decay_coeff * a0
+        q_sigma = decay_coeff * a1
+        dr = norm(rij).item()
+        n = rij.item(2) / dr
+        V_pppi = - gamma0 * math.exp(q_pi * (1 - dr / a0))
+        V_ppsigma = gamma1 * math.exp(q_sigma * (1 - dr / a1))
+        fc = 1 / (1 + math.exp((dr - r_c) / l_c))
+        hop = (n**2 * V_ppsigma + (1 - n**2) * V_pppi) * fc
+        return hop
+
+and add the hopping terms by:
 
 .. code-block:: python
 
@@ -177,14 +208,12 @@ energies with respect to 0.246 nm. The code is as following:
             # Get the distance matrix between fixed and twisted layers
             tree_rn = cKDTree(pos_rn)
             dist_matrix = tree_fixed.sparse_distance_matrix(tree_rn,
-                                                            max_distance=0.55)
+                                                            max_distance=0.40)
 
             # Add terms to inter_hop
-            # We assume a simple Gaussian decay of hopping energies w.r.t
-            # 0.246 NANOMETER.
-            for index, distance in dist_matrix.items():
-                inter_hop.add_hopping(rn, index[0], index[1],
-                                      -2.7 * math.exp(-(distance - 0.246) ** 2))
+            for index in dist_matrix.keys():
+                rij = pos_rn[index[1]] - pos_fixed[index[0]]
+                inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
 
 Finally, we can merge all layers and inter-layer hopping terms to produce a hetero-structure:
 
