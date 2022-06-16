@@ -58,8 +58,8 @@ class Visualizer:
             plt.close()
 
     def plot_xy(self, x: np.ndarray, y: np.ndarray,
-                x_label=None, y_label=None, color="r", linewidth=1.2,
-                fig_name=None, fig_dpi=300):
+                x_label=None, y_label=None, x_lim=None, y_lim=None,
+                color="r", linewidth=1.2, fig_name=None, fig_dpi=300):
         """
         Plot y as function of x.
 
@@ -71,6 +71,10 @@ class Visualizer:
             label for x-axis
         :param y_label: string
             label for y-axis
+        :param x_lim: (x_min, x_max)
+            range of x
+        :param y_lim: (y_min, y_max)
+            range of y
         :param color: string
             line color
         :param linewidth: float
@@ -87,6 +91,10 @@ class Visualizer:
                 plt.xlabel(x_label)
             if y_label is not None:
                 plt.ylabel(y_label)
+            if x_lim is not None:
+                plt.xlim(x_lim)
+            if y_lim is not None:
+                plt.ylim(y_lim)
             plt.tight_layout()
             self.__output(fig_name, fig_dpi)
 
