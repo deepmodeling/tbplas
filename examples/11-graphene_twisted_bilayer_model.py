@@ -105,6 +105,30 @@ def calc_hop(rij: np.ndarray):
     return hop
 
 
+def extend_intra_hop(layer: tb.PrimitiveCell, max_distance=0.75):
+    """
+    Extend the hopping terms within given layer to cutoff distance.
+
+    :param layer: tb.PrimitiveCell
+        layer to extend
+    :param max_distance: cutoff distance in NM
+    :return: None. Incoming layer is modified
+    """
+    layer.sync_array()
+    pos_r0 = layer.orb_pos_nm
+    tree_r0 = KDTree(pos_r0)
+    neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
+    for rn in neighbors:
+        pos_rn = pos_r0 + np.matmul(rn, layer.lat_vec)
+        tree_rn = KDTree(pos_rn)
+        dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
+                                                     max_distance=max_distance)
+        for index, distance in dist_matrix.items():
+            if distance > 0.0:
+                rij = pos_rn[index[1]] - pos_r0[index[0]]
+                layer.add_hopping(rn, index[0], index[1], calc_hop(rij))
+
+
 def main():
     # In this tutorial we show how to build twisted bilayer graphene. Firstly, we need
     # to define the functions for evaluating twisting angle and coordinates of lattice
@@ -140,8 +164,12 @@ def main():
     # With all the primitive cells ready, we build the 'fixed' and 'twisted'
     # layers by reshaping corresponding cells to the lattice vectors of
     # hetero-structure. This is done by calling 'make_hetero_layer'.
+    # Then we need to extend the hopping terms in each layer up to cutoff
+    # distance by calling 'extend_intra_hop'.
     layer_fixed = tb.make_hetero_layer(prim_cell_fixed, hetero_lattice)
+    extend_intra_hop(layer_fixed, max_distance=0.75)
     layer_twisted = tb.make_hetero_layer(prim_cell_twisted, hetero_lattice)
+    extend_intra_hop(layer_twisted, max_distance=0.75)
 
     # Now we come to the most difficult part: construction of interlayer
     # hopping terms. Note that this procedure is strongly system dependent,
@@ -163,31 +191,29 @@ def main():
     # distance.
     inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)
     tree_fixed = KDTree(pos_fixed)
-    for ia in range(-1, 2):
-        for ib in range(-1, 2):
-            rn = (ia, ib, 0)
-            # Get Cartesian coordinates of orbitals Rn cell of twisted layer
-            pos_rn = pos_twisted + np.matmul(rn, layer_twisted.lat_vec)
+    neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
+    for rn in neighbors:
+        # Get Cartesian coordinates of orbitals Rn cell of twisted layer
+        pos_rn = pos_twisted + np.matmul(rn, layer_twisted.lat_vec)
 
-            # Get the distance matrix between fixed and twisted layers
-            tree_rn = KDTree(pos_rn)
-            dist_matrix = tree_fixed.sparse_distance_matrix(tree_rn,
-                                                            max_distance=0.40)
+        # Get the distance matrix between fixed and twisted layers
+        tree_rn = KDTree(pos_rn)
+        dist_matrix = tree_fixed.sparse_distance_matrix(tree_rn, max_distance=0.75)
 
-            # Add terms to inter_hop
-            for index in dist_matrix.keys():
-                rij = pos_rn[index[1]] - pos_fixed[index[0]]
-                inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
+        # Add terms to inter_hop
+        for index in dist_matrix.keys():
+            rij = pos_rn[index[1]] - pos_fixed[index[0]]
+            inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
 
     # Finally, we merge layers and inter_hop to yield a hetero-structure
     merged_cell = tb.merge_prim_cell(layer_fixed, layer_twisted, inter_hop)
 
     # Evaluate band structure of hetero-structure
     k_points = np.array([
-        [0.0, 0.0, 0.0],
-        [2./3, 1./3, 0.0],
-        [1./2, 0.0, 0.0],
-        [0.0, 0.0, 0.0],
+       [0.0, 0.0, 0.0],
+       [2./3, 1./3, 0.0],
+       [1./2, 0.0, 0.0],
+       [0.0, 0.0, 0.0],
     ])
     k_label = ["G", "K", "M", "G"]
     k_path, k_idx = tb.gen_kpath(k_points, [10, 10, 10])

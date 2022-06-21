@@ -145,6 +145,8 @@ The output is shown in the left panel of the figure, from which we can see the p
 Add inter-layer hoppings
 ------------------------
 
+.. _inter_hop:
+
 Now we come to the most difficult part: adding inter-layer hopping terms. This task is strongly
 system-dependent and the example we show here is just for demonstration purpose. Since the hopping
 terms are position-dependent, we need to get the Cartesian coordiantes of orbials of each layer
@@ -225,3 +227,50 @@ Finally, we can merge all layers and inter-layer hopping terms to produce a hete
     sample.plot(with_orbitals=False, hop_as_arrows=False)
 
 The output is shown in the right panel of the figure.
+
+Extend intra-hopping terms
+--------------------------
+
+The primitive cells from which we build the fixed and twisted layers are in the nearest-neighbours
+approximation, i.e. hopping terms are cutoff up to the length of C-C bond, 0.1418 nm. However, the
+inter-layer hopping terms have a cutoff distance of 0.40 nm. This will bring inconsistence into the
+model. So, we need to extend the intra-hopping terms in the fixed and twisted layers. We fine such
+function as:
+
+.. code-block:: python
+
+    def extend_intra_hop(layer: tb.PrimitiveCell, max_distance):
+        """
+        Extend the hopping terms within given layer to cutoff distance.
+
+        :param layer: tb.PrimitiveCell
+            layer to extend
+        :param max_distance: cutoff distance in NM
+        :return: None. Incoming layer is modified
+        """
+        layer.sync_array()
+        pos_r0 = layer.orb_pos_nm
+        tree_r0 = KDTree(pos_r0)
+        neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
+        for rn in neighbors:
+            pos_rn = pos_r0 + np.matmul(rn, layer.lat_vec)
+            tree_rn = KDTree(pos_rn)
+            dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
+                                                         max_distance=max_distance)
+            for index, distance in dist_matrix.items():
+                if distance > 0.0:
+                    rij = pos_rn[index[1]] - pos_r0[index[0]]
+                    layer.add_hopping(rn, index[0], index[1], calc_hop(rij))
+
+which is much similar to the code for adding inter-layer hopping terms. We call it after making each
+layer:
+
+.. code-block:: python
+
+    layer_fixed = tb.make_hetero_layer(prim_cell_fixed, hetero_lattice)
+    extend_intra_hop(layer_fixed, max_distance=0.40)
+    layer_twisted = tb.make_hetero_layer(prim_cell_twisted, hetero_lattice)
+    extend_intra_hop(layer_twisted, max_distance=0.40)
+
+Other parts of :ref:`inter_hop` does change. The resulting hetero-structure has too many hopping terms
+and will not shown here.
