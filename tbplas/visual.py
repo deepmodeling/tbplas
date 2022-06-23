@@ -18,27 +18,17 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 
 from .builder import Sample
+from .parallel import MPIEnv
 
 
-class Visualizer:
-    """
-    Class for visualizing data.
-
-    Attributes
-    ----------
-    rank: integer
-        rank of this process
-    """
+class Visualizer(MPIEnv):
+    """Class for visualizing data."""
     def __init__(self, enable_mpi=False):
         """
         :param enable_mpi: boolean
             whether to enable mpi parallelism
         """
-        if enable_mpi:
-            from .parallel import MPIEnv
-            self.rank = MPIEnv().rank
-        else:
-            self.rank = 0
+        super().__init__(enable_mpi=enable_mpi, echo_details=False)
 
     def __output(self, fig_name=None, fig_dpi=300):
         """
@@ -50,7 +40,7 @@ class Visualizer:
             resolution of figure
         :return: None
         """
-        if self.rank == 0:
+        if self.is_master:
             if fig_name is not None:
                 plt.savefig(fig_name, dpi=fig_dpi)
             else:
@@ -85,7 +75,7 @@ class Visualizer:
             resolution of figure
         :return: None
         """
-        if self.rank == 0:
+        if self.is_master:
             plt.plot(x, y, color=color, linewidth=linewidth)
             if x_label is not None:
                 plt.xlabel(x_label)
@@ -127,7 +117,7 @@ class Visualizer:
             resolution of figure
         :return: None
         """
-        if self.rank == 0:
+        if self.is_master:
             # Plot band structure
             num_bands = bands.shape[1]
             for i in range(num_bands):
@@ -195,7 +185,7 @@ class Visualizer:
             dpi of output figure
         :return: None
         """
-        if self.rank == 0:
+        if self.is_master:
             # Get site locations
             sample.init_orb_pos()
             x = np.array(sample.orb_pos[:, 0])

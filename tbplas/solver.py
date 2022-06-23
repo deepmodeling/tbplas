@@ -24,11 +24,12 @@ import scipy.special as spec
 from .builder import Sample
 from .config import Config
 from .fortran import f2py
+from .parallel import MPIEnv
 
 
-class BaseSolver:
+class Solver(MPIEnv):
     """
-    Base class for Solver and Analyzer.
+    Wrapper class over FORTRAN TBPM subroutines.
 
     Attributes
     ----------
@@ -36,123 +37,6 @@ class BaseSolver:
         sample for which TBPM calculations will be performed
     config: instance of 'Config' class
         parameters controlling TBPM calculation
-    mpi_env: instance of 'MPIEnv' class
-        mpi parallel environment
-        None if mpi is not enabled.
-    """
-    def __init__(self, sample: Sample, config: Config, enable_mpi=False):
-        """
-        :param sample: instance of 'Sample' class
-            sample for which TBPM calculations will be performed
-        :param config: instance of 'Config' class
-            parameters controlling TBPM calculations
-        :param enable_mpi: boolean
-            whether to enable parallelism using MPI
-        """
-        self.sample = sample
-        self.config = config
-
-        # Setup parallel environment
-        if enable_mpi:
-            from .parallel import MPIEnv
-            self.mpi_env = MPIEnv()
-        else:
-            self.mpi_env = None
-
-        # Print simulation details
-        self.print("\nParallelization details:")
-        if self.mpi_env is not None:
-            self.print("%17s:%4d" % ("MPI processes", self.size))
-        else:
-            self.print("%17s" % "MPI disabled")
-        for env_name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
-            if env_name in os.environ.keys():
-                self.print("%17s:%4s" % (env_name, os.environ[env_name]))
-            else:
-                self.print("%17s: n/a" % env_name)
-        self.print()
-
-    @property
-    def rank(self):
-        """
-        Common interface to obtain the rank of mpi process.
-
-        :return: rank: integer
-            self.mpi_env.rank if mpi is enabled, otherwise 0.
-        """
-        if self.mpi_env is not None:
-            rank = self.mpi_env.rank
-        else:
-            rank = 0
-        return rank
-
-    @property
-    def size(self):
-        """
-        Common interface to obtain total number of mpi processes.
-
-        :return: size: integer
-            self.mpi_env.size if mpi is enabled, otherwise 1.
-        """
-        if self.mpi_env is not None:
-            size = self.mpi_env.size
-        else:
-            size = 1
-        return size
-
-    @property
-    def is_master(self):
-        """
-        Common interface to check if this is the master process.
-
-        :return: is_master: boolean
-            True if self.rank == 0, otherwise False.
-        """
-        return self.rank == 0
-
-    def barrier(self):
-        """
-        Common interface to call MPI_Barrier.
-
-        :return: None
-        """
-        if self.mpi_env is not None:
-            self.mpi_env.barrier()
-        else:
-            pass
-
-    def average(self, data_local):
-        """
-        Common interface to average data among mpi processes.
-
-        :param data_local: numpy array
-            local data on each mpi process
-        :return: data: numpy array with same shape and data type as data_local
-            averaged data from data_local
-            data_local itself is returned if mpi is not enabled.
-        """
-        if self.mpi_env is not None:
-            return self.mpi_env.average(data_local)
-        else:
-            return data_local
-
-    def print(self, text=""):
-        """
-        Print text on master process.
-
-        NOTE: flush=True is essential for some MPI implementations,
-        e.g. MPICH3.
-        """
-        if self.rank == 0:
-            print(text, flush=True)
-
-
-class Solver(BaseSolver):
-    """
-    Wrapper class over FORTRAN TBPM subroutines.
-
-    Attributes
-    ----------
     output['directory'] : string
         Output directory.
         Default value: "sim_data".
@@ -194,7 +78,9 @@ class Solver(BaseSolver):
         :param enable_mpi: boolean
             whether to enable parallelism using MPI
         """
-        super().__init__(sample, config, enable_mpi)
+        super().__init__(enable_mpi=enable_mpi, echo_details=True)
+        self.sample = sample
+        self.config = config
         self.output = dict()
         self.set_output()
         self.save_config()
@@ -221,7 +107,7 @@ class Solver(BaseSolver):
         # NOTE: On some file systems, e.g. btrfs, creating directory may be
         # slow. Other processes may try to access the directory before it is
         # created and run into I/O errors. So we need to put a barrier here.
-        if self.rank == 0:
+        if self.is_master:
             if not os.path.exists(self.output["directory"]):
                 os.mkdir(self.output["directory"])
         self.barrier()
@@ -246,7 +132,7 @@ class Solver(BaseSolver):
             file name of the .pkl file
         :return: None
         """
-        if self.rank == 0:
+        if self.is_master:
             pickle_name = "%s/%s.%s" % (self.output["directory"],
                                         self.output["prefix"], filename)
             with open(pickle_name, 'wb') as f:
@@ -261,7 +147,7 @@ class Solver(BaseSolver):
             self.config.generic["nr_random_samples"] is updated.
         """
         num_sample_opt = self.config.generic["nr_random_samples"]
-        if self.mpi_env is not None:
+        if self.mpi_enabled:
             while num_sample_opt % self.size != 0:
                 num_sample_opt += 1
             if num_sample_opt != self.config.generic["nr_random_samples"]:
@@ -347,7 +233,7 @@ class Solver(BaseSolver):
             suffix = "npy"
         else:
             raise NotImplementedError(f"Unsupported format {output_format}")
-        if self.rank == 0:
+        if self.is_master:
             np.save(f"{file_name}.{suffix}", data)
 
     def calc_corr_dos(self):

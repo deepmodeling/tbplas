@@ -830,7 +830,7 @@ class Sample:
         # Distribute k-points over processes
         if enable_mpi:
             from ..parallel import MPIEnv
-            mpi_env = MPIEnv()
+            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
             k_index = mpi_env.dist_range(num_k_points)
         else:
             mpi_env = None
@@ -952,7 +952,7 @@ class Sample:
         num_kpt = bands.shape[0]
         if enable_mpi:
             from ..parallel import MPIEnv
-            mpi_env = MPIEnv()
+            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
             k_index = mpi_env.dist_range(num_kpt)
         else:
             mpi_env = None

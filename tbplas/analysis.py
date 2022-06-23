@@ -25,8 +25,8 @@ from scipy.integrate import trapz
 
 from .builder import Sample
 from .config import Config
-from .solver import BaseSolver
 from .fortran import f2py
+from .parallel import MPIEnv
 
 
 def window_hanning(i, tnr):
@@ -72,8 +72,17 @@ def window_exp_ten(i, tnr):
     return 10.**power
 
 
-class Analyzer(BaseSolver):
-    """Class for analyzing correlation functions."""
+class Analyzer(MPIEnv):
+    """
+    Class for analyzing correlation functions.
+
+    Attributes
+    ----------
+    sample: instance of 'Sample' class
+        sample for which TBPM calculations will be performed
+    config: instance of 'Config' class
+        parameters controlling TBPM calculation
+    """
     def __init__(self, sample: Sample, config: Config, enable_mpi=False):
         """
         :param sample: instance of 'Sample' class
@@ -83,7 +92,9 @@ class Analyzer(BaseSolver):
         :param enable_mpi: boolean
             whether to enable parallelism using MPI
         """
-        super().__init__(sample, config, enable_mpi)
+        super().__init__(enable_mpi=enable_mpi, echo_details=False)
+        self.sample = sample
+        self.config = config
 
     def calc_dos(self, corr_dos, window=window_hanning):
         """
@@ -98,7 +109,7 @@ class Analyzer(BaseSolver):
         :return: dos: (2*nr_time_steps,) float64 array
             DOS values corresponding to energies
         """
-        if self.rank == 0:
+        if self.is_master:
             # Get parameters
             tnr = self.config.generic['nr_time_steps']
             en_range = self.sample.energy_range
@@ -160,7 +171,7 @@ class Analyzer(BaseSolver):
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
         """
-        if self.rank == 0:
+        if self.is_master:
             # Get parameters
             tnr = self.config.generic['nr_time_steps']
             en_range = self.sample.energy_range
@@ -220,7 +231,7 @@ class Analyzer(BaseSolver):
         :return: dyn_pol: (n_q_points, nr_time_steps) complex128 array
             dynamical polarization values corresponding to q-points and omegas
         """
-        if self.rank == 0:
+        if self.is_master:
             # Get parameters
             tnr = self.config.generic['nr_time_steps']
             en_range = self.sample.energy_range
@@ -262,7 +273,7 @@ class Analyzer(BaseSolver):
         :return: epsilon: (n_q_points, nr_time_steps) complex128 array
             dielectric function
         """
-        if self.rank == 0:
+        if self.is_master:
             # Get parameters
             tnr = self.config.generic['nr_time_steps']
             q_points = self.config.dyn_pol['q_points']
@@ -316,7 +327,7 @@ class Analyzer(BaseSolver):
         # source code. tbpm_dos and tbpm_ldos have been update, while other
         # subroutines are not. So here we need to insert 1.0 to the head of
         # corr_dos by calc_corr_dc before calling analyze_corr_dos.
-        if self.rank == 0:
+        if self.is_master:
             corr_dos = np.insert(corr_dos, 0, 1.0)
             energies_dos, dos = self.calc_dos(corr_dos, window_dos)
             energies_dos = np.array(energies_dos)
@@ -380,7 +391,7 @@ class Analyzer(BaseSolver):
         energies = energies[qe_indices]
         time = np.linspace(0, tnr - 1, tnr) * t_step
 
-        if self.rank == 0:
+        if self.is_master:
             diff_coeff = np.zeros((2, n_energies, tnr))
             for i in range(2):
                 for j in range(n_energies):
@@ -409,7 +420,7 @@ class Analyzer(BaseSolver):
         :return: conductivity: float64 array
             Hall conductivity according to energies
         """
-        if self.rank == 0:
+        if self.is_master:
             energies = np.array(self.config.dckb['energies'])
             dckb_prefactor = 16 * self.sample.nr_orbitals / \
                 self.sample.area_unit_cell

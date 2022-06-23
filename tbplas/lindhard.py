@@ -167,7 +167,7 @@ class Lindhard:
         self.delta = delta
         if enable_mpi:
             from .parallel import MPIEnv
-            self.mpi_env = MPIEnv()
+            self.mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
         else:
             self.mpi_env = None
 
