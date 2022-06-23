@@ -30,6 +30,7 @@ from . import core
 from .base import correct_coord, LockableObject
 from .super import SuperCell
 from .utils import ModelViewer
+from ..parallel import MPIEnv
 
 
 class InterHopping(LockableObject):
@@ -828,13 +829,8 @@ class Sample:
         k_path = lat.frac2cart(sc_recip_vec, k_path)
 
         # Distribute k-points over processes
-        if enable_mpi:
-            from ..parallel import MPIEnv
-            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-            k_index = mpi_env.dist_range(num_k_points)
-        else:
-            mpi_env = None
-            k_index = range(num_k_points)
+        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=True)
+        k_index = mpi_env.dist_range(num_k_points)
 
         # Loop over k-points to evaluate the band structure
         if solver == "lapack":
@@ -877,8 +873,7 @@ class Sample:
             raise exc.SolverError(solver)
 
         # Collect energies
-        if mpi_env is not None:
-            bands = mpi_env.all_reduce(bands)
+        bands = mpi_env.all_reduce(bands)
         return k_len, bands
 
     def calc_dos(self, k_points, e_min=None, e_max=None, e_step=0.05,
@@ -950,20 +945,14 @@ class Sample:
 
         # Distribute k-points over processes
         num_kpt = bands.shape[0]
-        if enable_mpi:
-            from ..parallel import MPIEnv
-            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-            k_index = mpi_env.dist_range(num_kpt)
-        else:
-            mpi_env = None
-            k_index = range(num_kpt)
+        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
+        k_index = mpi_env.dist_range(num_kpt)
 
         # Collect contributions
         for i_k in k_index:
             for eng_i in bands[i_k]:
                 dos += basis_func(energies, eng_i)
-        if mpi_env is not None:
-            dos = mpi_env.all_reduce(dos)
+        dos = mpi_env.all_reduce(dos)
     
         # Re-normalize dos
         # For each energy in bands, we use a normalized Gaussian or Lorentzian

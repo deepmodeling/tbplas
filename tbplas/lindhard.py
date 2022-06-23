@@ -21,9 +21,10 @@ from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
                       frac2cart, cart2frac, NM, KB)
 from .builder import core
 from .fortran import f2py
+from .parallel import MPIEnv
 
 
-class Lindhard:
+class Lindhard(MPIEnv):
     """
     Lindhard function calculator.
 
@@ -50,8 +51,6 @@ class Lindhard:
     delta: float
         broadening parameter in eV that appears in the denominator of Lindhard
         function
-    mpi_env: instance of 'MPIEnv' class
-        mpi environment
 
     NOTES
     -----
@@ -147,6 +146,7 @@ class Lindhard:
             using mpi
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
+        super().__init__(enable_mpi=enable_mpi, echo_details=True)
         self.cell = cell
         self.cell.lock()
         self.cell.sync_array()
@@ -165,11 +165,6 @@ class Lindhard:
             raise ValueError("2d specific algorithms require kmesh_size[2] == 1")
         self.dimension = dimension
         self.delta = delta
-        if enable_mpi:
-            from .parallel import MPIEnv
-            self.mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-        else:
-            self.mpi_env = None
 
     @staticmethod
     def wrap_frac(k_points: np.ndarray):
@@ -295,10 +290,7 @@ class Lindhard:
         :param n_max: number of k-points or frequencies
         :return: i_min, i_max: lower and upper bounds assigned to this process
         """
-        if self.mpi_env is not None:
-            i_index = self.mpi_env.dist_range(n_max)
-        else:
-            i_index = range(n_max)
+        i_index = self.dist_range(n_max)
         i_min, i_max = min(i_index), max(i_index)
         return i_min, i_max
 
@@ -343,9 +335,8 @@ class Lindhard:
             states[i_k] = eigenstates.T
 
         # Collect energies and wave functions
-        if self.mpi_env is not None:
-            bands = self.mpi_env.all_reduce(bands)
-            states = self.mpi_env.all_reduce(states)
+        bands = self.all_reduce(bands)
+        states = self.all_reduce(states)
         return bands, states
 
     def _get_dnk(self):
@@ -440,9 +431,8 @@ class Lindhard:
                 core.prod_dp(bands, states, kq_map, self.beta, self.mu,
                              q_points_cart[i_q], orb_pos, k_min, k_max,
                              delta_eng, prod_df)
-            if self.mpi_env is not None:
-                delta_eng = self.mpi_env.all_reduce(delta_eng)
-                prod_df = self.mpi_env.all_reduce(prod_df)
+            delta_eng = self.all_reduce(delta_eng)
+            prod_df = self.all_reduce(prod_df)
 
             # Evaluate dyn_pol
             if use_fortran:
@@ -452,8 +442,7 @@ class Lindhard:
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
                              omega_min, omega_max, i_q, dyn_pol)
-            if self.mpi_env is not None:
-                dyn_pol = self.mpi_env.all_reduce(dyn_pol)
+            dyn_pol = self.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
@@ -529,9 +518,8 @@ class Lindhard:
                 core.prod_dp_arb(bands, states, bands_kq, states_kq,
                                  self.beta, self.mu, q_point, orb_pos,
                                  k_min, k_max, delta_eng, prod_df)
-            if self.mpi_env is not None:
-                delta_eng = self.mpi_env.all_reduce(delta_eng)
-                prod_df = self.mpi_env.all_reduce(prod_df)
+            delta_eng = self.all_reduce(delta_eng)
+            prod_df = self.all_reduce(prod_df)
 
             # Evaluate dyn_pol
             if use_fortran:
@@ -541,8 +529,7 @@ class Lindhard:
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
                              omega_min, omega_max, i_q, dyn_pol)
-            if self.mpi_env is not None:
-                dyn_pol = self.mpi_env.all_reduce(dyn_pol)
+            dyn_pol = self.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
@@ -669,20 +656,18 @@ class Lindhard:
             core.prod_ac(bands, states, hop_ind, hop_eng, hop_dr, kmesh,
                          self.beta, self.mu, comp, k_min, k_max,
                          delta_eng, prod_df)
-        if self.mpi_env is not None:
-            delta_eng = self.mpi_env.all_reduce(delta_eng)
-            prod_df = self.mpi_env.all_reduce(prod_df)
+        delta_eng = self.all_reduce(delta_eng)
+        prod_df = self.all_reduce(prod_df)
 
         # Evaluate ac_cond
         if use_fortran:
             # NOTE: FORTRAN array index begins from 1!
             f2py.ac_cond_f(delta_eng, prod_df, self.omegas, self.delta,
-                          omega_min+1, omega_max+1, ac_cond)
+                           omega_min+1, omega_max+1, ac_cond)
         else:
             core.ac_cond(delta_eng, prod_df, self.omegas, self.delta,
                          omega_min, omega_max, ac_cond)
-        if self.mpi_env is not None:
-            ac_cond = self.mpi_env.all_reduce(ac_cond)
+        ac_cond = self.all_reduce(ac_cond)
 
         # Multiply prefactor
         # NOTE: there is not such g_s factor in the reference.

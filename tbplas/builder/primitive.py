@@ -27,6 +27,7 @@ from . import core
 from .base import (correct_coord, Orbital, LockableObject, PCIntraHopping,
                    HopDict)
 from .utils import ModelViewer
+from ..parallel import MPIEnv
 
 
 class PrimitiveCell(LockableObject):
@@ -760,13 +761,8 @@ class PrimitiveCell(LockableObject):
         k_len = kpt.gen_kdist(self.lat_vec, k_path)
 
         # Distribute k-points over processes
-        if enable_mpi:
-            from ..parallel import MPIEnv
-            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-            k_index = mpi_env.dist_range(num_k_points)
-        else:
-            mpi_env = None
-            k_index = range(num_k_points)
+        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=True)
+        k_index = mpi_env.dist_range(num_k_points)
 
         # Loop over k-points to evaluate the energies
         for i_k in k_index:
@@ -781,8 +777,7 @@ class PrimitiveCell(LockableObject):
             bands[i_k, :] = eigenvalues[:]
 
         # Collect energies
-        if mpi_env is not None:
-            bands = mpi_env.all_reduce(bands)
+        bands = mpi_env.all_reduce(bands)
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray, e_min=None, e_max=None,
@@ -844,20 +839,14 @@ class PrimitiveCell(LockableObject):
 
         # Distribute k-points over processes
         num_kpt = bands.shape[0]
-        if enable_mpi:
-            from ..parallel import MPIEnv
-            mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-            k_index = mpi_env.dist_range(num_kpt)
-        else:
-            mpi_env = None
-            k_index = range(num_kpt)
+        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
+        k_index = mpi_env.dist_range(num_kpt)
 
         # Collect contributions
         for i_k in k_index:
             for eng_i in bands[i_k]:
                 dos += basis_func(energies, eng_i)
-        if mpi_env is not None:
-            dos = mpi_env.all_reduce(dos)
+        dos = mpi_env.all_reduce(dos)
 
         # Re-normalize dos
         # For each energy in bands, we use a normalized Gaussian or Lorentzian

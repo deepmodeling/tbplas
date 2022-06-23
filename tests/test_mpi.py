@@ -77,7 +77,7 @@ def test_lind(itest, use_fortran):
         omegas, dp_reg = lind.calc_dyn_pol_regular(q_grid, use_fortran=use_fortran)
         timer.toc("regular")
         timer.report_total_time()
-        if lind.mpi_env.rank == 0:
+        if lind.rank == 0:
             plt.plot(omegas, dp_reg[0].imag, color="red", label="Regular")
             plt.legend()
             plt.show()
@@ -89,7 +89,7 @@ def test_lind(itest, use_fortran):
         omegas, dp_arb = lind.calc_dyn_pol_arbitrary(q_cart, use_fortran=use_fortran)
         timer.toc("arbitrary")
         timer.report_total_time()
-        if lind.mpi_env.rank == 0:
+        if lind.rank == 0:
             plt.plot(omegas, dp_arb[0].imag, color="blue", label="Arbitrary")
             plt.legend()
             plt.show()
@@ -106,7 +106,7 @@ def test_lind(itest, use_fortran):
         timer.report_total_time()
         omegas /= t
         ac_cond *= 4
-        if lind.mpi_env.rank == 0:
+        if lind.rank == 0:
             plt.plot(omegas, ac_cond.real, color="red")
             plt.minorticks_on()
             plt.show()
@@ -118,9 +118,9 @@ def main():
     sample = tb.Sample(tb.SuperCell(cell, dim=(12, 12, 1), pbc=(True, True, False)))
     mpi_env = MPIEnv()
 
-    # test_band(sample, mpi_env)
+    test_band(sample, mpi_env)
     # test_dos(sample, mpi_env)
-    test_lind(2, True)
+    # test_lind(0, True)
 
 
 if __name__ == "__main__":
