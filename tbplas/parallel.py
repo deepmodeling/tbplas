@@ -33,7 +33,7 @@ class MPIEnv:
     size: integer
         number of processes in mpi communicator
     """
-    def __init__(self, enable_mpi=True, echo_details=True) -> None:
+    def __init__(self, enable_mpi=True, echo_details=False) -> None:
         """
         :param enable_mpi: boolean
             whether to enable parallelization using MPI
