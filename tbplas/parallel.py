@@ -40,6 +40,11 @@ class MPIEnv:
         """
         Get data order of array.
 
+        NOTE: Order of memory layout is particularly important when using
+        MPI. If data_local is returned by FORTRAN subroutines, it should
+        in column-major order. Otherwise, it will be in row-major order.
+        If mistaken, no errors will be raised, but the results will be weired.
+
         :param array: numpy array
         :return: string, should be either "C" or "F"
         :raise ValueError: if array is neither C nor FORTRAN contiguous
@@ -113,12 +118,6 @@ class MPIEnv:
             local results on each process
         :return: data: numpy array
             averaged data from data_local
-
-        NOTE: Order of memory layout is particularly important when using
-        MPI. As data_local is returned by FORTRAN subroutines, it should
-        in column-major order. Otherwise no errors will be casted, but the
-        results will be weired. As numpy uses row-major order by default, DO
-        NOT remove the order=F argument below.
         """
         if self.rank == 0:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
@@ -128,6 +127,21 @@ class MPIEnv:
         self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
         if self.rank == 0:
             data /= self.size
+        return data
+
+    def all_average(self, data_local):
+        """
+        Average results over random samples broadcast to all process.
+
+        :param data_local: numpy array
+            local results on each process
+        :return: data: numpy array
+            averaged data from data_local
+        """
+        data = np.zeros(data_local.shape, dtype=data_local.dtype,
+                        order=self.__get_array_order(data_local))
+        self.comm.Allreduce(data_local, data, op=MPI.SUM)
+        data /= self.size
         return data
 
     def barrier(self):
