@@ -198,6 +198,18 @@ class MPIEnv:
             data = data_local
         return data
 
+    def bcast(self, data_local):
+        """
+        Broadcast data from master to other processes.
+
+        :param data_local: numpy array
+            local results on each process
+        :return: None.
+            Local data are synchronized to master process.
+        """
+        if self.mpi_enabled:
+            self.comm.Bcast(data_local, root=0)
+
     def barrier(self):
         """Wrapper for self.comm.Barrier."""
         if self.mpi_enabled:

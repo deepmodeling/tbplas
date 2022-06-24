@@ -109,14 +109,15 @@ class Analyzer(MPIEnv):
         :return: dos: (2*nr_time_steps,) float64 array
             DOS values corresponding to energies
         """
-        if self.is_master:
-            # Get parameters
-            tnr = self.config.generic['nr_time_steps']
-            en_range = self.sample.energy_range
-            en_step = 0.5 * en_range / tnr
-            energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
-                                 for i in range(tnr * 2)], dtype=float)
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        en_range = self.sample.energy_range
+        en_step = 0.5 * en_range / tnr
+        energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
+                             for i in range(tnr * 2)], dtype=float)
+        dos = np.zeros(tnr * 2, dtype=float)
 
+        if self.is_master:
             # Get negative time correlation
             corr_neg_time = np.empty(tnr * 2, dtype=complex)
             corr_neg_time[tnr - 1] = corr_dos.item(0)
@@ -127,7 +128,6 @@ class Analyzer(MPIEnv):
 
             # Fourier transform
             corr_fft = np.fft.ifft(corr_neg_time)
-            dos = np.empty(tnr * 2)
             for i in range(tnr):
                 dos[i + tnr] = abs(corr_fft.item(i))
             for i in range(tnr, 2 * tnr):
@@ -138,7 +138,8 @@ class Analyzer(MPIEnv):
             if self.config.generic['correct_spin']:
                 dos = 2. * dos
         else:
-            energies, dos = None, None
+            pass
+        self.bcast(dos)
         return energies, dos
 
     def calc_ldos(self, corr_ldos, window=window_hanning):
@@ -171,17 +172,18 @@ class Analyzer(MPIEnv):
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
         """
-        if self.is_master:
-            # Get parameters
-            tnr = self.config.generic['nr_time_steps']
-            en_range = self.sample.energy_range
-            t_step = np.pi / en_range
-            beta = self.config.generic['beta']
-            ac_prefactor = 4. * self.sample.nr_orbitals \
-                / (self.sample.area_unit_cell * self.sample.extended)
-            omegas = np.array([i * en_range / tnr for i in range(tnr)],
-                              dtype=float)
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        en_range = self.sample.energy_range
+        t_step = np.pi / en_range
+        beta = self.config.generic['beta']
+        ac_prefactor = 4. * self.sample.nr_orbitals \
+            / (self.sample.area_unit_cell * self.sample.extended)
+        omegas = np.array([i * en_range / tnr for i in range(tnr)],
+                          dtype=float)
+        ac_cond = np.zeros((4, tnr), dtype=complex)
 
+        if self.is_master:
             # Get real part of AC conductivity
             ac_real = np.zeros((4, tnr), dtype=float)
             for j in range(4):
@@ -213,7 +215,8 @@ class Analyzer(MPIEnv):
             if self.config.generic['correct_spin']:
                 ac_cond = 2. * ac_cond
         else:
-            omegas, ac_cond = None, None
+            pass
+        self.bcast(ac_cond)
         return omegas, ac_cond
 
     def calc_dyn_pol(self, corr_dyn_pol, window=window_exp_ten):
@@ -231,22 +234,21 @@ class Analyzer(MPIEnv):
         :return: dyn_pol: (n_q_points, nr_time_steps) complex128 array
             dynamical polarization values corresponding to q-points and omegas
         """
-        if self.is_master:
-            # Get parameters
-            tnr = self.config.generic['nr_time_steps']
-            en_range = self.sample.energy_range
-            t_step = np.pi / en_range
-            q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
-            n_q_points = len(q_points)
-            # do we need to divide the prefactor by 1.5??
-            dyn_pol_prefactor = -2. * self.sample.nr_orbitals \
-                / (self.sample.area_unit_cell * self.sample.extended)
-            n_omegas = tnr
-            omegas = np.array([i * en_range / tnr for i in range(tnr)],
-                              dtype=float)
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        en_range = self.sample.energy_range
+        t_step = np.pi / en_range
+        q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
+        n_q_points = len(q_points)
+        # do we need to divide the prefactor by 1.5??
+        dyn_pol_prefactor = -2. * self.sample.nr_orbitals \
+            / (self.sample.area_unit_cell * self.sample.extended)
+        n_omegas = tnr
+        omegas = np.array([i * en_range / tnr for i in range(tnr)],
+                          dtype=float)
+        dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
 
-            # get dynamical polarization
-            dyn_pol = np.zeros((n_q_points, n_omegas), dtype=complex)
+        if self.is_master:
             for i_q in range(n_q_points):
                 for i in range(n_omegas):
                     omega = omegas.item(i)
@@ -261,7 +263,8 @@ class Analyzer(MPIEnv):
             if self.config.generic['correct_spin']:
                 dyn_pol = 2. * dyn_pol
         else:
-            q_points, omegas, dyn_pol = None, None, None
+            pass
+        self.bcast(dyn_pol)
         return q_points, omegas, dyn_pol
 
     def calc_epsilon(self, dyn_pol):
@@ -273,19 +276,17 @@ class Analyzer(MPIEnv):
         :return: epsilon: (n_q_points, nr_time_steps) complex128 array
             dielectric function
         """
-        if self.is_master:
-            # Get parameters
-            tnr = self.config.generic['nr_time_steps']
-            q_points = self.config.dyn_pol['q_points']
-            n_q_points = len(q_points)
-            epsilon_prefactor = self.config.dyn_pol['coulomb_constant'] \
-                / self.config.dyn_pol['background_dielectric_constant'] \
-                / self.sample.extended
-            n_omegas = tnr
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        q_points = self.config.dyn_pol['q_points']
+        n_q_points = len(q_points)
+        epsilon_prefactor = self.config.dyn_pol['coulomb_constant'] \
+            / self.config.dyn_pol['background_dielectric_constant'] \
+            / self.sample.extended
+        n_omegas = tnr
+        epsilon = np.ones((n_q_points, n_omegas)) + np.zeros((n_q_points, n_omegas)) * 0j
 
-            # declare arrays
-            epsilon = np.ones((n_q_points, n_omegas)) \
-                + np.zeros((n_q_points, n_omegas)) * 0j
+        if self.is_master:
             v0 = epsilon_prefactor * np.ones(n_q_points)
             v = np.zeros(n_q_points)
 
@@ -298,13 +299,23 @@ class Analyzer(MPIEnv):
                     v[i] = v0.item(i) / k
                     epsilon[i, :] -= v.item(i) * dyn_pol[i, :]
         else:
-            epsilon = None
+            pass
+        self.bcast(epsilon)
         return epsilon
 
     def calc_dc_cond(self, corr_dos, corr_dc, window_dos=window_hanning,
                      window_dc=window_exp):
         """
         Calculate electronic (DC) conductivity from its correlation function.
+
+        NOTE: Here we need to call analyze_corr_dos to obtain DOS, which is
+        intended to analyze the result of calc_corr_dos by design. As in
+        fortran/f2py.pyf, the results of calc_corr_dos and calc_corr_ldos
+        have the length of nr_time_steps+1, while that of calc_corr_dc has
+        length of nr_time_steps. This is due to incomplete update of the
+        source code. tbpm_dos and tbpm_ldos have been update, while other
+        subroutines are not. So here we need to insert 1.0 to the head of
+        corr_dos by calc_corr_dc before calling analyze_corr_dos.
 
         :param corr_dos: (nr_time_steps,) complex128 array
             DOS correlation function
@@ -319,33 +330,25 @@ class Analyzer(MPIEnv):
         :return: dc: (2, n_energies) float64 array
             dc conductivity values
         """
-        # NOTE: Here we need to call analyze_corr_dos to obtain DOS, which is
-        # intended to analyze the result of calc_corr_dos by design. As in
-        # fortran/f2py.pyf, the results of calc_corr_dos and calc_corr_ldos
-        # have the length of nr_time_steps+1, while that of calc_corr_dc has
-        # length of nr_time_steps. This is due to incomplete update of the
-        # source code. tbpm_dos and tbpm_ldos have been update, while other
-        # subroutines are not. So here we need to insert 1.0 to the head of
-        # corr_dos by calc_corr_dc before calling analyze_corr_dos.
+        # Get DOS
+        corr_dos = np.insert(corr_dos, 0, 1.0)
+        energies_dos, dos = self.calc_dos(corr_dos, window_dos)
+        energies_dos = np.array(energies_dos)
+        dos = np.array(dos)
+
+        # Get parameters
+        tnr = self.config.generic['nr_time_steps']
+        en_range = self.sample.energy_range
+        t_step = 2 * np.pi / en_range
+        en_limit = self.config.DC_conductivity['energy_limits']
+        qe_indices = np.where((energies_dos >= en_limit[0]) &
+                              (energies_dos <= en_limit[1]))[0]
+        n_energies = len(qe_indices)
+        energies = energies_dos[qe_indices]
+        dc_prefactor = self.sample.nr_orbitals / self.sample.area_unit_cell
+        dc = np.zeros((2, n_energies))
+
         if self.is_master:
-            corr_dos = np.insert(corr_dos, 0, 1.0)
-            energies_dos, dos = self.calc_dos(corr_dos, window_dos)
-            energies_dos = np.array(energies_dos)
-            dos = np.array(dos)
-
-            # Get parameters
-            tnr = self.config.generic['nr_time_steps']
-            en_range = self.sample.energy_range
-            t_step = 2 * np.pi / en_range
-            en_limit = self.config.DC_conductivity['energy_limits']
-            qe_indices = np.where((energies_dos >= en_limit[0]) &
-                                  (energies_dos <= en_limit[1]))[0]
-            n_energies = len(qe_indices)
-            energies = energies_dos[qe_indices]
-            dc_prefactor = self.sample.nr_orbitals / self.sample.area_unit_cell
-
-            # get DC conductivity
-            dc = np.zeros((2, n_energies))
             for i in range(2):
                 for j in range(n_energies):
                     en = energies.item(j)
@@ -362,7 +365,8 @@ class Analyzer(MPIEnv):
             if self.config.generic['correct_spin']:
                 dc = 2. * dc
         else:
-            energies, dc = None, None
+            pass
+        self.bcast(dc)
         return energies, dc
 
     def calc_diff_coeff(self, corr_dc, window_dc=window_exp):
@@ -390,23 +394,23 @@ class Analyzer(MPIEnv):
         n_energies = len(qe_indices)
         energies = energies[qe_indices]
         time = np.linspace(0, tnr - 1, tnr) * t_step
+        diff_coeff = np.zeros((2, n_energies, tnr))
 
         if self.is_master:
-            diff_coeff = np.zeros((2, n_energies, tnr))
             for i in range(2):
                 for j in range(n_energies):
                     en = energies.item(j)
-                    temp = np.zeros((tnr))
+                    temp = np.zeros(tnr)
                     for k in range(tnr):
                         w = window_dc(k + 1, tnr)
                         phi = k * t_step * en
                         c_exp = cos(phi) - 1j * sin(phi)
                         temp[k] = w * (c_exp * corr_dc.item(i, j, k)).real
-                    for l in range(tnr):
-                        diff_coeff[i, j, l] = trapz(temp[:l + 1], time[:l + 1])
-
+                    for k2 in range(tnr):
+                        diff_coeff[i, j, k2] = trapz(temp[:k2 + 1], time[:k2 + 1])
         else:
-            time, diff_coeff = None, None
+            pass
+        self.bcast(diff_coeff)
         return time, diff_coeff
 
     def calc_hall_cond(self, mu_mn):
@@ -420,8 +424,8 @@ class Analyzer(MPIEnv):
         :return: conductivity: float64 array
             Hall conductivity according to energies
         """
+        energies = np.array(self.config.dckb['energies'])
         if self.is_master:
-            energies = np.array(self.config.dckb['energies'])
             dckb_prefactor = 16 * self.sample.nr_orbitals / \
                 self.sample.area_unit_cell
             conductivity = f2py.cond_from_trace(
@@ -433,5 +437,6 @@ class Analyzer(MPIEnv):
                 self.config.generic['Fermi_cheb_precision'],
                 dckb_prefactor)
         else:
-            energies, conductivity = None, None
+            conductivity = np.zeros(len(energies), dtype=float)
+        self.bcast(conductivity)
         return energies, conductivity
