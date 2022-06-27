@@ -166,25 +166,22 @@ class Solver(MPIEnv):
             time_step = 2 * pi / sample.energy_range
 
         :return: time_step: float
-            time step
+            time step in 1/eV
         """
         return 2 * math.pi / self.sample.energy_range
 
-    def __echo_time_step_fs(self):
+    def __echo_time_step_fs(self, time_step):
         """
-        Report time_step in femto-seconds.
+        Convert time step from 1/eV to femto-second and report.
 
-        The time_step in SI unit is determined by:
-            h_bar * omega = energy_range / (2 * pi)
-        and
-            time_step = 2 * pi / omega
-        So time_step = 4 * pi**2 * h_bar / energy_range
-        or 2 * pi**2 * h_bar / rescale.
+        1/eV = 2 * pi * |h_bar_eV| second.
 
+        :param time_step: float
+            time step in 1/eV
         :return: None.
             Result are printed to stdout.
         """
-        time_step_fs = 2 * math.pi**2 * H_BAR_EV / self.sample.rescale * 1e15
+        time_step_fs = time_step * (2 * math.pi * H_BAR_EV) * 1e15
         self.print("Time step for propagation: %7.3f fs\n" % time_step_fs)
 
     def __get_bessel_series(self, time_step):
@@ -266,6 +263,7 @@ class Solver(MPIEnv):
         bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_dos = f2py.tbpm_dos(
@@ -295,6 +293,7 @@ class Solver(MPIEnv):
         bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_ldos = f2py.tbpm_ldos(
@@ -327,6 +326,7 @@ class Solver(MPIEnv):
         beta_re, mu_re = self.__get_beta_mu_re()
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_ac = f2py.tbpm_accond(
@@ -364,6 +364,7 @@ class Solver(MPIEnv):
         site_y = self.sample.orb_pos[:, 1]
         site_z = self.sample.orb_pos[:, 2]
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_dyn_pol = f2py.tbpm_dyn_pol(
@@ -411,6 +412,7 @@ class Solver(MPIEnv):
         bessel_series = self.__get_bessel_series(time_step)
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_dos, corr_dc = f2py.tbpm_dccond(
@@ -474,6 +476,7 @@ class Solver(MPIEnv):
         time_step = self.__get_time_step()
         bessel_series = self.__get_bessel_series(time_step)
         num_sample = self.__dist_sample()
+        self.__echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         ham_csr = self.sample.build_ham_csr()
@@ -556,6 +559,7 @@ class Solver(MPIEnv):
         time_step = self.__get_time_step()
         bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
+        self.__echo_time_step_fs(time_step)
 
         # Propagate the wave function
         psi_t = f2py.tbpm_psi_t(
