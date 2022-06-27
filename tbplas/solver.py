@@ -22,6 +22,7 @@ import numpy as np
 import scipy.special as spec
 
 from .builder import Sample
+from .builder.constants import H_BAR_EV
 from .config import Config
 from .fortran import f2py
 from .parallel import MPIEnv
@@ -168,6 +169,23 @@ class Solver(MPIEnv):
             time step
         """
         return 2 * math.pi / self.sample.energy_range
+
+    def __echo_time_step_fs(self):
+        """
+        Report time_step in femto-seconds.
+
+        The time_step in SI unit is determined by:
+            h_bar * omega = energy_range / (2 * pi)
+        and
+            time_step = 2 * pi / omega
+        So time_step = 4 * pi**2 * h_bar / energy_range
+        or 2 * pi**2 * h_bar / rescale.
+
+        :return: None.
+            Result are printed to stdout.
+        """
+        time_step_fs = 2 * math.pi**2 * H_BAR_EV / self.sample.rescale * 1e15
+        self.print("Time step for propagation: %7.3f fs\n" % time_step_fs)
 
     def __get_bessel_series(self, time_step):
         """
@@ -521,7 +539,6 @@ class Solver(MPIEnv):
         :raises RuntimeError: if more than 1 mpi process is used
         :raises ValueError: if any time in time_log not in [0, nr_time_steps].
         """
-        # For now wave function propagation is compatible with MPI
         if self.size != 1:
             raise RuntimeError("Using more than 1 mpi process is not allowed"
                                " for wave function propagation")
