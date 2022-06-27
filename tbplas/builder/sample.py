@@ -962,6 +962,16 @@ class Sample:
         return energies, dos
 
     @property
+    def num_orb_tot(self):
+        """
+        Get the total number of orbitals of the sample.
+
+        :return: num_orb_tot: int
+            total number of orbitals
+        """
+        return sum(self.__get_num_orb())
+
+    @property
     def energy_range(self):
         """
         Get energy range to consider in calculations.
