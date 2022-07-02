@@ -572,21 +572,42 @@ class Sample:
 
     def set_magnetic_field(self, intensity):
         """
-        Apply magnetic field perpendicular to xOy-plane via Peierls substitution.
+        Apply magnetic field perpendicular to xOy-plane to -z direction via
+        Peierls substitution.
 
         The gauge-invariant Peierls phase from R_i to R_j is evaluated as
-            exp[-1j * e/(2*h_bar*c) * (A(R_i) - A(R_j)) * (R_i + R_j)].
-        With Landau gauge we have A(R) = (0, B*R_x, 0), then Peierls phase
-        becomes
-            exp[-1j * e/(2*h_bar*c) * B * (R_ix - R_jx) * (R_iy + R_jy)],
+            exp[-1j * |e|/(2*h_bar*c) * (R_i - R_j) * (A_i + A_j)]
         or
-            exp[1j * e/(2*h_bar*c) * B * (R_jx - R_ix) * (R_iy + R_jy)].
+            exp[1j * |e|/(2*h_bar*c) * (R_j - R_i) * (A_j + A_i)]
+        For the reference, see eqn. 10-11 of ref [1] and eqn. 19-20 of ref [2].
+        Be aware that ref [1] uses |e| while ref [2] uses e with sign.
+
+        For perpendicular magnetic pointing to +z, we have A = (-By, 0, 0). Then
+            (R_j - R_i) * (A_j + A_i) = -B * (y_j + y_i) * (x_j - x_i)
+        However, there isn't the minus sign in the source code of TBPLaS. This is
+        because we are considering a magnetic field pointing to -z.
+
+        Note that the above formulae use Gaussian units. For SI units, the speed
+        of light vanishes. This is verified by checking the dimension under SI
+        units:
+            [e]/[h_bar] = IT/(L^2 M T^-1) = L^-2 M^-1 I T^-2
+            [R][A] = L * (M T^-2 I^-1 L) = L^2 M I^-1 T^-2
+        which cancel out upon multiplication. Similarly, under Gaussian units
+        we have:
+        [e]/[c*h_bar] = L^(-3/2) M^(-1/2) T
+        [R][A] = L^(3/2) M^(1/2) T
+        which also cancel out upon multiplication.
+
+        The analysis also inspires to calculate the scaling factor in SI units
+        as:
+            |e/2h_bar| = 759633724404755.2
+        However, we use nm for lengths. So the scaling factor should be divided
+        by 1e18, yielding 0.0007596337244047553. That is exactly the magic number
+        pi / 4135.666734 = 0.0007596339008078771 in the source code of TBPLaS.
 
         Reference:
-        https://journals.aps.org/prb/pdf/10.1103/PhysRevB.51.4940
-        https://journals.jps.jp/doi/full/10.7566/JPSJ.85.074709
-        Note that the elementary charge may have different signs in these
-        papers.
+        [1] https://journals.aps.org/prb/pdf/10.1103/PhysRevB.51.4940
+        [2] https://journals.jps.jp/doi/full/10.7566/JPSJ.85.074709
 
         :param intensity: float
             magnetic B field in Tesla

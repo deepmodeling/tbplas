@@ -1337,12 +1337,13 @@ def set_mag_field(long [::1] hop_i, long [::1] hop_j,
     """
     cdef long num_hop_sc, ih, ii, jj
     cdef double dx, ytot, phase
+    cdef double factor = pi / 4135.666734
 
     num_hop_sc = hop_i.shape[0]
     for ih in range(num_hop_sc):
         ii, jj, dx = hop_i[ih], hop_j[ih], dr[ih, 0]
         ytot = orb_pos[jj, 1] + orb_pos[ii, 1]
-        phase = pi * intensity * dx * ytot / 4135.666734
+        phase = factor * intensity * dx * ytot
         hop_v[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
 
 
