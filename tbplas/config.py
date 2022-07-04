@@ -54,13 +54,13 @@ class Config:
     generic['nr_Fermi_fft_steps'] : int
         Maximum number of Fermi-Dirac distribution FFT steps,
         must be power of two. Default value: 2**15
-    LDOS['site_indices'] : int
-        Site indices for LDOS calculation.
-    LDOS['wf_weights'] : int
-        Wave function weights for LDOS calculation.
-        Default value: equal weights for all sites.
+    LDOS['site_indices'] : List[int]
+        Site indices for LDOS calculation. Default value: [0].
+    LDOS['wf_weights'] : List[float]
+        Wave function weights for LDOS calculation. Default value: [1.0].
+        It seems that this parameter is no longer in use.
     LDOS['delta'] : float
-        Parameter of infinitesimal. Default value: 0.01.
+        Parameter of infinitesimal in eV. Default value: 0.01.
     LDOS['recursion_depth'] : int
         Recursion depth of Haydock method. Default value: 2000
     dyn_pol['background_dielectric_constant'] : float
@@ -100,8 +100,8 @@ class Config:
                         'Fermi_cheb_precision': 1.0e-12}
 
         # LDOS
-        self.LDOS = {'site_indices': 0,
-                     'wf_weights': False,
+        self.LDOS = {'site_indices': [0],
+                     'wf_weights': [1.0],
                      'delta': 0.01,
                      'recursion_depth': 2000}
 
