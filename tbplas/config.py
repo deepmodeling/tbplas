@@ -12,7 +12,6 @@ Classes
         abstraction for representing TBPM parameters
 """
 
-import math
 import pickle
 
 from .builder import KB
@@ -64,11 +63,12 @@ class Config:
     LDOS['recursion_depth'] : int
         Recursion depth of Haydock method. Default value: 2000
     dyn_pol['background_dielectric_constant'] : float
-        Background dielectric constant. Default value: 23.6.
+        Relative background dielectric constant. Default value: 1.0.
     dyn_pol['coulomb_constant'] : float
-        Coulomb constant. Default value: 1.0
+        Scaling factor for Coulomb potential. Default value: 1.0
     dyn_pol['q_points'] : (n_q_points, 3) list of floats
-        List of q-points. Default value: [[0.1, 0., 0.]].
+        Cartesian coordinates of q-points in 1/nm.
+        Default value: [[1., 0., 0.]].
     DC_conductivity['energy_limits'] : 2-tuple of floats
         Minimum and maximum of energy window for DC conductivity.
         Default value: [-0.5, 0.5].
@@ -114,7 +114,7 @@ class Config:
         # dynamical polarization
         self.dyn_pol = {'q_points': [[1., 0., 0.]],
                         'coulomb_constant': 1.0,
-                        'background_dielectric_constant': 2 * math.pi * 3.7557757}
+                        'background_dielectric_constant': 1.0}
 
         # dckb, Hall conductivity
         self.dckb = {'energies': [i * 0.01 - 0.2 for i in range(0, 41)],

@@ -18,7 +18,7 @@ import numpy as np
 import scipy.linalg.lapack as spla
 
 from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
-                      frac2cart, cart2frac, NM, KB)
+                      frac2cart, cart2frac, NM, KB, EPSILON0)
 from .builder import core
 from .fortran import f2py
 from .parallel import MPIEnv
@@ -65,21 +65,33 @@ class Lindhard(MPIEnv):
     2. Coulomb potential and dielectric function
 
     The Coulomb potential in Lindhard class takes the following form:
-        V(r) = 1 / (eps_0 * eps_r) * e**2 / r
-    where eps_0 = 1 is the dielectric constant of vacuum. There is no 4*pi
-    factor to eps_0 as in Hartree or Rydberg units, i.e.,
-        V(r) = 1 / (4 * pi * eps_0 * eps_r) * e**2 / r
-    Function calc_epsilon evaluates relative dielectric constant eps_r.
+        V(r) = 1 / epsilon * e**2 / r
+             = 1 / (epsilon_0 * epsilon_r) * e**2 / r
+    where epsilon is the ABSOLUTE dielectric electric constant of background.
+
+    Now we evaluate the absolute dielectric constant of vacuum in the units of
+    eV/nm/q. Suppose that we have two electrons separated at the distance of
+    1nm, then their potential energy in SI units is:
+        V = 1 / (4 * pi * epsilon_0) * q**2 / 1e-9 [Joule]
+          = 1 / (4 * pi * epsilon_0) * q**2 / 1e-9 * 1 / q [eV]
+          = q * 1e9 / (4 * pi * epsilon_0) [eV]
+    The counterpart in eV/nm/q units is:
+        V = 1 / epsilon_0_arb [eV]
+    So we have:
+        1 / epsilon_0_arb = q * 1e9 / (4 * pi * epsilon_0)
+    where the right part are the values in SI. Finally, we have:
+        epsilon_0_arb = 0.6944615417149689
+    in eV/nm/q units. That's EPSILON0 in constants module.
 
     3. Fourier transform of Coulomb potential
 
     The 3D Fourier transform of Coulomb potential V(r) as defined in section 2
     takes the following form:
-        V(q) = 4 * pi * e**2 / (eps_0 * eps_r * q**2)
+        V(q) = 4 * pi * e**2 / (epsilon_0 * epsilon_r * q**2)
     For the derivation, see pp. 19 of Many-Particle Physics by Gerald D. Mahan.
 
     The 2D Fourier transform takes the form:
-        V(q) = 2 * pi * e**2 / (eps_0 * eps_r * q)
+        V(q) = 2 * pi * e**2 / (epsilon_0 * epsilon_r * q)
     See the following url for the derivation:
     https://math.stackexchange.com/questions/3627267/fourier-transform-of-the-2d-coulomb-potential
 
@@ -109,9 +121,9 @@ class Lindhard(MPIEnv):
     equation
         epsilon(q) = 1 - V(q) * dyn_pol(q)
     we can see it is also affected by the Coulomb potential V(q). Since
-        V(q) = 4 * pi * e**2 / (eps_0 * eps_r * q**2) (3d)
+        V(q) = 4 * pi * e**2 / (epsilon_0 * epsilon_r * q**2) (3d)
     and
-        V(q) = 2 * pi * e**2 / (eps_0 * eps_r * q) (2d)
+        V(q) = 2 * pi * e**2 / (epsilon_0 * epsilon_r * q) (2d)
     the influence of system dimension is q-dependent. Setting supercell lengths
     to 1 nm will NOT produce the same result as the second approach.
     """
@@ -543,19 +555,17 @@ class Lindhard(MPIEnv):
         """
         Get Coulomb interaction in momentum space for given q-point.
 
-        factor = 10**9 * elementary_charge / (4 * pi * epsilon_0) in SI units
-
         :param q_point: (3,) float64 array
             CARTESIAN coordinate of q-point in 1/NM
         :return: vq: float
             Coulomb interaction in momentum space in eV
         """
-        factor = 1.439964548
+        factor = 1 / (EPSILON0 * self.back_epsilon)
         q_norm = np.linalg.norm(q_point)
         if self.dimension == 2:
-            vq = factor * 2 * math.pi / self.back_epsilon / q_norm
+            vq = factor * 2 * math.pi / q_norm
         else:
-            vq = factor * 4 * math.pi / self.back_epsilon / q_norm**2
+            vq = factor * 4 * math.pi / q_norm**2
         return vq
 
     def calc_epsilon(self, q_points: np.ndarray, dyn_pol: np.ndarray):

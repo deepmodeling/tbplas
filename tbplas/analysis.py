@@ -23,7 +23,7 @@ import numpy.linalg as npla
 from scipy.signal import hilbert
 from scipy.integrate import trapz
 
-from .builder import Sample
+from .builder import Sample, EPSILON0
 from .config import Config
 from .fortran import f2py
 from .parallel import MPIEnv
@@ -282,6 +282,7 @@ class Analyzer(MPIEnv):
         n_q_points = len(q_points)
         epsilon_prefactor = self.config.dyn_pol['coulomb_constant'] \
             / self.config.dyn_pol['background_dielectric_constant'] \
+            / EPSILON0 \
             / self.sample.extended
         n_omegas = tnr
         epsilon = np.ones((n_q_points, n_omegas)) + np.zeros((n_q_points, n_omegas)) * 0j
