@@ -37,7 +37,6 @@ config = tb.Config()
 config.generic['nr_random_samples'] = 4
 config.generic['nr_time_steps'] = 256
 config.generic['energy_range'] = 20.
-config.generic['correct_spin'] = True
 config.dyn_pol['q_points'] = [[1., 0., 0.]]
 config.DC_conductivity['energy_limits'] = (-0.3, 0.3)
 config.LDOS['site_indices'] = [0]
@@ -65,6 +64,8 @@ if analyzer.is_master:
     plt.ylabel("DOS")
     plt.savefig("DOS.png")
     plt.close()
+
+config.generic['correct_spin'] = True
 
 # Get AC conductivity
 corr_ac = solver.calc_corr_ac_cond()
