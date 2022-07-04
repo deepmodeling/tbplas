@@ -29,14 +29,8 @@ class Config:
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
         Bessel function precision cut-off. Default value: 1.0e-14
-    generic['temperature'] : float
-        temperature in Kelvin
-        Default value: None for backward compatibility reasons.
     generic['beta'] : float
-        Value for 1/kBT in 1/eV
-        Default value: if temperature is set by the user, then it will be
-        1/(kB*temperature). Otherwise, it will be 1/(kB*300).
-        This is a compromise for backwards compatibility.
+        Value for 1/kBT in 1/eV. Default value: 1 / (kB * 300).
     generic['mu'] : float
         Chemical potential in eV. Default value: 0.
     generic['correct_spin'] : bool
@@ -94,7 +88,6 @@ class Config:
         # generic standard values
         self.generic = {'Bessel_max': 250,
                         'Bessel_precision': 1.0e-14,
-                        'temperature': None,
                         'beta': 1.0 / (KB * 300),
                         'mu': 0.,
                         'correct_spin': False,
@@ -128,26 +121,6 @@ class Config:
                      'n_kernel': 2048,
                      'direction': 1,
                      'ne_integral': 2048}
-
-    def check_sanity(self):
-        """
-        Check the sanity of parameters.
-
-        :return: None.
-            Parameters will be updated and warnings will be raised if errors
-            have been detected.
-        """
-        warnings.simplefilter("always")
-        temp = self.generic['temperature']
-        beta = self.generic['beta']
-        if temp is not None:
-            print(f"Resetting beta from temperature {temp}K")
-            self.generic['beta'] = 1.0 / (KB * temp)
-        else:
-            if beta is not None:
-                warnings.warn("Setting up generic.beta is deprecated."
-                              " Use generic.temperature instead.",
-                              DeprecationWarning)
 
 
 def read_config(filename):

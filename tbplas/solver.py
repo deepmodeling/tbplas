@@ -84,7 +84,6 @@ class Solver(MPIEnv):
         self.config = config
         self.output = dict()
         self.set_output()
-        self.config.check_sanity()
         self.save_config()
 
     def set_output(self, directory="sim_data", prefix=None):
