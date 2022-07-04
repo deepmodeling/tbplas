@@ -14,7 +14,6 @@ Classes
 
 import math
 import pickle
-import warnings
 
 from .builder import KB
 
@@ -121,6 +120,15 @@ class Config:
                      'n_kernel': 2048,
                      'direction': 1,
                      'ne_integral': 2048}
+
+    def set_temperature(self, temperature=300):
+        """
+        Set temperature.
+
+        :param temperature: float
+            temperature in Kelvin
+        """
+        self.generic['beta'] = 1.0 / (KB * temperature)
 
 
 def read_config(filename):
