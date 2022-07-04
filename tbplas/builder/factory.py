@@ -65,7 +65,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
 
     # Create extended cell and add orbitals
     extend_cell = PrimitiveCell(lat_vec_ext, unit=consts.NM)
-    extend_cell.extended *= np.prod(dim)
+    extend_cell.extended = prim_cell.extended * np.prod(dim)
     orb_id_pc, orb_id_sc = [], {}
     id_sc = 0
     for i_a in range(dim[0]):
@@ -155,6 +155,9 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     for i_dim in range(3):
         lat_cart[i_dim] = np.matmul(lat_frac[i_dim], prim_cell.lat_vec)
     res_cell = PrimitiveCell(lat_cart, unit=1.0)
+    vol_res = res_cell.get_lattice_volume()
+    vol_prim = prim_cell.get_lattice_volume()
+    res_cell.extended = prim_cell.extended * (vol_res / vol_prim)
 
     # Add orbitals
     prim_cell.sync_array()
