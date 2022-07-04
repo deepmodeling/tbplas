@@ -97,8 +97,8 @@ def test_lind(itest, use_fortran):
     else:
         # Calculate ac_cond
         lind = tb.Lindhard(cell=cell, energy_max=t*3.5, energy_step=2048,
-                        kmesh_size=(600, 600, 1), mu=0.0, temperature=300.0,
-                        g_s=2, back_epsilon=1.0, dimension=2, enable_mpi=True)
+                           kmesh_size=(600, 600, 1), mu=0.0, temperature=300.0,
+                           g_s=2, back_epsilon=1.0, dimension=2, enable_mpi=True)
         timer = tb.Timer()
         timer.tic("ac_cond")
         omegas, ac_cond = lind.calc_ac_cond(component="xx", use_fortran=use_fortran)

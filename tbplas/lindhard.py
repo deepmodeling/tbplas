@@ -118,7 +118,7 @@ class Lindhard(MPIEnv):
     def __init__(self, cell: PrimitiveCell,
                  energy_max: float, energy_step: int,
                  kmesh_size: Tuple[int, int, int],
-                 mu=0.0, temperature=300.0, g_s=2, back_epsilon=1.0,
+                 mu=0.0, temperature=300.0, g_s=1, back_epsilon=1.0,
                  dimension=3, delta=0.005, enable_mpi=False) -> None:
         """
         :param cell: instance of 'PrimitiveCell' class
