@@ -33,7 +33,8 @@ class Config:
     generic['mu'] : float
         Chemical potential in eV. Default value: 0.
     generic['correct_spin'] : bool
-        If True, results are corrected for spin. Default value: False.
+        If True, results are corrected for spin-degeneracy.
+        Default value: False.
     generic['nr_ran_samples'] : int
         Number of random initial wave functions. Default value: 1
     generic['nr_time_steps'] : int
@@ -44,8 +45,8 @@ class Config:
         Check the wave function for divergence after each number of steps.
         Default value: 128.
     generic['wfn_check_thr']: float
-        Threshold for checking divergence of wave function. If the norm of
-        difference is larger than this value, errors will be raised.
+        Threshold for checking divergence of wave function. If the difference
+        of norm is larger than this value, errors will be raised.
         Default value: 1.0e-9
     generic['Fermi_cheb_precision'] : float
         Precision cut-off of Fermi-Dirac distribution.
