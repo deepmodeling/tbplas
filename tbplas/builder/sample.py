@@ -570,7 +570,7 @@ class Sample:
         self.hop_v /= (factor / self.rescale)
         self.rescale = factor
 
-    def set_magnetic_field(self, intensity):
+    def set_magnetic_field(self, intensity, gauge=0):
         """
         Apply magnetic field perpendicular to xOy-plane to -z direction via
         Peierls substitution.
@@ -611,6 +611,9 @@ class Sample:
 
         :param intensity: float
             magnetic B field in Tesla
+        :param gauge: int
+            gauge of vector potential which produces magnetic field to -z
+            0 for (By, 0, 0), 1 for (0, -Bx, 0), 2 for (0.5By, -0.5Bx, 0)
         :return: None
             self.hop_v is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
@@ -619,12 +622,15 @@ class Sample:
             of range
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
+        :raises ValueError: if gauge is not in (0, 1, 2)
         """
         self.init_orb_pos()
         self.init_hop()
         self.init_dr()
+        if gauge not in (0, 1, 2):
+            raise ValueError(f"Illegal gauge {gauge}")
         core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
-                           self.orb_pos, intensity)
+                           self.orb_pos, intensity, gauge)
 
     def build_ham_csr(self):
         """

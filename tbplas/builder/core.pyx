@@ -1313,7 +1313,7 @@ def build_inter_dr(long [::1] hop_i, long [::1] hop_j,
 @cython.wraparound(False)
 def set_mag_field(long [::1] hop_i, long [::1] hop_j,
                   double complex [::1] hop_v, double [:,::1] dr,
-                  double [:,::1] orb_pos, double intensity):
+                  double [:,::1] orb_pos, double intensity, long gauge):
     """
     Add magnetic field perpendicular to xOy-plane via Peierls substitution.
 
@@ -1330,21 +1330,40 @@ def set_mag_field(long [::1] hop_i, long [::1] hop_j,
         CARTESIAN coordinates of all orbitals in super cell in NM
     intensity: float
         intensity of magnetic field in Tesla
+    gauge: int64
+        gauge of vector field
 
     Returns
     -------
     None. Results are saved in hop_v.
     """
     cdef long num_hop_sc, ih, ii, jj
-    cdef double dx, ytot, phase
+    cdef double dx, dy, sx, sy, phase
     cdef double factor = pi / 4135.666734
 
     num_hop_sc = hop_i.shape[0]
-    for ih in range(num_hop_sc):
-        ii, jj, dx = hop_i[ih], hop_j[ih], dr[ih, 0]
-        ytot = orb_pos[jj, 1] + orb_pos[ii, 1]
-        phase = factor * intensity * dx * ytot
-        hop_v[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
+    if gauge == 0:
+        for ih in range(num_hop_sc):
+            ii, jj = hop_i[ih], hop_j[ih]
+            dx = dr[ih, 0]
+            sy = orb_pos[jj, 1] + orb_pos[ii, 1]
+            phase = factor * intensity * dx * sy
+            hop_v[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
+    elif gauge == 1:
+        for ih in range(num_hop_sc):
+            ii, jj = hop_i[ih], hop_j[ih]
+            dy = dr[ih, 1]
+            sx = orb_pos[jj, 0] + orb_pos[ii, 0]
+            phase = -factor * intensity * dy * sx
+            hop_v[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
+    else:
+        for ih in range(num_hop_sc):
+            ii, jj = hop_i[ih], hop_j[ih]
+            dx, dy = dr[ih, 0], dr[ih, 1]
+            sx = orb_pos[jj, 0] + orb_pos[ii, 0]
+            sy = orb_pos[jj, 1] + orb_pos[ii, 1]
+            phase = factor * 0.5 * intensity * (dx * sx - dy * sy)
+            hop_v[ih] = hop_v[ih] * (cos(phase) + 1j * sin(phase))
 
 
 @cython.boundscheck(False)
