@@ -95,6 +95,7 @@ class Analyzer(MPIEnv):
         super().__init__(enable_mpi=enable_mpi, echo_details=False)
         self.sample = sample
         self.config = config
+        self.config.check_sanity()
 
     def calc_dos(self, corr_dos, window=window_hanning):
         """

@@ -14,6 +14,9 @@ Classes
 
 import math
 import pickle
+import warnings
+
+from .builder import KB
 
 
 class Config:
@@ -25,26 +28,38 @@ class Config:
     generic['Bessel_max'] : int
         Maximum number of Bessel functions. Default value: 100
     generic['Bessel_precision'] : float
-        Bessel function precision cut-off. Default value: 1.0e-13
+        Bessel function precision cut-off. Default value: 1.0e-14
+    generic['temperature'] : float
+        temperature in Kelvin
+        Default value: None for backward compatibility reasons.
     generic['beta'] : float
-        Value for 1/kT.
-        Default value: 11604.505/300 (room temperature, using eV)
+        Value for 1/kBT in 1/eV
+        Default value: if temperature is set by the user, then it will be
+        1/(kB*temperature). Otherwise, it will be 1/(kB*300).
+        This is a compromise for backwards compatibility.
+    generic['mu'] : float
+        Chemical potential in eV. Default value: 0.
     generic['correct_spin'] : bool
         If True, results are corrected for spin. Default value: False.
-    generic['Fermi_cheb_precision'] : float
-        Precision cut-off of Fermi-Dirac distribution.
-        Default value: 1.0e-10
-    generic['mu'] : float
-        Chemical potential. Default value: 0.
-    generic['nr_Fermi_fft_steps'] : int
-        Maximum number of Fermi-Dirac distribution FFT steps,
-        must be power of two. Default value: 2**15
     generic['nr_ran_samples'] : int
         Number of random initial wave functions. Default value: 1
     generic['nr_time_steps'] : int
         Number of time steps. Default value: 1024
     generic['seed'] : int
         Seed for random wave function generation. Default value: 1337.
+    generic['wfn_check_steps']: int
+        Check the wave function for divergence after each number of steps.
+        Default value: 128.
+    generic['wfn_check_thr']: float
+        Threshold for checking divergence of wave function. If the norm of
+        difference is larger than this value, errors will be raised.
+        Default value: 1.0e-9
+    generic['Fermi_cheb_precision'] : float
+        Precision cut-off of Fermi-Dirac distribution.
+        Default value: 1.0e-12
+    generic['nr_Fermi_fft_steps'] : int
+        Maximum number of Fermi-Dirac distribution FFT steps,
+        must be power of two. Default value: 2**15
     LDOS['site_indices'] : int
         Site indices for LDOS calculation.
     LDOS['wf_weights'] : int
@@ -79,16 +94,17 @@ class Config:
         # generic standard values
         self.generic = {'Bessel_max': 250,
                         'Bessel_precision': 1.0e-14,
+                        'temperature': None,
+                        'beta': 1.0 / (KB * 300),
+                        'mu': 0.,
                         'correct_spin': False,
                         'nr_time_steps': 1024,
                         'nr_random_samples': 1,
-                        'beta': 11604.505 / 300,
-                        'mu': 0.,
-                        'nr_Fermi_fft_steps': 2 ** 15,
-                        'Fermi_cheb_precision': 1.0e-12,
                         'seed': 1337,
                         'wfn_check_steps': 128,
-                        'wfn_check_thr': 1.0e-9}
+                        'wfn_check_thr': 1.0e-9,
+                        'nr_Fermi_fft_steps': 2**15,
+                        'Fermi_cheb_precision': 1.0e-12}
 
         # LDOS
         self.LDOS = {'site_indices': 0,
@@ -112,6 +128,26 @@ class Config:
                      'n_kernel': 2048,
                      'direction': 1,
                      'ne_integral': 2048}
+
+    def check_sanity(self):
+        """
+        Check the sanity of parameters.
+
+        :return: None.
+            Parameters will be updated and warnings will be raised if errors
+            have been detected.
+        """
+        warnings.simplefilter("always")
+        temp = self.generic['temperature']
+        beta = self.generic['beta']
+        if temp is not None:
+            print(f"Resetting beta from temperature {temp}K")
+            self.generic['beta'] = 1.0 / (KB * temp)
+        else:
+            if beta is not None:
+                warnings.warn("Setting up generic.beta is deprecated."
+                              " Use generic.temperature instead.",
+                              DeprecationWarning)
 
 
 def read_config(filename):
