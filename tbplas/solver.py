@@ -499,15 +499,26 @@ class Solver(MPIEnv):
         """
         Calculate local density of states (LDOS) using Haydock recursion method.
 
+        CAUTION: this method works for only one site. Although it can be adopted
+        to deal with multiple sites, the time usage will be unaffordable.
+        Use TBPM instead if you want to calculate LDOS for multiple sites.
+
+        Ref: https://journals.jps.jp/doi/10.1143/JPSJ.80.054710
+
         :return: energies: (2*nr_time_steps+1,) float64 array
-            energy list
+            energies in eV
         :return: ldos: (2*nr_time_steps+1,) float64 array
-            LDOS value to corresponding energies
+            LDOS value to corresponding energies in 1/eV
         :raises RuntimeError: if more than 1 mpi process is used
+        :raises ValueError: if more than 1 site is given
         """
         if self.size != 1:
             raise RuntimeError("Using more than 1 mpi process is not allowed"
                                " for ldos_haydock")
+        if len(self.config.LDOS['site_indices']) != 1:
+            raise ValueError("Only one site is allowed for Haydock recursion"
+                             " method")
+
         ham_csr = self.sample.build_ham_csr()
         energies, ldos = f2py.ldos_haydock(
             self.config.LDOS['site_indices'],

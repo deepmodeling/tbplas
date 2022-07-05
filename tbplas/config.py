@@ -55,6 +55,8 @@ class Config:
         must be power of two. Default value: 2**15
     LDOS['site_indices'] : List[int]
         Site indices for LDOS calculation. Default value: [0].
+        There is no limit for the number of sites for TBPM.
+        However, the Haydock recursion method accepts only one site.
     LDOS['wf_weights'] : List[float]
         Wave function weights for LDOS calculation. Default value: [1.0].
         It seems that this parameter is no longer in use.
