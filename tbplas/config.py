@@ -70,11 +70,11 @@ class Config:
         Cartesian coordinates of q-points in 1/nm.
         Default value: [[1., 0., 0.]].
     DC_conductivity['energy_limits'] : 2-tuple of floats
-        Minimum and maximum of energy window for DC conductivity.
+        Minimum and maximum of energy window for DC conductivity in eV.
         Default value: [-0.5, 0.5].
     dckb['energies'] : list of floats
         List of chemical potentials to calculate Hall conductivity.
-        It must be in [-1, 1], unit is H_rescale.
+        It must be in [-1, 1], unit is sample.rescale.
     dckb['n_kernel'] : int
         Number of kernels in Kernel Polynomial Method(KPM). Default value: 2048
     dckb['direction'] : int
@@ -82,7 +82,8 @@ class Config:
     dckb['ne_integral'] : int
         Number of integral steps. Default value: 2048
     quasi_eigenstates['energies'] : list of floats
-        List of energies of quasi-eigenstates. Default value: [-0.1, 0., 0.1].
+        List of energies of quasi-eigenstates in eV.
+        Default value: [-0.1, 0., 0.1].
     """
     def __init__(self):
         # generic standard values
