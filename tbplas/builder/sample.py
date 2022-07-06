@@ -904,7 +904,8 @@ class Sample:
         return k_len, bands
 
     def calc_dos(self, k_points, e_min=None, e_max=None, e_step=0.05,
-                 sigma=0.05, basis="Gaussian", enable_mpi=False, **kwargs):
+                 sigma=0.05, basis="Gaussian", g_s=1, enable_mpi=False,
+                 **kwargs):
         """
         Calculate density of states for given energy range and step.
     
@@ -921,6 +922,8 @@ class Sample:
         :param basis: string
             basis function to approximate the Delta function
             should be either "Gaussian" or "Lorentzian"
+        :param g_s: int
+            spin degeneracy
         :param enable_mpi: boolean
             whether to enable parallelization over k-points using mpi
         :param kwargs: dictionary
@@ -986,6 +989,7 @@ class Sample:
         # basis function to approximate the Delta function. Totally, there are
         # bands.size basis functions. So we divide dos by this number.
         dos /= bands.size
+        dos *= g_s
         return energies, dos
 
     @property

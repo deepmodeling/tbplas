@@ -781,7 +781,8 @@ class PrimitiveCell(LockableObject):
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray, e_min=None, e_max=None,
-                 e_step=0.05, sigma=0.05, basis="Gaussian", enable_mpi=False):
+                 e_step=0.05, sigma=0.05, basis="Gaussian", g_s=1,
+                 enable_mpi=False):
         """
         Calculate density of states for given energy range and step.
 
@@ -798,6 +799,8 @@ class PrimitiveCell(LockableObject):
         :param basis: string
             basis function to approximate the Delta function
             should be either "Gaussian" or "Lorentzian"
+        :param g_s: int
+            spin degeneracy
         :param enable_mpi: boolean
             whether to enable parallelization over k-points using mpi
         :return: energies: (num_grid,) float64 array
@@ -853,6 +856,7 @@ class PrimitiveCell(LockableObject):
         # basis function to approximate the Delta function. Totally, there are
         # bands.size basis functions. So we divide dos by this number.
         dos /= bands.size
+        dos *= g_s
         return energies, dos
 
     @property
