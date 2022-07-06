@@ -93,12 +93,11 @@ The parameters controlling TBPM calculations are stored in an instance of :class
     config = tb.Config()
     config.generic['nr_random_samples'] = 4
     config.generic['nr_time_steps'] = 256
-    config.generic['energy_range'] = 20.
 
 In the first line we create an instance of :class:`.Config` class. Then we specify that we are going
 to use 4 initial conditions. For each initial condition, the wave function will propagate 256 steps.
-And we want the DOS to be evaluated on the range of :math:`[-10, 10]` eV. From ``sample`` and ``config``
-we can create the solver and analyzer, from :class:`.Solver` and :class:`.Analyzer` classes, respectively:
+From ``sample`` and ``config`` we can create the solver and analyzer, from :class:`.Solver` and
+:class:`.Analyzer` classes, respectively:
 
 .. code-block:: python
 

@@ -40,11 +40,10 @@ sample_pbc.rescale_ham(9.0)
 
 # Then we set up the parameters governing the TBPM calculation.
 # We will use 4 random samples. For each sample 256 the propagation will take
-# 256 steps. The DOS will be evaluated on the energy range of [-10, 10] eV.
+# 256 steps.
 config = tb.Config()
 config.generic['nr_random_samples'] = 4
 config.generic['nr_time_steps'] = 256
-config.generic['energy_range'] = 20.
 
 # Then we create a solver and an analyzer from sample and configuration.
 solver = tb.Solver(sample_pbc, config)
