@@ -1067,29 +1067,38 @@ class Sample:
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
 
-    def get_reciprocal_vectors(self):
+    def get_reciprocal_vectors(self, i=0):
         """
-        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+        Get the Cartesian coordinates of reciprocal lattice vectors of given
+        supercell in 1/NM.
 
+        :param i: int
+            supercell index
         :return: (3, 3) float64 array, reciprocal vectors in 1/NM.
         """
-        return self.sc_list[0].get_reciprocal_vectors()
+        return self.sc_list[i].get_reciprocal_vectors()
 
-    def get_lattice_area(self, direction="c"):
+    def get_lattice_area(self, i=0, direction="c"):
         """
-        Get the area formed by lattice vectors normal to given direction.
+        Get the area formed by lattice vectors normal to given direction of
+        given supercell.
 
+        :param i: int
+            supercell index
         :param direction: string, should be in ("a", "b", "c")
             direction of area, e.g. "c" indicates the area formed by lattice
             vectors in the aOb plane.
         :return: float, area formed by lattice vectors in NM^2.
         """
-        return self.sc_list[0].get_lattice_area(direction)
+        return self.sc_list[i].get_lattice_area(direction)
 
-    def get_lattice_volume(self):
+    def get_lattice_volume(self, i=0):
         """
-        Get the volume formed by all three lattice vectors in NM^3.
+        Get the volume formed by all three lattice vectors in NM^3 of
+        given supercell.
 
+        :param i: int
+            supercell index
         :return: float, volume in NM^3.
         """
-        return self.sc_list[0].get_lattice_volume()
+        return self.sc_list[i].get_lattice_volume()
