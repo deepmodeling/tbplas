@@ -105,9 +105,9 @@ class Analyzer(MPIEnv):
         :param window: function, optional
             window function for integral
         :return: energies: (2*nr_time_steps,) float64 array
-            energy values
+            energies in eV
         :return: dos: (2*nr_time_steps,) float64 array
-            DOS values corresponding to energies
+            DOS in 1/eV
         """
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
@@ -151,9 +151,9 @@ class Analyzer(MPIEnv):
         :param window: function, optional
             window function for integral
         :return: energies: (2*nr_time_steps,) float64 array
-            energy values
+            energies in eV
         :return: ldos: (2*nr_time_steps,) float64 array
-            LDOS values corresponding to energies
+            LDOS in 1/eV
         """
         return self.calc_dos(corr_ldos, window)
 
