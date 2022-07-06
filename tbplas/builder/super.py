@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 
 from . import exceptions as exc
 from . import core
+from . import lattice as lat
 from .base import correct_coord, LockableObject
 from .primitive import PrimitiveCell
 from .utils import ModelViewer
@@ -914,6 +915,33 @@ class SuperCell(OrbitalSet):
             viewer.plot_grid(color="k", linestyle=":")
             viewer.plot_lat_vec(color="k", length_includes_head=True,
                                 width=0.005, head_width=0.02)
+
+    def get_reciprocal_vectors(self):
+        """
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+
+        :return: (3, 3) float64 array, reciprocal vectors in 1/NM.
+        """
+        return lat.gen_reciprocal_vectors(self.sc_lat_vec)
+
+    def get_lattice_area(self, direction="c"):
+        """
+        Get the area formed by lattice vectors normal to given direction.
+
+        :param direction: string, should be in ("a", "b", "c")
+            direction of area, e.g. "c" indicates the area formed by lattice
+            vectors in the aOb plane.
+        :return: float, area formed by lattice vectors in NM^2.
+        """
+        return lat.get_lattice_area(self.sc_lat_vec, direction)
+
+    def get_lattice_volume(self):
+        """
+        Get the volume formed by all three lattice vectors in NM^3.
+
+        :return: float, volume in NM^3.
+        """
+        return lat.get_lattice_volume(self.sc_lat_vec)
 
     @property
     def pc_lat_vec(self):

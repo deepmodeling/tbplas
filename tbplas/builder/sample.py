@@ -1066,3 +1066,30 @@ class Sample:
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.num_orb
+
+    def get_reciprocal_vectors(self):
+        """
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+
+        :return: (3, 3) float64 array, reciprocal vectors in 1/NM.
+        """
+        return self.sc_list[0].get_reciprocal_vectors()
+
+    def get_lattice_area(self, direction="c"):
+        """
+        Get the area formed by lattice vectors normal to given direction.
+
+        :param direction: string, should be in ("a", "b", "c")
+            direction of area, e.g. "c" indicates the area formed by lattice
+            vectors in the aOb plane.
+        :return: float, area formed by lattice vectors in NM^2.
+        """
+        return self.sc_list[0].get_lattice_area(direction)
+
+    def get_lattice_volume(self):
+        """
+        Get the volume formed by all three lattice vectors in NM^3.
+
+        :return: float, volume in NM^3.
+        """
+        return self.sc_list[0].get_lattice_volume()
