@@ -122,6 +122,8 @@ class Analyzer(MPIEnv):
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
         en_step = 0.5 * en_range / tnr
+
+        # Allocate working arrays
         energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
                              for i in range(tnr * 2)], dtype=float)
         dos = np.zeros(tnr * 2, dtype=float)
@@ -190,7 +192,7 @@ class Analyzer(MPIEnv):
         :param window: function, optional
             window function for integral
         :return: omegas: (nr_time_steps,) float64 array
-            omega values
+            frequencies in eV
         :return: ac_cond: (4, nr_time_steps) complex128 array
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
@@ -207,6 +209,8 @@ class Analyzer(MPIEnv):
         else:
             ac_prefactor = self.sample.nr_orbitals \
                 / (self.sample.volume_unit_cell * self.sample.extended)
+
+        # Allocate working arrays
         omegas = np.array([i * en_range / tnr for i in range(tnr)],
                           dtype=float)
         ac_cond = np.zeros((4, tnr), dtype=complex)
@@ -251,26 +255,41 @@ class Analyzer(MPIEnv):
         """
         Calculate dynamical polarization from correlation function.
 
+        Reference:
+        https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.035439
+
+        According to eqn. 6 of the reference, corr_dyn_pol is dimensionless.
+        The integration over time gives a unit of time in 1/eV, and the factor
+        of -2/V gives a unit of 1/nm^2 or 1/nm^e depending on the dimension.
+        So the final unit of dyn_pol is 1/(eV*nm^2) or 1/(eV*nm^3), consistent
+        with the output of Lindhard.
+
         :param corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
             dynamical polarization correlation function
         :param window: function, optional
             window function for integral
         :return: q_points: (n_q_points, 3) float64 array
-            coordinates of q-points
+            Cartesian coordinates of q-points in 1/nm
         :return: omegas: (nr_time_steps,) float64 array
-            omega values
+            frequencies in eV
         :return: dyn_pol: (n_q_points, nr_time_steps) complex128 array
             dynamical polarization values corresponding to q-points and omegas
+            The unit is 1/(eV*nm^2) or 1/(eV*nm^3) depending on the dimension.
         """
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
         t_step = pi / en_range
         q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
+        if self.dimension == 2:
+            dyn_pol_prefactor = 2. * self.sample.nr_orbitals \
+                / (self.sample.area_unit_cell * self.sample.extended)
+        else:
+            dyn_pol_prefactor = 2. * self.sample.nr_orbitals \
+                / (self.sample.volume_unit_cell * self.sample.extended)
+
+        # Allocate working arrays
         n_q_points = len(q_points)
-        # do we need to divide the prefactor by 1.5??
-        dyn_pol_prefactor = -2. * self.sample.nr_orbitals \
-            / (self.sample.area_unit_cell * self.sample.extended)
         n_omegas = tnr
         omegas = np.array([i * en_range / tnr for i in range(tnr)],
                           dtype=float)
@@ -285,7 +304,7 @@ class Analyzer(MPIEnv):
                         phi = k * t_step * omega
                         dpv += window(k + 1, tnr) * corr_dyn_pol.item(i_q, k) \
                             * (cos(phi) + 1j * sin(phi))
-                    dyn_pol[i_q, i] = -dyn_pol_prefactor * t_step * dpv
+                    dyn_pol[i_q, i] = dyn_pol_prefactor * t_step * dpv
 
             # correct for spin
             if self.config.generic['correct_spin']:

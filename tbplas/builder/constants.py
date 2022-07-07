@@ -7,4 +7,7 @@ BOHR2NM = BOHR2ANG * ANG  # Scaling factor from Bohr to nano-meter
 KB = 8.617333262e-5  # Boltzmann constant in eV/K
 HAR2EV = 27.21138602  # Scaling factor from Hartree to eV
 H_BAR_EV = 6.582119514e-16  # Reduced Plank constant in eV*s
-EPSILON0 = 0.6944615417149689  # Dielectric constant of vacuum in eV/nm/q units
+
+# Dielectric constant of vacuum in eV/nm/q units
+# See lindhard.py for the derivation.
+EPSILON0 = 0.6944615417149689
