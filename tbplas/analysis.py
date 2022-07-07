@@ -16,7 +16,7 @@ Classes
         wrapper over analyzing tools
 """
 
-from math import cos, sin, exp
+from math import cos, sin, exp, pi
 
 import numpy as np
 import numpy.linalg as npla
@@ -40,7 +40,7 @@ def window_hanning(i, tnr):
     :return: float
         Hanning window value
     """
-    return 0.5 * (1 + cos(np.pi * i / tnr))
+    return 0.5 * (1 + cos(pi * i / tnr))
 
 
 def window_exp(i, tnr):
@@ -199,7 +199,7 @@ class Analyzer(MPIEnv):
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
-        t_step = np.pi / en_range
+        t_step = pi / en_range
         beta = self.config.generic['beta']
         if self.dimension == 2:
             ac_prefactor = self.sample.nr_orbitals \
@@ -265,7 +265,7 @@ class Analyzer(MPIEnv):
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
-        t_step = np.pi / en_range
+        t_step = pi / en_range
         q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
         n_q_points = len(q_points)
         # do we need to divide the prefactor by 1.5??
@@ -368,7 +368,7 @@ class Analyzer(MPIEnv):
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
-        t_step = 2 * np.pi / en_range
+        t_step = 2 * pi / en_range
         en_limit = self.config.DC_conductivity['energy_limits']
         qe_indices = np.where((energies_dos >= en_limit[0]) &
                               (energies_dos <= en_limit[1]))[0]
@@ -414,7 +414,7 @@ class Analyzer(MPIEnv):
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
-        t_step = 2 * np.pi / en_range
+        t_step = 2 * pi / en_range
         en_limit = self.config.DC_conductivity['energy_limits']
         energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
                              for i in range(tnr * 2)], dtype=float)
