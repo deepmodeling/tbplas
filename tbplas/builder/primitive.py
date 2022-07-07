@@ -58,9 +58,13 @@ class PrimitiveCell(LockableObject):
     time_stamp: dictionary
         time stamps of attributes
         Method 'sync_array' will use this dictionary to update the arrays.
-    extended: integer
+    extended: float
         number of times the primitive cell has been extended
-        reserved for compatibility with old version of TBPlaS
+        Some response functions will be divided by this attribute to average
+        them to the very primitive cell since the primitive cell itself may
+        be formed by replicating another cell.
+        In most cases it will be an integer. However, if the primitive cell
+        has been created by reshaping another cell, it will become a float.
     """
     def __init__(self, lat_vec: np.ndarray, unit=consts.ANG) -> None:
         """
@@ -99,7 +103,7 @@ class PrimitiveCell(LockableObject):
                            'hop_array': current_time-0.1}
 
         # Setup misc. attributes.
-        self.extended = 1
+        self.extended = 1.0
 
     def _is_newer(self, key1, key2):
         """

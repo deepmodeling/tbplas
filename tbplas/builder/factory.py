@@ -404,6 +404,15 @@ def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
     # Create merged primitive cell
     merged_cell = PrimitiveCell(pc_list[0].lat_vec, unit=consts.NM)
 
+    # Determine the 'extended' attribute
+    extended = pc_list[0].extended
+    for pc in pc_list:
+        if (pc.extended - extended) >= 1.e-3:
+            print(f"INFO: resetting extend to 1.0")
+            extended = 1.0
+            break
+    merged_cell.extended = extended
+
     # Add orbitals
     for pc in pc_list:
         for orb in pc.orbital_list:
