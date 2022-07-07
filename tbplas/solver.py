@@ -84,7 +84,6 @@ class Solver(MPIEnv):
         self.config = config
         self.output = dict()
         self.set_output()
-        self.save_config()
 
     def set_output(self, directory="sim_data", prefix=None):
         """
@@ -124,6 +123,9 @@ class Solver(MPIEnv):
         self.print("%11s: %s" % ("Directory", self.output["directory"]))
         self.print("%11s: %s" % ("Prefix", self.output["prefix"]))
         self.print()
+
+        # Force saving config
+        self.save_config()
 
     def save_config(self, filename="config.pkl"):
         """
