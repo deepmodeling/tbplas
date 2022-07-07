@@ -82,19 +82,28 @@ class Analyzer(MPIEnv):
         sample for which TBPM calculations will be performed
     config: instance of 'Config' class
         parameters controlling TBPM calculation
+    dimension: int
+        dimension of the system
     """
-    def __init__(self, sample: Sample, config: Config, enable_mpi=False):
+    def __init__(self, sample: Sample, config: Config, dimension=3,
+                 enable_mpi=False):
         """
         :param sample: instance of 'Sample' class
             sample for which TBPM calculations will be performed
         :param config: instance of 'Config' class
             parameters controlling TBPM calculations
+        :param dimension: int
+            dimension of the sample
         :param enable_mpi: boolean
             whether to enable parallelism using MPI
+        :raises ValueError: if dimension is neither 2 nor 3
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=False)
         self.sample = sample
         self.config = config
+        if dimension not in (2, 3):
+            raise ValueError(f"Unsupported dimension: {dimension}")
+        self.dimension = dimension
 
     def calc_dos(self, corr_dos, window=window_hanning):
         """
@@ -161,6 +170,20 @@ class Analyzer(MPIEnv):
         """
         Calculate optical (AC) conductivity from correlation function.
 
+        The formulae are eqn. 300-301 of Prof. Yuan's note on graphene, with the
+        exception that the h_bar on the denominator should be dropped.The unit of
+        corr_ac is e^2/h_bar^2 * (eV)^2 * nm^2. When multiplied by the time_step
+        in the unit of 1/eV, it will become e^2/h_bar^2 * eV * nm^2. The unit of
+        (exp(-beta * h_bar * omega) - 1) / (omega * V) is h_bar / (eV * nm^3).
+        The unit of their product is then e^2/(h_bar*nm) in 3d case and
+        e^2/h_bar in 2d case, which is consistent with the results from Lindhard
+        function.
+
+        The reason for nr_orbitals in the prefactor is that every electron
+        contribute freely to the conductivity and we have to take the number
+        of electrons into consideration. See eqn. 222-223 of the note for more
+        details.
+
         :param corr_ac: (4, nr_time_steps) complex128 array
             AC correlation function in 4 directions:
             xx, xy, yx, yy, respectively
@@ -171,14 +194,19 @@ class Analyzer(MPIEnv):
         :return: ac_cond: (4, nr_time_steps) complex128 array
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
+            The unit is e^2/(h_bar*nm) in 3d case and e^2/h_bar in 2d case.
         """
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
         en_range = self.sample.energy_range
         t_step = np.pi / en_range
         beta = self.config.generic['beta']
-        ac_prefactor = 4. * self.sample.nr_orbitals \
-            / (self.sample.area_unit_cell * self.sample.extended)
+        if self.dimension == 2:
+            ac_prefactor = self.sample.nr_orbitals \
+                / (self.sample.area_unit_cell * self.sample.extended)
+        else:
+            ac_prefactor = self.sample.nr_orbitals \
+                / (self.sample.volume_unit_cell * self.sample.extended)
         omegas = np.array([i * en_range / tnr for i in range(tnr)],
                           dtype=float)
         ac_cond = np.zeros((4, tnr), dtype=complex)
