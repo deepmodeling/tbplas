@@ -70,7 +70,8 @@ class Solver(MPIEnv):
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
     """
-    def __init__(self, sample: Sample, config: Config, enable_mpi=False):
+    def __init__(self, sample: Sample, config: Config, enable_mpi=False,
+                 **kwargs):
         """
         :param sample: instance of 'Sample' class
             sample for which TBPM calculations will be performed
@@ -78,12 +79,14 @@ class Solver(MPIEnv):
             parameters controlling TBPM calculations
         :param enable_mpi: boolean
             whether to enable parallelism using MPI
+        :param kwargs: dictionary
+            arguments for method 'set_output'
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=True)
         self.sample = sample
         self.config = config
         self.output = dict()
-        self.set_output()
+        self.set_output(**kwargs)
 
     def set_output(self, directory="sim_data", prefix=None):
         """
