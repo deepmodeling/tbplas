@@ -260,7 +260,7 @@ class Analyzer(MPIEnv):
 
         According to eqn. 6 of the reference, corr_dyn_pol is dimensionless.
         The integration over time gives a unit of time in 1/eV, and the factor
-        of -2/V gives a unit of 1/nm^2 or 1/nm^e depending on the dimension.
+        of -2/V gives a unit of 1/nm^2 or 1/nm^3 depending on the dimension.
         So the final unit of dyn_pol is 1/(eV*nm^2) or 1/(eV*nm^3), consistent
         with the output of Lindhard.
 
@@ -314,6 +314,28 @@ class Analyzer(MPIEnv):
         self.bcast(dyn_pol)
         return q_points, omegas, dyn_pol
 
+    def _get_vq(self, q_point: np.ndarray):
+        """
+        Get Coulomb interaction in momentum space for given q-point.
+
+        :param q_point: (3,) float64 array
+            CARTESIAN coordinate of q-point in 1/NM
+        :return: vq: float
+            Coulomb interaction in momentum space in eV
+        """
+        factor = self.config.dyn_pol['coulomb_constant']
+        back_epsilon = self.config.dyn_pol['background_dielectric_constant']
+        factor /= (EPSILON0 * back_epsilon)
+        q_norm = np.linalg.norm(q_point)
+        if q_norm == 0.0:
+            vq = 0.0
+        else:
+            if self.dimension == 2:
+                vq = factor * 2 * pi / q_norm
+            else:
+                vq = factor * 4 * pi / q_norm**2
+        return vq
+
     def calc_epsilon(self, dyn_pol):
         """
         Calculate dielectric function from dynamical polarization.
@@ -327,25 +349,13 @@ class Analyzer(MPIEnv):
         tnr = self.config.generic['nr_time_steps']
         q_points = self.config.dyn_pol['q_points']
         n_q_points = len(q_points)
-        epsilon_prefactor = self.config.dyn_pol['coulomb_constant'] \
-            / self.config.dyn_pol['background_dielectric_constant'] \
-            / EPSILON0 \
-            / self.sample.extended
         n_omegas = tnr
-        epsilon = np.ones((n_q_points, n_omegas)) + np.zeros((n_q_points, n_omegas)) * 0j
+        epsilon = np.zeros((n_q_points, n_omegas), dtype=complex)
 
         if self.is_master:
-            v0 = epsilon_prefactor * np.ones(n_q_points)
-            v = np.zeros(n_q_points)
-
-            # calculate epsilon
             for i, q_point in enumerate(q_points):
-                k = npla.norm(q_point)
-                if k == 0.0:
-                    v[i] = 0.
-                else:
-                    v[i] = v0.item(i) / k
-                    epsilon[i, :] -= v.item(i) * dyn_pol[i, :]
+                vq = self._get_vq(q_point)
+                epsilon[i] = 1 - vq * dyn_pol[i]
         else:
             pass
         self.bcast(epsilon)
