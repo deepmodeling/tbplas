@@ -364,7 +364,13 @@ class Analyzer(MPIEnv):
     def calc_dc_cond(self, corr_dos, corr_dc, window_dos=window_hanning,
                      window_dc=window_exp):
         """
-        Calculate electronic (DC) conductivity from its correlation function.
+        Calculate electronic (DC) conductivity at zero temperature from its
+        correlation function.
+
+        Reference: eqn. 381 of graphene note.
+
+        NOTE: the xy and yx components of conductivity are not accurate. So
+        they will not be evaluated.
 
         NOTE: Here we need to call analyze_corr_dos to obtain DOS, which is
         intended to analyze the result of calc_corr_dos by design. As in
@@ -384,9 +390,10 @@ class Analyzer(MPIEnv):
         :param window_dc: function, optional
             window function for DC integral
         :return: energies: (n_energies,) float64 array
-            energy values
+            energies in eV
         :return: dc: (2, n_energies) float64 array
-            dc conductivity values
+            dc conductivity values for xx and yy directions in the same unit
+            as ac conductivity
         """
         # Get DOS
         corr_dos = np.insert(corr_dos, 0, 1.0)
@@ -403,7 +410,12 @@ class Analyzer(MPIEnv):
                               (energies_dos <= en_limit[1]))[0]
         n_energies = len(qe_indices)
         energies = energies_dos[qe_indices]
-        dc_prefactor = self.sample.nr_orbitals / self.sample.area_unit_cell
+        if self.dimension == 2:
+            dc_prefactor = self.sample.nr_orbitals / \
+                self.sample.area_unit_cell
+        else:
+            dc_prefactor = self.sample.nr_orbitals / \
+                self.sample.volume_unit_cell
         dc = np.zeros((2, n_energies))
 
         if self.is_master:
