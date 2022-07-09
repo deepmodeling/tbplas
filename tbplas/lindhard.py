@@ -458,6 +458,7 @@ class Lindhard(MPIEnv):
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
+        dyn_pol /= self.cell.extended
 
         # Transpose dyn_pol back
         if use_fortran:
@@ -545,6 +546,7 @@ class Lindhard(MPIEnv):
 
         # Multiply dyn_pol by prefactor
         dyn_pol *= self._get_dyn_pol_factor()
+        dyn_pol /= self.cell.extended
 
         # Transpose dyn_pol back
         if use_fortran:
@@ -691,4 +693,5 @@ class Lindhard(MPIEnv):
             raise NotImplementedError(f"Dimension {self.dimension} not "
                                       f"implemented")
         ac_cond *= prefactor
+        ac /= self.cell.extended
         return self.omegas, ac_cond
