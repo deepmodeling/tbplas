@@ -171,22 +171,20 @@ class Solver(MPIEnv):
             time_step = 2 * pi / sample.energy_range
 
         :return: time_step: float
-            time step in 1/eV
+            time step in h_bar/eV
         """
         return 2 * math.pi / self.sample.energy_range
 
     def __echo_time_step_fs(self, time_step):
         """
-        Convert time step from 1/eV to femto-second and report.
-
-        1/eV = 2 * pi * |h_bar_eV| second.
+        Convert time step from h_bar/eV to femto-second and report.
 
         :param time_step: float
-            time step in 1/eV
+            time step in h_bar/eV
         :return: None.
             Result are printed to stdout.
         """
-        time_step_fs = time_step * (2 * math.pi * H_BAR_EV) * 1e15
+        time_step_fs = time_step * H_BAR_EV * 1e15
         self.print("Time step for propagation: %7.3f fs\n" % time_step_fs)
 
     def __get_bessel_series(self, time_step):
