@@ -19,11 +19,10 @@ Classes
 from math import cos, sin, exp, pi
 
 import numpy as np
-import numpy.linalg as npla
 from scipy.signal import hilbert
 from scipy.integrate import trapz
 
-from .builder import Sample, EPSILON0
+from .builder import Sample, EPSILON0, H_BAR_EV
 from .config import Config
 from .fortran import f2py
 from .parallel import MPIEnv
@@ -172,14 +171,13 @@ class Analyzer(MPIEnv):
         """
         Calculate optical (AC) conductivity from correlation function.
 
-        The formulae are eqn. 300-301 of Prof. Yuan's note on graphene, with the
-        exception that the h_bar on the denominator should be dropped.The unit of
-        corr_ac is e^2/h_bar^2 * (eV)^2 * nm^2. When multiplied by the time_step
-        in the unit of 1/eV, it will become e^2/h_bar^2 * eV * nm^2. The unit of
-        (exp(-beta * h_bar * omega) - 1) / (omega * V) is h_bar / (eV * nm^3).
-        The unit of their product is then e^2/(h_bar*nm) in 3d case and
-        e^2/h_bar in 2d case, which is consistent with the results from Lindhard
-        function.
+        Reference: eqn. 300-301 of graphene note.
+
+        The unit of AC conductivity in 2d case follows:
+        [sigma] = [1/h_bar * omega * A] * [j^2] * [dt]
+                = 1/(eV*nm^2) * e^2/h_bar^2 * (eV)^2 * nm^2 * h_bar/eV
+                = e^2/h_bar
+        which is consistent with the results from Lindhard function.
 
         The reason for nr_orbitals in the prefactor is that every electron
         contribute freely to the conductivity and we have to take the number
@@ -258,11 +256,13 @@ class Analyzer(MPIEnv):
         Reference:
         https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.035439
 
-        According to eqn. 6 of the reference, corr_dyn_pol is dimensionless.
-        The integration over time gives a unit of time in 1/eV, and the factor
-        of -2/V gives a unit of 1/nm^2 or 1/nm^3 depending on the dimension.
-        So the final unit of dyn_pol is 1/(eV*nm^2) or 1/(eV*nm^3), consistent
-        with the output of Lindhard.
+        The unit of dp in 2d case follows:
+        [dp] = [1/A] * [C_DP] * [dt]
+             = 1/nm^2 * 1 * h_bar/eV
+             = h_bar/(eV*nm^2)
+        which is inconsistent with the output of Lindhard!
+
+        TODO: check the formula for missing 1/h_bar.
 
         :param corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
             dynamical polarization correlation function
@@ -368,6 +368,12 @@ class Analyzer(MPIEnv):
         correlation function.
 
         Reference: eqn. 381 of graphene note.
+
+        The unit of DC conductivity in 2d case follows:
+        [sigma] = [D/A] * [j^2] * [dt]
+                = 1/(eV*nm^2) * e^2/h_bar^2 * (eV)^2 * nm^2 * h_bar/eV
+                = e^2/h_bar
+        which is consistent with the result of Lindhard function.
 
         NOTE: the xy and yx components of conductivity are not accurate. So
         they will not be evaluated.
