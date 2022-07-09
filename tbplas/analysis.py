@@ -449,14 +449,20 @@ class Analyzer(MPIEnv):
         """
         Calculate diffusion coefficient form DC correlation function.
 
+        The unit of diff_coeff follows:
+        [diff_coeff] = [1/e^2] * [j^2] * [dt]
+                     = 1/e^2 * e^2/h_bar^2 * (eV)^2 * nm^2 * h_bar/eV
+                     = eV*nm^2/h_bar
+        which does not depend on system dimension.
+
         :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
             DC conductivity correlation function
         :param window_dc: function, optional
             window function for DC integral
         :return time: (nr_time_steps,) float64 array
-            time for diffusion coefficient
+            time for diffusion coefficient in h_bar/eV
         :return diff_coeff: (2, n_energies, nr_time_steps) complex128 array
-            diffusion coefficient
+            diffusion coefficient in nm^2/(h_bar/eV)
         """
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
