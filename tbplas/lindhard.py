@@ -693,5 +693,5 @@ class Lindhard(MPIEnv):
             raise NotImplementedError(f"Dimension {self.dimension} not "
                                       f"implemented")
         ac_cond *= prefactor
-        ac /= self.cell.extended
+        ac_cond /= self.cell.extended
         return self.omegas, ac_cond
