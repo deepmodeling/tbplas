@@ -35,6 +35,11 @@ class MPIEnv:
     """
     def __init__(self, enable_mpi=True, echo_details=False) -> None:
         """
+        This class has two usages: as a developer class for parallel jobs
+        or as a user class for detecting the master process. For the latter
+        purpose, the default value of enable_mpi should be True while
+        echo_details should be False. DO NOT change them.
+
         :param enable_mpi: boolean
             whether to enable parallelization using MPI
         :param echo_details: boolean
