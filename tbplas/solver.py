@@ -69,6 +69,26 @@ class Solver(MPIEnv):
         Default value: f"sim_data/{timestamp}.corr_dyn_pol".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
+    output['hall_mu'] : string
+        mu_{mn} required output file.
+        Default value: f"sim_data/{timestamp}.hall_mu".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
+    output['qe'] : string
+        Quasi-eigenstates output file.
+        Default value: f"sim_data/{timestamp}.qe".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
+    output['ldos_haydock'] : string
+        LDOS output file from Haydock method.
+        Default value: f"sim_data/{timestamp}.ldos_haydock".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
+    output['psi_t'] : string
+        Time-dependent wave function output file.
+        Default value: f"sim_data/{timestamp}.psi_t".
+        The actual output file will have a suffix of 'npy' or 'h5' depending on
+        the output format.
     """
     def __init__(self, sample: Sample, config: Config, enable_mpi=False,
                  **kwargs):
@@ -117,7 +137,7 @@ class Solver(MPIEnv):
 
         # Determine file names
         for key in ("corr_DOS", "corr_LDOS", "corr_AC", "corr_dyn_pol",
-                    "corr_DC"):
+                    "corr_DC", "hall_mu", "qe", "ldos_haydock", "psi_t"):
             self.output[key] = "%s/%s.%s" % (self.output["directory"],
                                              self.output["prefix"], key)
 
@@ -464,12 +484,15 @@ class Solver(MPIEnv):
             self.config.dckb['direction'],
             self.rank)
         mu_mn = self.average(mu_mn)
+        self.__save_data(mu_mn, self.output['hall_mu'])
         return mu_mn
 
-    def calc_quasi_eigenstates(self):
+    def calc_quasi_eigenstates(self, save_data=False):
         """
         Calculate quasi-eigenstates.
 
+        :param save_data: boolean
+            whether to save quasi-eigenstates
         :return: states: (n_energies, n_indptr-1) float64 array
             Quasi-eigenstates of the sample
             states[i, :] is a quasi-eigenstate at energy of
@@ -496,6 +519,8 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_thr']
         )
         states = self.average(states)
+        if save_data:
+            self.__save_data(states, self.output['qe'])
         return states
 
     def calc_ldos_haydock(self):
@@ -533,11 +558,12 @@ class Solver(MPIEnv):
             self.config.LDOS['recursion_depth'],
             self.config.generic['nr_time_steps'],
             self.config.generic['nr_random_samples'],
-            self.output['corr_LDOS'])
-        self.__save_data(ldos, self.output["corr_LDOS"])
+            self.output['ldos_haydock'])
+        self.__save_data(ldos, self.output["ldos_haydock"])
         return energies, ldos
 
-    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray):
+    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray,
+                   save_data=False):
         """
         Calculate propagation of wave function from given initial state.
 
@@ -551,6 +577,8 @@ class Solver(MPIEnv):
             steps on which time the time-dependent wave function will be logged
             For example, t=0 stands for the initial wave function, while t=1
             indicates the wave function AFTER the 1st propagation.
+        :param save_data: boolean
+            whether to save time-dependent wave function
         :return: psi_t: (num_time, num_orb_sample) complex128 array
             time-dependent wave function according to time_log
         :raises RuntimeError: if more than 1 mpi process is used
@@ -584,4 +612,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        return psi_t.T
+        psi_t = psi_t.T
+        if save_data:
+            self.__save_data(psi_t, self.output['psi_t'])
+        return psi_t
