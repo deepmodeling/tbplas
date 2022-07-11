@@ -75,8 +75,8 @@ class Config:
         Minimum and maximum of energy window for DC conductivity in eV.
         Default value: [-0.5, 0.5].
     dckb['energies'] : list of floats
-        List of chemical potentials to calculate Hall conductivity.
-        It must be in [-1, 1], unit is sample.rescale.
+        List of chemical potentials to calculate Hall conductivity in eV.
+        Default value: [-0.2, 0.2] with energy step of 0.01 eV
     dckb['n_kernel'] : int
         Number of kernels in Kernel Polynomial Method(KPM). Default value: 2048
     dckb['direction'] : int
