@@ -4,16 +4,17 @@
 
 ! calculates everything after the calculation of the trace
 SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
-                           NE_integral, fermi_precision, prefactor, cond)
+                           NE_integral, fermi_precision, rank, cond)
     USE const, ONLY: PI
     USE kpm
     USE funcs, ONLY: Fermi_dist
     IMPLICIT NONE
     ! input
     INTEGER, INTENT(IN) :: n_kernel, n_mu, NE_integral
-    REAL(KIND=8), INTENT(IN) :: H_rescale, beta, fermi_precision, prefactor
+    REAL(KIND=8), INTENT(IN) :: H_rescale, beta, fermi_precision
     REAL(KIND=8), INTENT(IN), DIMENSION(n_mu) :: mu
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(n_kernel, n_kernel) :: mu_mn
+    INTEGER, INTENT(IN) :: rank
     !output
     REAL(KIND=8), INTENT(OUT), DIMENSION(n_mu) :: cond
 
@@ -30,6 +31,10 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
 
     PRINT*, "  Calculating sum"
     DO k = 1, NE
+        IF (MODULO(k, 64) == 0) THEN
+            IF (rank == 0) PRINT *, "Calculating for energy ", k, " of ", NE
+        END IF
+
         energy(k) = k * dE
         CALL get_gamma_mn(energy(k), n_kernel, Gamma_mn)
 
@@ -46,6 +51,8 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
 
     PRINT*, "  Final integral"
     DO i = 1, n_mu
+        IF (rank == 0) PRINT *, "Calculating for energy ", i, " of ", n_mu
+
         dcx = 0D0
 
         !$OMP PARALLEL DO SIMD PRIVATE(en, div, fd) REDUCTION(+: dcx)
@@ -57,6 +64,6 @@ SUBROUTINE cond_from_trace(mu_mn, n_kernel, mu, n_mu, H_rescale, beta, &
         END DO
         !$OMP END PARALLEL DO SIMD
 
-        cond(i) = dcx * prefactor / H_rescale / H_rescale
+        cond(i) = dcx
     END DO
 END SUBROUTINE cond_from_trace

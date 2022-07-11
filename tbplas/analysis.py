@@ -22,7 +22,7 @@ import numpy as np
 from scipy.signal import hilbert
 from scipy.integrate import trapz
 
-from .builder import Sample, EPSILON0, H_BAR_EV
+from .builder import Sample, EPSILON0
 from .config import Config
 from .fortran import f2py
 from .parallel import MPIEnv
@@ -495,21 +495,49 @@ class Analyzer(MPIEnv):
         self.bcast(diff_coeff)
         return time, diff_coeff
 
-    def calc_hall_cond(self, mu_mn):
+    def calc_hall_cond(self, mu_mn, unit="h_bar"):
         """
         Calculate Hall conductivity according to Kubo-Bastin formula mu_mn.
 
+        Reference:
+        https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.114.116602
+
+        The unif of hall_cond in 2d case from eqn. 1 of the reference follows:
+        [hall_cond] = [h_bar*e^2/Omega] * [dE * Tr<...>]
+                    = h_bar*e^2/nm^2 * 1/eV * nm^2/h_bar^2 * eV
+                    = e^2/h_bar
+        which is consistent with AC and DC conductivity.
+        Note that the delta function in the formula has the unit of 1/eV.
+
+        The unit can also be determined from enq. 4 as:
+        [hall_cond] = [e^2*h_bar/(Omega*delaE^2)] * [mu]
+                    = h_bar/(nm^2*V^2) * nm^2 * (eV)^2 / h_bar^2
+                    = e^2/h_bar
+        Note that the scaled energy is dimensionless.
+
         :param mu_mn: (n_kernel, n_kernel) complex128 array
             output of self.calc_hall_mu
+        :param unit: string
+            unit of Hall conductivity, set to 'h_bar' to use 'e^2/h_bar'
+            and 'h' to use 'e^2/h'
         :return: energies: float64 array
-            energies
+            chemical potentials specified in config.dckb['energies']
         :return: conductivity: float64 array
             Hall conductivity according to energies
+        :raise ValueError: if unit is neither 'h_bar' or 'h'
         """
+        if unit not in ("h_bar", "h"):
+            raise ValueError(f"Illegal unit {unit}")
         energies = np.array(self.config.dckb['energies'])
         if self.is_master:
             dckb_prefactor = 16 * self.sample.nr_orbitals / \
-                self.sample.area_unit_cell
+                (pi * self.sample.energy_range**2)
+            if self.dimension == 2:
+                dckb_prefactor /= self.sample.area_unit_cell
+            else:
+                dckb_prefactor /= self.sample.volume_unit_cell
+            if unit == "h":
+                dckb_prefactor *= (2 * pi)
             conductivity = f2py.cond_from_trace(
                 mu_mn,
                 self.config.dckb['energies'],
@@ -517,7 +545,12 @@ class Analyzer(MPIEnv):
                 self.config.generic['beta'],
                 self.config.dckb['ne_integral'],
                 self.config.generic['Fermi_cheb_precision'],
-                dckb_prefactor)
+                self.rank)
+            conductivity *= dckb_prefactor
+
+            # correct for spin
+            if self.config.generic['correct_spin']:
+                conductivity *= 2
         else:
             conductivity = np.zeros(len(energies), dtype=float)
         self.bcast(conductivity)
