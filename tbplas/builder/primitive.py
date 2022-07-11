@@ -12,7 +12,6 @@ Classes
         can be created
 """
 
-import math
 import time
 
 import numpy as np
@@ -25,7 +24,7 @@ from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
 from .base import (correct_coord, Orbital, LockableObject, PCIntraHopping,
-                   HopDict)
+                   HopDict, gaussian, lorentzian)
 from .utils import ModelViewer
 from ..parallel import MPIEnv
 
@@ -824,23 +823,12 @@ class PrimitiveCell(LockableObject):
         num_grid = int((e_max - e_min) / e_step)
         energies = np.linspace(e_min, e_max, num_grid+1)
 
-        # Define broadening functions
-        def _gaussian(x, mu):
-            part_a = 1.0 / (sigma * math.sqrt(2 * math.pi))
-            part_b = np.exp(-(x - mu)**2 / (2 * sigma**2))
-            return part_a * part_b
-
-        def _lorentzian(x, mu):
-            part_a = 1.0 / (math.pi * sigma)
-            part_b = sigma**2 / ((x - mu)**2 + sigma**2)
-            return part_a * part_b
-
         # Evaluate DOS by collecting contributions from all energies
         dos = np.zeros(energies.shape, dtype=np.float64)
         if basis == "Gaussian":
-            basis_func = _gaussian
+            basis_func = gaussian
         elif basis == "Lorentzian":
-            basis_func = _lorentzian
+            basis_func = lorentzian
         else:
             raise exc.BasisError(basis)
 
@@ -852,7 +840,7 @@ class PrimitiveCell(LockableObject):
         # Collect contributions
         for i_k in k_index:
             for eng_i in bands[i_k]:
-                dos += basis_func(energies, eng_i)
+                dos += basis_func(energies, eng_i, sigma)
         dos = mpi_env.all_reduce(dos)
 
         # Re-normalize dos

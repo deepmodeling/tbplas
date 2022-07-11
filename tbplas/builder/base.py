@@ -22,6 +22,8 @@ Classes
         reserved for compatibility with old version of TBPlaS
 """
 
+import math
+
 import numpy as np
 
 from . import exceptions as exc
@@ -67,6 +69,40 @@ def invert_rn(rn: tuple, i=0):
             return invert_rn(rn, i+1)
         else:
             return False
+
+
+def gaussian(x, mu, sigma):
+    """
+    Gaussian type broadening function.
+
+    :param x: np.ndarray
+        incoming x
+    :param mu: float
+        center of the Gaussian function
+    :param sigma: float
+        half-width of the Gaussian function
+    :return: normalized Gaussian function value at each x
+    """
+    part_a = 1.0 / (sigma * math.sqrt(2 * math.pi))
+    part_b = np.exp(-(x - mu)**2 / (2 * sigma**2))
+    return part_a * part_b
+
+
+def lorentzian(x, mu, sigma):
+    """
+    Lorentzian type broadening function.
+
+    :param x: np.ndarray
+        incoming x
+    :param mu: float
+        center of the Lorentzian function
+    :param sigma: float
+        half-width of the Lorentzian function
+    :return: normalized Lorentzian function value at each x
+    """
+    part_a = 1.0 / (math.pi * sigma)
+    part_b = sigma**2 / ((x - mu)**2 + sigma**2)
+    return part_a * part_b
 
 
 class Orbital:
