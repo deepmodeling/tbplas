@@ -8,6 +8,10 @@ Functions
         super-cell dimension and periodic condition
     invert_rn: developer function
         check if the cell index should be inverted
+    gaussian: developer function
+        Gaussian type broadening function
+    lorentzian: developer function
+        Lorentzian type broadening function
 
 Classes
 -------

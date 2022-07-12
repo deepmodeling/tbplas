@@ -741,23 +741,33 @@ class PrimitiveCell(LockableObject):
             for pair, energy in hop_rn.items():
                 print(" ", rn, pair, energy)
 
-    def calc_bands(self, k_path: np.ndarray, enable_mpi=False):
+    def calc_bands(self, k_path: np.ndarray, orbital_indices=None,
+                   enable_mpi=False):
         """
         Calculate band structure along given k_path.
 
         :param k_path: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points along given path
+        :param orbital_indices: List[int] or "all"
+            orbital indices to evaluate weights
         :param enable_mpi: boolean
             whether to enable parallelization over k-points using mpi
         :return: k_len: (num_kpt,) float64 array in 1/NM
             length of k-path in reciprocal space, for plotting band structure
         :return: bands: (num_kpt, num_orb) float64 array
             Energies corresponding to k-points in eV
+        :return: weights: (num_kpt, num_orb) float64 array
+            contribution of selected orbitals to the eigenstates
+            effective only when orbital_indices is not none
         """
         # Initialize working arrays.
         self.sync_array()
         num_k_points = k_path.shape[0]
         bands = np.zeros((num_k_points, self.num_orb), dtype=np.float64)
+        if orbital_indices is not None:
+            weights = np.zeros((num_k_points, self.num_orb), dtype=np.float64)
+        else:
+            weights = None
         ham_k = np.zeros((self.num_orb, self.num_orb), dtype=np.complex128)
 
         # Get length of k-path in reciprocal space
@@ -766,6 +776,18 @@ class PrimitiveCell(LockableObject):
         # Distribute k-points over processes
         mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=True)
         k_index = mpi_env.dist_range(num_k_points)
+
+        # Function for collecting weights
+        def _eval_weights(states):
+            if orbital_indices is not None:
+                if orbital_indices == "all":
+                    weights[i_k] += 1.0
+                else:
+                    states = states.T
+                    states = states[idx]
+                    for i_b in range(self.num_orb):
+                        for i_o in orbital_indices:
+                            weights[i_k, i_b] += abs(states[i_b, i_o])**2
 
         # Loop over k-points to evaluate the energies
         for i_k in k_index:
@@ -778,14 +800,22 @@ class PrimitiveCell(LockableObject):
             idx = eigenvalues.argsort()[::-1]
             eigenvalues = eigenvalues[idx]
             bands[i_k, :] = eigenvalues[:]
+            _eval_weights(eigenstates)
 
-        # Collect energies
+        # Collect data
         bands = mpi_env.all_reduce(bands)
-        return k_len, bands
+        if orbital_indices is not None:
+            weights = mpi_env.all_reduce(weights)
+
+        # Return
+        if orbital_indices is None:
+            return k_len, bands
+        else:
+            return k_len, bands, weights
 
     def calc_dos(self, k_points: np.ndarray, e_min=None, e_max=None,
                  e_step=0.05, sigma=0.05, basis="Gaussian", g_s=1,
-                 enable_mpi=False):
+                 orbital_indices=None, enable_mpi=False):
         """
         Calculate density of states for given energy range and step.
 
@@ -804,6 +834,8 @@ class PrimitiveCell(LockableObject):
             should be either "Gaussian" or "Lorentzian"
         :param g_s: int
             spin degeneracy
+        :param orbital_indices: List[int] or "all"
+            orbital indices to evaluate LDOS
         :param enable_mpi: boolean
             whether to enable parallelization over k-points using mpi
         :return: energies: (num_grid,) float64 array
@@ -813,7 +845,11 @@ class PrimitiveCell(LockableObject):
         :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
         # Get the band energies
-        k_len, bands = self.calc_bands(k_points, enable_mpi)
+        if orbital_indices is None:
+            orbital_indices = "all"
+        k_len, bands, weights = \
+            self.calc_bands(k_points, orbital_indices=orbital_indices,
+                            enable_mpi=enable_mpi)
 
         # Create energy grid
         if e_min is None:
@@ -839,8 +875,9 @@ class PrimitiveCell(LockableObject):
 
         # Collect contributions
         for i_k in k_index:
-            for eng_i in bands[i_k]:
-                dos += basis_func(energies, eng_i, sigma)
+            for i_b, eng_i in enumerate(bands[i_k]):
+                dos += basis_func(energies, eng_i, sigma) * \
+                    weights.item(i_k, i_b)
         dos = mpi_env.all_reduce(dos)
 
         # Re-normalize dos
