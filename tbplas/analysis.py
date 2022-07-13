@@ -108,8 +108,15 @@ class Analyzer(MPIEnv):
         """
         Calculate DOS from correlation function.
 
+        Reference: eqn. 16-17 of feature article.
+
+        The unit of dos follows:
+            [dos] = [C_DOS] [dt] = h_bar / eV
+        So possibly the formula misses a h_bar on the denominator.
+        Anyway, the DOS is correct since it is explicitly normalized to 1.
+
         :param corr_dos: (nr_time_steps+1,) complex128 array
-            DOS correlation function
+            dimensionless DOS correlation function
         :param window: function, optional
             window function for integral
         :return: energies: (2*nr_time_steps,) float64 array
@@ -157,7 +164,7 @@ class Analyzer(MPIEnv):
         Calculate LDOS from correlation function.
 
         :param corr_ldos: (nr_time_steps+1,) complex128 array
-            LDOS correlation function
+            dimensionless LDOS correlation function
         :param window: function, optional
             window function for integral
         :return: energies: (2*nr_time_steps,) float64 array
@@ -174,7 +181,7 @@ class Analyzer(MPIEnv):
         Reference: eqn. 300-301 of graphene note.
 
         The unit of AC conductivity in 2d case follows:
-        [sigma] = [1/h_bar * omega * A] * [j^2] * [dt]
+        [sigma] = [1/(h_bar * omega * A)] * [j^2] * [dt]
                 = 1/(eV*nm^2) * e^2/h_bar^2 * (eV)^2 * nm^2 * h_bar/eV
                 = e^2/h_bar
         which is consistent with the results from Lindhard function.
@@ -185,8 +192,9 @@ class Analyzer(MPIEnv):
         details.
 
         :param corr_ac: (4, nr_time_steps) complex128 array
-            AC correlation function in 4 directions:
+            AC correlation function in in 4 directions:
             xx, xy, yx, yy, respectively
+            Unit should be e^2/h_bar^2 * (eV)^2 * nm^2.
         :param window: function, optional
             window function for integral
         :return: omegas: (nr_time_steps,) float64 array
@@ -260,12 +268,11 @@ class Analyzer(MPIEnv):
         [dp] = [1/A] * [C_DP] * [dt]
              = 1/nm^2 * 1 * h_bar/eV
              = h_bar/(eV*nm^2)
-        which is inconsistent with the output of Lindhard!
-
-        TODO: check the formula for missing 1/h_bar.
+        which is inconsistent with the output of Lindhard! So, possibly the
+        formula misses a h_bar on the denominator.
 
         :param corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
-            dynamical polarization correlation function
+            dimensionless dynamical polarization correlation function
         :param window: function, optional
             window function for integral
         :return: q_points: (n_q_points, 3) float64 array
@@ -388,9 +395,9 @@ class Analyzer(MPIEnv):
         corr_dos by calc_corr_dc before calling analyze_corr_dos.
 
         :param corr_dos: (nr_time_steps,) complex128 array
-            DOS correlation function
+            dimensionless DOS correlation function
         :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
-            DC conductivity correlation function
+            DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
         :param window_dos: function, optional
             window function for DOS integral
         :param window_dc: function, optional
@@ -449,6 +456,8 @@ class Analyzer(MPIEnv):
         """
         Calculate diffusion coefficient form DC correlation function.
 
+        Reference: eqn. 43-44 of feature article.
+
         The unit of diff_coeff follows:
         [diff_coeff] = [1/e^2] * [j^2] * [dt]
                      = 1/e^2 * e^2/h_bar^2 * (eV)^2 * nm^2 * h_bar/eV
@@ -456,7 +465,7 @@ class Analyzer(MPIEnv):
         which does not depend on system dimension.
 
         :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
-            DC conductivity correlation function
+            DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
         :param window_dc: function, optional
             window function for DC integral
         :return time: (nr_time_steps,) float64 array
@@ -516,7 +525,7 @@ class Analyzer(MPIEnv):
         Note that the scaled energy is dimensionless.
 
         :param mu_mn: (n_kernel, n_kernel) complex128 array
-            output of self.calc_hall_mu
+            output of solver.calc_hall_mu in nm^2/h_bar^2 * (eV)^2
         :param unit: string
             unit of Hall conductivity, set to 'h_bar' to use 'e^2/h_bar'
             and 'h' to use 'e^2/h'

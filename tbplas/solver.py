@@ -279,7 +279,7 @@ class Solver(MPIEnv):
         Calculate correlation function of density of states (DOS).
 
         :return: corr_dos: (nr_time_steps+1,) complex128 array
-            DOS correlation function
+            dimensionless DOS correlation function
         """
         # Get parameters
         time_step = self.__get_time_step()
@@ -309,7 +309,7 @@ class Solver(MPIEnv):
         Calculate correlation function of local density of states (DOS).
 
         :return: corr_ldos: (nr_time_steps+1,) complex128 array
-            LDOS correlation function
+            dimensionless LDOS correlation function
         """
         # Get parameters
         time_step = self.__get_time_step()
@@ -342,6 +342,7 @@ class Solver(MPIEnv):
         :return: corr_ac: (4, nr_time_steps) complex128 array
             AC correlation function in 4 directions:
             xx, xy, yx, yy, respectively
+            Unit is e^2/h_bar^2 * (eV)^2 * nm^2.
         """
         # Get parameters
         time_step = 0.5 * self.__get_time_step()
@@ -376,7 +377,7 @@ class Solver(MPIEnv):
         Calculate correlation function of dynamical polarization.
 
         :return: corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
-            Dynamical polarization correlation function.
+            domensionless Dynamical polarization correlation function.
         """
         # Get parameters
         time_step = 0.5 * self.__get_time_step()
@@ -415,9 +416,9 @@ class Solver(MPIEnv):
         Calculate correlation function of electronic (DC) conductivity.
 
         :return: corr_dos: (nr_time_steps,) complex128 array
-            DOS correlation function
+            dimensionless DOS correlation function
         :return: corr_dc: (2, n_energies, nr_time_steps) complex128 array
-            DC conductivity correlation function
+            DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
         """
         # Get parameters
         tnr = self.config.generic['nr_time_steps']
@@ -471,6 +472,7 @@ class Solver(MPIEnv):
             mu_{mn} in eqn. 4 in the reference paper, which will be utilized
             to evaluate Hall conductivity using Kubo-Bastin formula
             n_kernel = self.config.dckb['n_kernel']
+            Unit is nm^2/h_bar^2 * (eV)^2.
         """
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
         num_sample = self.__dist_sample()
