@@ -1,0 +1,2 @@
+This directory contains test scripts for determining the units and scaling
+factors of TBPM output. They are not intended for common UnitTests.
