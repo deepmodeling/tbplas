@@ -108,7 +108,7 @@ def main():
     mfiend_intensity = 50
 
     # Initial wave function
-    init_wfc = "pw"
+    init_wfc = "gaussian"
     wfc_center = (x_max * 0.5, y_max * 0.5)
     wfc_extent = (1.0, 0.0)
     wfc_kpt = np.array([g_x, 0, 0])
@@ -158,7 +158,7 @@ def main():
     # Plot the model
     if plot_sample:
         sample.plot(with_cells=False, hop_as_arrows=False, with_orbitals=False,
-                    fig_name="struct.png", fig_dpi=100)
+                    fig_name="sample.png", fig_dpi=100)
 
     # Plot potential
     vis = tb.Visualizer()
