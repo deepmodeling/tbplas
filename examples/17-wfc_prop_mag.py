@@ -80,17 +80,11 @@ def init_wfc_pw(sample, kpt):
     return wfc
 
 
-def estimate_step(mag_field, scale_factor):
-    h_bar = 6.582119569e-16  # Reduced Plank constant in eV*s
-    q = 1.602176634e-19  # Charge of electron in Coulomb
-    m = 9.109383701e-31  # Mass of electron in kg
-    ev2s = 2 * math.pi * h_bar  # Factor from 1/eV to second
-    omega_landau = q * mag_field / m
-    time_landau = 2 * math.pi / omega_landau
-    time_step = math.pi / scale_factor * ev2s
-    print(time_landau)
-    print(time_step)
-    print(time_landau / time_step)
+def init_wfc_random(sample):
+    phase = 2 * np.pi * np.random.rand(sample.num_orb_tot)
+    wfc = np.exp(1j * phase)
+    wfc /= np.linalg.norm(wfc)
+    return wfc
 
 
 def main():
@@ -99,19 +93,32 @@ def main():
     dim = (50, 20, 1)
     pbc = (True, True, False)
 
+    # Geometries
     x_max = prim_cell.lat_vec[0, 0] * dim[0]
     y_max = prim_cell.lat_vec[1, 1] * dim[1]
     g_x = 2 * math.pi / x_max
     g_y = 2 * math.pi / y_max
-    wfc_center = (x_max * 0.5, y_max * 0.5)
-    deform_center = (x_max * 0.75, y_max * 0.5)
-    kpt = np.array([g_x, 0,  0])
 
-    init_wfc = "pw"
+    # Perturbations
     with_deform = False
+    deform_center = (x_max * 0.75, y_max * 0.5)
     with_efield = False
-    with_mfield = False
-    plot_kind = "abs"
+    with_mfield = True
+    mfield_gauge = 0
+    mfiend_intensity = 50
+
+    # Initial wave function
+    init_wfc = "pw"
+    wfc_center = (x_max * 0.5, y_max * 0.5)
+    wfc_extent = (1.0, 0.0)
+    wfc_kpt = np.array([g_x, 0, 0])
+
+    # Output
+    plot_sample = False
+    plot_v_pot = False
+    plot_wfc = True
+    plot_kind = "phase"
+    plot_mean_y = True
 
     # Make sample
     if with_deform:
@@ -126,13 +133,15 @@ def main():
     if with_efield:
         add_efield(sample, center=deform_center)
     if with_mfield:
-        sample.set_magnetic_field(50)
+        sample.set_magnetic_field(mfiend_intensity, gauge=mfield_gauge)
 
     # Initialize wave function
     if init_wfc == "pw":
-        psi0 = init_wfc_pw(sample, kpt)
+        psi0 = init_wfc_pw(sample, wfc_kpt)
+    elif init_wfc == "gaussian":
+        psi0 = init_wfc_gaussian(sample, center=wfc_center, extent=wfc_extent)
     else:
-        psi0 = init_wfc_gaussian(sample, center=wfc_center, extent=(1.0, 0.0))
+        psi0 = init_wfc_random(sample)
 
     # Propagate wave function
     config = tb.Config()
@@ -147,35 +156,41 @@ def main():
     psi_t = solver.calc_psi_t(psi0, time_log)
 
     # Plot the model
-    sample.plot(with_cells=False, hop_as_arrows=False, with_orbitals=False,
-                fig_name="struct.png", fig_dpi=100)
+    if plot_sample:
+        sample.plot(with_cells=False, hop_as_arrows=False, with_orbitals=False,
+                    fig_name="struct.png", fig_dpi=100)
+
+    # Plot potential
+    vis = tb.Visualizer()
+    if plot_v_pot:
+        vis.plot_wfc(sample, sample.orb_eng, cmap="hot", scatter=True,
+                     fig_name="v_pot.png", fig_dpi=100)
 
     # Plot time-dependent wave function
-    vis = tb.Visualizer()
-    vis.plot_wfc(sample, sample.orb_eng, cmap="hot", scatter=True,
-                 fig_name="v_pot.png", fig_dpi=100)
-    for i in range(len(time_log)):
-        if plot_kind == "abs":
-            wfc = np.abs(psi_t[i])**2
-        elif plot_kind == "real":
-            wfc = psi_t[i].real
-        elif plot_kind == "imag":
-            wfc = psi_t[i].imag
-        elif plot_kind == "phase":
-            wfc =  np.arccos(psi_t[i].real / np.abs(psi_t[i]))
-        else:
-            raise ValueError(f"Illegal {plot_kind}")
-        vis.plot_wfc(sample, wfc, cmap="hot", scatter=False,
-                     fig_name=f"{time_log[i]}.png", fig_dpi=100)
+    if plot_wfc:
+        for i in range(len(time_log)):
+            if plot_kind == "abs":
+                wfc = np.abs(psi_t[i])**2
+            elif plot_kind == "real":
+                wfc = psi_t[i].real
+            elif plot_kind == "imag":
+                wfc = psi_t[i].imag
+            elif plot_kind == "phase":
+                wfc = np.angle(psi_t[i])
+            else:
+                raise ValueError(f"Illegal {plot_kind}")
+            vis.plot_wfc(sample, wfc, cmap="hot", scatter=False,
+                         fig_name=f"{time_log[i]}.png", fig_dpi=100)
 
-    # # Plot mean y
-    # mean_y = np.zeros(len(time_log), dtype=float)
-    # orb_pos_y = sample.orb_pos[:, 1]
-    # for i_t, psi in enumerate(psi_t):
-    #     mean_y[i_t] = np.dot(orb_pos_y, np.abs(psi)**2)
-    # vis.plot_xy(time_log, mean_y)
-
-    estimate_step(50, sample.rescale)
+    # Plot mean y
+    if plot_mean_y:
+        mean_y = np.zeros(len(time_log), dtype=float)
+        orb_pos_y = sample.orb_pos[:, 1]
+        for i_t, psi in enumerate(psi_t):
+            mean_y[i_t] = np.dot(orb_pos_y, np.abs(psi)**2)
+        vis.plot_xy(time_log, mean_y)
+        np.save("time_log", time_log)
+        np.save(f"mean_y_{dim[1]}", mean_y)
 
 
 if __name__ == "__main__":
