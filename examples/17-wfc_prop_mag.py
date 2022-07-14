@@ -103,7 +103,7 @@ def main():
     with_deform = False
     deform_center = (x_max * 0.75, y_max * 0.5)
     with_efield = False
-    with_mfield = True
+    with_mfield = False
     mfield_gauge = 0
     mfiend_intensity = 50
 
@@ -117,8 +117,8 @@ def main():
     plot_sample = False
     plot_v_pot = False
     plot_wfc = True
-    plot_kind = "phase"
-    plot_mean_y = True
+    plot_kind = "abs"
+    plot_mean_y = False
 
     # Make sample
     if with_deform:
