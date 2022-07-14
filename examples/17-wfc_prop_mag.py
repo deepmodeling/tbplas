@@ -87,6 +87,12 @@ def init_wfc_random(sample):
     return wfc
 
 
+def init_wfc_uniform(sample):
+    wfc = np.ones(sample.num_orb_tot, dtype=np.complex128)
+    wfc /= np.linalg.norm(wfc)
+    return wfc
+
+
 def main():
     # Fundamental parameters
     prim_cell = tb.make_graphene_rect()
@@ -108,7 +114,7 @@ def main():
     mfiend_intensity = 50
 
     # Initial wave function
-    init_wfc = "gaussian"
+    init_wfc = "uniform"
     wfc_center = (x_max * 0.5, y_max * 0.5)
     wfc_extent = (1.0, 0.0)
     wfc_kpt = np.array([g_x, 0, 0])
@@ -138,10 +144,14 @@ def main():
     # Initialize wave function
     if init_wfc == "pw":
         psi0 = init_wfc_pw(sample, wfc_kpt)
-    elif init_wfc == "gaussian":
+    elif init_wfc in ("gaussian", "gau"):
         psi0 = init_wfc_gaussian(sample, center=wfc_center, extent=wfc_extent)
-    else:
+    elif init_wfc in ("random", "rand"):
         psi0 = init_wfc_random(sample)
+    elif init_wfc in ("uniform", "uni"):
+        psi0 = init_wfc_uniform(sample)
+    else:
+        raise ValueError(f"Illegal initial wave function type {init_wfc}")
 
     # Propagate wave function
     config = tb.Config()
@@ -178,7 +188,7 @@ def main():
             elif plot_kind == "phase":
                 wfc = np.angle(psi_t[i])
             else:
-                raise ValueError(f"Illegal {plot_kind}")
+                raise ValueError(f"Illegal plot_kind {plot_kind}")
             vis.plot_wfc(sample, wfc, cmap="hot", scatter=False,
                          fig_name=f"{time_log[i]}.png", fig_dpi=100)
 
