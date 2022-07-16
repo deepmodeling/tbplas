@@ -8,7 +8,7 @@ Functions
 Classes
 -------
     PrimitiveCell: user class
-        abstraction for  primitive cell from which a super cell
+        abstraction for primitive cell from which a supercell
         can be created
 """
 
@@ -31,7 +31,7 @@ from ..parallel import MPIEnv
 
 class PrimitiveCell(LockableObject):
     """
-    Class for representing a primitive cell, from which the super cell
+    Class for representing a primitive cell, from which the supercell
     can be built.
 
     Attributes
@@ -299,21 +299,7 @@ class PrimitiveCell(LockableObject):
             raise exc.PCOrbIndexError(orb_i) from err
 
         # Delete associated hopping terms
-        hop_dict = self.hopping_dict.dict
-        for rn, hop_rn in hop_dict.items():
-            for pair in list(hop_rn.keys()):
-                if orb_i in pair:
-                    hop_rn.pop(pair)
-                else:
-                    ii, jj = pair
-                    if ii > orb_i:
-                        ii -= 1
-                    if jj > orb_i:
-                        jj -= 1
-                    new_pair = (ii, jj)
-                    if new_pair != pair:
-                        energy = hop_rn.pop(pair)
-                        hop_rn[new_pair] = energy
+        self.hopping_dict.remove_orbital(orb_i)
 
         # Update timestamps
         self._update_time_stamp('orb_list')
@@ -518,15 +504,14 @@ class PrimitiveCell(LockableObject):
             raise ValueError("Length of pbc is not 3")
 
         # Get the list of hopping terms to keep
-        hop_dict = self.hopping_dict.dict
-        for rn in list(hop_dict.keys()):
+        for rn in self.hopping_dict.get_rn():
             to_keep = True
             for i_dim in range(3):
                 if not pbc[i_dim] and rn[i_dim] != 0:
                     to_keep = False
                     break
             if not to_keep:
-                hop_dict.pop(rn)
+                self.hopping_dict.remove_rn(rn)
         self._update_time_stamp('hop_dict')
         self.sync_array()
 

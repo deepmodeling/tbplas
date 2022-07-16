@@ -279,6 +279,82 @@ class PCIntraHopping:
             status = False
         return status
 
+    def get_rn(self):
+        """
+        Get the list of cell indices.
+
+        :return: list of cell indices
+        """
+        return list(self.dict.keys())
+
+    def remove_rn(self, rn: tuple):
+        """
+        Remove all the hopping terms of given cell index.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :return: status
+            where the hopping terms are removed, False if not found
+        """
+        rn, pair, conj = self._norm_keys(rn, 0, 0)
+        try:
+            self.dict.pop(rn)
+            status = True
+        except KeyError:
+            status = False
+        return status
+
+    def remove_orbital(self, orb_i: int, algo: str = "fast"):
+        """
+        Remove all hopping terms associated with given orbital and update
+        orbital indices of remaining terms.
+
+        :param int orb_i: orbital index to remove
+        :param str algo: algorithm to deal with hopping terms
+        :return: None.
+        """
+        for rn, hop_rn in self.dict.items():
+            if algo == "fast":
+                # Determine the orbital pairs to remove and to update
+                pair_to_remove = []
+                pair_to_update = dict()
+                for pair in list(hop_rn.keys()):
+                    if orb_i in pair:
+                        pair_to_remove.append(pair)
+                    else:
+                        ii, jj = pair
+                        if ii > orb_i:
+                            ii -= 1
+                        if jj > orb_i:
+                            jj -= 1
+                        new_pair = (ii, jj)
+                        if new_pair != pair:
+                            pair_to_update[pair] = new_pair
+
+                # Remove and update paris
+                # CAUTION: Removal must be done before updating. And the pairs
+                # must be sorted before updating. Otherwise, the results will
+                # be unpredictable.
+                for pair in pair_to_remove:
+                    hop_rn.pop(pair)
+                for pair in sorted(pair_to_update.keys()):
+                    new_pair = pair_to_update[pair]
+                    energy = hop_rn.pop(pair)
+                    hop_rn[new_pair] = energy
+            else:
+                new_hop_rn = dict()
+                for pair in hop_rn.keys():
+                    if orb_i in pair:
+                        pass
+                    else:
+                        ii, jj = pair
+                        if ii > orb_i:
+                            ii -= 1
+                        if jj > orb_i:
+                            jj -= 1
+                        new_pair = (ii, jj)
+                        new_hop_rn[new_pair] = hop_rn[pair]
+                self.dict[rn] = new_hop_rn
+
     def to_array(self):
         """
         Convert hopping terms to array of 'hop_ind' and 'hop_eng',
