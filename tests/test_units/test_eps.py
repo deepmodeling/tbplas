@@ -16,7 +16,7 @@ cell.add_hopping([1, 0], 1, 0, t)
 cell.add_hopping([0, 1], 1, 0, t)
 
 # Create sample
-super_cell_pbc = tb.SuperCell(cell, dim=(2048, 2048, 1),
+super_cell_pbc = tb.SuperCell(cell, dim=(4096, 4096, 1),
                               pbc=(True, True, False))
 sample_pbc = tb.Sample(super_cell_pbc)
 sample_pbc.rescale_ham(9.0)
@@ -31,12 +31,13 @@ solver = tb.Solver(sample_pbc, config, prefix="test")
 analyzer = tb.Analyzer(sample_pbc, config, dimension=2)
 vis = tb.Visualizer()
 
-from_scratch = False
+from_scratch = True
 if from_scratch:
     corr_dp = solver.calc_corr_dyn_pol()
 else:
     corr_dp = np.load("sim_data/test.corr_dyn_pol.npy")
 q, omegas, dp = analyzer.calc_dyn_pol(corr_dp)
-epsilon = analyzer.calc_epsilon2(dp)
+epsilon = analyzer.calc_epsilon(dp)
 
-vis.plot_xy(omegas, epsilon[0].real)
+np.save("omegas_eps", omegas)
+np.save("eps", epsilon)

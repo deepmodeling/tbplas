@@ -16,7 +16,7 @@ cell.add_hopping([1, 0], 1, 0, t)
 cell.add_hopping([0, 1], 1, 0, t)
 
 # Create sample
-super_cell_pbc = tb.SuperCell(cell, dim=(2048, 2048, 1),
+super_cell_pbc = tb.SuperCell(cell, dim=(4096, 4096, 1),
                               pbc=(True, True, False))
 sample_pbc = tb.Sample(super_cell_pbc)
 sample_pbc.rescale_ham(9.0)
@@ -37,4 +37,5 @@ else:
     corr_ac = np.load("sim_data/test.corr_AC.npy")
 omegas, ac_cond = analyzer.calc_ac_cond(corr_ac)
 
-vis.plot_xy(omegas/t, ac_cond[0].real*4)
+np.save("omegas_ac", omegas)
+np.save("ac", ac_cond)
