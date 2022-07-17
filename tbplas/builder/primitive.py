@@ -271,13 +271,28 @@ class PrimitiveCell(LockableObject):
             raise exc.PCOrbIndexError(orb_i) from err
         return orbital
 
-    def remove_orbital(self, orb_i, sync_array=False, **kwargs):
+    def remove_orbital(self, orb_i, **kwargs):
         """
-        Remove given orbital and associated hopping terms, then update remaining
-        hopping terms.
+        Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param orb_i: integer
             index of the orbital to remove
+        :param kwargs: dictionary
+            arguments for method 'remove_orbitals'
+        :return: None
+            self.orbital_list and self.hopping_list are modified.
+        :raises PCLockError: if the primitive cell is locked
+        :raises PCOrbIndexError: if orb_i falls out of range
+        """
+        self.remove_orbitals([orb_i], **kwargs)
+
+    def remove_orbitals(self, indices, sync_array=False, **kwargs):
+        """
+        Remove given orbitals and associated hopping terms, then update
+        remaining hopping terms.
+
+        :param indices: List[int]
+            indices of orbitals to remove
         :param sync_array: boolean
             whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
@@ -292,14 +307,16 @@ class PrimitiveCell(LockableObject):
         if self.is_locked:
             raise exc.PCLockError()
 
-        # Delete the orbital
-        try:
-            self.orbital_list.pop(orb_i)
-        except IndexError as err:
-            raise exc.PCOrbIndexError(orb_i) from err
+        # Delete the orbitals
+        indices = sorted(indices)
+        for i, orb_i in enumerate(indices):
+            try:
+                self.orbital_list.pop(orb_i - i)
+            except IndexError as err:
+                raise exc.PCOrbIndexError(orb_i) from err
 
         # Delete associated hopping terms
-        self.hopping_dict.remove_orbital(orb_i)
+        self.hopping_dict.remove_orbitals(indices)
 
         # Update timestamps
         self._update_time_stamp('orb_list')
@@ -480,10 +497,7 @@ class PrimitiveCell(LockableObject):
         orb_id_trim = [i_o for i_o, count in enumerate(hop_count) if count <= 1]
 
         # Remove orbitals and hopping terms
-        # Orbital indices should be sorted in increasing order.
-        orb_id_trim = sorted(orb_id_trim)
-        for i, orb_id in enumerate(orb_id_trim):
-            self.remove_orbital(orb_id - i)
+        self.remove_orbitals(orb_id_trim)
         self.sync_array()
 
     def apply_pbc(self, pbc=(True, True, True)):

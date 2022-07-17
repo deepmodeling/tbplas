@@ -11,7 +11,7 @@ cell level. Here are the summary of the Python-based tools:
 * reshape_prim_cell
 * extend_prim_cell
 * apply_pbc
-* remove_orbital
+* remove_orbitals
 * remove_hopping
 * trim
 * spiral_prim_cell
@@ -24,7 +24,7 @@ is a method of the :class:`PrimitiveCell` class, and makes a periodic primitive 
 removing hopping terms to neighbouring cells along given directions. We will show the usage of these
 functions by constructing graphene nano-ribbon with armchair and zigzag edges from the primitive cell.
 
-:func:`remove_orbital` and :func:`remove_hopping` are also methods of the :class:`PrimitiveCell` class, and
+:func:`remove_orbitals` and :func:`remove_hopping` are also methods of the :class:`PrimitiveCell` class, and
 remove an orbital or hopping term from the primitive cell, respectively. Dangling orbitals and hopping terms
 may remain in the cell after the removal, and can be trimmed with the :func:`trim` method. We will show the
 usage of these functions by constructing a large graphene cell with vacancies.
@@ -192,7 +192,7 @@ Remove orbitals and hopping terms
 
 .. rubric:: Remove orbitals
 
-To demonstrate the usage of :func:`remove_orbital` and :func:`remove_hopping` we need to import the diamond-shaped
+To demonstrate the usage of :func:`remove_orbitals` and :func:`remove_hopping` we need to import the diamond-shaped
 primitive cell of graphene and extend it by 3 times along :math:`a` and :math:`b` directions:
 
 .. code-block:: python
@@ -214,6 +214,7 @@ We remove orbital #8 and #14 with the following commands:
 
 .. code-block:: python
 
+    cell.remove_orbitals([8, 14])
     orb_to_remove = [8, 14]
     for i, orb in enumerate(sorted(orb_to_remove)):
         cell.remove_orbital(orb - i)

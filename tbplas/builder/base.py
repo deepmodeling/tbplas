@@ -27,6 +27,7 @@ Classes
 """
 
 import math
+from typing import List
 
 import numpy as np
 
@@ -303,57 +304,49 @@ class PCIntraHopping:
             status = False
         return status
 
-    def remove_orbital(self, orb_i: int, algo: str = "fast"):
+    def remove_orbital(self, orb_i: int):
         """
-        Remove all hopping terms associated with given orbital and update
-        orbital indices of remaining terms.
+        Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param int orb_i: orbital index to remove
-        :param str algo: algorithm to deal with hopping terms
         :return: None.
         """
-        for rn, hop_rn in self.dict.items():
-            if algo == "fast":
-                # Determine the orbital pairs to remove and to update
-                pair_to_remove = []
-                pair_to_update = dict()
-                for pair in list(hop_rn.keys()):
-                    if orb_i in pair:
-                        pair_to_remove.append(pair)
-                    else:
-                        ii, jj = pair
-                        if ii > orb_i:
-                            ii -= 1
-                        if jj > orb_i:
-                            jj -= 1
-                        new_pair = (ii, jj)
-                        if new_pair != pair:
-                            pair_to_update[pair] = new_pair
+        self.remove_orbitals([orb_i])
 
-                # Remove and update paris
-                # CAUTION: Removal must be done before updating. And the pairs
-                # must be sorted before updating. Otherwise, the results will
-                # be unpredictable.
-                for pair in pair_to_remove:
-                    hop_rn.pop(pair)
-                for pair in sorted(pair_to_update.keys()):
-                    new_pair = pair_to_update[pair]
-                    energy = hop_rn.pop(pair)
-                    hop_rn[new_pair] = energy
-            else:
-                new_hop_rn = dict()
-                for pair in hop_rn.keys():
-                    if orb_i in pair:
-                        pass
-                    else:
-                        ii, jj = pair
-                        if ii > orb_i:
-                            ii -= 1
-                        if jj > orb_i:
-                            jj -= 1
-                        new_pair = (ii, jj)
-                        new_hop_rn[new_pair] = hop_rn[pair]
-                self.dict[rn] = new_hop_rn
+    def remove_orbitals(self, indices: List[int]):
+        """
+        Remove the hopping terms corresponding to a list of orbitals and update
+        remaining hopping terms.
+
+        :param indices: List[int]
+            indices of orbitals to remove
+        :return: None
+        """
+        indices = sorted(indices)
+        idx_remap = dict()
+
+        def _remap(orb_i):
+            try:
+                result = idx_remap[orb_i]
+            except KeyError:
+                result = orb_i
+                for j in indices:
+                    if j < orb_i:
+                        result -= 1
+                idx_remap[orb_i] = result
+            return result
+
+        for rn, hop_rn in self.dict.items():
+            new_hop_rn = dict()
+            for pair in hop_rn.keys():
+                ii, jj = pair
+                if ii in indices or jj in indices:
+                    pass
+                else:
+                    ii = _remap(ii)
+                    jj = _remap(jj)
+                    new_hop_rn[(ii, jj)] = hop_rn[pair]
+            self.dict[rn] = new_hop_rn
 
     def to_array(self):
         """
