@@ -15,6 +15,7 @@ def plot_dp():
         omegas = np.load(f"{pref}/omegas_dp.npy")
         data = np.load(f"{pref}/dp.npy")
         plt.plot(omegas/t, -data.imag[0]*t*a**2, color=colors[i])
+    plt.minorticks_on()
     plt.grid()
     plt.show()
     plt.close()
