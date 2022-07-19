@@ -278,6 +278,11 @@ class PCIntraHopping:
             status = True
         except KeyError:
             status = False
+        try:
+            if self.dict[rn] == {}:
+                self.dict.pop(rn)
+        except KeyError:
+            pass
         return status
 
     def get_rn(self):
@@ -347,6 +352,10 @@ class PCIntraHopping:
                     jj = _remap(jj)
                     new_hop_rn[(ii, jj)] = hop_rn[pair]
             self.dict[rn] = new_hop_rn
+
+        for rn in list(self.dict.keys()):
+            if self.dict[rn] == {}:
+                self.dict.pop(rn)
 
     def to_array(self):
         """
