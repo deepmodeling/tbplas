@@ -157,7 +157,7 @@ def frac2cart(lattice_vectors, fractional_coordinates):
     return cartesian_coordinates
 
 
-def rotate_coord(coord, angle=0.0, axis="z"):
+def rotate_coord(coord, angle=0.0, axis="z", center=np.zeros(3)):
     """
     Rotate Cartesian coordinates according to Euler angles.
 
@@ -175,10 +175,18 @@ def rotate_coord(coord, angle=0.0, axis="z"):
     :param axis: string
         axis around which the rotation is performed
         x - pitch, y - roll, z - yawn
+    :param center: (3,) float64 array
+        Cartesian coordinate of rotation center
     :return: coord_rot: (num_coord, 3) float64 array
         rotated Cartesian coordinates
     :raises ValueError: if axis is not "x", "y" or "z"
     """
+    if not isinstance(coord, np.ndarray):
+        coord = np.array(coord)
+    if not isinstance(center, np.ndarray):
+        center = np.array(center)
+    if len(center) != 3:
+        raise ValueError(f"Length of rotation center should be 3")
     cos_ang, sin_ang = cos(-angle), sin(-angle)
     rot_mat = np.eye(3)
     if axis == "x":
@@ -200,7 +208,7 @@ def rotate_coord(coord, angle=0.0, axis="z"):
         raise ValueError("Axis should be in 'x', 'y', 'z'")
     coord_rot = np.zeros(shape=coord.shape, dtype=coord.dtype)
     for i in range(coord.shape[0]):
-        coord_rot[i] = np.matmul(rot_mat, coord[i])
+        coord_rot[i] = np.matmul(rot_mat, coord[i] - center) + center
     return coord_rot
 
 

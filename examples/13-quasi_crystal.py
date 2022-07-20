@@ -9,9 +9,8 @@ import tbplas as tb
 
 def rotate(center, angle):
     def _rotate(orb_pos):
-        pos_shift = orb_pos - center
-        pos_shift = tb.rotate_coord(pos_shift, angle=angle/180*math.pi)
-        pos_shift = pos_shift + center
+        pos_shift = tb.rotate_coord(orb_pos, angle=angle/180*math.pi,
+                                    center=center)
         orb_pos[:, :] = pos_shift
     return _rotate
 
@@ -37,13 +36,13 @@ def make_quasi_crystal_pc(prim_cell, dim, center):
 
     # Get rotated lattice vectors of top layer
     angle = 30 / 180 * math.pi
-    end_points = np.vstack((np.zeros(3), top_layer.lat_vec)) - center
-    end_points = tb.rotate_coord(end_points, angle)
+    end_points = np.vstack((np.zeros(3), top_layer.lat_vec))
+    end_points = tb.rotate_coord(end_points, angle, center=center)
     lat_vec = end_points[1:] - end_points[0]
 
     # Get rotated orbital positions of top layer
-    orb_pos = top_layer.orb_pos_nm - center
-    orb_pos = tb.rotate_coord(orb_pos, angle) + center
+    orb_pos = top_layer.orb_pos_nm
+    orb_pos = tb.rotate_coord(orb_pos, angle, center=center)
     orb_pos = tb.cart2frac(lat_vec, orb_pos)
 
     # Rotate top layer
