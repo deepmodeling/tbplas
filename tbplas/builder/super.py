@@ -208,7 +208,7 @@ class OrbitalSet(LockableObject):
 
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
-        Add a vacancy to existing list of vacancies.
+        Wrapper over 'add_vacancies' to add a single vacancy to the orbital set.
 
         :param vacancy: (ia, ib, ic, io) or equivalent int32 array
             vacancy index in primitive cell representation
@@ -225,24 +225,47 @@ class OrbitalSet(LockableObject):
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
+        self.add_vacancies([vacancy], sync_array=sync_array, **kwargs)
+
+    def add_vacancies(self, vacancies, sync_array=True, **kwargs):
+        """
+        Add a list of vacancies to the orbital set.
+
+        :param vacancies: list of (ia, ib, ic, io) or equivalent int32 arrays
+            list of indices of vacancies in primitive cell representation
+        :param sync_array: boolean
+            whether to call 'sync_array' to update the arrays
+        :param kwargs: dictionary
+            arguments for method 'sync_array'
+        :return: None
+            self.vacancy_list is modified.
+            self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
+            be modified if sync_array is True.
+        :raises OrbSetLockError: if the object is locked
+        :raises VacIDPCLenError: if length of vacancy index is not 4
+        :raises VacIDPCIndexError: if cell or orbital index of vacancy is
+            out of range
+        """
         if self.is_locked:
             raise exc.OrbSetLockError()
 
-        # Convert and check vacancy
-        if not isinstance(vacancy, tuple):
-            vacancy = tuple(vacancy)
-        try:
-            self.check_id_pc(vacancy)
-        except exc.IDPCLenError as err:
-            raise exc.VacIDPCLenError(err.id_pc) from err
-        except exc.IDPCIndexError as err:
-            raise exc.VacIDPCIndexError(err.i_dim, err.id_pc) from err
+        for vacancy in vacancies:
+            # Convert and check vacancy
+            if not isinstance(vacancy, tuple):
+                vacancy = tuple(vacancy)
+            try:
+                self.check_id_pc(vacancy)
+            except exc.IDPCLenError as err:
+                raise exc.VacIDPCLenError(err.id_pc) from err
+            except exc.IDPCIndexError as err:
+                raise exc.VacIDPCIndexError(err.i_dim, err.id_pc) from err
 
-        # Add vacancy
-        if vacancy not in self.vacancy_list:
-            self.vacancy_list.append(vacancy)
-            if sync_array:
-                self.sync_array(**kwargs)
+            # Add vacancy
+            if vacancy not in self.vacancy_list:
+                self.vacancy_list.append(vacancy)
+
+        if sync_array:
+            self.sync_array(**kwargs)
 
     def set_vacancies(self, vacancies=None, sync_array=True, **kwargs):
         """
@@ -264,10 +287,7 @@ class OrbitalSet(LockableObject):
             out of range
         """
         self.vacancy_list = []
-        for vacancy in vacancies:
-            self.add_vacancy(vacancy)
-        if sync_array:
-            self.sync_array(**kwargs)
+        self.add_vacancies(vacancies, sync_array=sync_array, **kwargs)
 
     def sync_array(self, verbose=False, force_sync=False):
         """

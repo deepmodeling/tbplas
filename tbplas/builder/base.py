@@ -262,13 +262,15 @@ class PCIntraHopping:
             energy = energy.conjugate()
         return energy, status
 
-    def remove_hopping(self, rn: tuple, orb_i: int, orb_j: int):
+    def remove_hopping(self, rn: tuple, orb_i: int, orb_j: int, clean=False):
         """
         Remove an existing hopping term.
 
         :param tuple rn: (r_a, r_b, r_c), cell index
         :param int orb_i: orbital index or bra
         :param int orb_j: orbital index of ket
+        :param clean: boolean
+            whether to call 'clean' to remove empty cell indices
         :return: status
             where the hopping term is removed, False if not found
         """
@@ -278,11 +280,8 @@ class PCIntraHopping:
             status = True
         except KeyError:
             status = False
-        try:
-            if self.dict[rn] == {}:
-                self.dict.pop(rn)
-        except KeyError:
-            pass
+        if clean:
+            self.clean()
         return status
 
     def get_rn(self):
@@ -309,22 +308,26 @@ class PCIntraHopping:
             status = False
         return status
 
-    def remove_orbital(self, orb_i: int):
+    def remove_orbital(self, orb_i: int, clean=False):
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param int orb_i: orbital index to remove
+        :param clean: boolean
+            whether to call 'clean' to remove empty cell indices
         :return: None.
         """
-        self.remove_orbitals([orb_i])
+        self.remove_orbitals([orb_i], clean=clean)
 
-    def remove_orbitals(self, indices: List[int]):
+    def remove_orbitals(self, indices: List[int], clean=True):
         """
         Remove the hopping terms corresponding to a list of orbitals and update
         remaining hopping terms.
 
         :param indices: List[int]
             indices of orbitals to remove
+        :param clean: boolean
+            whether to call 'clean' to remove empty cell indices
         :return: None
         """
         indices = sorted(indices)
@@ -353,6 +356,15 @@ class PCIntraHopping:
                     new_hop_rn[(ii, jj)] = hop_rn[pair]
             self.dict[rn] = new_hop_rn
 
+        if clean:
+            self.clean()
+
+    def clean(self):
+        """
+        Remove empty cell indices.
+
+        :return: None. self.dict is modified.
+        """
         for rn in list(self.dict.keys()):
             if self.dict[rn] == {}:
                 self.dict.pop(rn)

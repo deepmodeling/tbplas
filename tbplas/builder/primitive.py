@@ -271,12 +271,15 @@ class PrimitiveCell(LockableObject):
             raise exc.PCOrbIndexError(orb_i) from err
         return orbital
 
-    def remove_orbital(self, orb_i, **kwargs):
+    def remove_orbital(self, orb_i, sync_array=False, **kwargs):
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param orb_i: integer
             index of the orbital to remove
+        :param sync_array: boolean
+            whether to call sync_array to update numpy arrays
+            according to orbitals and hopping terms
         :param kwargs: dictionary
             arguments for method 'remove_orbitals'
         :return: None
@@ -284,9 +287,9 @@ class PrimitiveCell(LockableObject):
         :raises PCLockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         """
-        self.remove_orbitals([orb_i], **kwargs)
+        self.remove_orbitals([orb_i], sync_array=sync_array, **kwargs)
 
-    def remove_orbitals(self, indices, sync_array=False, **kwargs):
+    def remove_orbitals(self, indices, sync_array=True, **kwargs):
         """
         Remove given orbitals and associated hopping terms, then update
         remaining hopping terms.
@@ -389,7 +392,7 @@ class PrimitiveCell(LockableObject):
             self.sync_array(**kwargs)
 
     def add_hopping_dict(self, hop_dict: HopDict, eng_cutoff=1e-5,
-                         sync_array=False, **kwargs):
+                         sync_array=True, **kwargs):
         """
         Add a matrix of hopping terms to the primitive cell, or update existing
         hopping terms.
