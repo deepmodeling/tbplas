@@ -862,9 +862,7 @@ class SuperCell(OrbitalSet):
         orb_id_trim = core.get_orb_id_trim(self.orb_id_pc, hop_i, hop_j)
 
         # Add vacancies
-        for orb_id in orb_id_trim:
-            self.add_vacancy(orb_id)
-        self.sync_array(force_sync=True)
+        self.add_vacancies(orb_id_trim)
 
         # Also trim hop_modifier
         if self.hop_modifier is not None:
