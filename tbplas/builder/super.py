@@ -170,7 +170,7 @@ class OrbitalSet(LockableObject):
 
         # Set vacancies if any
         if vacancies is not None:
-            self.set_vacancies(vacancies)
+            self.add_vacancies(vacancies)
 
     def _check_id_pc(self, id_pc):
         """
@@ -190,13 +190,20 @@ class OrbitalSet(LockableObject):
         """
         if len(id_pc) != 4:
             raise exc.IDPCLenError(id_pc)
-        if not isinstance(id_pc, tuple) and not isinstance(id_pc, np.ndarray):
+        if isinstance(id_pc, tuple):
+            for i in range(3):
+                if id_pc[i] not in range(self.dim.item(i)):
+                    raise exc.IDPCIndexError(i, id_pc)
+            if id_pc[3] not in range(self.num_orb_pc):
+                raise exc.IDPCIndexError(3, id_pc)
+        elif isinstance(id_pc, np.ndarray):
+            for i in range(3):
+                if id_pc.item(i) not in range(self.dim.item(i)):
+                    raise exc.IDPCIndexError(i, id_pc)
+            if id_pc.item(3) not in range(self.num_orb_pc):
+                raise exc.IDPCIndexError(3, id_pc)
+        else:
             raise exc.IDPCTypeError(id_pc)
-        for i in range(3):
-            if id_pc[i] not in range(self.dim.item(i)):
-                raise exc.IDPCIndexError(i, id_pc)
-        if id_pc[3] not in range(self.num_orb_pc):
-            raise exc.IDPCIndexError(3, id_pc)
 
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
@@ -384,6 +391,8 @@ class OrbitalSet(LockableObject):
         :raises IDSCIndexError: if any id_sc in id_sc_array is out of range
         """
         self.sync_array()
+        if not isinstance(id_sc_array, np.ndarray):
+            id_sc_array = np.array(id_sc_array, dtype=np.int64)
         status = core.check_id_sc_array(self.num_orb_sc, id_sc_array)
         if status[0] == -1:
             raise exc.IDSCIndexError(id_sc_array[status[1]])
@@ -399,10 +408,15 @@ class OrbitalSet(LockableObject):
             orbital indices in primitive cell representation
         :return: id_sc_array: (num_orb,) int64 array
             orbital indices in supercell representation
+        :raises IDPCLenError: if id_pc_array.shape[1] != 4
         :raises IDPCIndexError: if any id_pc in id_pc_array is out of range
         :raises IDPCVacError: if any id_pc in id_pc_array is a vacancy
         """
         self.sync_array()
+        if not isinstance(id_pc_array, np.ndarray):
+            id_pc_array = np.array(id_pc_array, dtype=np.int32)
+        if id_pc_array.shape[1] != 4:
+            raise exc.IDPCLenError(id_pc_array[0])
         status = core.check_id_pc_array(self.dim, self.num_orb_pc,
                                         id_pc_array, self.vac_id_pc)
         if status[0] == -2:
