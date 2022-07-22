@@ -1,5 +1,5 @@
 """
-Functions and classes for super cell.
+Functions and classes for supercell.
 
 Functions
 ---------
@@ -8,11 +8,11 @@ Functions
 Classes
 -------
     OrbitalSet: developer class
-        container class for orbitals and vacancies in the super cell
+        container class for orbitals and vacancies in the supercell
     IntraHopping: user class
-        container class for modifications to hopping terms in the super cell
+        container class for modifications to hopping terms in the supercell
     SuperCell: user class
-        abstraction for a super cell from which the sample is constructed
+        abstraction for a supercell from which the sample is constructed
 """
 
 from typing import Callable
@@ -30,49 +30,48 @@ from .utils import ModelViewer
 
 class OrbitalSet(LockableObject):
     """
-    Container class for orbitals and vacancies in the super cell.
+    Container class for orbitals and vacancies in the supercell.
 
     Attributes
     ----------
     prim_cell: instance of 'PrimitiveCell' class
-        primitive cell from which the super cell is constructed
+        primitive cell from which the supercell is constructed
     dim: (3,) int32 array
-        dimension of the super cell along a, b, and c directions
+        dimension of the supercell along a, b, and c directions
     pbc: (3,) int32 array
         whether to enable periodic condition along a, b, and c directions
         0 for False, 1 for True.
     vacancy_list: list of (ia, ib, ic, io)
         indices of vacancies in primitive cell representation
         None if there are no vacancies.
-    hash_dict: dictionary
-        dictionary of hash of tuple(vacancy_list)
+    hash_dict: dictionary of hash of tuple(vacancy_list)
         Key should be 'vac'.
         Method 'sync_array' will use this flag to update the arrays.
         Should only be accessed within that method!
     vac_id_pc: (num_vac, 4) int32 array
         indices of vacancies in primitive cell representation
     vac_id_sc: (num_vac,) int64 array
-        indices of vacancies in super cell representation
+        indices of vacancies in supercell representation
     orb_id_pc: (num_orb_sc, 4) int32 array
         indices of orbitals in primitive cell representation
 
     NOTES
     -----
-    1. Minimal super cell dimension
+    1. Minimal supercell dimension
 
     Assume that we have a primitive cell located at R=0. The furthest primitive
     cell between which hopping terms exist is located at R=N. It can be proved
-    that if the dimension of super cell along that direction is less than N,
+    that if the dimension of supercell along that direction is less than N,
     the same matrix element hij will appear more than one time in hop_i, hop_j
     and hop_v of 'SuperCell' class, as well as its conjugate counterpart. This
     will complicate the program and significantly slow it down, which situation
     we must avoid.
 
-    Further, if the dimension of super cell falls in [N, 2*N], hij will appear
+    Further, if the dimension of supercell falls in [N, 2*N], hij will appear
     only one time, yet its conjugate counterpart still exists. Although no
     problems have been found so far, we still need to avoid this situation.
 
-    So the minimal dimension of super cell is 2*N+1, where N is the index of
+    So the minimal dimension of supercell is 2*N+1, where N is the index of
     the furthest primitive cell between which hopping terms exists. Otherwise,
     the 'SuperCell' class, as well as the core functions of '_get_num_hop_sc',
     'build_hop', 'build_hop_k' and 'fill_ham' will not work properly.
@@ -90,7 +89,7 @@ class OrbitalSet(LockableObject):
     it for reduce memory usage.
 
     However, it should be noted that vac_id_sc and orb_id_sc are generated via
-    different approaches. We show it by an example of 2*2 super cell with 2
+    different approaches. We show it by an example of 2*2 supercell with 2
     orbitals per primitive cell. The indices of orbitals as well as vacancies
     in primitive cell representation are
                id_pc    id_sc    type
@@ -119,9 +118,9 @@ class OrbitalSet(LockableObject):
                  vacancies=None) -> None:
         """
         :param prim_cell: instance of 'PrimitiveCell'
-            primitive cell from which the super cell is constructed
+            primitive cell from which the supercell is constructed
         :param dim: (na, nb, nc)
-            dimension of the super cell along a, b and c directions
+            dimension of the supercell along a, b and c directions
         :param pbc: tuple consisting of 3 booleans
             whether to enable periodic boundary condition along a, b, and c
             directions
@@ -340,7 +339,7 @@ class OrbitalSet(LockableObject):
         call this method many times, use orb_id_sc2pc_array instead.
 
         :param id_sc: integer
-            index of orbital in super cell representation
+            index of orbital in supercell representation
         :return: id_pc: (4,) int32 array
             index of orbital in primitive cell representation
         :raises IDSCIndexError: if id_sc is out of range
@@ -363,7 +362,7 @@ class OrbitalSet(LockableObject):
         :param id_pc: (ia, ib, ic, io), or equivalent int32 array
             index of orbital in primitive cell representation
         :return: id_sc: integer
-            index of orbital in super cell representation
+            index of orbital in supercell representation
         :raises IDPCLenError: if len(id_pc) != 4
         :raises IDPCIndexError: if cell or orbital index of id_pc is
             out of range
@@ -386,7 +385,7 @@ class OrbitalSet(LockableObject):
         representation to pc representation.
 
         :param id_sc_array: (num_orb,) int64 array
-            orbital indices in super cell representation
+            orbital indices in supercell representation
         :return: id_pc_array: (num_orb, 4) int32 array
             orbital indices in primitive cell representation
         :raises IDSCIndexError: if any id_sc in id_sc_array is out of range
@@ -406,7 +405,7 @@ class OrbitalSet(LockableObject):
         :param id_pc_array: (num_orb, 4) int32 array
             orbital indices in primitive cell representation
         :return: id_sc_array: (num_orb,) int64 array
-            orbital indices in super cell representation
+            orbital indices in supercell representation
         :raises IDPCIndexError: if any id_pc in id_pc_array is out of range
         :raises IDPCVacError: if any id_pc in id_pc_array is a vacancy
         """
@@ -446,10 +445,10 @@ class OrbitalSet(LockableObject):
     @property
     def num_orb_sc(self):
         """
-        Get the number of orbitals of super cell.
+        Get the number of orbitals of supercell.
 
         :return: integer
-            number of orbitals in super cell
+            number of orbitals in supercell
         """
         num_orb_sc = self.num_orb_pc * np.prod(self.dim).item()
         num_orb_sc -= len(self.vacancy_list)
@@ -458,7 +457,7 @@ class OrbitalSet(LockableObject):
 
 class IntraHopping(LockableObject):
     """
-    Container class for modifications to hopping terms in the super cell.
+    Container class for modifications to hopping terms in the supercell.
 
     Attributes
     ----------
@@ -490,7 +489,7 @@ class IntraHopping(LockableObject):
     counterparts are new to 'SuperCell', they will be appended to hop_* arrays.
     The dr array will also be updated accordingly.
 
-    We restrict hopping terms to reside within the (0, 0, 0) super cell even if
+    We restrict hopping terms to reside within the (0, 0, 0) supercell even if
     periodic conditions are enabled. Other hopping terms will be treated as
     illegal.
     """
@@ -627,23 +626,23 @@ class IntraHopping(LockableObject):
 
 class SuperCell(OrbitalSet):
     """
-    Class for representing a super cell from which the sample is constructed.
+    Class for representing a supercell from which the sample is constructed.
 
     Attributes
     ----------
     hop_modifier: instance of 'IntraHopping' class
-        modification to hopping terms in the super cell
+        modification to hopping terms in the supercell
     orb_pos_modifier: function
-        modification to orbital positions in the super cell
+        modification to orbital positions in the supercell
     """
     def __init__(self, prim_cell: PrimitiveCell, dim, pbc=(False, False, False),
                  vacancies=None, hop_modifier: IntraHopping = None,
                  orb_pos_modifier: Callable[[np.ndarray], None] = None) -> None:
         """
         :param prim_cell: instance of 'PrimitiveCell' class
-            primitive cell from which the super cell is constructed
+            primitive cell from which the supercell is constructed
         :param dim: (na, nb, nc)
-            dimension of the super cell along a, b, and c directions
+            dimension of the supercell along a, b, and c directions
         :param pbc: tuple consisting of 3 booleans
             whether to enable periodic boundary condition along a, b and c
             directions
@@ -652,7 +651,7 @@ class SuperCell(OrbitalSet):
         :param hop_modifier: instance of 'IntraHopping' class
             modification to hopping terms
         :param orb_pos_modifier: function
-            modification to orbital positions in the super cell
+            modification to orbital positions in the supercell
         :return: None
         :raises SCDimLenError: if len(dim) != 2 or 3
         :raises SCDimSizeError: if dimension is smaller than minimal value
@@ -701,20 +700,20 @@ class SuperCell(OrbitalSet):
 
     def get_orb_eng(self):
         """
-        Get energies of all orbitals in the super cell.
+        Get energies of all orbitals in the supercell.
 
         :return: orb_eng: (num_orb_sc,) float64 array
-            on-site energies of orbitals in the super cell in eV
+            on-site energies of orbitals in the supercell in eV
         """
         self.sync_array()
         return core.build_orb_eng(self.pc_orb_eng, self.orb_id_pc)
 
     def get_orb_pos(self):
         """
-        Get positions of all orbitals in the super cell.
+        Get positions of all orbitals in the supercell.
 
         :return: orb_pos: (num_orb_sc, 3) float64 array
-            Cartesian coordinates of orbitals in the super cell in nm
+            Cartesian coordinates of orbitals in the supercell in nm
         """
         self.sync_array()
         orb_pos = core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
@@ -725,7 +724,7 @@ class SuperCell(OrbitalSet):
 
     def get_hop(self):
         """
-        Get indices and energies of all hopping terms in the super cell.
+        Get indices and energies of all hopping terms in the supercell.
 
         NOTE: The hopping terms will be reduced by conjugate relation.
         So only half of them will be returned as results.
@@ -792,7 +791,7 @@ class SuperCell(OrbitalSet):
         # Check for diagonal, duplicate or conjugate terms in hopping terms
         # NOTE: the checking procedure is EXTREMELY SLOW for large models even
         # though it is implemented in Cython. So it is disabled by default.
-        # Hopefully, the limitation on super cell dimension will prohibit the
+        # Hopefully, the limitation on supercell dimension will prohibit the
         # ill situations.
         # status = core.check_hop(hop_i, hop_j)
         # if status[0] == -3:
@@ -809,13 +808,13 @@ class SuperCell(OrbitalSet):
 
     def get_dr(self):
         """
-        Get distances of all hopping terms in the super cell.
+        Get distances of all hopping terms in the supercell.
 
         NOTE: The hopping distances will be reduced by conjugate relation.
         So only half of them will be returned as results.
 
         NOTE: If periodic conditions are enabled, orbital indices in hop_j may
-        be wrapped back if it falls out of the super cell. Nevertheless, the
+        be wrapped back if it falls out of the supercell. Nevertheless, the
         distances in dr are still the ones before wrapping. This is essential
         for adding magnetic field, calculating band structure and many
         properties involving dx and dy.
@@ -973,7 +972,7 @@ class SuperCell(OrbitalSet):
     @property
     def sc_lat_vec(self):
         """
-        Get the lattice vectors of super cell.
+        Get the lattice vectors of supercell.
 
         :return: (3, 3) float64 array
             lattice vectors of primitive cell in nm.
