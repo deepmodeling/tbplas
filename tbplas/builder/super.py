@@ -172,7 +172,7 @@ class OrbitalSet(LockableObject):
         if vacancies is not None:
             self.set_vacancies(vacancies)
 
-    def check_id_pc(self, id_pc):
+    def _check_id_pc(self, id_pc):
         """
         Checks if orbital or vacancy index in primitive cell representation
         is legal.
@@ -190,20 +190,13 @@ class OrbitalSet(LockableObject):
         """
         if len(id_pc) != 4:
             raise exc.IDPCLenError(id_pc)
-        if isinstance(id_pc, tuple):
-            for i in range(3):
-                if id_pc[i] not in range(self.dim.item(i)):
-                    raise exc.IDPCIndexError(i, id_pc)
-            if id_pc[3] not in range(self.num_orb_pc):
-                raise exc.IDPCIndexError(3, id_pc)
-        elif isinstance(id_pc, np.ndarray):
-            for i in range(3):
-                if id_pc.item(i) not in range(self.dim.item(i)):
-                    raise exc.IDPCIndexError(i, id_pc)
-            if id_pc.item(3) not in range(self.num_orb_pc):
-                raise exc.IDPCIndexError(3, id_pc)
-        else:
+        if not isinstance(id_pc, tuple) and not isinstance(id_pc, np.ndarray):
             raise exc.IDPCTypeError(id_pc)
+        for i in range(3):
+            if id_pc[i] not in range(self.dim.item(i)):
+                raise exc.IDPCIndexError(i, id_pc)
+        if id_pc[3] not in range(self.num_orb_pc):
+            raise exc.IDPCIndexError(3, id_pc)
 
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
@@ -253,7 +246,7 @@ class OrbitalSet(LockableObject):
             if not isinstance(vacancy, tuple):
                 vacancy = tuple(vacancy)
             try:
-                self.check_id_pc(vacancy)
+                self._check_id_pc(vacancy)
             except exc.IDPCLenError as err:
                 raise exc.VacIDPCLenError(err.id_pc) from err
             except exc.IDPCIndexError as err:
@@ -370,7 +363,7 @@ class OrbitalSet(LockableObject):
         :raises IDPCVacError: if id_pc corresponds to a vacancy
         """
         self.sync_array()
-        self.check_id_pc(id_pc)
+        self._check_id_pc(id_pc)
         if not isinstance(id_pc, np.ndarray):
             id_pc = np.array(id_pc, dtype=np.int32)
         orb_id_sc = core.id_pc2sc(self.dim, self.num_orb_pc,

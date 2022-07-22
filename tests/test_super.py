@@ -91,45 +91,45 @@ class TestSuper(unittest.TestCase):
 
         # IDPCLenError for tuple
         with self.assertRaises(exc.IDPCLenError) as cm:
-            orb_set.check_id_pc((1, 2, 3))
+            orb_set._check_id_pc((1, 2, 3))
         self.assertRegex(str(cm.exception), msg_len)
 
         # IDPCIndexError for tuple
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc((3, 0, 0, 0))
+            orb_set._check_id_pc((3, 0, 0, 0))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc((0, -1, 0, 0))
+            orb_set._check_id_pc((0, -1, 0, 0))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc((0, 0, 5, 0))
+            orb_set._check_id_pc((0, 0, 5, 0))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc((0, 0, 0, 5))
+            orb_set._check_id_pc((0, 0, 0, 5))
         self.assertRegex(str(cm.exception), msg_orb)
 
         # IDPCLenError for array
         with self.assertRaises(exc.IDPCLenError) as cm:
-            orb_set.check_id_pc(np.array((1, 2, 3)))
+            orb_set._check_id_pc(np.array((1, 2, 3)))
         self.assertRegex(str(cm.exception), msg_len)
 
         # IDPCIndexError for array
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc(np.array((3, 0, 0, 0)))
+            orb_set._check_id_pc(np.array((3, 0, 0, 0)))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc(np.array((0, -1, 0, 0)))
+            orb_set._check_id_pc(np.array((0, -1, 0, 0)))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc(np.array((0, 0, 5, 0)))
+            orb_set._check_id_pc(np.array((0, 0, 5, 0)))
         self.assertRegex(str(cm.exception), msg_cell)
         with self.assertRaises(exc.IDPCIndexError) as cm:
-            orb_set.check_id_pc(np.array((0, 0, 0, 5)))
+            orb_set._check_id_pc(np.array((0, 0, 0, 5)))
         self.assertRegex(str(cm.exception), msg_orb)
 
         # TDPCTypeError
         with self.assertRaises(exc.IDPCTypeError) as cm:
-            orb_set.check_id_pc([0, 0, 0, 0])
+            orb_set._check_id_pc([0, 0, 0, 0])
         self.assertRegex(str(cm.exception), msg_type)
 
     def test03_check_id_pc(self):
@@ -141,13 +141,13 @@ class TestSuper(unittest.TestCase):
         th = TestHelper(self)
 
         def _test():
-            orb_set.check_id_pc((1, 0, 0, 1))
+            orb_set._check_id_pc((1, 0, 0, 1))
         th.test_no_raise(_test, exc.IDPCLenError)
         th.test_no_raise(_test, exc.IDPCIndexError)
         th.test_no_raise(_test, exc.IDPCTypeError)
 
         def _test():
-            orb_set.check_id_pc(np.array((1, 0, 0, 1)))
+            orb_set._check_id_pc(np.array((1, 0, 0, 1)))
         th.test_no_raise(_test, exc.IDPCLenError)
         th.test_no_raise(_test, exc.IDPCIndexError)
         th.test_no_raise(_test, exc.IDPCTypeError)
