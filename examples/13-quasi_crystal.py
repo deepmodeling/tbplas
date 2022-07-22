@@ -3,6 +3,7 @@
 import math
 
 import numpy as np
+from numpy.linalg import norm
 
 import tbplas as tb
 
@@ -21,6 +22,23 @@ def make_quasi_crystal(prim_cell, dim, center_pc):
     sc_fixed = tb.SuperCell(prim_cell, dim)
     sc_rotated = tb.SuperCell(prim_cell, dim,
                               orb_pos_modifier=rotate(center_sc, 30.0))
+
+    # Remove unnecessary orbitals
+    orb_pos_sc_fixed = sc_fixed.get_orb_pos()
+    orb_pos_sc_rotated = sc_rotated.get_orb_pos()
+    idx_rm_fixed = []
+    idx_rm_rotated = []
+    for i, pos in enumerate(orb_pos_sc_fixed):
+        if norm(pos - center_sc) > 3.0:
+            idx_rm_fixed.append(i)
+    for i, pos in enumerate(orb_pos_sc_rotated):
+        if norm(pos - center_sc) > 3.0:
+            idx_rm_rotated.append(i)
+    idx_rm_fixed = np.array(idx_rm_fixed, dtype=np.int64)
+    idx_rm_rotated = np.array(idx_rm_rotated, dtype=np.int64)
+    sc_fixed.set_vacancies(sc_fixed.orb_id_sc2pc_array(idx_rm_fixed))
+    sc_rotated.set_vacancies(sc_rotated.orb_id_sc2pc_array(idx_rm_rotated))
+
     sample = tb.Sample(sc_fixed, sc_rotated)
     return sample
 
@@ -73,6 +91,7 @@ def main():
     center = (2./3, 2./3, 0)
     cell = make_quasi_crystal_pc(prim_cell, dim, center)
     cell.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
+
     sample = make_quasi_crystal(prim_cell, dim, center)
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
 
