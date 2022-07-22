@@ -177,6 +177,8 @@ def top_down(prim_cell: tb.PrimitiveCell,
     final_width = start_width * extension**iteration
     extended_cell = tb.extend_prim_cell(prim_cell,
                                         dim=(final_width, final_width, 1))
+    extended_cell.apply_pbc((False, False, False))
+
     # Create the mask
     start_box = Box(0, 0, final_width - 1, final_width - 1)
     mask = Mask(start_box, num_grid=extension, num_iter=iteration)
@@ -208,6 +210,7 @@ def bottom_up(prim_cell: tb.PrimitiveCell,
     final_width = start_width * extension**iteration
     extended_cell = tb.extend_prim_cell(prim_cell,
                                         dim=(final_width, final_width, 1))
+    extended_cell.apply_pbc((False, False, False))
 
     # Build 0-th order fractal
     fractal = [(ia, ib)
@@ -259,13 +262,13 @@ def main():
     # Create model using top-down approach
     timer = tb.Timer()
     timer.tic("top_down")
-    model = top_down(prim_cell, 2, 4, 3)
+    model = top_down(prim_cell, 2, 3, 3)
     timer.toc("top_down")
     model.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
 
     # Create model using bottom-up approach
     timer.tic("bottom_up")
-    model = bottom_up(prim_cell, 2, 4, 3)
+    model = bottom_up(prim_cell, 2, 3, 3)
     timer.toc("bottom_up")
     model.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
     timer.report_total_time()
