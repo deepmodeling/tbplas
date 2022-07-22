@@ -661,9 +661,8 @@ class SuperCell(OrbitalSet):
         :raises VacIDPCIndexError: if cell or orbital index of any vacancy is
             out of range
         """
-        # Build and lock orbital set
+        # Build orbital set
         super().__init__(prim_cell, dim, pbc=pbc, vacancies=vacancies)
-        self.lock()
 
         # Assign and Lock hop_modifier
         self.hop_modifier = hop_modifier
