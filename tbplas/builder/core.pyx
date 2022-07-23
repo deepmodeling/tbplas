@@ -1091,63 +1091,6 @@ def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def check_hop(long [::1] hop_i, long [::1] hop_j):
-    """
-    Check if there are diagonal, duplicate or conjugate terms in hop_i and hop_j
-    from SuperCell.get_hop().
-
-    Parameters
-    ----------
-    hop_i: (num_hop,) int64 array
-        row indices of hopping terms
-    hop_j: (num_hop,) int64 array
-        column indices of hopping terms
-
-    Returns
-    -------
-    status: (3,) int32 array
-        0th element is the error type:
-            -3: diagonal term found
-            -2: conjugate terms found
-            -1: duplicate terms found
-             0: NO ERROR
-        1st and 2nd elements are the indices of diagonal, duplicate or conjugate
-        terms
-    """
-    cdef long num_hop, ih1, ih2
-    cdef long i_ref, j_ref, i_chk, j_chk
-    cdef int [::1] status
-
-    status = np.zeros(3, dtype=np.int32)
-    num_hop = hop_i.shape[0]
-
-    for ih1 in range(num_hop-1):
-        i_ref, j_ref = hop_i[ih1], hop_j[ih1]
-        # Check for diagonal terms
-        if i_ref == j_ref:
-            status[0] = -3
-            status[1] = ih1
-            status[2] = ih1
-            break
-
-        # Check for duplicate or conjugate terms
-        for ih2 in range(ih1+1, num_hop):
-            i_chk, j_chk = hop_i[ih2], hop_j[ih2]
-            if i_ref == i_chk and j_ref == j_chk:
-                status[0] = -1
-                status[1] = ih1
-                status[2] = ih2
-                break
-            elif i_ref == j_chk and j_ref == i_chk:
-                status[0] = -2
-                status[1] = ih1
-                status[2] = ih2
-                break
-    return np.asarray(status)
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
     """
     Get the indices of orbitals to trim in primitive cell representation.

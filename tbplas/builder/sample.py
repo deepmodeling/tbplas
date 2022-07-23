@@ -382,7 +382,7 @@ class Sample:
         self.dr = None
         self.rescale = 1.0
 
-    def __get_num_orb(self):
+    def _get_num_orb(self):
         """
         Get numbers of orbitals in each supercell.
 
@@ -392,7 +392,7 @@ class Sample:
         num_orb = [sc.num_orb_sc for sc in self.sc_list]
         return num_orb
 
-    def __get_ind_start(self):
+    def _get_ind_start(self):
         """
         Get starting indices of orbitals for each supercell for assembling
         hopping terms and distances.
@@ -400,7 +400,7 @@ class Sample:
         :return: ind_start: list of integers
             starting indices of orbitals for each supercell
         """
-        num_orb = self.__get_num_orb()
+        num_orb = self._get_num_orb()
         ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
         return ind_start
 
@@ -460,7 +460,7 @@ class Sample:
         """
         if force_init or self.hop_i is None:
             hop_i_tot, hop_j_tot, hop_v_tot = [], [], []
-            ind_start = self.__get_ind_start()
+            ind_start = self._get_ind_start()
 
             # Collect hopping terms from each supercell
             for i_sc, sc in enumerate(self.sc_list):
@@ -646,7 +646,7 @@ class Sample:
         """
         self.init_orb_eng()
         self.init_hop()
-        ham_size = sum(self.__get_num_orb())
+        ham_size = sum(self._get_num_orb())
         ham_shape = (ham_size, ham_size)
         ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
         ham_half = csr_matrix((self.hop_v, (self.hop_i, self.hop_j)),
@@ -674,7 +674,7 @@ class Sample:
         """
         self.init_dr()
         dx, dy = self.dr[:, 0], self.dr[:, 1]
-        mat_size = sum(self.__get_num_orb())
+        mat_size = sum(self._get_num_orb())
         shape = (mat_size, mat_size)
         dx_csr = csr_matrix((dx, (self.hop_i, self.hop_j)), shape)
         dy_csr = csr_matrix((dy, (self.hop_i, self.hop_j)), shape)
@@ -839,7 +839,7 @@ class Sample:
 
         # Initialize working arrays.
         num_k_points = len(k_path)
-        num_orbitals = sum(self.__get_num_orb())
+        num_orbitals = sum(self._get_num_orb())
         ham_shape = (num_orbitals, num_orbitals)
         if solver == "lapack":
             num_bands = num_orbitals
@@ -1024,7 +1024,7 @@ class Sample:
         :return: num_orb_tot: int
             total number of orbitals
         """
-        return sum(self.__get_num_orb())
+        return sum(self._get_num_orb())
 
     @property
     def energy_range(self):

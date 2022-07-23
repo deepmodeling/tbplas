@@ -86,7 +86,7 @@ class PCHopNotFoundError(Exception):
 
 
 class SCDimSizeError(Exception):
-    """Exception for super cell dimension with wrong size."""
+    """Exception for supercell dimension with wrong size."""
     def __init__(self, i_dim, dim_min):
         super().__init__()
         self.i_dim = i_dim
@@ -98,12 +98,12 @@ class SCDimSizeError(Exception):
 
 
 class SCDimLenError(CoordLenError):
-    """Exception for super cell dimension of wrong length."""
+    """Exception for supercell dimension of wrong length."""
     def __init__(self, coord):
         super().__init__(coord)
 
     def __str__(self):
-        return f"length of super cell dimension {self.coord} not in (2, 3)"
+        return f"length of supercell dimension {self.coord} not in (2, 3)"
 
 
 class PBCLenError(CoordLenError):
@@ -192,7 +192,7 @@ class IDPCVacError(IDPCError):
 
 class IDSCError(Exception):
     """
-    Base class for exceptions associated with index in super cell
+    Base class for exceptions associated with index in supercell
     representation.
     """
     def __init__(self, id_sc):
@@ -244,40 +244,31 @@ class OrbSetLockError(LockError):
         self.object_name = "orbital set"
 
 
-class IntraHopLockError(LockError):
-    """Exception for modifying a locked IntraHopping instance."""
+class SCLockError(LockError):
+    """Exception for modifying a locked SuperCell instance."""
     def __init__(self):
         super().__init__()
-        self.object_name = "intra-hopping object"
+        self.object_name = "supercell object"
 
 
-class SCHopError(Exception):
-    """Base class for hopping terms within a super cell."""
-    def __init__(self, bra, ket):
+class SCOrbIndexError(Exception):
+    """Exception for reading or modifying an orbital with wrong index."""
+    def __init__(self, orb_i):
         super().__init__()
-        self.bra = bra
-        self.ket = ket
+        self.orb_i = orb_i
 
     def __str__(self):
-        return f"illegal hopping term {self.bra} {self.ket}"
+        return f"orbital index {self.orb_i} out of range"
 
 
-class SCHopDiagonalError(SCHopError):
-    """Exception for treating a diagonal term as hopping term in super cell."""
-    def __init__(self, bra, ket):
-        super().__init__(bra, ket)
-
-    def __str__(self):
-        return f"bra {self.bra} and ket {self.ket} are identical"
-
-
-class SCHopNotFoundError(SCHopError):
-    """Exception for a missing hopping term within a super cell."""
-    def __init__(self, bra, ket):
-        super().__init__(bra, ket)
+class SCHopDiagonalError(Exception):
+    """Exception for treating a diagonal term as hopping term."""
+    def __init__(self, rn, orb_i):
+        super().__init__()
+        self.hop_ind = rn + (orb_i, orb_i)
 
     def __str__(self):
-        return f"hopping term {self.bra}{self.ket} not found"
+        return f"hopping term {self.hop_ind} is diagonal"
 
 
 class InterHopLockError(LockError):

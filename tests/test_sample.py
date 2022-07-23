@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
-                    PrimitiveCell, SuperCell, IntraHopping,
+                    PrimitiveCell, SuperCell,
                     InterHopping, Sample, Timer)
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
@@ -265,38 +265,38 @@ class TestSample(unittest.TestCase):
         """
         sc1, sc2, sc3, inter_hop1, inter_hop2 = make_test_set()
 
-        # Normal case with 1 super cell
+        # Normal case with 1 supercell
         sample = Sample(sc1)
-        num_orb = sample._Sample__get_num_orb()
-        ind_start = sample._Sample__get_ind_start()
+        num_orb = sample._get_num_orb()
+        ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18])
         self.assertListEqual(ind_start, [0])
 
-        # Normal case with 2 super cells and 1 inter-hopping
+        # Normal case with 2 supercells and 1 inter-hopping
         sample = Sample(sc1, sc2, inter_hop1)
-        num_orb = sample._Sample__get_num_orb()
-        ind_start = sample._Sample__get_ind_start()
+        num_orb = sample._get_num_orb()
+        ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18])
         self.assertListEqual(ind_start, [0, 18])
 
-        # Normal case with 3 super cells and 2 inter-hopping
+        # Normal case with 3 supercells and 2 inter-hopping
         sample = Sample(sc1, sc2, sc3, inter_hop1, inter_hop2)
-        num_orb = sample._Sample__get_num_orb()
-        ind_start = sample._Sample__get_ind_start()
+        num_orb = sample._get_num_orb()
+        ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18, 18])
         self.assertListEqual(ind_start, [0, 18, 36])
 
-        # Abnormal case with 2 super cells and no inter-hopping
+        # Abnormal case with 2 supercells and no inter-hopping
         sample = Sample(sc1, sc2)
-        num_orb = sample._Sample__get_num_orb()
-        ind_start = sample._Sample__get_ind_start()
+        num_orb = sample._get_num_orb()
+        ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18])
         self.assertListEqual(ind_start, [0, 18])
 
-        # Abnormal case with 3 super cells and no inter-hopping
+        # Abnormal case with 3 supercells and no inter-hopping
         sample = Sample(sc1, sc2, sc3)
-        num_orb = sample._Sample__get_num_orb()
-        ind_start = sample._Sample__get_ind_start()
+        num_orb = sample._get_num_orb()
+        ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18, 18])
         self.assertListEqual(ind_start, [0, 18, 36])
 
@@ -308,35 +308,35 @@ class TestSample(unittest.TestCase):
         """
         sc1, sc2, sc3, inter_hop1, inter_hop2 = make_test_set()
 
-        # Normal case with 1 super cell
+        # Normal case with 1 supercell
         sample = Sample(sc1)
         sample.init_orb_eng()
         sample.init_orb_pos()
         self.assertTupleEqual(sample.orb_eng.shape, (18,))
         self.assertTupleEqual(sample.orb_pos.shape, (18, 3))
 
-        # Normal case with 2 super cells and 1 inter-hopping
+        # Normal case with 2 supercells and 1 inter-hopping
         sample = Sample(sc1, sc2, inter_hop1)
         sample.init_orb_eng()
         sample.init_orb_pos()
         self.assertTupleEqual(sample.orb_eng.shape, (36,))
         self.assertTupleEqual(sample.orb_pos.shape, (36, 3))
 
-        # Normal case with 3 super cells and 2 inter-hopping
+        # Normal case with 3 supercells and 2 inter-hopping
         sample = Sample(sc1, sc2, sc3, inter_hop1, inter_hop2)
         sample.init_orb_eng()
         sample.init_orb_pos()
         self.assertTupleEqual(sample.orb_eng.shape, (54,))
         self.assertTupleEqual(sample.orb_pos.shape, (54, 3))
 
-        # Abnormal case with 2 super cells and no inter-hopping
+        # Abnormal case with 2 supercells and no inter-hopping
         sample = Sample(sc1, sc2)
         sample.init_orb_eng()
         sample.init_orb_pos()
         self.assertTupleEqual(sample.orb_eng.shape, (36,))
         self.assertTupleEqual(sample.orb_pos.shape, (36, 3))
 
-        # Abnormal case with 3 super cells and no inter-hopping
+        # Abnormal case with 3 supercells and no inter-hopping
         sample = Sample(sc1, sc2, sc3)
         sample.init_orb_eng()
         sample.init_orb_pos()
@@ -351,35 +351,35 @@ class TestSample(unittest.TestCase):
         """
         sc1, sc2, sc3, inter_hop1, inter_hop2 = make_test_set()
 
-        # Normal case with 1 super cell
+        # Normal case with 1 supercell
         sample = Sample(sc1)
         sample.init_hop()
         sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (27,))
         self.assertTupleEqual(sample.dr.shape, (27, 3))
 
-        # Normal case with 2 super cells and 1 inter-hopping
+        # Normal case with 2 supercells and 1 inter-hopping
         sample = Sample(sc1, sc2, inter_hop1)
         sample.init_hop()
         sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (57,))
         self.assertTupleEqual(sample.dr.shape, (57, 3))
 
-        # Normal case with 3 super cells and 2 inter-hopping
+        # Normal case with 3 supercells and 2 inter-hopping
         sample = Sample(sc1, sc2, sc3, inter_hop1, inter_hop2)
         sample.init_hop()
         sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (87,))
         self.assertTupleEqual(sample.dr.shape, (87, 3))
 
-        # Abnormal case with 2 super cells and no inter-hopping
+        # Abnormal case with 2 supercells and no inter-hopping
         sample = Sample(sc1, sc2)
         sample.init_hop()
         sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (54,))
         self.assertTupleEqual(sample.dr.shape, (54, 3))
 
-        # Abnormal case with 3 super cells and no inter-hopping
+        # Abnormal case with 3 supercells and no inter-hopping
         sample = Sample(sc1, sc2, sc3)
         sample.init_hop()
         sample.init_dr()
@@ -388,7 +388,7 @@ class TestSample(unittest.TestCase):
 
     def test07_rescale(self):
         """
-        Test if the the new code to determine rescale factor yields the same
+        Test if the new code to determine rescale factor yields the same
         result as the old version and compare their efficiency.
 
         :return: None
@@ -547,42 +547,44 @@ class TestSample(unittest.TestCase):
 
         :return: None.
         """
-        print("\n3x3 Graphene super cell with pbc")
+        print("\n3x3 Graphene supercell with pbc")
         sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
         sample = Sample(sc)
         sample.plot()
 
-        print("3x3 Graphene super cell with open bc")
+        print("3x3 Graphene supercell with open bc")
         sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(False, False, False))
         sample = Sample(sc)
         sample.plot()
 
-        print("3x3 Graphene super cell with pbc and vacancies")
+        print("3x3 Graphene supercell with pbc and vacancies")
         vacancies = [(1, 1, 0, 0), (1, 1, 0, 1)]
         sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False),
                        vacancies=vacancies)
         sample = Sample(sc)
         sample.plot()
 
-        print("3x3 Graphene super cell with open bc and vacancies")
+        print("3x3 Graphene supercell with open bc and vacancies")
         vacancies = [(1, 1, 0, 0), (1, 1, 0, 1)]
         sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(False, False, False),
                        vacancies=vacancies)
         sample = Sample(sc)
         sample.plot()
 
-        print("3x3 Graphene super cell with open bc and intra hopping")
-        hop_mod = IntraHopping()
-        hop_mod.add_hopping(rn_i=(0, 0), orb_i=1, rn_j=(1, 2), orb_j=0,
-                            energy=1.5)
-        hop_mod.add_hopping(rn_i=(0, 2), orb_i=0, rn_j=(2, 0), orb_j=1,
-                            energy=2.0)
-        sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False),
-                       hop_modifier=hop_mod)
+        print("3x3 Graphene supercell with open bc and intra hopping")
+        sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
+        id_pc_bra = [(0, 0, 0, 1), (0, 2, 0, 0)]
+        id_pc_ket = [(1, 2, 0, 0), (2, 0, 0, 1)]
+        id_sc_bra = sc.orb_id_pc2sc_array(id_pc_bra)
+        id_sc_ket = sc.orb_id_pc2sc_array(id_pc_ket)
+        sc.add_hopping(rn=(0, 0, 0), orb_i=id_sc_bra[0], orb_j=id_sc_ket[0],
+                       energy=1.5)
+        sc.add_hopping(rn=(0, 0, 0), orb_i=id_sc_bra[1], orb_j=id_sc_ket[1],
+                       energy=2.0)
         sample = Sample(sc)
         sample.plot()
 
-        print("3x3 Graphene super cell with 2 layers")
+        print("3x3 Graphene supercell with 2 layers")
         pc1 = make_cell()
         pc2 = make_cell()
         pc2.set_orbital(orb_i=0, position=[1./3, 1./3, 0.0])
@@ -628,20 +630,20 @@ class TestSample(unittest.TestCase):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
 
-        print("\n24*24 Graphene super cell with 4 holes without trimming"
+        print("\n24*24 Graphene supercell with 4 holes without trimming"
               " dangling orbitals")
         sc = SuperCell(make_cell(), dim=(24, 24, 1), vacancies=holes)
         sample = Sample(sc)
         sample.plot(with_cells=False)
 
-        print("\n24*24 Graphene super cell with 4 holes with dangling orbitals"
+        print("\n24*24 Graphene supercell with 4 holes with dangling orbitals"
               " trimmed")
         sc.unlock()
         sc.trim()
         sample = Sample(sc)
         sample.plot(with_cells=False)
 
-        print("\n24*24 Graphene super cell with Gaussian bump")
+        print("\n24*24 Graphene supercell with Gaussian bump")
 
         def _make_pos_mod(c0):
             def _pos_mod(orb_pos):

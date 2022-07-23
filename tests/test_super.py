@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from tbplas import gen_lattice_vectors, PrimitiveCell, IntraHopping, SuperCell
+from tbplas import gen_lattice_vectors, PrimitiveCell, SuperCell
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
 from tbplas.builder.super import OrbitalSet
@@ -44,7 +44,7 @@ class TestSuper(unittest.TestCase):
         with self.assertRaises(exc.SCDimLenError) as cm:
             OrbitalSet(self.cell, dim=(1, 1, 1, 2))
         self.assertRegex(str(cm.exception),
-                         r"length of super cell dimension .+ not in .+")
+                         r"length of supercell dimension .+ not in .+")
 
         # DimSizeError
         msg_dim = r"^dimension on direction [0-2] should" \
@@ -376,71 +376,6 @@ class TestSuper(unittest.TestCase):
                                 dtype=np.int)
         th.test_equal_array(id_sc_test, id_sc_ref)
 
-    def test12_intra_hop(self):
-        """
-        Test methods of 'IntraHopping' class.
-
-        :return: None.
-        """
-        intra_hop = IntraHopping()
-        th = TestHelper(self)
-
-        # Check the default attributes
-        self.assertListEqual(intra_hop.indices, [])
-        self.assertListEqual(intra_hop.energies, [])
-
-        # Add one hopping term and check the attributes
-        intra_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(2, 1), orb_j=1,
-                              energy=-1.2)
-        self.assertTupleEqual(intra_hop.indices[0][0], (0, 0, 0, 0))
-        self.assertTupleEqual(intra_hop.indices[0][1], (2, 1, 0, 1))
-        self.assertListEqual(intra_hop.energies, [-1.2])
-
-        # Overwrite the same item
-        intra_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(2, 1), orb_j=1,
-                              energy=-1.5)
-        self.assertTupleEqual(intra_hop.indices[0][0], (0, 0, 0, 0))
-        self.assertTupleEqual(intra_hop.indices[0][1], (2, 1, 0, 1))
-        self.assertListEqual(intra_hop.energies, [-1.5])
-
-        # Overwrite the conjugate item
-        intra_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(0, 0), orb_j=0,
-                              energy=-1.1+1.2j)
-        self.assertTupleEqual(intra_hop.indices[0][0], (0, 0, 0, 0))
-        self.assertTupleEqual(intra_hop.indices[0][1], (2, 1, 0, 1))
-        self.assertListEqual(intra_hop.energies, [-1.1-1.2j])
-
-        # Check error handling
-        def _test():
-            intra_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(2, 1), orb_j=1,
-                                  energy=-1.1)
-        th.test_raise(_test, exc.SCHopDiagonalError,
-                      r"bra .+ and ket .+ are identical")
-
-        def _test():
-            intra_hop.add_hopping(rn_i=(2,), orb_i=1, rn_j=(2, 1), orb_j=1,
-                                  energy=-1.1)
-        th.test_raise(_test, exc.IDPCLenError, r"length of id_pc .+ is not 4")
-
-        def _test():
-            intra_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(2, 1, 3, 3),
-                                  orb_j=1, energy=-1.1)
-        th.test_raise(_test, exc.IDPCLenError, r"length of id_pc .+ is not 4")
-
-        # Test 'trim' method
-        intra_hop = IntraHopping()
-        intra_hop.add_hopping((2, 1), 1, (1, 2), 2, 1.0)
-        intra_hop.add_hopping((0, 0), 3, (2, 2), 0, 2.0)
-        intra_hop.add_hopping((4, 3), 1, (2, 3), 1, 3.0)
-        intra_hop.add_hopping((1, 3), 2, (3, 1), 0, 4.0)
-        orb_id_trim = [(2, 1, 0, 1), (2, 2, 0, 0), (4, 3, 0, 0), (3, 1, 0, 1)]
-        intra_hop.trim(orb_id_trim)
-        self.assertTupleEqual(intra_hop.indices[0][0], (4, 3, 0, 1))
-        self.assertTupleEqual(intra_hop.indices[0][1], (2, 3, 0, 1))
-        self.assertTupleEqual(intra_hop.indices[1][0], (1, 3, 0, 2))
-        self.assertTupleEqual(intra_hop.indices[1][1], (3, 1, 0, 0))
-        self.assertListEqual(intra_hop.energies, [3.0, 4.0])
-
     def test13_get_orb_eng(self):
         """
         Test if SuperCell.get_orb_eng works as expected.
@@ -468,35 +403,6 @@ class TestSuper(unittest.TestCase):
         :return: None
         """
         th = TestHelper(self)
-
-        # IDPCIndexError on cell index
-        def _test():
-            hop_modifier = IntraHopping()
-            hop_modifier.add_hopping(rn_i=(3, 3), orb_i=1, rn_j=(0, 0), orb_j=0)
-            SuperCell(self.cell, dim=(3, 3, 1),
-                      hop_modifier=hop_modifier).get_hop()
-        th.test_raise(_test, exc.IDPCIndexError,
-                      r"cell index .+ of id_pc .+ out of range")
-
-        # IDPCIndexError on orbital index
-        def _test():
-            hop_modifier = IntraHopping()
-            hop_modifier.add_hopping(rn_i=(2, 2), orb_i=2, rn_j=(0, 0), orb_j=0)
-            SuperCell(self.cell, dim=(3, 3, 1),
-                      hop_modifier=hop_modifier).get_hop()
-        th.test_raise(_test, exc.IDPCIndexError,
-                      r"orbital index .+ of id_pc .+ out of range")
-
-        # VacIDPCLenError
-        def _test():
-            vacancies = [(1, 1, 0, 0), (1, 1, 0, 1)]
-            hop_modifier = IntraHopping()
-            hop_modifier.add_hopping(rn_i=(0, 0), orb_i=1, rn_j=(0, 1), orb_j=1)
-            hop_modifier.add_hopping(rn_i=(1, 1), orb_i=0, rn_j=(0, 0), orb_j=0)
-            SuperCell(self.cell, dim=(3, 3, 1), vacancies=vacancies,
-                      hop_modifier=hop_modifier).get_hop()
-        th.test_raise(_test, exc.IDPCVacError,
-                      r"orbital id_pc .+ seems to be a vacancy")
 
         # ValueError
         def _check_status(status):
@@ -530,20 +436,26 @@ class TestSuper(unittest.TestCase):
         th.test_raise(_test, ValueError, r"Duplicate terms detected 1 2")
 
         # Test hop_modifier
-        hop_mod = IntraHopping()
+        sc = SuperCell(self.cell, dim=(3, 3, 1))
 
-        # Change existing hopping terms
-        # The same item
-        hop_mod.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(0, 0), orb_j=1)
-        # Conjugate item
-        hop_mod.add_hopping(rn_i=(1, 1), orb_i=1, rn_j=(1, 1), orb_j=0)
-
-        # Add a new hopping
-        hop_mod.add_hopping(rn_i=(0, 0), orb_i=1, rn_j=(1, 2), orb_j=0)
-        hop_mod.add_hopping(rn_i=(0, 2), orb_i=0, rn_j=(2, 0), orb_j=1)
+        id_pc_bra = [
+            (0, 0, 0, 0),  # same item
+            (1, 1, 0, 1),  # conjugate item
+            (0, 0, 0, 1),  # new term
+            (0, 2, 0, 0),  # new term
+        ]
+        id_pc_ket = [
+            (0, 0, 0, 1),  # same item
+            (1, 1, 0, 0),  # conjugate item
+            (1, 2, 0, 0),  # new term
+            (2, 0, 0, 1),  # new term
+        ]
+        id_sc_bra = sc.orb_id_pc2sc_array(id_pc_bra)
+        id_sc_ket = sc.orb_id_pc2sc_array(id_pc_ket)
+        for i in range(id_sc_bra.shape[0]):
+            sc.add_hopping((0, 0, 0), id_sc_bra[i], id_sc_ket[i], energy=0.0)
 
         # Inspect the arrays
-        sc = SuperCell(self.cell, dim=(3, 3, 1), hop_modifier=hop_mod)
         hop_i = sc.get_hop()[0]
         dr = sc.get_dr()
         self.assertEqual(hop_i.shape[0], dr.shape[0])

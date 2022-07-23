@@ -9,7 +9,7 @@ Classes
 -------
     OrbitalSet: developer class
         container class for orbitals and vacancies in the supercell
-    IntraHopping: user class
+    SCIntraHopping: developer class
         container class for modifications to hopping terms in the supercell
     SuperCell: user class
         abstraction for a supercell from which the sample is constructed
@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from . import exceptions as exc
 from . import core
 from . import lattice as lat
-from .base import correct_coord, LockableObject
+from .base import correct_coord, LockableObject, PCIntraHopping
 from .primitive import PrimitiveCell
 from .utils import ModelViewer
 
@@ -462,173 +462,51 @@ class OrbitalSet(LockableObject):
         return num_orb_sc
 
 
-class IntraHopping(LockableObject):
+class SCIntraHopping(PCIntraHopping):
     """
-    Container class for modifications to hopping terms in the supercell.
-
-    Attributes
-    ----------
-    indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
-        where (ia, ib, ic, io) is the index of bra in primitive cell
-        representation and (ia', ib', ic', io') is the index of ket
-    energies: list of complex numbers
-        hopping energies corresponding to indices in eV
+    Container class for holding additional hopping terms in a supercell.
 
     NOTES
     -----
     1. Sanity check
 
     This class is intended to constitute the 'hop_modifier' attribute of the
-    'SuperCell' class and is closely coupled to it. So we do not check if the
-    hopping indices are out of range here. This will be done in the 'SuperCell'
-    class via the 'get_hop' method.
+    'SuperCell' class. It is assumed that the caller will take care of all
+    the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
 
     2. Reduction
 
     We reduce hopping terms according to the conjugate relation
-        <bra|H|ket> = <ket|H|bra>*.
+        <0, bra|H|R, ket> = <0, ket|H|-R, bra>*.
     So actually only half of hopping terms are stored.
 
     3. Rules
 
-    If the hopping terms claimed here are already included in 'SuperCell', they
-    will overwrite the existing terms. If the hopping terms or their conjugate
-    counterparts are new to 'SuperCell', they will be appended to hop_* arrays.
-    The dr array will also be updated accordingly.
-
-    We restrict hopping terms to reside within the (0, 0, 0) supercell even if
-    periodic conditions are enabled. Other hopping terms will be treated as
-    illegal.
+    If the hopping terms claimed here are already included in the supercell,
+    they will overwrite the existing terms. If the hopping terms or their
+    conjugate counterparts are new to 'SuperCell', they will be appended to
+    hop_* arrays. The dr array will also be updated accordingly.
     """
     def __init__(self):
         super().__init__()
-        self.indices = []
-        self.energies = []
 
-    def __find_equiv_hopping(self, bra, ket):
+    def to_array(self):
         """
-        Find the index of equivalent hopping term of <bra|H|ket>, i.e. the same
-        term or its conjugate counterpart.
+        Convert hopping terms to array of 'hop_ind' and 'hop_eng',
+        for constructing hop_i, hop_j, hop_v and dr.
 
-        :param bra: (ia, ib, ic, io)
-            index of bra of the hopping term in primitive cell representation
-        :param ket: (ia', ib', ic', io')
-            index of ket of the hopping term in primitive cell representation
-        :return: id_same: integer
-            index of the same hopping term, none if not found
-        :return: id_conj: integer
-            index of the conjugate hopping term, none if not found
+        :return: (hop_ind, hop_eng)
+            hop_ind: (num_hop, 5) int64 array, hopping indices
+            hop_eng: (num_hop,) complex128 array, hopping energies
         """
-        assert len(bra) == len(ket) == 4
-        id_same, id_conj = None, None
-        hop_same = (bra, ket)
-        hop_conj = (ket, bra)
-        try:
-            id_same = self.indices.index(hop_same)
-        except ValueError:
-            pass
-        if id_same is None:
-            try:
-                id_conj = self.indices.index(hop_conj)
-            except ValueError:
-                pass
-        return id_same, id_conj
-
-    def add_hopping(self, rn_i, orb_i, rn_j, orb_j, energy=0.0):
-        """
-        Add a hopping term.
-
-        :param rn_i: (ia, ib, ic)
-            cell index of bra in primitive cell representation
-        :param orb_i: integer
-            orbital index of bra in primitive cell representation
-        :param rn_j: (ia', ib', ic')
-            cell index of ket in primitive cell representation
-        :param orb_j: integer
-            orbital index of ket in primitive cell representation
-        :param energy: complex
-            hopping energy in eV
-        :return: None
-            self.indices and self.energies are modified.
-        :raises IntraHopLockError: if the object is locked
-        :raises IDPCLenError: if len(rn_i) or len(rn_j) not in (2, 3)
-        :raises SCHopDiagonalError: if rn_i + (orb_i,) == rn_j + (orb_j,)
-        """
-        if self.is_locked:
-            raise exc.IntraHopLockError()
-
-        # Assemble and check index of bra
-        try:
-            rn_i = correct_coord(rn_i)
-        except exc.CoordLenError as err:
-            raise exc.IDPCLenError(rn_i + (orb_i,)) from err
-        bra = rn_i + (orb_i,)
-
-        # Assemble and check index of ket
-        try:
-            rn_j = correct_coord(rn_j)
-        except exc.CoordLenError as err:
-            raise exc.IDPCLenError(rn_j + (orb_j,)) from err
-        ket = rn_j + (orb_j,)
-
-        # Check if the hopping term is a diagonal term
-        if bra == ket:
-            raise exc.SCHopDiagonalError(bra, ket)
-
-        # Update existing hopping term, or add the new term to hopping_list.
-        id_same, id_conj = self.__find_equiv_hopping(bra, ket)
-        if id_same is not None:
-            self.energies[id_same] = energy
-        elif id_conj is not None:
-            self.energies[id_conj] = energy.conjugate()
-        else:
-            self.indices.append((bra, ket))
-            self.energies.append(energy)
-
-    def get_orb_ind(self):
-        """
-        Get orbital indices of bra and ket in hopping terms in primitive cell
-        presentation.
-
-        :return: id_bra: (num_hop,) int32 array
-            indices of bra
-        :return id_ket: (num_hop,) int32 array
-            indices of ket
-        """
-        id_bra = np.array([_[0] for _ in self.indices], dtype=np.int32)
-        id_ket = np.array([_[1] for _ in self.indices], dtype=np.int32)
-        return id_bra, id_ket
-
-    def trim(self, orb_id_trim):
-        """
-        Remove hopping terms associated to dangling orbitals.
-
-        This method is intended to be called by 'trim' method of 'SuperCell'
-        class.
-
-        :param orb_id_trim: (num_orb_trim, 4) int32 array
-            indices of orbitals to trim in primitive cell representation
-        :return: None.
-            self.energies and self.indices are modified.
-        :raises IntraHopLockError: if the object is locked
-        """
-        if self.is_locked:
-            raise exc.IntraHopLockError()
-
-        remain_terms = []
-        orb_id_trim = [tuple(orb_id) for orb_id in orb_id_trim]
-        for i, ind in enumerate(self.indices):
-            to_trim = False
-            for orb_id in orb_id_trim:
-                if orb_id == ind[0] or orb_id == ind[1]:
-                    to_trim = True
-                    break
-            if not to_trim:
-                remain_terms.append(i)
-        new_indices = [self.indices[i] for i in remain_terms]
-        new_energies = [self.energies[i] for i in remain_terms]
-        self.indices = new_indices
-        self.energies = new_energies
+        hop_ind, hop_eng = [], []
+        for rn, hop_rn in self.dict.items():
+            for pair, energy in hop_rn.items():
+                hop_ind.append(rn + pair)
+                hop_eng.append(energy)
+        hop_ind = np.array(hop_ind, dtype=np.int64)
+        hop_eng = np.array(hop_eng, dtype=np.complex128)
+        return hop_ind, hop_eng
 
 
 class SuperCell(OrbitalSet):
@@ -637,13 +515,13 @@ class SuperCell(OrbitalSet):
 
     Attributes
     ----------
-    hop_modifier: instance of 'IntraHopping' class
+    hop_modifier: instance of 'SCIntraHopping' class
         modification to hopping terms in the supercell
     orb_pos_modifier: function
         modification to orbital positions in the supercell
     """
     def __init__(self, prim_cell: PrimitiveCell, dim, pbc=(False, False, False),
-                 vacancies=None, hop_modifier: IntraHopping = None,
+                 vacancies=None,
                  orb_pos_modifier: Callable[[np.ndarray], None] = None) -> None:
         """
         :param prim_cell: instance of 'PrimitiveCell' class
@@ -655,8 +533,6 @@ class SuperCell(OrbitalSet):
             directions
         :param vacancies: list of (ia, ib, ic, io)
             indices of vacancies in primitive cell representation
-        :param hop_modifier: instance of 'IntraHopping' class
-            modification to hopping terms
         :param orb_pos_modifier: function
             modification to orbital positions in the supercell
         :return: None
@@ -670,30 +546,48 @@ class SuperCell(OrbitalSet):
         # Build orbital set
         super().__init__(prim_cell, dim, pbc=pbc, vacancies=vacancies)
 
-        # Assign and Lock hop_modifier
-        self.hop_modifier = hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.lock()
-
-        # Assign orb_pos_modifier
+        # Initialize hop_modifier and orb_pos_modifier
+        self.hop_modifier = SCIntraHopping()
         self.orb_pos_modifier = orb_pos_modifier
 
-    def set_hop_modifier(self, hop_modifier: IntraHopping = None):
+    def add_hopping(self, rn, orb_i, orb_j, energy):
         """
-        Reset hop_modifier.
+        Add a new term to the hopping modifier.
 
-        :param hop_modifier: instance of 'IntraHopping' class
-            hopping modifier
-        :return: None
+        :param rn: (ra, rb, rc)
+            cell index of the hopping term, i.e. R
+        :param orb_i: integer
+            index of orbital i in <i,0|H|j,R>
+        :param orb_j:
+            index of orbital j in <i,0|H|j,R>
+        :param energy: complex
+            hopping integral in eV
+        :return: None.
+            self.hop_modifier is updated.
+        :raises SCLockError: if the supercell is locked
+        :raises SCOrbIndexError: if orb_i or orb_j falls out of range
+        :raises SCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
+        :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        # Release old hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.unlock()
+        if self.is_locked:
+            raise exc.SCLockError()
 
-        # Assign and lock new hop_modifier
-        self.hop_modifier = hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.lock()
+        # Check params, adapted from the '_check_hop_index' method
+        # of 'PrimitiveCell' class
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+        num_orbitals = self.num_orb_sc
+        if not (0 <= orb_i < num_orbitals):
+            raise exc.SCOrbIndexError(orb_i)
+        if not (0 <= orb_j < num_orbitals):
+            raise exc.SCOrbIndexError(orb_j)
+        if rn == (0, 0, 0) and orb_i == orb_j:
+            raise exc.SCHopDiagonalError(rn, orb_i)
+
+        # Add the hopping term
+        self.hop_modifier.add_hopping(rn, orb_i, orb_j, energy)
 
     def set_orb_pos_modifier(self, orb_pos_modifier: Callable = None):
         """
@@ -702,7 +596,10 @@ class SuperCell(OrbitalSet):
         :param orb_pos_modifier: function
             modifier to orbital positions
         :return: None
+        :raises SCLockError: if the supercell is locked
         """
+        if self.is_locked:
+            raise exc.SCLockError()
         self.orb_pos_modifier = orb_pos_modifier
 
     def get_orb_eng(self):
@@ -742,10 +639,6 @@ class SuperCell(OrbitalSet):
             column indices of hopping terms reduced by conjugate relation
         :return: hop_v: (num_hop_sc,) complex128 array
             energies of hopping terms in accordance with hop_i and hop_j in eV
-        :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier is out of range
-        :raises IDPCVacError: if bra or ket in hop_modifier corresponds
-            to a vacancy
         """
         self.sync_array()
 
@@ -758,33 +651,20 @@ class SuperCell(OrbitalSet):
                            data_kind=0)
 
         # Apply hopping modifier
-        if self.hop_modifier is not None \
-                and len(self.hop_modifier.indices) != 0:
-            # Convert hopping indices to sc representation
-            id_bra_pc, id_ket_pc = self.hop_modifier.get_orb_ind()
-            id_bra_sc = self.orb_id_pc2sc_array(id_bra_pc)
-            id_ket_sc = self.orb_id_pc2sc_array(id_ket_pc)
-
-            # Parse hopping terms
+        if self.hop_modifier.num_hop != 0:
+            hop_ind, hop_eng = self.hop_modifier.to_array()
             hop_i_new, hop_j_new, hop_v_new = [], [], []
-            for ih in range(id_bra_sc.shape[0]):
-                id_bra = id_bra_sc.item(ih)
-                id_ket = id_ket_sc.item(ih)
+
+            for ih in range(hop_ind.shape[0]):
+                id_bra = hop_ind.item(ih, 3)
+                id_ket = hop_ind.item(ih, 4)
+                hop_energy = hop_eng.item(ih)
                 id_same, id_conj = \
                     core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
-
-                # If the hopping term already exists, update it.
-                hop_energy = self.hop_modifier.energies[ih]
                 if id_same != -1:
                     hop_v[id_same] = hop_energy
-
-                # If the conjugate counterpart of the hopping term exists,
-                # update it.
                 elif id_conj != -1:
                     hop_v[id_conj] = hop_energy.conjugate()
-
-                # If neither the hopping term nor its conjugate counterpart
-                # exist, append it to hop_i, hop_j and hop_v.
                 else:
                     hop_i_new.append(id_bra)
                     hop_j_new.append(id_ket)
@@ -794,23 +674,6 @@ class SuperCell(OrbitalSet):
             hop_i = np.append(hop_i, hop_i_new)
             hop_j = np.append(hop_j, hop_j_new)
             hop_v = np.append(hop_v, hop_v_new)
-
-        # Check for diagonal, duplicate or conjugate terms in hopping terms
-        # NOTE: the checking procedure is EXTREMELY SLOW for large models even
-        # though it is implemented in Cython. So it is disabled by default.
-        # Hopefully, the limitation on supercell dimension will prohibit the
-        # ill situations.
-        # status = core.check_hop(hop_i, hop_j)
-        # if status[0] == -3:
-        #     raise ValueError(f"Diagonal term detected {status[1]}")
-        # elif status[0] == -2:
-        #     raise ValueError(f"Conjugate terms detected {status[1]} "
-        #                      f"{status[2]}")
-        # elif status[0] == -1:
-        #     raise ValueError(f"Duplicate terms detected {status[1]} "
-        #                      f"{status[2]}")
-        # else:
-        #     pass
         return hop_i, hop_j, hop_v
 
     def get_dr(self):
@@ -828,12 +691,16 @@ class SuperCell(OrbitalSet):
 
         :return: dr: (num_hop_sc, 3) float64 array
             distances of hopping terms in accordance with hop_i and hop_j in nm
-        :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier is out of range
-        :raises IDPCVacError: if bra or ket in hop_modifier corresponds
-            to a vacancy
         """
         self.sync_array()
+
+        # Get initial hopping terms
+        hop_i, hop_j, hop_v =  \
+            core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
+                           self.dim, self.pbc, self.num_orb_pc,
+                           self.orb_id_pc, self.vac_id_sc,
+                           self.sc_lat_vec, None,
+                           data_kind=0)
 
         # Get initial dr
         orb_pos = self.get_orb_pos()
@@ -843,14 +710,23 @@ class SuperCell(OrbitalSet):
                             self.sc_lat_vec, orb_pos,
                             data_kind=1)
 
-        # Append additional terms from hop_modifier
-        dr_new = []
-        hop_i, hop_j, hop_v = self.get_hop()
-        for i in range(dr.shape[0], hop_i.shape[0]):
-            id_bra, id_ket = hop_i.item(i), hop_j.item(i)
-            dr_new.append(orb_pos[id_ket] - orb_pos[id_bra])
-        if len(dr_new) != 0:
-            dr = np.vstack((dr, dr_new))
+        # Apply hopping modifier
+        if self.hop_modifier.num_hop != 0:
+            hop_ind, hop_eng = self.hop_modifier.to_array()
+            dr_new = []
+
+            for ih in range(hop_ind.shape[0]):
+                id_bra = hop_ind.item(ih, 3)
+                id_ket = hop_ind.item(ih, 4)
+                id_same, id_conj = \
+                    core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
+                if id_same == -1 and id_conj == -1:
+                    rn = np.matmul(hop_ind[ih, :3], self.sc_lat_vec)
+                    dr_new.append(orb_pos[id_ket] + rn - orb_pos[id_bra])
+
+            # Append additional hopping distances
+            if len(dr_new) != 0:
+                dr = np.vstack((dr, dr_new))
         return dr
 
     def trim(self):
@@ -860,20 +736,21 @@ class SuperCell(OrbitalSet):
         :return: None.
             self.vacancy_list, self.vac_id_pc, self.vac_id_sc and self.orb_id_pc
             are modified.
-        :raises OrbSetLockError: if the object is locked
+        :raises SCLockError: if the object is locked
         """
-        # Get indices of dangling orbitals in primitive cell representation
+        if self.is_locked:
+            raise exc.SCLockError()
+
+        # Get indices of dangling orbitals
         hop_i, hop_j, hop_v = self.get_hop()
-        orb_id_trim = core.get_orb_id_trim(self.orb_id_pc, hop_i, hop_j)
+        id_pc_trim = core.get_orb_id_trim(self.orb_id_pc, hop_i, hop_j)
+        id_sc_trim = self.orb_id_pc2sc_array(id_pc_trim)
 
         # Add vacancies
-        self.add_vacancies(orb_id_trim)
+        self.add_vacancies(id_pc_trim)
 
         # Also trim hop_modifier
-        if self.hop_modifier is not None:
-            self.hop_modifier.unlock()
-            self.hop_modifier.trim(orb_id_trim)
-            self.hop_modifier.lock()
+        self.hop_modifier.remove_orbitals(id_sc_trim)
 
     def get_reciprocal_vectors(self):
         """
