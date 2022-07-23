@@ -173,13 +173,9 @@ class LockableObject:
         self.is_locked = False
 
 
-class PCIntraHopping:
+class BaseHopping:
     """
-    Container class for holding hopping terms of a primitive cell.
-
-    NOTE: this class is intended to constitute the 'hopping_dict' attribute of
-    'PrimitiveCell' class. It is assumed that the caller will take care of all
-     the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
+    Base class for IntraHopping and InterHopping classes.
 
     Attributes
     ----------
@@ -193,30 +189,8 @@ class PCIntraHopping:
 
     @staticmethod
     def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
-        """
-        Normalize cell index and orbital pair into permitted keys of self.dict.
-
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
-        :return: (rn, pair, conj)
-            where rn is the normalized cell index,
-            pair is the normalized orbital pair,
-            conj is the flag of whether to take the conjugate of hopping energy
-        """
-        if invert_rn(rn):
-            rn = (-rn[0], -rn[1], -rn[2])
-            pair = (orb_j, orb_i)
-            conj = True
-        elif rn == (0, 0, 0) and orb_i > orb_j:
-            rn = rn
-            pair = (orb_j, orb_i)
-            conj = True
-        else:
-            rn = rn
-            pair = (orb_i, orb_j)
-            conj = False
-        return rn, pair, conj
+        """Method to be implemented in derived classes."""
+        raise NotImplemented("_norm_keys not implemented!")
 
     def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
         """
@@ -369,6 +343,54 @@ class PCIntraHopping:
             if self.dict[rn] == {}:
                 self.dict.pop(rn)
 
+    @property
+    def num_hop(self):
+        """Count the number of hopping terms."""
+        self.clean()
+        num_hop = 0
+        for rn, hop_rn in self.dict.items():
+            num_hop += len(hop_rn)
+        return num_hop
+
+
+class PCIntraHopping(BaseHopping):
+    """
+    Container class for holding hopping terms of a primitive cell.
+
+    NOTE: this class is intended to constitute the 'hopping_dict' attribute of
+    'PrimitiveCell' class. It is assumed that the caller will take care of all
+     the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @staticmethod
+    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+        """
+        Normalize cell index and orbital pair into permitted keys of self.dict.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: (rn, pair, conj)
+            where rn is the normalized cell index,
+            pair is the normalized orbital pair,
+            conj is the flag of whether to take the conjugate of hopping energy
+        """
+        if invert_rn(rn):
+            rn = (-rn[0], -rn[1], -rn[2])
+            pair = (orb_j, orb_i)
+            conj = True
+        elif rn == (0, 0, 0) and orb_i > orb_j:
+            rn = rn
+            pair = (orb_j, orb_i)
+            conj = True
+        else:
+            rn = rn
+            pair = (orb_i, orb_j)
+            conj = False
+        return rn, pair, conj
+
     def to_array(self):
         """
         Convert hopping terms to array of 'hop_ind' and 'hop_eng',
@@ -387,15 +409,6 @@ class PCIntraHopping:
         hop_ind = np.array(hop_ind, dtype=np.int32)
         hop_eng = np.array(hop_eng, dtype=np.complex128)
         return hop_ind, hop_eng
-
-    @property
-    def num_hop(self):
-        """Count the number of hopping terms."""
-        self.clean()
-        num_hop = 0
-        for rn, hop_rn in self.dict.items():
-            num_hop += len(hop_rn)
-        return num_hop
 
 
 class HopDict:
