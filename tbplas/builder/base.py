@@ -378,6 +378,7 @@ class PCIntraHopping:
             hop_ind: (num_hop, 5) int32 array, hopping indices
             hop_eng: (num_hop,) complex128 array, hopping energies
         """
+        self.clean()
         hop_ind, hop_eng = [], []
         for rn, hop_rn in self.dict.items():
             for pair, energy in hop_rn.items():
@@ -390,6 +391,7 @@ class PCIntraHopping:
     @property
     def num_hop(self):
         """Count the number of hopping terms."""
+        self.clean()
         num_hop = 0
         for rn, hop_rn in self.dict.items():
             num_hop += len(hop_rn)
