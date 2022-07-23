@@ -450,7 +450,7 @@ class Sample:
             whether to force initializing the arrays from scratch even if they
             have already been initialized
         :return: None
-            self.hop_i, self.hop_j and self.hop_j are modified.
+            self.hop_i, self.hop_j, self.hop_j and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
             hop_modifier of any super cell or in any inter hopping set is out
@@ -484,6 +484,9 @@ class Sample:
             self.hop_i = np.concatenate(hop_i_tot)
             self.hop_j = np.concatenate(hop_j_tot)
             self.hop_v = np.concatenate(hop_v_tot)
+
+            # Reset scaling factor
+            self.rescale = 1.0
 
     def init_dr(self, force_init=False):
         """
