@@ -40,9 +40,9 @@ class InterHopping(LockableObject):
     Attributes
     ----------
     sc_bra: instance of 'SuperCell' class
-        the 'bra' super cell from which the hopping terms exist
+        the 'bra' supercell from which the hopping terms exist
     sc_ket: instance of 'SuperCell' class
-        the 'ket' super cell to which the hopping terms exist
+        the 'ket' supercell to which the hopping terms exist
     indices: list of ((ia, ib, ic, io), (ia', ib', ic', io'))
         where (ia, ib, ic, io) is the index of bra in primitive cell
         representation and (ia', ib', ic', io') is the index of ket
@@ -73,9 +73,9 @@ class InterHopping(LockableObject):
     def __init__(self, sc_bra: SuperCell, sc_ket: SuperCell):
         """
         :param sc_bra: instance of 'SuperCell' class
-            the 'bra' super cell from which the hopping terms exist
+            the 'bra' supercell from which the hopping terms exist
         :param sc_ket: instance of 'SuperCell' class
-            the 'ket' super cell to which the hopping terms exist
+            the 'ket' supercell to which the hopping terms exist
         """
         super().__init__()
         self.sc_bra = sc_bra
@@ -201,9 +201,9 @@ class InterHopping(LockableObject):
         id_bra_pc = np.array([_[0] for _ in self.indices], dtype=np.int32)
         id_ket_pc = np.array([_[1] for _ in self.indices], dtype=np.int32)
 
-        # NOTE: id_ket_pc needs to be wrapped back into (0, 0, 0) super cell
-        # since it can reside at any super cell. On the contrary, id_bra_ket
-        # is restricted (0, 0, 0) super cell and need on wrap. Errors will
+        # NOTE: id_ket_pc needs to be wrapped back into (0, 0, 0) supercell
+        # since it can reside at any supercell. On the contrary, id_bra_ket
+        # is restricted (0, 0, 0) supercell and need on wrap. Errors will
         # be raised by orb_id_pc2sc_array it falls out of (0, 0, 0).
         self.sc_ket.wrap_id_pc_array(id_ket_pc)
         hop_i = self.sc_bra.orb_id_pc2sc_array(id_bra_pc)
@@ -232,7 +232,7 @@ class InterHopping(LockableObject):
         Get hopping distances.
 
         NOTE: If periodic conditions are enabled, orbital indices in hop_j may
-        be wrapped back if it falls out of the super cell. Nevertheless, the
+        be wrapped back if it falls out of the supercell. Nevertheless, the
         distances in dr are still the ones before wrapping. This is essential
         for adding magnetic field, calculating band structure and many
         properties involving dx and dy.
@@ -316,9 +316,9 @@ class Sample:
     hop_list: list of 'IntraHopping' instances
         list of inter-hopping sets between supercells within the sample
     orb_eng: (num_orb_sc,) float64 array
-        on-site energies of orbitals in the super cell in eV
+        on-site energies of orbitals in the supercell in eV
     orb_pos: (num_orb_sc, 3) float64 array
-        Cartesian coordinates of orbitals in the super cell in nm
+        Cartesian coordinates of orbitals in the supercell in nm
     hop_i: (num_hop_sc,) int64 array
         row indices of hopping terms reduced by conjugate relation
     hop_j: (num_hop_sc,) int64 array
@@ -334,7 +334,7 @@ class Sample:
     NOTES
     -----
     If periodic conditions are enabled, orbital indices in hop_j may be wrapped
-    back if it falls out of the super cell. Nevertheless, the distances in dr
+    back if it falls out of the supercell. Nevertheless, the distances in dr
     are still the ones before wrapping. This is essential for adding magnetic
     field, calculating band structure and many properties involving dx and dy.
     """
@@ -384,21 +384,21 @@ class Sample:
 
     def __get_num_orb(self):
         """
-        Get numbers of orbitals in each super cell.
+        Get numbers of orbitals in each supercell.
 
         :return: num_orb: list of integers
-            numbers of orbitals in each super cell
+            numbers of orbitals in each supercell
         """
         num_orb = [sc.num_orb_sc for sc in self.sc_list]
         return num_orb
 
     def __get_ind_start(self):
         """
-        Get starting indices of orbitals for each super cell for assembling
+        Get starting indices of orbitals for each supercell for assembling
         hopping terms and distances.
 
         :return: ind_start: list of integers
-            starting indices of orbitals for each super cell
+            starting indices of orbitals for each supercell
         """
         num_orb = self.__get_num_orb()
         ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
@@ -453,16 +453,16 @@ class Sample:
             self.hop_i, self.hop_j, self.hop_j and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         if force_init or self.hop_i is None:
             hop_i_tot, hop_j_tot, hop_v_tot = [], [], []
             ind_start = self.__get_ind_start()
 
-            # Collect hopping terms from each super cell
+            # Collect hopping terms from each supercell
             for i_sc, sc in enumerate(self.sc_list):
                 hop_i, hop_j, hop_v = sc.get_hop()
                 hop_i += ind_start[i_sc]
@@ -502,9 +502,9 @@ class Sample:
             self.dr is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         if force_init or self.dr is None:
@@ -523,9 +523,9 @@ class Sample:
             self._orb_*, self._hop_* and self.dr are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         if self.orb_eng is not None:
@@ -555,9 +555,9 @@ class Sample:
             self.orb_eng, self.hop_v and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         self.init_orb_eng()
@@ -617,9 +617,9 @@ class Sample:
             self.hop_v is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         :raises ValueError: if gauge is not in (0, 1, 2)
         """
@@ -639,9 +639,9 @@ class Sample:
             sparse Hamiltonian matrix in CSR format
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         self.init_orb_eng()
@@ -667,9 +667,9 @@ class Sample:
             sparse dx and dy matrices in CSR format
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         self.init_dr()
@@ -711,9 +711,9 @@ class Sample:
         :return: dy, float64 array
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         self.init_orb_eng()
@@ -766,9 +766,9 @@ class Sample:
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         :raises ValueError: if view is illegal
         """
@@ -827,9 +827,9 @@ class Sample:
         :raises SolverError: if solver is neither lapack nor arpack
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         self.init_orb_pos()
@@ -967,9 +967,9 @@ class Sample:
         :raises SolverError: if solver is neither lapack nor arpack
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier of any super cell or in any inter hopping set is out
+            hop_modifier of any supercell or in any inter hopping set is out
             of range
-        :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
+        :raises IDPCVacError: if bra or ket in hop_modifier of any supercell
             or in any inter-hopping set corresponds to a vacancy
         """
         # Get the band energies
