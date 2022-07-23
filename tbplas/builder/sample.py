@@ -515,13 +515,10 @@ class Sample:
                 dr_tot.append(hop.get_dr())
             self.dr = np.concatenate(dr_tot)
 
-    def reset_array(self, force_reset=False):
+    def reset_array(self):
         """
         Reset all modifications to self._orb_*, self._hop_* and self.dr.
 
-        :param force_reset: boolean
-            whether to force resetting the arrays even if they have not been
-            initialized or modified
         :return: None
             self._orb_*, self._hop_* and self.dr are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
@@ -531,13 +528,13 @@ class Sample:
         :raises IDPCVacError: if bra or ket in hop_modifier of any super cell
             or in any inter-hopping set corresponds to a vacancy
         """
-        if force_reset or self.orb_eng is not None:
+        if self.orb_eng is not None:
             self.init_orb_eng(force_init=True)
-        if force_reset or self.orb_pos is not None:
+        if self.orb_pos is not None:
             self.init_orb_pos(force_init=True)
-        if force_reset or self.hop_i is not None:
+        if self.hop_i is not None:
             self.init_hop(force_init=True)
-        if force_reset or self.dr is not None:
+        if self.dr is not None:
             self.init_dr(force_init=True)
 
     def rescale_ham(self, factor=None):
