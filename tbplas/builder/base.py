@@ -179,7 +179,7 @@ class LockableObject:
         self.is_locked = False
 
 
-class BaseHopping:
+class BaseHopping(LockableObject):
     """
     Base class for IntraHopping and InterHopping classes.
 
@@ -191,6 +191,7 @@ class BaseHopping:
         energies.
     """
     def __init__(self):
+        super().__init__()
         self.dict = {}
 
     @staticmethod
@@ -213,7 +214,7 @@ class BaseHopping:
             pair is the normalized orbital pair,
             conj is the flag of whether to take the conjugate of hopping energy
         """
-        raise NotImplemented("_norm_keys not implemented!")
+        raise NotImplementedError("_norm_keys not implemented!")
 
     def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
         """
@@ -227,7 +228,10 @@ class BaseHopping:
         :param int orb_j: orbital index of ket
         :param complex energy: hopping energy
         :return: None
+        :raises LockError: is the object is locked
         """
+        if self.is_locked:
+            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         if conj:
             energy = energy.conjugate()
@@ -270,7 +274,10 @@ class BaseHopping:
             whether to call 'clean' to remove empty cell indices
         :return: status
             where the hopping term is removed, False if not found
+        :raises LockError: is the object is locked
         """
+        if self.is_locked:
+            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
             self.dict[rn].pop(pair)
@@ -296,7 +303,10 @@ class BaseHopping:
         :param tuple rn: (r_a, r_b, r_c), cell index
         :return: status
             where the hopping terms are removed, False if not found
+        :raises LockError: if the object is locked
         """
+        if self.is_locked:
+            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, 0, 0)
         try:
             self.dict.pop(rn)
@@ -313,6 +323,7 @@ class BaseHopping:
         :param clean: boolean
             whether to call 'clean' to remove empty cell indices
         :return: None.
+        :raises LockError: if the object is locked
         """
         self.remove_orbitals([orb_i], clean=clean)
 
@@ -326,7 +337,10 @@ class BaseHopping:
         :param clean: boolean
             whether to call 'clean' to remove empty cell indices
         :return: None
+        :raises LockError: if the object is locked
         """
+        if self.is_locked:
+            raise exc.LockError()
         indices = sorted(indices)
         idx_remap = dict()
 
@@ -390,6 +404,25 @@ class BaseHopping:
             hop_ind = np.array(hop_ind, dtype=np.int32)
         hop_eng = np.array(hop_eng, dtype=np.complex128)
         return hop_ind, hop_eng
+
+    def count_pair(self, orb_i, orb_j):
+        """
+        Count the hopping terms with given orbital index.
+
+        :param orb_i: int
+            orbital index of bra
+        :param orb_j: int
+            orbital index of ket
+        :return: count: int
+            number of hopping terms with given orbital index
+        """
+        self.clean()
+        count = 0
+        pair = (orb_i, orb_j)
+        for rn, hop_rn in self.dict.items():
+            if pair in hop_rn.keys():
+                count += 1
+        return count
 
     @property
     def num_hop(self):

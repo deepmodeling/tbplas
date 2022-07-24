@@ -425,18 +425,6 @@ class OrbitalSet(LockableObject):
                                           id_pc_array, self.vac_id_sc)
         return id_sc_array
 
-    def wrap_id_pc_array(self, id_pc_array):
-        """
-        Wrap orbital or vacancy indices im primitive cell representation
-        according to boundary conditions.
-
-        :param id_pc_array: (num_orb, 4) int32 array
-            orbital indices in primitive cell representation
-        :return: None
-            Incoming id_pc_array is modified.
-        """
-        core.wrap_id_pc_array(id_pc_array, self.dim, self.pbc)
-
     @property
     def num_orb_pc(self):
         """
@@ -684,11 +672,16 @@ class SuperCell(OrbitalSet):
             for ih in range(hop_ind.shape[0]):
                 id_bra = hop_ind.item(ih, 3)
                 id_ket = hop_ind.item(ih, 4)
+                rn = np.matmul(hop_ind[ih, :3], self.sc_lat_vec)
+                dr_i = orb_pos[id_ket] + rn - orb_pos[id_bra]
                 id_same, id_conj = \
                     core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
-                if id_same == -1 and id_conj == -1:
-                    rn = np.matmul(hop_ind[ih, :3], self.sc_lat_vec)
-                    dr_new.append(orb_pos[id_ket] + rn - orb_pos[id_bra])
+                if id_same != -1:
+                    dr[id_same] = dr_i
+                elif id_conj != -1:
+                    dr[id_conj] = -dr_i
+                else:
+                    dr_new.append(dr_i)
 
             # Append additional hopping distances
             if len(dr_new) != 0:

@@ -272,19 +272,19 @@ class SCHopDiagonalError(Exception):
 
 
 class InterHopLockError(LockError):
-    """Exception for modifying a locked InterHopping instance."""
+    """Exception for modifying a locked SCInterHopping instance."""
     def __init__(self):
         super().__init__()
         self.object_name = "inter-hopping object"
 
 
 class InterHopVoidError(Exception):
-    """Exception for calling get_* methods of a void InterHopping instance."""
+    """Exception for calling get_* methods of a void SCInterHopping instance."""
     def __init__(self):
         super().__init__()
 
     def __str__(self):
-        return "no hopping terms added to InterHopping instance"
+        return "no hopping terms added to SCInterHopping instance"
 
 
 class SampleError(Exception):
@@ -309,12 +309,12 @@ class SampleCompError(SampleError):
 
     def __str__(self):
         return f"component #{self.i_comp} should be instance" \
-               f" of SuperCell or InterHopping"
+               f" of SuperCell or SCInterHopping"
 
 
 class SampleClosureError(SampleError):
     """
-    Exception for an InterHopping instance whose sc_bra or sc_ket is not
+    Exception for an SCInterHopping instance whose sc_bra or sc_ket is not
     included in the sample.
     """
     def __init__(self, i_comp, sc_name):

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, SuperCell,
-                    InterHopping, Sample, Timer)
+                    SCInterHopping, Sample, Timer)
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
 from tbplas.utils import TestHelper
@@ -32,21 +32,27 @@ def make_test_set():
     sc3 = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
 
     # Make 2 inter-hopping instances
-    inter_hop1 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-    inter_hop1.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                           energy=-1.2)
-    inter_hop1.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                           energy=1.5)
-    inter_hop1.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                           energy=-0.7)
+    inter_hop1 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+    inter_hop1.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                           orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                           orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+    inter_hop1.add_hopping(rn=(0, 0, 0), energy=1.5,
+                           orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                           orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+    inter_hop1.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                           orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                           orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
 
-    inter_hop2 = InterHopping(sc_bra=sc2, sc_ket=sc3)
-    inter_hop2.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                           energy=-1.2)
-    inter_hop2.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                           energy=1.5)
-    inter_hop2.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                           energy=-0.7)
+    inter_hop2 = SCInterHopping(sc_bra=sc2, sc_ket=sc3)
+    inter_hop2.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                           orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                           orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+    inter_hop2.add_hopping(rn=(0, 0, 0), energy=1.5,
+                           orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                           orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+    inter_hop2.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                           orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                           orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
     return sc1, sc2, sc3, inter_hop1, inter_hop2
 
 
@@ -59,7 +65,7 @@ class TestSample(unittest.TestCase):
 
     def test00_add_hop(self):
         """
-        Test 'add_hop' method of 'InterHopping' class.
+        Test 'add_hop' method of 'SCInterHopping' class.
 
         :return: None
         """
@@ -69,49 +75,15 @@ class TestSample(unittest.TestCase):
 
         # Exception handling
         def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
+            inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
             inter_hop2.lock()
-            inter_hop2.add_hopping(rn_i=(2, 1, 3), orb_i=1, rn_j=(2, 0, 3),
-                                   orb_j=1, energy=-1.1)
+            inter_hop2.add_hopping(rn=(2, 1, 3), orb_i=1, orb_j=1, energy=-1.1)
         th.test_raise(_test, exc.InterHopLockError, r"trying to modify a locked"
                                                     r" inter-hopping object")
 
-        def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.add_hopping(rn_i=(2,), orb_i=1, rn_j=(2, 1), orb_j=1,
-                                   energy=-1.1)
-        th.test_raise(_test, exc.IDPCLenError, r"length of id_pc .+ is not 4")
-
-        def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(2, 1, 3, 3),
-                                   orb_j=1, energy=-1.1)
-        th.test_raise(_test, exc.IDPCLenError, r"length of id_pc .+ is not 4")
-
-        # Normal case
-        inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
-
-        # Test default attributes
-        self.assertListEqual(inter_hop.indices, [])
-        self.assertListEqual(inter_hop.energies, [])
-
-        # Add one hopping term and check the attributes
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(2, 1), orb_j=1,
-                              energy=-1.2)
-        self.assertTupleEqual(inter_hop.indices[0][0], (0, 0, 0, 0))
-        self.assertTupleEqual(inter_hop.indices[0][1], (2, 1, 0, 1))
-        self.assertListEqual(inter_hop.energies, [-1.2])
-
-        # Overwrite the same item
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(2, 1), orb_j=1,
-                              energy=-1.5)
-        self.assertTupleEqual(inter_hop.indices[0][0], (0, 0, 0, 0))
-        self.assertTupleEqual(inter_hop.indices[0][1], (2, 1, 0, 1))
-        self.assertListEqual(inter_hop.energies, [-1.5])
-
     def test01_get_hop(self):
         """
-        Test 'get_hop' method of 'InterHopping' class.
+        Test 'get_hop' method of 'SCInterHopping' class.
 
         :return: None
         """
@@ -125,50 +97,29 @@ class TestSample(unittest.TestCase):
 
         # Exception handling
         def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
+            inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
             inter_hop2.get_hop()
         th.test_raise(_test, exc.InterHopVoidError, r"no hopping terms added to"
-                                                    r" InterHopping instance")
+                                                    r" SCInterHopping instance")
 
         def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(3, 3), orb_j=1)
-            inter_hop2.get_hop()
-        th.test_no_raise(_test, exc.IDPCIndexError)
-
-        def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.add_hopping(rn_i=(3, 3), orb_i=0, rn_j=(0, 0), orb_j=1)
-            inter_hop2.get_hop()
-        th.test_raise(_test, exc.IDPCIndexError, r"cell index .+ of .+ out"
-                                                 r" of range")
-
-        def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(0, 0), orb_j=3)
-            inter_hop2.get_hop()
-        th.test_raise(_test, exc.IDPCIndexError, r"orbital index .+ of .+ out"
-                                                 r" of range")
-
-        def _check_status(status):
-            if status[0] == -1:
-                raise ValueError(f"Duplicate terms detected {status[1]} "
-                                 f"{status[2]}")
-
-        def _test():
-            _hop_i = np.array([1, 1, 2], dtype=np.int64)
-            _hop_j = np.array([1, 1, 3], dtype=np.int64)
-            _check_status(core.check_inter_hop(_hop_i, _hop_j))
+            inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+            inter_hop2.add_hopping(rn=(0, 0, 0), orb_i=0, orb_j=1, energy=-1.2)
+            inter_hop2.add_hopping(rn=(1, 0, 0), orb_i=0, orb_j=1, energy=-1.2)
+            inter_hop2.get_hop(check_dup=True)
         th.test_raise(_test, ValueError, r"Duplicate terms detected 0 1")
 
         # Normal case
-        inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                              energy=-1.2)
-        inter_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                              energy=1.5)
-        inter_hop.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                              energy=-0.7)
+        inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                              orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=1.5,
+                              orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                              orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
         hop_i_ref = [0, 15, 12]
         hop_j_ref = [11, 10, 5]
         hop_v_ref = [-1.2, 1.5, -0.7]
@@ -179,7 +130,7 @@ class TestSample(unittest.TestCase):
 
     def test02_get_dr(self):
         """
-        Test 'get_dr' method of 'InterHopping' class.
+        Test 'get_dr' method of 'SCInterHopping' class.
 
         :return: None
         """
@@ -193,19 +144,22 @@ class TestSample(unittest.TestCase):
 
         # Exception handling
         def _test():
-            inter_hop2 = InterHopping(sc_bra=sc1, sc_ket=sc2)
+            inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
             inter_hop2.get_hop()
         th.test_raise(_test, exc.InterHopVoidError, r"no hopping terms added to"
-                                                    r" InterHopping instance")
+                                                    r" SCInterHopping instance")
 
         # Normal case
-        inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                              energy=-1.2)
-        inter_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                              energy=1.5)
-        inter_hop.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                              energy=-0.7)
+        inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                              orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=1.5,
+                              orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                              orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
 
         hop_i, hop_j, hop_v = inter_hop.get_hop()
         orb_pos1 = sc1.get_orb_pos()
@@ -236,23 +190,26 @@ class TestSample(unittest.TestCase):
             Sample(sc1, sc2, make_cell())
         th.test_raise(_test, exc.SampleCompError,
                       r"component .+ should be instance of SuperCell or"
-                      r" InterHopping")
+                      r" SCInterHopping")
 
         def _test():
             sc3 = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
-            inter_hop2 = InterHopping(sc1, sc3)
+            inter_hop2 = SCInterHopping(sc1, sc3)
             Sample(sc1, sc2, inter_hop2)
         th.test_raise(_test, exc.SampleClosureError,
                       r".+ of inter_hop .+ not included in sample")
 
         # Normal case
-        inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                              energy=-1.2)
-        inter_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                              energy=1.5)
-        inter_hop.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                              energy=-0.7)
+        inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                              orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=1.5,
+                              orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                              orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
         Sample(sc1)
         Sample(sc1, sc2)
         Sample(sc1, sc2, inter_hop)
@@ -507,7 +464,7 @@ class TestSample(unittest.TestCase):
 
         # Sample initialization
         timer.tic("sc_init")
-        sc = SuperCell(make_cell(), dim=(5000, 1000), pbc=(True, True))
+        sc = SuperCell(make_cell(), dim=(500, 1000), pbc=(True, True))
         sample = Sample(sc)
         timer.toc("sc_init")
 
@@ -591,13 +548,16 @@ class TestSample(unittest.TestCase):
         pc2.set_orbital(orb_i=1, position=[2./3, 2./3, 0.0])
         sc1 = SuperCell(pc1, dim=(3, 3, 1), pbc=(True, True, False))
         sc2 = SuperCell(pc2, dim=(3, 3, 1), pbc=(True, True, False))
-        inter_hop = InterHopping(sc_bra=sc1, sc_ket=sc2)
-        inter_hop.add_hopping(rn_i=(0, 0), orb_i=0, rn_j=(1, 2), orb_j=1,
-                              energy=-1.2)
-        inter_hop.add_hopping(rn_i=(2, 1), orb_i=1, rn_j=(1, 2), orb_j=0,
-                              energy=1.5)
-        inter_hop.add_hopping(rn_i=(2, 0), orb_i=0, rn_j=(0, 2), orb_j=1,
-                              energy=-0.7)
+        inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-1.2,
+                              orb_i=sc1.orb_id_pc2sc((0, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 1)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=1.5,
+                              orb_i=sc1.orb_id_pc2sc((2, 1, 0, 1)),
+                              orb_j=sc2.orb_id_pc2sc((1, 2, 0, 0)))
+        inter_hop.add_hopping(rn=(0, 0, 0), energy=-0.7,
+                              orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
+                              orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
         sample = Sample(sc1, sc2, inter_hop)
         sample.plot()
 

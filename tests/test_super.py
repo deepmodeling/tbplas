@@ -402,39 +402,6 @@ class TestSuper(unittest.TestCase):
 
         :return: None
         """
-        th = TestHelper(self)
-
-        # ValueError
-        def _check_status(status):
-            if status[0] == -3:
-                raise ValueError(f"Diagonal term detected {status[1]}")
-            elif status[0] == -2:
-                raise ValueError(f"Conjugate terms detected {status[1]} "
-                                 f"{status[2]}")
-            elif status[0] == -1:
-                raise ValueError(f"Duplicate terms detected {status[1]} "
-                                 f"{status[2]}")
-            else:
-                pass
-
-        def _test():
-            _hop_i = np.array([1, 1, 2], dtype=np.int64)
-            _hop_j = np.array([1, 0, 3], dtype=np.int64)
-            _check_status(core.check_hop(_hop_i, _hop_j))
-        th.test_raise(_test, ValueError, r"Diagonal term detected 0")
-
-        def _test():
-            _hop_i = np.array([0, 1, 2], dtype=np.int64)
-            _hop_j = np.array([1, 0, 3], dtype=np.int64)
-            _check_status(core.check_hop(_hop_i, _hop_j))
-        th.test_raise(_test, ValueError, r"Conjugate terms detected 0 1")
-
-        def _test():
-            _hop_i = np.array([0, 1, 1], dtype=np.int64)
-            _hop_j = np.array([1, 2, 2], dtype=np.int64)
-            _check_status(core.check_hop(_hop_i, _hop_j))
-        th.test_raise(_test, ValueError, r"Duplicate terms detected 1 2")
-
         # Test hop_modifier
         sc = SuperCell(self.cell, dim=(3, 3, 1))
 

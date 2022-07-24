@@ -10,7 +10,7 @@ API Reference
     Lindhard
     IntraHopping
     SuperCell
-    InterHopping
+    SCInterHopping
     Sample
     Config
     Solver

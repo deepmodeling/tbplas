@@ -29,7 +29,7 @@ class, or with the help of :class:`.Lindhard` class.
 
     User class diagram of TBPLaS. Only essential attributes are shown for clarity.
 
-:class:`.SuperCell` / :class:`.InterHopping` / :class:`.Sample` are a set of classes specially designed
+:class:`.SuperCell` / :class:`.SCInterHopping` / :class:`.Sample` are a set of classes specially designed
 for constructing large complex models, especially for TBPM calculations. The computational expensive parts
 of these classes are written in Cython, making them orders of magnitudes faster than the purely python-based
 tools. For example, it takes 0.01 second to construct a graphene model with 100,000 primitive cells using
@@ -37,7 +37,7 @@ tools. For example, it takes 0.01 second to construct a graphene model with 100,
 level the user can specify the number of replicated primitive cells, boundary conditions, vacancies, additional
 intra-hopping terms (instance of :class:`.IntraHopping` class), and modifiers to orbital positions. Heterogenous
 systems, e.g., slabs with adatoms or hetero-structures with multiple layers, are modeled as separate supercells
-plus inter-hopping terms (instance of :class:`.InterHopping` class). The :class:`.Sample` class is a unified
+plus inter-hopping terms (instance of :class:`.SCInterHopping` class). The :class:`.Sample` class is a unified
 interface to both homogenous and heterogenous systems, from which the band structure and density of states can
 be obtained via exact-diagonalization. Different kinds of perturbations, e.g., electric and magnetic fields,
 strain, can be specified at :class:`.Sample` level. Also, it acts as the starting point for TBPM calculations.
@@ -64,7 +64,7 @@ size using Python-based tools, and evaluate properties like band structure and d
 Strains and external fields can be implemented by directly modifying the orbital positions, on-site energies,
 hopping terms and other attributes of the primitive cell instance.
 
-If the model is much larger, we need to use the Cython-based :class:`.SuperCell` / :class:`.InterHopping` / :class:`.Sample`
+If the model is much larger, we need to use the Cython-based :class:`.SuperCell` / :class:`.SCInterHopping` / :class:`.Sample`
 classes to create a sample. Strains and external fields can be implemented in the same approach as for primitive cell.
 From the sample we can band structure and density of states via exact diagonalization, or by TBPM with solver/analyzer.
 Finally, we can visualize the results with the help of visualizer.

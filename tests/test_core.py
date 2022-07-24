@@ -333,42 +333,6 @@ class TestCore(unittest.TestCase):
         orb_set.orb_id_sc2pc_array(sc)
         self.timer.toc(record)
 
-    def test16_wrap_id_pc_array(self):
-        """
-        Test core function 'wrap_id_pc_array'.
-
-        :return: None.
-        """
-        th = TestHelper(self)
-        orb_id_pc = np.array([[0, 0, 0, 1],
-                              [4, 6, 2, 0],
-                              [1, 0, 0, 0],
-                              [3, 5, 1, 1]], dtype=np.int32)
-        dim = np.array([3, 2, 2, 2], dtype=np.int32)
-        pbc = np.array([1, 1, 0], dtype=np.int32)
-
-        def _wrap(id_pc):
-            id_pc_wrap = []
-            for i_dim in range(3):
-                j_dim = id_pc[i_dim]
-                n_dim = dim.item(i_dim)
-                if pbc.item(i_dim) == 0:
-                    if j_dim < 0 or j_dim >= n_dim:
-                        id_pc_wrap.append(-1)
-                    else:
-                        id_pc_wrap.append(j_dim)
-                else:
-                    id_pc_wrap.append(j_dim % n_dim)
-            id_pc_wrap.append(id_pc[3])
-            return id_pc_wrap
-        ref_id_pc = [_wrap(id_pc) for id_pc in orb_id_pc]
-        ref_id_pc = np.array(ref_id_pc)
-
-        self.timer.tic("wrap_id_pc")
-        core.wrap_id_pc_array(orb_id_pc, dim, pbc)
-        th.test_equal_array(orb_id_pc, ref_id_pc)
-        self.timer.toc("wrap_id_pc")
-
 
 if __name__ == "__main__":
     unittest.main()
