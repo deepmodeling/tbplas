@@ -194,6 +194,11 @@ class BaseHopping(LockableObject):
         super().__init__()
         self.dict = {}
 
+    def __hash__(self):
+        """Return hash value of this instance."""
+        hop_list = self.to_list()
+        return hash(tuple(hop_list))
+
     @staticmethod
     def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
         """
@@ -379,6 +384,20 @@ class BaseHopping(LockableObject):
         for rn in list(self.dict.keys()):
             if self.dict[rn] == {}:
                 self.dict.pop(rn)
+
+    def to_list(self):
+        """
+        Flatten all hopping terms into a list.
+
+        :return: hopping terms as a list
+        :rtype: list of (rb, rb, rc, orb_i, orb_j)
+        """
+        self.clean()
+        hop_list = []
+        for rn, hop_rn in self.dict.items():
+            for pair, energy in hop_rn.items():
+                hop_list.append(rn + pair + (energy,))
+        return hop_list
 
     def to_array(self, use_int64=False):
         """

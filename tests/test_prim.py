@@ -491,9 +491,9 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.hop_eng, None)
         # 3rd call, expected: updating nothing
         th.test_stdout(_test, update_none)
-        # 4th call, expected: updating both
+        # 4th call, expected: updating orb
         cell.remove_orbital(0)
-        th.test_stdout(_test, update_both)
+        th.test_stdout(_test, update_orb)
         self.assertEqual(cell.hop_ind, None)
         self.assertEqual(cell.hop_eng, None)
         self.assertEqual(cell.orb_pos, None)

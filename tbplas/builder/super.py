@@ -160,7 +160,7 @@ class OrbitalSet(LockableObject):
 
         # Initialize lists and arrays assuming no vacancies
         self.vacancy_list = []
-        self.hash_dict = {'vac': hash(tuple(self.vacancy_list))}
+        self.hash_dict = {'vac': self._get_hash('vac')}
         self.vac_id_pc = None
         self.vac_id_sc = None
         self.orb_id_pc = core.build_orb_id_pc(self.dim, self.num_orb_pc,
@@ -169,6 +169,38 @@ class OrbitalSet(LockableObject):
         # Set vacancies if any
         if vacancies is not None:
             self.add_vacancies(vacancies)
+
+    def _get_hash(self, attr: str):
+        """
+        Get hash of given attribute.
+
+        :param str attr: name of the attribute
+        :return: hash of the attribute
+        :rtype: int
+        :raises ValueError: if attr is illegal
+        """
+        if attr == "vac":
+            new_hash = hash(tuple(self.vacancy_list))
+        else:
+            raise ValueError(f"Illegal attribute name {attr}")
+        return new_hash
+
+    def _update_hash(self, attr: str):
+        """
+        Compare and update hash of given attribute.
+
+        :param str attr: name of the attribute
+        :return: whether the hash has been updated.
+        :rtype: bool
+        :raises ValueError: if attr is illegal
+        """
+        new_hash = self._get_hash(attr)
+        if self.hash_dict[attr] != new_hash:
+            self.hash_dict[attr] = new_hash
+            status = True
+        else:
+            status = False
+        return status
 
     def _check_id_pc(self, id_pc):
         """
@@ -303,11 +335,10 @@ class OrbitalSet(LockableObject):
         :return: None
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc are modified.
         """
-        new_hash = hash(tuple(self.vacancy_list))
-        if force_sync or new_hash != self.hash_dict['vac']:
+        to_update = self._update_hash('vac')
+        if force_sync or to_update:
             if verbose:
                 print("INFO: updating sc vacancy and orbital arrays")
-            self.hash_dict['vac'] = new_hash
             # If vacancy list is not [], update arrays as usual.
             if len(self.vacancy_list) != 0:
                 vac_id_pc = np.array(self.vacancy_list, dtype=np.int32)

@@ -12,8 +12,6 @@ Classes
         can be created
 """
 
-import time
-
 import numpy as np
 import scipy.linalg.lapack as lapack
 import matplotlib.pyplot as plt
@@ -54,8 +52,8 @@ class PrimitiveCell(LockableObject):
         collection of indices of all hopping terms
     hop_eng: (num_hop,) complex128 array
         collection of energies of all hopping terms in eV
-    time_stamp: dictionary
-        time stamps of attributes
+    hash_dict: dictionary
+        hashes of attributes
         Method 'sync_array' will use this dictionary to update the arrays.
     extended: float
         number of times the primitive cell has been extended
@@ -93,35 +91,46 @@ class PrimitiveCell(LockableObject):
         self.hop_ind = None
         self.hop_eng = None
 
-        # Setup timestamp
-        # Orbital list and hopping terms should be newer than the arrays!
-        current_time = time.time()
-        self.time_stamp = {'orb_list': current_time,
-                           'hop_dict': current_time,
-                           'orb_array': current_time-0.1,
-                           'hop_array': current_time-0.1}
+        # Setup hash values
+        self.hash_dict = {'orb': self._get_hash('orb'),
+                          'hop': self._get_hash('hop')}
 
         # Setup misc. attributes.
         self.extended = 1.0
 
-    def _is_newer(self, key1, key2):
+    def _get_hash(self, attr: str):
         """
-        Check if the timestamp of key1 is newer than key2.
+        Get hash of given attribute.
 
-        :param key1: string, key of self.time_stamp
-        :param key2: string, key of self.time_stamp
-        :return: bool, whether timestamp of key1 is newer than key2
+        :param str attr: name of the attribute
+        :return: hash of the attribute
+        :rtype: int
+        :raises ValueError: if attr is illegal
         """
-        return self.time_stamp[key1] >= self.time_stamp[key2]
+        if attr == "orb":
+            new_hash = hash(tuple(self.orbital_list))
+        elif attr == "hop":
+            new_hash = hash(self.hopping_dict)
+        else:
+            raise ValueError(f"Illegal attribute name {attr}")
+        return new_hash
 
-    def _update_time_stamp(self, key):
+    def _update_hash(self, attr: str):
         """
-        Update the timestamp of key.
+        Compare and update hash of given attribute.
 
-        :param key: string, key of self.time_stamp
-        :return: None
+        :param str attr: name of the attribute
+        :return: whether the hash has been updated.
+        :rtype: bool
+        :raises ValueError: if attr is illegal
         """
-        self.time_stamp[key] = time.time()
+        new_hash = self._get_hash(attr)
+        if self.hash_dict[attr] != new_hash:
+            self.hash_dict[attr] = new_hash
+            status = True
+        else:
+            status = False
+        return status
 
     def add_orbital(self, position, energy=0.0, label="X", sync_array=False,
                     **kwargs):
@@ -154,7 +163,6 @@ class PrimitiveCell(LockableObject):
 
         # Add the orbital
         self.orbital_list.append(Orbital(position, energy, label))
-        self._update_time_stamp('orb_list')
         if sync_array:
             self.sync_array(**kwargs)
 
@@ -224,7 +232,6 @@ class PrimitiveCell(LockableObject):
             orbital.energy = energy
         if label is not None:
             orbital.label = label
-        self._update_time_stamp('orb_list')
         if sync_array:
             self.sync_array(**kwargs)
 
@@ -321,10 +328,6 @@ class PrimitiveCell(LockableObject):
         # Delete associated hopping terms
         self.hopping_dict.remove_orbitals(indices)
 
-        # Update timestamps
-        self._update_time_stamp('orb_list')
-        self._update_time_stamp('hop_dict')
-
         # Update arrays
         if sync_array:
             self.sync_array(**kwargs)
@@ -387,7 +390,6 @@ class PrimitiveCell(LockableObject):
             raise exc.PCLockError()
         rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
         self.hopping_dict.add_hopping(rn, orb_i, orb_j, energy)
-        self._update_time_stamp('hop_dict')
         if sync_array:
             self.sync_array(**kwargs)
 
@@ -477,7 +479,6 @@ class PrimitiveCell(LockableObject):
         status = self.hopping_dict.remove_hopping(rn, orb_i, orb_j)
         if not status:
             raise exc.PCHopNotFoundError(rn + (orb_i, orb_j))
-        self._update_time_stamp('hop_dict')
         if sync_array:
             self.sync_array(**kwargs)
 
@@ -529,7 +530,6 @@ class PrimitiveCell(LockableObject):
                     break
             if not to_keep:
                 self.hopping_dict.remove_rn(rn)
-        self._update_time_stamp('hop_dict')
         self.sync_array()
 
     def sync_array(self, verbose=False, force_sync=False):
@@ -547,10 +547,10 @@ class PrimitiveCell(LockableObject):
             are modified.
         """
         # Update orbital arrays
-        if force_sync or self._is_newer('orb_list', 'orb_array'):
+        to_update = self._update_hash('orb')
+        if force_sync or to_update:
             if verbose:
                 print("INFO: updating pc orbital arrays")
-            self._update_time_stamp('orb_array')
             # If orbital_list is not [], update as usual.
             if len(self.orbital_list) != 0:
                 self.orb_pos = np.array(
@@ -566,10 +566,10 @@ class PrimitiveCell(LockableObject):
                 print("INFO: no need to update pc orbital arrays")
 
         # Update hopping arrays
-        if force_sync or self._is_newer('hop_dict', 'hop_array'):
+        to_update = self._update_hash('hop')
+        if force_sync or to_update:
             if verbose:
                 print("INFO: updating pc hopping arrays")
-            self._update_time_stamp('hop_array')
             hop_ind, hop_eng = self.hopping_dict.to_array(use_int64=False)
             # if hop_eng is not [], update as usual.
             if len(hop_eng) != 0:
