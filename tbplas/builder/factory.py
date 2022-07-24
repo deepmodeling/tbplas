@@ -319,7 +319,8 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
         merged primitive cell
     :raises ValueError: if no arg is given, or any arg is not instance of
         PrimitiveCell or PCInterHopping, or any inter_hop_dict involves primitive
-        cells not included in args
+        cells not included in args, or lattice vectors of primitive cells do not
+        match
     :raises PCOrbIndexError: if any orbital index in any inter_hop_dict is out
         of range
     """
@@ -338,6 +339,12 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
         else:
             raise ValueError(f"Component #{i_arg} should be instance of "
                              f"PrimitiveCell or PCInterHopping")
+
+    # Check lattice mismatch
+    lat_ref = pc_list[0].lat_vec
+    for i, pc in enumerate(pc_list):
+        if np.sum(np.abs(pc.lat_vec - lat_ref)) > 1e-5:
+            raise ValueError(f"Lattice vectors of pc #0 and #{i} mismatch!")
 
     # Check closure of inter-hopping instances
     for i_h, hop in enumerate(hop_list):
