@@ -24,6 +24,9 @@ Classes
     IntraHopping: developer class
         for holding hopping terms in a primitive cell or modifications
         to a supercell
+    InterHopping: developer class
+        base class for container classes holding hopping terms between
+        two models
     HopDict: user class
         container for holding hopping terms of a primitive cell
         reserved for compatibility with old version of TBPlaS
@@ -435,6 +438,36 @@ class IntraHopping(BaseHopping):
             rn = rn
             pair = (orb_i, orb_j)
             conj = False
+        return rn, pair, conj
+
+
+class InterHopping(BaseHopping):
+    """
+    Base class for container classes holding hopping terms between two models.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @staticmethod
+    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+        """
+        Normalize cell index and orbital pair into permitted keys of self.dict.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: (rn, pair, conj)
+            where rn is the normalized cell index,
+            pair is the normalized orbital pair,
+            conj is the flag of whether to take the conjugate of hopping energy
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        """
+        try:
+            rn = correct_coord(rn)
+        except exc.CoordLenError as err:
+            raise exc.CellIndexLenError(err.coord) from err
+        pair = (orb_i, orb_j)
+        conj = False
         return rn, pair, conj
 
 

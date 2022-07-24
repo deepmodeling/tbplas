@@ -21,4 +21,4 @@ API Reference
     spiral_prim_cell
     make_hetero_layer
     merge_prim_cell
-    InterHopDict
+    PCInterHopping

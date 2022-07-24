@@ -11,4 +11,4 @@ from .primitive import PrimitiveCell
 from .super import SuperCell
 from .sample import InterHopping, Sample
 from .factory import (extend_prim_cell, reshape_prim_cell, spiral_prim_cell,
-                      make_hetero_layer, InterHopDict, merge_prim_cell)
+                      make_hetero_layer, PCInterHopping, merge_prim_cell)

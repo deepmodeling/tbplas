@@ -49,7 +49,7 @@ class TestHetero(unittest.TestCase):
 
     def test_inter_hop_dict(self):
         """
-        Test InterHopDict class.
+        Test PCInterHopping class.
 
         :return: None.
         """
@@ -57,7 +57,7 @@ class TestHetero(unittest.TestCase):
         pc_ket = tb.make_graphene_diamond()
 
         # Check initial state of inter_hop
-        inter_hop = tb.InterHopDict(pc_bra, pc_ket)
+        inter_hop = tb.PCInterHopping(pc_bra, pc_ket)
         self.assertDictEqual(inter_hop.dict, {})
 
         # Add the 1st hopping term
@@ -108,7 +108,7 @@ class TestHetero(unittest.TestCase):
             sample.plot(view=view)
 
         # Then we bind the two primitive cells with an inter_hop_dict.
-        inter_hop = tb.InterHopDict(pc_bra, pc_ket)
+        inter_hop = tb.PCInterHopping(pc_bra, pc_ket)
         inter_hop.add_hopping((0, 0, 0), 0, 0, 1.0)
         inter_hop.add_hopping((1, 1, 0), 0, 1, 1.0)
         merged_cell = tb.merge_prim_cell(pc_bra, pc_ket, inter_hop)
@@ -178,7 +178,7 @@ class TestHetero(unittest.TestCase):
         pos_twisted = layer_twisted.orb_pos_nm
 
         # Loop over neighbouring cells to build inter-hopping dictionary
-        inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)
+        inter_hop = tb.PCInterHopping(layer_fixed, layer_twisted)
         tree_fixed = cKDTree(pos_fixed)
         for ia in range(-1, 2):
             for ib in range(-1, 2):

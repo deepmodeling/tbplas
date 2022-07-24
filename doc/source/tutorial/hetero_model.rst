@@ -162,7 +162,7 @@ first:
 Then we loop over neighbouring cells to collect inter-layer hopping terms. We only need to take the
 hopping terms from :math:`(0, 0, 0)` cell of *fixed* layer to any cell of *twisted* layer. The
 conjugate terms are handled automatically. The hopping terms are stored in an instance of
-:class:`.InterHopDict` class. We utilize ``KDTree`` from ``scipy`` to detect interlayer neighbours
+:class:`.PCInterHopping` class. We utilize ``KDTree`` from ``scipy`` to detect interlayer neighbours
 up to the cutoff distance of 0.75 nm. The hopping terms are determined via Slater-Koster relation,
 according to Phys. Rev. B 86, 125413 (2012). We define the following function:
 
@@ -199,7 +199,7 @@ and add the hopping terms by:
 
 .. code-block:: python
 
-    inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)
+    inter_hop = tb.PCInterHopping(layer_fixed, layer_twisted)
     tree_fixed = cKDTree(pos_fixed)
     for ia in range(-1, 2):
         for ib in range(-1, 2):

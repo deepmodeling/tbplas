@@ -189,7 +189,7 @@ def main():
     # automatically.
     # We utilize KDTree from scipy to detect interlayer neighbours up to cutoff
     # distance.
-    inter_hop = tb.InterHopDict(layer_fixed, layer_twisted)
+    inter_hop = tb.PCInterHopping(layer_fixed, layer_twisted)
     tree_fixed = KDTree(pos_fixed)
     neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
     for rn in neighbors:

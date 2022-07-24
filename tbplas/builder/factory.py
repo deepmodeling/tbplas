@@ -20,9 +20,9 @@ Functions
 
 Classes
 -------
-    InterHopDict: user class
-    containing holding hopping terms between different primitive cells in
-    hetero-structure
+    PCInterHopping: user class
+        container for holding hopping terms between different primitive cells in
+        hetero-structure
 """
 
 import math
@@ -34,7 +34,7 @@ from scipy.spatial import KDTree
 from . import constants as consts
 from . import exceptions as exc
 from .lattice import frac2cart, cart2frac, rotate_coord
-from .base import correct_coord
+from .base import correct_coord, InterHopping
 from .primitive import PrimitiveCell
 
 
@@ -278,20 +278,17 @@ def make_hetero_layer(prim_cell: PrimitiveCell, hetero_lattice: np.ndarray,
     return hetero_layer
 
 
-class InterHopDict:
+class PCInterHopping(InterHopping):
     """
     Class for holding hopping terms between different primitive cells
     in hetero-structure.
 
     Attributes
     ----------
-    _pc_bra: instance of 'PrimitiveCell' class
+    pc_bra: instance of 'PrimitiveCell' class
         the 'bra' primitive cell from which the hopping terms exist
-    _pc_ket: instance of 'PrimitiveCell' class
+    pc_ket: instance of 'PrimitiveCell' class
         the 'ket' primitive cell from which the hopping terms exist
-    _dict: dictionary
-        Keys should be cell indices and values should be dictionaries
-        themselves.
 
     NOTES
     -----
@@ -304,70 +301,24 @@ class InterHopDict:
         :param pc_bra: instance of 'PrimitiveCell' class
             the 'bra' primitive cell from which the hopping terms exist
         :param pc_ket: instance of 'PrimitiveCell' class
-            the 'bra' primitive cell from which the hopping terms exist
+            the 'ket' primitive cell from which the hopping terms exist
         """
-        self._pc_bra = pc_bra
-        self._pc_ket = pc_ket
-        self._dict = {}
-
-    def add_hopping(self, rn, orb_i, orb_j, energy):
-        """
-        Add a new hopping term.
-
-        :param rn: (ra, rb, rc)
-            cell index of hopping matrix, i.e. Rn
-        :param orb_i: integer
-            index of orbital i in <pc_bra, R0, i|H|pc_ket, Rn, j>
-        :param orb_j: integer
-            index of orbital j in <pc_bra, R0, i|H|pc_ket, Rn, j>
-        :param energy: complex
-            hopping integral in eV
-        :return: None
-        :raises CellIndexLenError: if len(rn) != 2 or 3
-        """
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
-        try:
-            hop_rn = self._dict[rn]
-        except KeyError:
-            hop_rn = self._dict[rn] = {}
-        hop_rn[(orb_i, orb_j)] = energy
-
-    @property
-    def pc_bra(self):
-        """
-        :return: self._pc_bra
-        """
-        return self._pc_bra
-
-    @property
-    def pc_ket(self):
-        """
-        :return: self._pc_ket
-        """
-        return self._pc_ket
-
-    @property
-    def dict(self):
-        """
-        :return: self._dict
-        """
-        return self._dict
+        super().__init__()
+        self.pc_bra = pc_bra
+        self.pc_ket = pc_ket
 
 
-def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
+def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
     """
     Merge primitive cells and inter-hopping dictionaries to build a large
     primitive cell.
 
-    :param args: list of 'PrimitiveCell' or 'InterHopDict' instances
+    :param args: list of 'PrimitiveCell' or 'PCInterHopping' instances
         primitive cells and inter-hopping terms within the large primitive cell
     :return: merged_cell: instance of 'PrimitiveCell'
         merged primitive cell
     :raises ValueError: if no arg is given, or any arg is not instance of
-        PrimitiveCell or InterHopDict, or any inter_hop_dict involves primitive
+        PrimitiveCell or PCInterHopping, or any inter_hop_dict involves primitive
         cells not included in args
     :raises PCOrbIndexError: if any orbital index in any inter_hop_dict is out
         of range
@@ -382,11 +333,11 @@ def merge_prim_cell(*args: Union[PrimitiveCell, InterHopDict]):
     for i_arg, arg in enumerate(args):
         if isinstance(arg, PrimitiveCell):
             pc_list.append(arg)
-        elif isinstance(arg, InterHopDict):
+        elif isinstance(arg, PCInterHopping):
             hop_list.append(arg)
         else:
             raise ValueError(f"Component #{i_arg} should be instance of "
-                             f"PrimitiveCell or InterHopDict")
+                             f"PrimitiveCell or PCInterHopping")
 
     # Check closure of inter-hopping instances
     for i_h, hop in enumerate(hop_list):
