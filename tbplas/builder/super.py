@@ -770,7 +770,8 @@ class SuperCell(OrbitalSet):
         return lat.get_lattice_volume(self.sc_lat_vec)
 
     def plot(self, axes: plt.Axes, with_orbitals=True, with_cells=True,
-             hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):
+             hop_as_arrows=True, hop_eng_cutoff=1e-5, hop_color="r",
+             view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms to axes.
 
@@ -786,6 +787,8 @@ class SuperCell(OrbitalSet):
             cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
+        :param hop_color: string
+            color of hopping terms
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -813,13 +816,13 @@ class SuperCell(OrbitalSet):
                 # pos_j = orb_pos[hop_j.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, color='r',
+                    viewer.plot_arrow(pos_i, pos_j, color=hop_color,
                                       length_includes_head=True,
                                       width=0.002, head_width=0.02, fill=False)
                 else:
                     viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
-            viewer.plot_line(color='r')
+            viewer.plot_line(color=hop_color)
 
         # Plot cells
         if with_cells:

@@ -139,7 +139,7 @@ class SCInterHopping(InterHopping):
         return dr
 
     def plot(self, axes: plt.Axes, hop_as_arrows=True, hop_eng_cutoff=1e-5,
-             view="ab"):
+             hop_color="r", view="ab"):
         """
         Plot hopping terms to axes.
 
@@ -151,6 +151,8 @@ class SCInterHopping(InterHopping):
             cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
+        :param hop_color: string
+            color of hopping terms
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -176,13 +178,13 @@ class SCInterHopping(InterHopping):
                 # pos_j = orb_pos_j[hop_j.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, color='r',
+                    viewer.plot_arrow(pos_i, pos_j, color=hop_color,
                                       length_includes_head=True,
                                       width=0.002, head_width=0.02, fill=False)
                 else:
                     viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
-            viewer.plot_line(color="r")
+            viewer.plot_line(color=hop_color)
 
 
 class Sample:
@@ -590,7 +592,8 @@ class Sample:
 
     def plot(self, fig_name=None, fig_size=None, fig_dpi=300,
              with_orbitals=True, with_cells=True,
-             hop_as_arrows=True, hop_eng_cutoff=1e-5, view="ab"):
+             hop_as_arrows=True, hop_eng_cutoff=1e-5,
+             sc_colors=None, hop_colors=None, view="ab"):
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -616,6 +619,10 @@ class Sample:
             cutoff for showing hopping terms.
             Hopping terms with absolute energy below this value will not be
             shown in the plot.
+        :param sc_colors: List[str]
+            colors for the hopping terms of each supercell
+        :param hop_colors: List[str]
+            colors for the hopping terms each inter-hopping container
         :param view: string
             kind of view point
             should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
@@ -628,14 +635,20 @@ class Sample:
         fig, axes = plt.subplots(figsize=fig_size)
         axes.set_aspect('equal')
 
+        if sc_colors is None:
+            sc_colors = ['r' for _ in range(len(self.sc_list))]
+        if hop_colors is None:
+            hop_colors = ['r' for _ in range(len(self.hop_list))]
+
         # Plot supercells and hopping terms
-        for sc in self.sc_list:
+        for i, sc in enumerate(self.sc_list):
             sc.plot(axes, with_orbitals=with_orbitals, with_cells=with_cells,
                     hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
-                    view=view)
-        for hop in self.hop_list:
-            hop.plot(axes, hop_as_arrows=hop_as_arrows,
-                     hop_eng_cutoff=hop_eng_cutoff, view=view)
+                    hop_color=sc_colors[i], view=view)
+        for i, hop in enumerate(self.hop_list):
+            hop.plot(axes,
+                     hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
+                     hop_color=hop_colors[i], view=view)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
