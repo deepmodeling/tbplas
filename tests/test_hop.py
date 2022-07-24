@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from tbplas import Timer
-from tbplas.builder.base import invert_rn, PCIntraHopping
+from tbplas.builder.base import invert_rn, IntraHopping
 from tbplas.utils import TestHelper
 
 
@@ -39,7 +39,7 @@ class TestHop(unittest.TestCase):
 
     def test_add_hopping(self):
         """Test if 'add_hopping' method works as expected."""
-        hop_dict = PCIntraHopping()
+        hop_dict = IntraHopping()
 
         # Add a normal term that does not need to invert.
         hop_dict.add_hopping(rn=(1, -1, 2), orb_i=1, orb_j=2, energy=1.2+1j)
@@ -79,7 +79,7 @@ class TestHop(unittest.TestCase):
 
     def test_get_hopping(self):
         """Test if 'get_hopping' method works as expected."""
-        hop_dict = PCIntraHopping()
+        hop_dict = IntraHopping()
 
         # Add a normal term that does not need to invert.
         hop_dict.add_hopping(rn=(1, -1, 2), orb_i=1, orb_j=2, energy=1.2+1j)
@@ -127,7 +127,7 @@ class TestHop(unittest.TestCase):
 
     def test_to_array(self):
         """Test if 'to_array' method works as expected."""
-        hop_dict = PCIntraHopping()
+        hop_dict = IntraHopping()
         hop_dict.add_hopping(rn=(1, -1, 2), orb_i=1, orb_j=2, energy=1.2+1j)
         hop_dict.add_hopping(rn=(1, 1, -2), orb_i=1, orb_j=2, energy=1.2+3j)
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=1, orb_j=2, energy=1.2-1j)
@@ -144,7 +144,7 @@ class TestHop(unittest.TestCase):
 
     def test_hop_dict_speed(self):
         """Test the performance of 'add_hopping' and 'get_hopping' method."""
-        hop_dict = PCIntraHopping()
+        hop_dict = IntraHopping()
         timer = Timer()
         timer.tic("add_hopping")
         for i in range(-500, 500):

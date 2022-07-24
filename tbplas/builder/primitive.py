@@ -23,7 +23,7 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import (correct_coord, Orbital, LockableObject, PCIntraHopping,
+from .base import (correct_coord, Orbital, LockableObject, IntraHopping,
                    HopDict, gaussian, lorentzian)
 from .utils import ModelViewer
 from ..parallel import MPIEnv
@@ -85,7 +85,7 @@ class PrimitiveCell(LockableObject):
 
         # Setup orbitals and hopping terms
         self.orbital_list = []
-        self.hopping_dict = PCIntraHopping()
+        self.hopping_dict = IntraHopping()
 
         # Setup arrays.
         self.orb_pos = None
@@ -570,7 +570,7 @@ class PrimitiveCell(LockableObject):
             if verbose:
                 print("INFO: updating pc hopping arrays")
             self._update_time_stamp('hop_array')
-            hop_ind, hop_eng = self.hopping_dict.to_array()
+            hop_ind, hop_eng = self.hopping_dict.to_array(use_int64=False)
             # if hop_eng is not [], update as usual.
             if len(hop_eng) != 0:
                 self.hop_ind = hop_ind

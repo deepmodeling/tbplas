@@ -8,9 +8,7 @@ Functions
 Classes
 -------
     OrbitalSet: developer class
-        container class for orbitals and vacancies in the supercell
-    SCIntraHopping: developer class
-        container class for modifications to hopping terms in the supercell
+        container class for orbitals and vacancies
     SuperCell: user class
         abstraction for a supercell from which the sample is constructed
 """
@@ -23,7 +21,7 @@ import matplotlib.pyplot as plt
 from . import exceptions as exc
 from . import core
 from . import lattice as lat
-from .base import correct_coord, LockableObject, PCIntraHopping
+from .base import correct_coord, LockableObject, IntraHopping
 from .primitive import PrimitiveCell
 from .utils import ModelViewer
 
@@ -462,56 +460,24 @@ class OrbitalSet(LockableObject):
         return num_orb_sc
 
 
-class SCIntraHopping(PCIntraHopping):
+class SuperCell(OrbitalSet):
     """
-    Container class for holding additional hopping terms in a supercell.
+    Class for representing a supercell from which the sample is constructed.
 
-    NOTES
-    -----
-    1. Sanity check
-
-    This class is intended to constitute the 'hop_modifier' attribute of the
-    'SuperCell' class. It is assumed that the caller will take care of all
-    the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
-
-    2. Reduction
+    Notes on hop_modifier
+    ---------------------
+    1. Reduction
 
     We reduce hopping terms according to the conjugate relation
         <0, bra|H|R, ket> = <0, ket|H|-R, bra>*.
     So actually only half of hopping terms are stored.
 
-    3. Rules
+    2. Rules
 
     If the hopping terms claimed here are already included in the supercell,
     they will overwrite the existing terms. If the hopping terms or their
     conjugate counterparts are new to 'SuperCell', they will be appended to
     hop_* arrays. The dr array will also be updated accordingly.
-    """
-    def __init__(self):
-        super().__init__()
-
-    def to_array(self):
-        """
-        Convert hopping terms to array of 'hop_ind' and 'hop_eng',
-        for constructing hop_i, hop_j, hop_v and dr.
-
-        :return: (hop_ind, hop_eng)
-            hop_ind: (num_hop, 5) int64 array, hopping indices
-            hop_eng: (num_hop,) complex128 array, hopping energies
-        """
-        hop_ind, hop_eng = [], []
-        for rn, hop_rn in self.dict.items():
-            for pair, energy in hop_rn.items():
-                hop_ind.append(rn + pair)
-                hop_eng.append(energy)
-        hop_ind = np.array(hop_ind, dtype=np.int64)
-        hop_eng = np.array(hop_eng, dtype=np.complex128)
-        return hop_ind, hop_eng
-
-
-class SuperCell(OrbitalSet):
-    """
-    Class for representing a supercell from which the sample is constructed.
 
     Attributes
     ----------
@@ -547,7 +513,7 @@ class SuperCell(OrbitalSet):
         super().__init__(prim_cell, dim, pbc=pbc, vacancies=vacancies)
 
         # Initialize hop_modifier and orb_pos_modifier
-        self.hop_modifier = SCIntraHopping()
+        self.hop_modifier = IntraHopping()
         self.orb_pos_modifier = orb_pos_modifier
 
     def add_hopping(self, rn, orb_i, orb_j, energy):
@@ -652,7 +618,7 @@ class SuperCell(OrbitalSet):
 
         # Apply hopping modifier
         if self.hop_modifier.num_hop != 0:
-            hop_ind, hop_eng = self.hop_modifier.to_array()
+            hop_ind, hop_eng = self.hop_modifier.to_array(use_int64=True)
             hop_i_new, hop_j_new, hop_v_new = [], [], []
 
             for ih in range(hop_ind.shape[0]):
@@ -712,7 +678,7 @@ class SuperCell(OrbitalSet):
 
         # Apply hopping modifier
         if self.hop_modifier.num_hop != 0:
-            hop_ind, hop_eng = self.hop_modifier.to_array()
+            hop_ind, hop_eng = self.hop_modifier.to_array(use_int64=True)
             dr_new = []
 
             for ih in range(hop_ind.shape[0]):

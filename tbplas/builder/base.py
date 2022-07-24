@@ -19,8 +19,11 @@ Classes
         abstraction for orbitals in TB model
     LockableObject: developer class
         base class for all lockable classes
-    PCIntraHopping: developer class
-        container for holding hopping terms of a primitive cell
+    BaseHopping: developer class
+        base class for hopping term container
+    IntraHopping: developer class
+        for holding hopping terms in a primitive cell or modifications
+        to a supercell
     HopDict: user class
         container for holding hopping terms of a primitive cell
         reserved for compatibility with old version of TBPlaS
@@ -166,7 +169,7 @@ class LockableObject:
 
     def unlock(self):
         """
-        Unlock the primitive cell. Modifications are allowed then.
+        Unlock the object. Modifications are allowed then.
 
         :return: None
         """
@@ -189,15 +192,32 @@ class BaseHopping:
 
     @staticmethod
     def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
-        """Method to be implemented in derived classes."""
+        """
+        Normalize cell index and orbital pair into permitted keys of self.dict.
+
+        NOTE: This function should be overridden in derived classes.
+
+        For IntraHopping, it should check whether to take the conjugation and
+        return the status in conj. For InterHopping, it should check if rn is
+        legal since the class is exposed to the user. The status conj should
+        always be False for InterHopping.
+
+        :param tuple rn: (r_a, r_b, r_c), cell index
+        :param int orb_i: orbital index or bra
+        :param int orb_j: orbital index of ket
+        :return: (rn, pair, conj)
+            where rn is the normalized cell index,
+            pair is the normalized orbital pair,
+            conj is the flag of whether to take the conjugate of hopping energy
+        """
         raise NotImplemented("_norm_keys not implemented!")
 
     def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
         """
         Add a new hopping term or update existing term.
 
-        NOTE: conjugate terms are reduced by normalizing their cell indices and
-        orbital pairs.
+        NOTE: For IntraHopping, conjugate terms are reduced by normalizing their
+        cell indices and orbital pairs. For InterHopping this is not needed.
 
         :param tuple rn: (r_a, r_b, r_c), cell index
         :param int orb_i: orbital index or bra
@@ -343,6 +363,31 @@ class BaseHopping:
             if self.dict[rn] == {}:
                 self.dict.pop(rn)
 
+    def to_array(self, use_int64=False):
+        """
+        Convert hopping terms to array of 'hop_ind' and 'hop_eng',
+        for constructing attributes of 'PrimitiveCell' or 'Sample'.
+
+        :param use_int64: boolean
+            whether to use 64-bit integer for hop_ind, should be
+            enabled for the 'Sample' class
+        :return: (hop_ind, hop_eng)
+            hop_ind: (num_hop, 5) int32 array, hopping indices
+            hop_eng: (num_hop,) complex128 array, hopping energies
+        """
+        self.clean()
+        hop_ind, hop_eng = [], []
+        for rn, hop_rn in self.dict.items():
+            for pair, energy in hop_rn.items():
+                hop_ind.append(rn + pair)
+                hop_eng.append(energy)
+        if use_int64:
+            hop_ind = np.array(hop_ind, dtype=np.int64)
+        else:
+            hop_ind = np.array(hop_ind, dtype=np.int32)
+        hop_eng = np.array(hop_eng, dtype=np.complex128)
+        return hop_ind, hop_eng
+
     @property
     def num_hop(self):
         """Count the number of hopping terms."""
@@ -353,13 +398,14 @@ class BaseHopping:
         return num_hop
 
 
-class PCIntraHopping(BaseHopping):
+class IntraHopping(BaseHopping):
     """
-    Container class for holding hopping terms of a primitive cell.
+    Container class for holding hopping terms of a primitive cell or
+    modifications to a supercell.
 
-    NOTE: this class is intended to constitute the 'hopping_dict' attribute of
-    'PrimitiveCell' class. It is assumed that the caller will take care of all
-     the parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
+    NOTE: this class is intended to be called by the 'PrimitiveCell' and
+    'SuperCell' classes. It is assumed that the caller will take care of all the
+    parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
     """
     def __init__(self):
         super().__init__()
@@ -390,25 +436,6 @@ class PCIntraHopping(BaseHopping):
             pair = (orb_i, orb_j)
             conj = False
         return rn, pair, conj
-
-    def to_array(self):
-        """
-        Convert hopping terms to array of 'hop_ind' and 'hop_eng',
-        for constructing attributes of 'PrimitiveCell'.
-
-        :return: (hop_ind, hop_eng)
-            hop_ind: (num_hop, 5) int32 array, hopping indices
-            hop_eng: (num_hop,) complex128 array, hopping energies
-        """
-        self.clean()
-        hop_ind, hop_eng = [], []
-        for rn, hop_rn in self.dict.items():
-            for pair, energy in hop_rn.items():
-                hop_ind.append(rn + pair)
-                hop_eng.append(energy)
-        hop_ind = np.array(hop_ind, dtype=np.int32)
-        hop_eng = np.array(hop_eng, dtype=np.complex128)
-        return hop_ind, hop_eng
 
 
 class HopDict:
