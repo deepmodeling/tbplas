@@ -226,7 +226,8 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     return res_cell
 
 
-def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0, shift=0.0):
+def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0,
+                     center=np.zeros(3), shift=0.0):
     """
     Rotate and shift primitive cell with respect to z-axis.
 
@@ -234,6 +235,8 @@ def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0, shift=0.0):
         primitive cell to twist
     :param angle: float
         twisting angle in RADIANs, NOT degrees
+    :param center: (3,) float64 array
+        Cartesian coordinates of the rotation center in NANOMETER
     :param shift: float
         distance of shift in NANOMETER
     :return: None
@@ -241,20 +244,25 @@ def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0, shift=0.0):
     """
     prim_cell.sync_array()
 
-    # Since prim_cell uses fractional coordinates internally, we
-    # just need to rotate its lattice vectors.
-    prim_cell.lat_vec = rotate_coord(prim_cell.lat_vec, angle)
+    # Get rotated lattice vectors
+    end_points = np.vstack((np.zeros(3), prim_cell.lat_vec))
+    end_points = rotate_coord(end_points, angle=angle, center=center)
+    lat_vec = end_points[1:] - end_points[0]
 
-    # Shift coordinates
-    orb_pos = frac2cart(prim_cell.lat_vec, prim_cell.orb_pos)
+    # Get rotated orbital positions
+    # CAUTION: DO NOT normalize the positions after rotation.
+    # They should be kept as they are.
+    orb_pos = prim_cell.orb_pos_nm
+    orb_pos = rotate_coord(orb_pos, angle=angle, center=center)
+
+    # Shift orbital positions
     orb_pos[:, 2] += shift
-    orb_pos = cart2frac(prim_cell.lat_vec, orb_pos)
+
+    # Update lattice vectors and orbital positions
+    prim_cell.lat_vec = lat_vec
+    orb_pos = cart2frac(lat_vec, orb_pos)
     for i, pos in enumerate(orb_pos):
         prim_cell.set_orbital(i, position=tuple(pos))
-
-    # NOTE: if you modify orbital_list and hopping_dict of prim_cell manually,
-    # then sync_array should be called with force_sync=True. Or alternatively,
-    # update the timestamps of orb_list and hop_dict.
     prim_cell.sync_array()
 
 
