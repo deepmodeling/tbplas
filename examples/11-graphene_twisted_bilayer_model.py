@@ -230,9 +230,12 @@ def main():
     vis.plot_bands(k_len, bands, k_idx, k_label)
 
     # Visualize Moire's pattern
-    sample = tb.Sample(tb.SuperCell(merged_cell, dim=(3, 3, 1),
-                                    pbc=(False, False, False)))
-    sample.plot(with_orbitals=False, hop_as_arrows=False, hop_eng_cutoff=0.5)
+    angle = -math.atan(hetero_lattice[0, 1] / hetero_lattice[0, 0])
+    tb.spiral_prim_cell(merged_cell, angle=angle)
+    sample = tb.Sample(tb.SuperCell(merged_cell, dim=(4, 4, 1),
+                                    pbc=(True, True, False)))
+    sample.plot(with_orbitals=False, hop_as_arrows=False,
+                hop_eng_cutoff=0.3)
 
 
 if __name__ == "__main__":

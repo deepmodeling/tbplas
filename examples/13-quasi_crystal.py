@@ -62,21 +62,21 @@ def extend_hop(prim_cell: tb.PrimitiveCell, max_distance=0.75):
 
 
 def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
-    # Build bottom and top layers
-    bottom_layer = tb.extend_prim_cell(prim_cell, dim=dim)
-    top_layer = tb.extend_prim_cell(prim_cell, dim=dim)
+    # Build fixed and twisted layers
+    layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
+    layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
 
     # Get the Cartesian coordinates of rotation center
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
     center = np.matmul(center, prim_cell.lat_vec)
 
     # Rotate and reshape top layer
-    tb.spiral_prim_cell(top_layer, angle=angle, center=center, shift=shift)
-    conv_mat = np.matmul(bottom_layer.lat_vec, np.linalg.inv(top_layer.lat_vec))
-    top_layer = tb.reshape_prim_cell(top_layer, conv_mat)
+    tb.spiral_prim_cell(layer_twisted, angle=angle, center=center, shift=shift)
+    conv_mat = np.matmul(layer_fixed.lat_vec, np.linalg.inv(layer_twisted.lat_vec))
+    layer_twisted = tb.reshape_prim_cell(layer_twisted, conv_mat)
 
     # Merge bottom and top layers
-    final_cell = tb.merge_prim_cell(top_layer, bottom_layer)
+    final_cell = tb.merge_prim_cell(layer_twisted, layer_fixed)
 
     # Remove unnecessary orbitals
     idx_remove = []
@@ -85,6 +85,7 @@ def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
         if np.linalg.norm(pos[:2] - center[:2]) > radius:
             idx_remove.append(i)
     final_cell.remove_orbitals(idx_remove)
+    final_cell.trim()
 
     # Extend hopping terms
     extend_hop(final_cell)
@@ -172,7 +173,7 @@ def main():
     cell = make_quasi_crystal_pc(prim_cell, dim, angle, center)
     timer.toc("pc")
     cell.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-              hop_eng_cutoff=0.5)
+              hop_eng_cutoff=0.3)
 
     pc_fixed = tb.make_graphene_diamond()
     pc_twisted = tb.make_graphene_diamond()
@@ -180,7 +181,7 @@ def main():
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_diamond")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=['r', 'b'], hop_colors=['g'], hop_eng_cutoff=0.5)
+                sc_colors=['r', 'b'], hop_colors=['g'], hop_eng_cutoff=0.3)
 
     pc_fixed = tb.make_graphene_rect()
     pc_twisted = tb.make_graphene_rect()
@@ -190,7 +191,7 @@ def main():
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_rect")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=['b', 'r'], hop_colors=['g'], hop_eng_cutoff=0.5)
+                sc_colors=['b', 'r'], hop_colors=['g'], hop_eng_cutoff=0.3)
 
     timer.report_total_time()
 

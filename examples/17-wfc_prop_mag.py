@@ -155,12 +155,8 @@ def main():
 
     # Propagate wave function
     config = tb.Config()
-    if with_mfield:
-        config.generic['nr_time_steps'] = 2200
-        time_log = np.array([i*100 for i in range(21)])
-    else:
-        config.generic['nr_time_steps'] = 128
-        time_log = np.array([0, 16, 32, 64, 128])
+    config.generic['nr_time_steps'] = 128
+    time_log = np.array([0, 16, 32, 64, 128])
     sample.rescale_ham()
     solver = tb.Solver(sample, config)
     psi_t = solver.calc_psi_t(psi0, time_log)
