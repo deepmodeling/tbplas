@@ -529,6 +529,10 @@ class HopDict:
 
     Reserved for compatibility with old version of TBPlaS.
 
+    NOTE: DO NOT try to rewrite this class based on IntraHopping. This class
+    is intended for compatibility reasons and designed following a different
+    philosophy than IntraHopping.
+
     Attributes
     ----------
     dict: dictionary
