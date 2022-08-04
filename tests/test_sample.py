@@ -559,7 +559,7 @@ class TestSample(unittest.TestCase):
                               orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
                               orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
         sample = Sample(sc1, sc2, inter_hop)
-        sample.plot()
+        sample.plot(sc_colors=["r", "b"], hop_colors=["g"])
 
     def test12_plot_advanced(self):
         """

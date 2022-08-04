@@ -33,6 +33,7 @@ Classes
 """
 
 import math
+from collections import namedtuple
 from typing import List
 
 import numpy as np
@@ -116,37 +117,7 @@ def lorentzian(x, mu, sigma):
     return part_a * part_b
 
 
-class Orbital:
-    """
-    Class for representing an orbital in TB model.
-
-    Attributes
-    ----------
-    position: tuple with 3 floats
-        FRACTIONAL coordinate of the orbital
-    energy: float
-        on-site energy of the orbital in eV
-    label: string
-        orbital label
-    """
-    def __init__(self, position, energy=0.0, label="X") -> None:
-        """
-        :param position: tuple with 3 floats
-            FRACTIONAL coordinate of the orbital
-        :param energy: float
-            on-site energy of the orbital in eV
-        :param label: string
-            orbital label
-        :return: None
-        """
-        assert len(position) == 3
-        self.position = position
-        self.energy = energy
-        self.label = label
-
-    def __hash__(self):
-        """Return hash value of this instance."""
-        return hash(self.position + (self.energy, self.label))
+Orbital = namedtuple("Orbital", ["position", "energy", "label"])
 
 
 class LockableObject:

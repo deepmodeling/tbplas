@@ -226,12 +226,13 @@ class PrimitiveCell(LockableObject):
             orbital = self.orbital_list[orb_i]
         except IndexError as err:
             raise exc.PCOrbIndexError(orb_i) from err
-        if position is not None:
-            orbital.position = position
-        if energy is not None:
-            orbital.energy = energy
-        if label is not None:
-            orbital.label = label
+        if position is None:
+            position = orbital.position
+        if energy is None:
+            energy = orbital.energy
+        if label is None:
+            label = orbital.label
+        self.orbital_list[orb_i] = Orbital(position, energy, label)
         if sync_array:
             self.sync_array(**kwargs)
 
