@@ -17,9 +17,9 @@ Classes
 -------
     Orbital: developer class
         abstraction for orbitals in TB model
-    LockableObject: developer class
+    Lockable: developer class
         base class for all lockable classes
-    BaseHopping: developer class
+    Hopping: developer class
         base class for hopping term container
     IntraHopping: developer class
         for holding hopping terms in a primitive cell or modifications
@@ -34,6 +34,7 @@ Classes
 
 import math
 from collections import namedtuple
+from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
@@ -124,7 +125,7 @@ def lorentzian(x, mu, sigma):
 Orbital = namedtuple("Orbital", ["position", "energy", "label"])
 
 
-class LockableObject:
+class Lockable(ABC):
     """
     Base class for all lockable objects.
 
@@ -153,8 +154,13 @@ class LockableObject:
         """
         self.is_locked = False
 
+    @abstractmethod
+    def check_lock(self):
+        """Check the lock state of the object."""
+        pass
 
-class BaseHopping(LockableObject):
+
+class Hopping(ABC):
     """
     Base class for IntraHopping and InterHopping classes.
 
@@ -175,6 +181,7 @@ class BaseHopping(LockableObject):
         return hash(tuple(hop_list))
 
     @staticmethod
+    @abstractmethod
     def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
         """
         Normalize cell index and orbital pair into permitted keys of self.dict.
@@ -194,7 +201,7 @@ class BaseHopping(LockableObject):
             pair is the normalized orbital pair,
             conj is the flag of whether to take the conjugate of hopping energy
         """
-        raise NotImplementedError("_norm_keys not implemented!")
+        pass
 
     def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
         """
@@ -208,10 +215,7 @@ class BaseHopping(LockableObject):
         :param int orb_j: orbital index of ket
         :param complex energy: hopping energy
         :return: None
-        :raises LockError: is the object is locked
         """
-        if self.is_locked:
-            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         if conj:
             energy = energy.conjugate()
@@ -254,10 +258,7 @@ class BaseHopping(LockableObject):
             whether to call 'clean' to remove empty cell indices
         :return: status
             where the hopping term is removed, False if not found
-        :raises LockError: is the object is locked
         """
-        if self.is_locked:
-            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
             self.dict[rn].pop(pair)
@@ -283,10 +284,7 @@ class BaseHopping(LockableObject):
         :param tuple rn: (r_a, r_b, r_c), cell index
         :return: status
             where the hopping terms are removed, False if not found
-        :raises LockError: if the object is locked
         """
-        if self.is_locked:
-            raise exc.LockError()
         rn, pair, conj = self._norm_keys(rn, 0, 0)
         try:
             self.dict.pop(rn)
@@ -317,10 +315,7 @@ class BaseHopping(LockableObject):
         :param clean: boolean
             whether to call 'clean' to remove empty cell indices
         :return: None
-        :raises LockError: if the object is locked
         """
-        if self.is_locked:
-            raise exc.LockError()
         indices = sorted(indices)
         idx_remap = dict()
 
@@ -428,7 +423,7 @@ class BaseHopping(LockableObject):
         return num_hop
 
 
-class IntraHopping(BaseHopping):
+class IntraHopping(Hopping):
     """
     Container class for holding hopping terms of a primitive cell or
     modifications to a supercell.
@@ -468,7 +463,7 @@ class IntraHopping(BaseHopping):
         return rn, pair, conj
 
 
-class InterHopping(BaseHopping):
+class InterHopping(Hopping):
     """
     Base class for container classes holding hopping terms between two models.
     """

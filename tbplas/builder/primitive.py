@@ -21,13 +21,13 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import (check_coord, Orbital, LockableObject, IntraHopping,
+from .base import (check_coord, Orbital, Lockable, IntraHopping,
                    HopDict, gaussian, lorentzian)
 from .utils import ModelViewer
 from ..parallel import MPIEnv
 
 
-class PrimitiveCell(LockableObject):
+class PrimitiveCell(Lockable):
     """
     Class for representing a primitive cell, from which the supercell
     can be built.
@@ -148,6 +148,11 @@ class PrimitiveCell(LockableObject):
             raise exc.OrbPositionLenError(position)
         return position
 
+    def check_lock(self):
+        """Check lock state of this instance."""
+        if self.is_locked:
+            raise exc.PCLockError()
+
     def add_orbital(self, position, energy=0.0, label="X", sync_array=False,
                     **kwargs):
         """
@@ -170,8 +175,7 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         # Check arguments
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
         position = self._check_position(position)
 
         # Add the orbital
@@ -226,8 +230,7 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         # Check arguments
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
         if position is not None:
             position = self._check_position(position)
 
@@ -325,8 +328,7 @@ class PrimitiveCell(LockableObject):
         :raises PCOrbIndexError: if orb_i falls out of range
         """
         # Check arguments
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
 
         # Delete the orbitals
         indices = sorted(indices)
@@ -396,8 +398,7 @@ class PrimitiveCell(LockableObject):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
         rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
         self.hopping_dict.add_hopping(rn, orb_i, orb_j, energy)
         if sync_array:
@@ -483,8 +484,7 @@ class PrimitiveCell(LockableObject):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
         rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
         status = self.hopping_dict.remove_hopping(rn, orb_i, orb_j)
         if not status:
@@ -526,8 +526,7 @@ class PrimitiveCell(LockableObject):
         :raises PCLockError: if the primitive cell is locked
         :raises ValueError: if len(pbc) != 3
         """
-        if self.is_locked:
-            raise exc.PCLockError()
+        self.check_lock()
         if len(pbc) != 3:
             raise ValueError("Length of pbc is not 3")
 

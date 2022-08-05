@@ -26,13 +26,13 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import gaussian, lorentzian, InterHopping
+from .base import gaussian, lorentzian, Lockable, InterHopping
 from .super import SuperCell
 from .utils import ModelViewer
 from ..parallel import MPIEnv
 
 
-class SCInterHopping(InterHopping):
+class SCInterHopping(Lockable, InterHopping):
     """
     Container class for hopping terms between different supercells within the
     sample.
@@ -64,9 +64,15 @@ class SCInterHopping(InterHopping):
         :param sc_ket: instance of 'SuperCell' class
             the 'ket' supercell to which the hopping terms exist
         """
-        super().__init__()
+        Lockable.__init__(self)
+        InterHopping.__init__(self)
         self.sc_bra = sc_bra
         self.sc_ket = sc_ket
+
+    def check_lock(self):
+        """Check lock state of this instance."""
+        if self.is_locked:
+            raise exc.InterHopLockError()
 
     def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
         """
@@ -79,10 +85,8 @@ class SCInterHopping(InterHopping):
         :return: None
         :raises InterHopLockError: is the object is locked
         """
-        try:
-            super().add_hopping(rn, orb_i, orb_j, energy)
-        except exc.LockError as err:
-            raise exc.InterHopLockError() from err
+        self.check_lock()
+        super().add_hopping(rn, orb_i, orb_j, energy)
 
     def get_hop(self, check_dup=False):
         """

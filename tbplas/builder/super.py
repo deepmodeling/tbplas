@@ -21,12 +21,12 @@ import matplotlib.pyplot as plt
 from . import exceptions as exc
 from . import core
 from . import lattice as lat
-from .base import check_coord, LockableObject, IntraHopping
+from .base import check_coord, Lockable, IntraHopping
 from .primitive import PrimitiveCell
 from .utils import ModelViewer
 
 
-class OrbitalSet(LockableObject):
+class OrbitalSet(Lockable):
     """
     Container class for orbitals and vacancies in the supercell.
 
@@ -151,7 +151,7 @@ class OrbitalSet(LockableObject):
         self.dim = np.array(dim, dtype=np.int32)
 
         # Check and set periodic boundary condition
-        pbc = [0 if _ is False else 1 for _ in pbc]
+        pbc = tuple([0 if _ is False else 1 for _ in pbc])
         pbc, legal = check_coord(pbc)
         if not legal:
             raise exc.PBCLenError(pbc)
@@ -234,6 +234,11 @@ class OrbitalSet(LockableObject):
         else:
             raise exc.IDPCTypeError(id_pc)
 
+    def check_lock(self):
+        """Check lock state of this instance."""
+        if self.is_locked:
+            raise exc.OrbSetLockError()
+
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
         Wrapper over 'add_vacancies' to add a single vacancy to the orbital set.
@@ -274,8 +279,7 @@ class OrbitalSet(LockableObject):
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
-        if self.is_locked:
-            raise exc.OrbSetLockError()
+        self.check_lock()
 
         for vacancy in vacancies:
             # Convert and check vacancy
@@ -534,6 +538,11 @@ class SuperCell(OrbitalSet):
         self.hop_modifier = IntraHopping()
         self.orb_pos_modifier = orb_pos_modifier
 
+    def check_lock(self):
+        """Check lock state of this instance."""
+        if self.is_locked:
+            raise exc.SCLockError()
+
     def add_hopping(self, rn, orb_i, orb_j, energy):
         """
         Add a new term to the hopping modifier.
@@ -553,8 +562,7 @@ class SuperCell(OrbitalSet):
         :raises SCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        if self.is_locked:
-            raise exc.SCLockError()
+        self.check_lock()
 
         # Check params, adapted from the '_check_hop_index' method
         # of 'PrimitiveCell' class
@@ -581,8 +589,7 @@ class SuperCell(OrbitalSet):
         :return: None
         :raises SCLockError: if the supercell is locked
         """
-        if self.is_locked:
-            raise exc.SCLockError()
+        self.check_lock()
         self.orb_pos_modifier = orb_pos_modifier
 
     def get_orb_eng(self):
