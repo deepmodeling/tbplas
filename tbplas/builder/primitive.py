@@ -21,7 +21,7 @@ from . import lattice as lat
 from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import (correct_coord, Orbital, LockableObject, IntraHopping,
+from .base import (check_coord, Orbital, LockableObject, IntraHopping,
                    HopDict, gaussian, lorentzian)
 from .utils import ModelViewer
 from ..parallel import MPIEnv
@@ -132,6 +132,22 @@ class PrimitiveCell(LockableObject):
             status = False
         return status
 
+    @staticmethod
+    def _check_position(position):
+        """
+        Check and complete orbital position.
+
+        :param position: tuple of floats
+            atomic position to check
+        :return position: tuple of floats
+            check atomic position
+        :raises OrbPositionLenError: if len(position) is not 2 or 3
+        """
+        position, legal = check_coord(position)
+        if not legal:
+            raise exc.OrbPositionLenError(position)
+        return position
+
     def add_orbital(self, position, energy=0.0, label="X", sync_array=False,
                     **kwargs):
         """
@@ -156,10 +172,7 @@ class PrimitiveCell(LockableObject):
         # Check arguments
         if self.is_locked:
             raise exc.PCLockError()
-        try:
-            position = correct_coord(position)
-        except exc.CoordLenError as err:
-            raise exc.OrbPositionLenError(err.coord) from err
+        position = self._check_position(position)
 
         # Add the orbital
         self.orbital_list.append(Orbital(position, energy, label))
@@ -181,7 +194,7 @@ class PrimitiveCell(LockableObject):
         :raises PCLockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
-        position_cart = np.array([correct_coord(position)])
+        position_cart = np.array([self._check_position(position)])
         position_frac = lat.cart2frac(self.lat_vec, position_cart * unit)[0]
         self.add_orbital(position_frac, **kwargs)
 
@@ -216,10 +229,7 @@ class PrimitiveCell(LockableObject):
         if self.is_locked:
             raise exc.PCLockError()
         if position is not None:
-            try:
-                position = correct_coord(position)
-            except exc.CoordLenError as err:
-                raise exc.OrbPositionLenError(err.coord) from err
+            position = self._check_position(position)
 
         # Set orbital attributes
         try:
@@ -259,7 +269,7 @@ class PrimitiveCell(LockableObject):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         if position is not None:
-            position = np.array([correct_coord(position)])
+            position = np.array([self._check_position(position)])
             position = lat.cart2frac(self.lat_vec, position * unit)[0]
         self.set_orbital(orb_i, position, **kwargs)
 
@@ -349,10 +359,9 @@ class PrimitiveCell(LockableObject):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn, legal = check_coord(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
         num_orbitals = len(self.orbital_list)
         if not (0 <= orb_i < num_orbitals):
             raise exc.PCOrbIndexError(orb_i)

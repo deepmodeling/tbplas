@@ -671,7 +671,7 @@ class TestPrimitive(unittest.TestCase):
         # Test __get_minus_sign
         rn = (0, -1, 3, 2)
         minus_rn = (0, 1, -3, -2)
-        self.assertTupleEqual(minus_rn, hop_dict._HopDict__get_minus_rn(rn))
+        self.assertTupleEqual(minus_rn, hop_dict._get_minus_rn(rn))
 
         # Test set_mat and set_zero_mat
         # Exception handling

@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from . import exceptions as exc
 from . import core
 from . import lattice as lat
-from .base import correct_coord, LockableObject, IntraHopping
+from .base import check_coord, LockableObject, IntraHopping
 from .primitive import PrimitiveCell
 from .utils import ModelViewer
 
@@ -139,10 +139,9 @@ class OrbitalSet(LockableObject):
         self.prim_cell.lock()
 
         # Check and set dimension
-        try:
-            dim = correct_coord(dim, complete_item=1)
-        except exc.CoordLenError as err:
-            raise exc.SCDimLenError(dim) from err
+        dim, legal = check_coord(dim, complete_item=1)
+        if not legal:
+            raise exc.SCDimLenError(dim)
         for i in range(3):
             rn_min = self.prim_cell.hop_ind[:, i].min()
             rn_max = self.prim_cell.hop_ind[:, i].max()
@@ -152,10 +151,10 @@ class OrbitalSet(LockableObject):
         self.dim = np.array(dim, dtype=np.int32)
 
         # Check and set periodic boundary condition
-        try:
-            pbc = correct_coord([0 if _ is False else 1 for _ in pbc])
-        except exc.CoordLenError as err:
-            raise exc.PBCLenError(err.coord) from err
+        pbc = [0 if _ is False else 1 for _ in pbc]
+        pbc, legal = check_coord(pbc)
+        if not legal:
+            raise exc.PBCLenError(pbc)
         self.pbc = np.array(pbc, dtype=np.int32)
 
         # Initialize lists and arrays assuming no vacancies
@@ -559,10 +558,9 @@ class SuperCell(OrbitalSet):
 
         # Check params, adapted from the '_check_hop_index' method
         # of 'PrimitiveCell' class
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn, legal = check_coord(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
         num_orbitals = self.num_orb_sc
         if not (0 <= orb_i < num_orbitals):
             raise exc.SCOrbIndexError(orb_i)

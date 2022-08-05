@@ -3,7 +3,7 @@ Base functions and classes used through the builder package
 
 Functions
 ---------
-    correct_coord: developer function
+    check_coord: developer function
         check and auto-complete cell index, orbital coordinate,
         super-cell dimension and periodic condition
     invert_rn: developer function
@@ -41,27 +41,31 @@ import numpy as np
 from . import exceptions as exc
 
 
-def correct_coord(coord, complete_item=0):
+def check_coord(coord: tuple, complete_item=0):
     """
-    Check and complete cell index, orbital coordinate, etc.
+    Check and auto-complete cell index, orbital coordinate, etc.
 
     :param coord: tuple with 2 integers or floats
         incoming coordinate to check
     :param complete_item: integer or float
         item to be appended to coord if its length is 2
     :return: coord: tuple with 3 integers or floats
-        corrected and completed coordinate
-    :raises CoordLenError: if length of coord is not 2 or 3
+        corrected and auto-completed coordinate
+    :return: legal: boolean
+        True if length of incoming coord is 2 or 3, otherwise False.
     """
-    if len(coord) not in (2, 3):
-        raise exc.CoordLenError(coord)
-    coord = tuple(coord)
-    if len(coord) == 2:
+    coord, legal = tuple(coord), True
+    len_coord = len(coord)
+    if len_coord == 3:
+        pass
+    elif len_coord == 2:
         if isinstance(coord[0], int):
             coord += (int(complete_item),)
         else:
             coord += (float(complete_item),)
-    return coord
+    else:
+        legal = False
+    return coord, legal
 
 
 def invert_rn(rn: tuple, i=0):
@@ -485,10 +489,9 @@ class InterHopping(BaseHopping):
             conj is the flag of whether to take the conjugate of hopping energy
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn, legal = check_coord(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
         pair = (orb_i, orb_j)
         conj = False
         return rn, pair, conj
@@ -522,9 +525,25 @@ class HopDict:
         self.mat_shape = (num_orb, num_orb)
 
     @staticmethod
-    def __get_minus_rn(rn):
+    def _get_minus_rn(rn):
         """Get minus cell index."""
         return tuple([-v for v in rn])
+
+    @staticmethod
+    def _check_rn(rn):
+        """
+        Check and complete cell index.
+
+        :param rn: tuple of integers
+            cell index to check
+        :return rn: tuple of integers
+            checked cell index
+        :raises CellIndexLenError: if len(rn) is not 2 or 3
+        """
+        rn, legal = check_coord(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
+        return rn
 
     def set_num_orb(self, num_orb):
         """
@@ -551,10 +570,7 @@ class HopDict:
             matrix
         """
         # Check cell index
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn = self._check_rn(rn)
 
         # Check matrix size
         hop_mat = np.array(hop_mat)
@@ -578,7 +594,7 @@ class HopDict:
         if rn in self.dict.keys():
             self.dict[rn] = hop_mat
         else:
-            minus_rn = self.__get_minus_rn(rn)
+            minus_rn = self._get_minus_rn(rn)
             if minus_rn in self.dict.keys():
                 self.dict[minus_rn] = hop_mat.T.conj()
             else:
@@ -610,10 +626,7 @@ class HopDict:
         :raises PCHopDiagonalError: if on-site energy is given as input
         """
         # Check cell index
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn = self._check_rn(rn)
 
         # Check element indices
         if element[0] not in range(self.mat_shape[0]) or \
@@ -628,7 +641,7 @@ class HopDict:
         if rn in self.dict.keys():
             self.dict[rn][element[0], element[1]] = hop
         else:
-            minus_rn = self.__get_minus_rn(rn)
+            minus_rn = self._get_minus_rn(rn)
             if minus_rn in self.dict.keys():
                 self.dict[minus_rn][element[1], element[0]] = hop.conjugate()
             else:
@@ -649,15 +662,12 @@ class HopDict:
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
         # Check cell index
-        try:
-            rn = correct_coord(rn)
-        except exc.CoordLenError as err:
-            raise exc.CellIndexLenError(err.coord) from err
+        rn = self._check_rn(rn)
 
         # Delete hopping matrix
         if rn in self.dict.keys():
             self.dict.pop(rn, None)
         else:
-            minus_rn = self.__get_minus_rn(rn)
+            minus_rn = self._get_minus_rn(rn)
             if minus_rn in self.dict.keys():
                 self.dict.pop(minus_rn, None)

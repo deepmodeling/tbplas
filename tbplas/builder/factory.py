@@ -33,8 +33,8 @@ from scipy.spatial import KDTree
 
 from . import constants as consts
 from . import exceptions as exc
-from .lattice import frac2cart, cart2frac, rotate_coord
-from .base import correct_coord, InterHopping
+from .lattice import cart2frac, rotate_coord
+from .base import check_coord, InterHopping
 from .primitive import PrimitiveCell
 
 
@@ -52,7 +52,9 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
     :raises ValueError: if dimension along any direction is smaller than 1
     """
     # Check the dimension of extended cell
-    dim = correct_coord(dim, complete_item=1)
+    dim, legal = check_coord(dim, complete_item=1)
+    if not legal:
+        raise exc.CoordLenError(dim)
     for i_dim in range(len(dim)):
         if dim[i_dim] < 1:
             raise ValueError(f"Dimension along direction {i_dim} should not"
