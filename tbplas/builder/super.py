@@ -237,7 +237,7 @@ class OrbitalSet(Lockable):
     def check_lock(self):
         """Check lock state of this instance."""
         if self.is_locked:
-            raise exc.OrbSetLockError()
+            raise exc.SCLockError()
 
     def add_vacancy(self, vacancy, sync_array=False, **kwargs):
         """
@@ -253,7 +253,7 @@ class OrbitalSet(Lockable):
             self.vacancy_list is modified.
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
             be modified if sync_array is True.
-        :raises OrbSetLockError: if the object is locked
+        :raises SCLockError: if the object is locked
         :raises VacIDPCLenError: if length of vacancy index is not 4
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
@@ -274,7 +274,7 @@ class OrbitalSet(Lockable):
             self.vacancy_list is modified.
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
             be modified if sync_array is True.
-        :raises OrbSetLockError: if the object is locked
+        :raises SCLockError: if the object is locked
         :raises VacIDPCLenError: if length of vacancy index is not 4
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
@@ -313,7 +313,7 @@ class OrbitalSet(Lockable):
             self.vacancy_list is modified.
             self.vac_id_pc, self.vac_id_sc and self.orb_id_pc will also
             be modified if sync_array is True.
-        :raises OrbSetLockError: if the object is locked
+        :raises SCLockError: if the object is locked
         :raises VacIDPCLenError: if length of vacancy index is not 4
         :raises VacIDPCIndexError: if cell or orbital index of vacancy is
             out of range
@@ -537,11 +537,6 @@ class SuperCell(OrbitalSet):
         # Initialize hop_modifier and orb_pos_modifier
         self.hop_modifier = IntraHopping()
         self.orb_pos_modifier = orb_pos_modifier
-
-    def check_lock(self):
-        """Check lock state of this instance."""
-        if self.is_locked:
-            raise exc.SCLockError()
 
     def add_hopping(self, rn, orb_i, orb_j, energy):
         """
