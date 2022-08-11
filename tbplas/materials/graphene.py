@@ -16,12 +16,14 @@ import numpy as np
 from ..builder import gen_lattice_vectors, PrimitiveCell, reshape_prim_cell, NM
 
 
-def make_graphene_diamond(c=1.0):
+def make_graphene_diamond(c=1.0, t=-2.7):
     """
     Make graphene primitive cell in diamond shape.
 
     :param c: float
         length of c-axis in NANOMETER
+    :param t: float
+        hopping integral in eV
     :return: cell: instance of 'PrimitiveCell' class
         graphene primitive cell
     """
@@ -29,13 +31,13 @@ def make_graphene_diamond(c=1.0):
     cell = PrimitiveCell(vectors, unit=NM)
     cell.add_orbital([0.0, 0.0], label="C_pz")
     cell.add_orbital([1/3., 1/3.], label="C_pz")
-    cell.add_hopping([0, 0], 0, 1, -2.7)
-    cell.add_hopping([1, 0], 1, 0, -2.7)
-    cell.add_hopping([0, 1], 1, 0, -2.7)
+    cell.add_hopping([0, 0], 0, 1, t)
+    cell.add_hopping([1, 0], 1, 0, t)
+    cell.add_hopping([0, 1], 1, 0, t)
     return cell
 
 
-def make_graphene_rect(from_scratch=True, c=1.0):
+def make_graphene_rect(from_scratch=True, c=1.0, t=-2.7):
     """
     Make graphene primitive cell in rectangular shape.
 
@@ -45,6 +47,8 @@ def make_graphene_rect(from_scratch=True, c=1.0):
         method to build the primitive cell
         If true, build the cell from scratch.
         Otherwise, build it by reshaping a primitive cell.
+    :param t: float
+        hopping integral in eV
     :return: cell: instance of 'PrimitiveCell' class
         graphene primitive cell
     """
@@ -63,14 +67,14 @@ def make_graphene_rect(from_scratch=True, c=1.0):
         cell.add_orbital((1/2., 1/2.), label="C_pz")
 
         # Add hopping terms
-        cell.add_hopping([0, 0], 0, 2, -2.7)
-        cell.add_hopping([0, 0], 2, 3, -2.7)
-        cell.add_hopping([0, 0], 3, 1, -2.7)
-        cell.add_hopping([0, 1], 1, 0, -2.7)
-        cell.add_hopping([1, 0], 3, 1, -2.7)
-        cell.add_hopping([1, 0], 2, 0, -2.7)
+        cell.add_hopping([0, 0], 0, 2, t)
+        cell.add_hopping([0, 0], 2, 3, t)
+        cell.add_hopping([0, 0], 3, 1, t)
+        cell.add_hopping([0, 1], 1, 0, t)
+        cell.add_hopping([1, 0], 3, 1, t)
+        cell.add_hopping([1, 0], 2, 0, t)
     else:
-        cell = make_graphene_diamond()
+        cell = make_graphene_diamond(t=t)
         lat_frac = np.array([[1, 0, 0], [-1, 2, 0], [0, 0, 1]])
         cell = reshape_prim_cell(cell, lat_frac)
     return cell
