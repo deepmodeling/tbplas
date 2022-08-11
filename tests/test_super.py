@@ -6,7 +6,6 @@ import numpy as np
 
 from tbplas import gen_lattice_vectors, PrimitiveCell, SuperCell
 import tbplas.builder.exceptions as exc
-import tbplas.builder.core as core
 from tbplas.builder.super import OrbitalSet
 from tbplas.utils import TestHelper
 

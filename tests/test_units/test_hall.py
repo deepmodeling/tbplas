@@ -2,10 +2,13 @@
 
 import numpy as np
 import tbplas as tb
+from test_lindhard import make_cell
 
 
 # Construct primitive cell
-cell = tb.make_graphene_rect()
+t = 3.0  # Absolute hopping energy in eV
+a = 0.142  # C-C distance in NM
+cell = make_cell(a, t)
 
 # Create sample
 super_cell_pbc = tb.SuperCell(cell, dim=(500, 200, 1),
@@ -26,8 +29,8 @@ solver = tb.Solver(sample_pbc, config, prefix="test")
 analyzer = tb.Analyzer(sample_pbc, config, dimension=2)
 vis = tb.Visualizer()
 
-#mu_hall = solver.calc_hall_mu()
-mu_hall = np.load("xy/mu_hall.npy")
+mu_hall = solver.calc_hall_mu()
+# mu_hall = np.load("xy/mu_hall.npy")
 omegas, hall = analyzer.calc_hall_cond(mu_hall, unit="h")
 np.save("omegas", omegas)
 np.save("hall", hall)

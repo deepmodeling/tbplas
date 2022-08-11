@@ -2,18 +2,13 @@
 
 import numpy as np
 import tbplas as tb
+from test_lindhard import make_cell
 
 
 # Construct primitive cell
 t = 3.0  # Absolute hopping energy in eV
 a = 0.142  # C-C distance in NM
-vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
-cell = tb.PrimitiveCell(vectors, unit=tb.NM)
-cell.add_orbital([0.0, 0.0], label="C_pz")
-cell.add_orbital([1 / 3., 1 / 3.], label="C_pz")
-cell.add_hopping([0, 0], 0, 1, t)
-cell.add_hopping([1, 0], 1, 0, t)
-cell.add_hopping([0, 1], 1, 0, t)
+cell = make_cell(a, t)
 
 # Create sample
 super_cell_pbc = tb.SuperCell(cell, dim=(4096, 4096, 1),
