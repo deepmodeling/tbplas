@@ -27,9 +27,9 @@ copyright = '2017-2022, the TBPLaS development team'
 author = 'Edo van Veen, Guus Slotman, Kaixiang Huang Yunhai Li, Xueheng Kuang & Shengjun Yuan'
 
 # The short X.Y version
-version = '1.0'
+version = '1.1'
 # The full version, including alpha/beta/rc tags
-release = '1.0-rc'
+release = '1.1-rc'
 
 
 # -- General configuration ---------------------------------------------------

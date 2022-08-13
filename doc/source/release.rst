@@ -19,7 +19,7 @@ v1.1 | 2022-08-13
 * The default values of common parameters and the units of outputs have been unified for exact
   diagonalization, Lindhard and TBPM subroutines.
 * References to papers discussing the methodologies have been revised.
-* Function ``merge_prim_cell`` checks lattice vectors before merging cells.
+* :func:`merge_prim_cell` checks lattice vectors before merging cells.
 * ``plot`` method of :class:`.Sample` accepts lists of colors for plotting the supercells and
   inter-cell hopping terms.
 * DC conductivity subroutine is refactored and much faster.
@@ -34,9 +34,9 @@ v1.1 | 2022-08-13
 * The output unit of AC conductivity from TBPM has been changed from e^2/(4*h_bar) to e^2/h_bar,
   for consistency with the :class:`.Lindhard` class.
 
-.. rubic:: Bugs fixed
+.. rubric:: Bugs fixed
 
-* :function:`merge_prim_cell` does not set the ``extend`` attribute properly.
+* :func:`merge_prim_cell` does not set the ``extend`` attribute properly.
 * ``reset_array`` method of :class:`.Sample` class does not reset the ``rescale`` attribute.
 * The FORTRAN subroutine ``norm`` produces L^1norm instead of L^2 for complex vectors.
 * The FORTRAN subroutine ``tbpm_ldos`` does not set initial state properly.
