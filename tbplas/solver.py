@@ -540,14 +540,10 @@ class Solver(MPIEnv):
         :return: ldos: (2*nr_time_steps+1,) float64 array
             LDOS value to corresponding energies in 1/eV
         :raises RuntimeError: if more than 1 mpi process is used
-        :raises ValueError: if more than 1 site is given
         """
         if self.size != 1:
             raise RuntimeError("Using more than 1 mpi process is not allowed"
                                " for ldos_haydock")
-        if len(self.config.LDOS['site_indices']) != 1:
-            raise ValueError("Only one site is allowed for Haydock recursion"
-                             " method")
 
         ham_csr = self.sample.build_ham_csr()
         energies, ldos = f2py.ldos_haydock(

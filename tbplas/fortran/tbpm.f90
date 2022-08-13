@@ -147,11 +147,15 @@ SUBROUTINE tbpm_ldos(site_indices, n_siteind, Bes, n_Bes, &
 #endif
 
         ! make LDOS state
+        ! NOTE: Both wf0 and wf_t should have non-zero components
+        ! at selected sites only!
         CALL random_state(wf_t, n_wf, seed*(i_sample+rank*n_ran_samples))
         wf0 = 0D0
         DO i = 1, n_siteind
             wf0(site_indices(i) + 1) = wf_t(site_indices(i) + 1)
         END DO
+        wf0 = wf0 / sqrt(inner_prod(wf0, wf0))
+        wf_t = wf0
         corrval = inner_prod(wf0, wf_t)
 
 #ifdef DEBUG

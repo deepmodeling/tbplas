@@ -97,36 +97,60 @@ SUBROUTINE Haydock_coef(n1, n_depth, H_csr, H_rescale, coefa, coefb)
 
     ! declare vars
     INTEGER :: i
-    COMPLEX(KIND=8), DIMENSION(SIZE(n1)), TARGET :: n0, n2
-    COMPLEX(KIND=8), DIMENSION(:), POINTER :: p0, p1, p2, p3
+    COMPLEX(KIND=8), DIMENSION(SIZE(n1)), TARGET :: n2, n_buf
+    COMPLEX(KIND=8), DIMENSION(:), POINTER :: p1, p2, p_buf, p_swap
 
-    ! get a1
-    n2 = amv(H_rescale, H_csr, n1)
-    coefa(1) = inner_prod(n1, n2)
-    ! get b1
-    CALL axpy(-coefa(1), n1, n2)
-    coefb(1) = norm(n2)
+    ! Formulation of the method
+    !
+    ! initial condition:
+    !   a1 = <n1|H|n1>
+    !   m2 = (H - a1)|n1>
+    !   b2 = |m2|
+    !   n2 = m2 / b2
+    !
+    ! iteration:
+    !   ai = <ni|H|ni>
+    !   mi+1 = (H - ai)|ni> - bi|ni-1>
+    !   bi+1 = |mi+1|
+    !   ni+1 = mi+1 / bi+1
+    !
+    ! where mi+1 is the unnormalized wave function at iteration i+1.
+    !
+    ! In out implementation:
+    !   p1, n1 -> ni
+    !   p2, n2 -> ni+1
+    !   p_buf, n_buf -> H|ni> and mi+1
 
+    ! get initial values for a and b
+    n_buf = amv(H_rescale, H_csr, n1)  ! n_buf = H|n1>
+    coefa(1) = inner_prod(n1, n_buf)   ! a1 = <n1|H|n1> = <n1|n_buf>
+    CALL axpy(-coefa(1), n1, n_buf)    ! m2 = (H - a1)|n1> = |n_buf> - a1|n1>
+    coefb(1) = norm(n_buf)             ! b2 = |m2|
+    n2 = n_buf / coefb(1)              ! n2 = m2 / b2
+
+    ! initialize pointers
     p1 => n1
     p2 => n2
-    p3 => n0
+    p_buf => n_buf
+
     ! recursion
     DO i = 2, n_depth
         IF (MODULO(i, 1000) == 0) THEN
             PRINT *, "    Depth    ", i, " of ", n_depth
         END IF
 
-        p0 => p1
+        p_buf = amv(H_rescale, H_csr, p2)  ! n_buf = H|ni>
+        coefa(i) = inner_prod(p2, p_buf)   ! ai = <ni|H|ni> = <n1|n_buf>
+        ! mi+1 = (H - ai)|ni> - bi|ni-1> = n_buf - ai|ni> - bi|ni-1>
+        CALL axpbypz(-coefa(i), p2, -coefb(i-1), p1, p_buf)
+        coefb(i) = norm(p_buf)             ! bi+1 = |mi+1|
+        p_buf = p_buf / coefb(i)           ! ni+1 = mi+1 / bi+1
+
+        ! update pointers
+        p_swap => p1
         p1 => p2
-        CALL self_div(p1, coefb(i-1)) ! p1(:) = p2(:) / coefb(i-1)
-
-        p2 => p3
-        p2 = amv(H_rescale, H_csr, p1)
-        coefa(i) = inner_prod(p1, p2)
-
-        CALL axpbypz(-coefa(i), p1, -coefb(i-1), p0, p2)
-        coefb(i) = norm(p2)
-        p3 => p0
+        p2 => p_buf
+        p_buf => p_swap
     END DO
 END SUBROUTINE Haydock_coef
 
