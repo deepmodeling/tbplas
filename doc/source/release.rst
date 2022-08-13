@@ -1,6 +1,46 @@
 Release Notes
 =============
 
+v1.1 | 2022-08-13
+-----------------
+
+.. rubric:: New features
+
+* New :class:`.Lindhard` class for evaluating response properties using Lindhard function.
+* Implemented LDOS calculation based exact diagonalization.
+* Implemented propagation of wave function from initial condition.
+* Implemented evaluation of diffusion coeffcients from DC correlation function.
+* Added MPI support for band structure and DOS calculation.
+* Added support for 64-bit array indices (samples can be much larger).
+
+.. rubric:: Improvments
+
+* A lot of classes have been refactored for simplicity, maintainability and efficiency.
+* The default values of common parameters and the units of outputs have been unified for exact
+  diagonalization, Lindhard and TBPM subroutines.
+* References to papers discussing the methodologies have been revised.
+* Function ``merge_prim_cell`` checks lattice vectors before merging cells.
+* ``plot`` method of :class:`.Sample` accepts lists of colors for plotting the supercells and
+  inter-cell hopping terms.
+* DC conductivity subroutine is refactored and much faster.
+
+.. rubric:: Changes
+
+* The ``IntraHopping`` class has beem removed. Modifications to hopping terms are now handled
+  by the supercell itself.
+* The ``InterHopping`` class has been renamed to :class:`.SCInterHopping`.
+* The ``InterHopDict`` class has been renamed to :class:`.PCInterHopping`.
+* ``apply_pbc`` and ``trim_prim_cell`` functions are moved to :class:`.PrimitiveCell` class.
+* The output unit of AC conductivity from TBPM has been changed from e^2/(4*h_bar) to e^2/h_bar,
+  for consistency with the :class:`.Lindhard` class.
+
+.. rubic:: Bugs fixed
+
+* :function:`merge_prim_cell` does not set the ``extend`` attribute properly.
+* ``reset_array`` method of :class:`.Sample` class does not reset the ``rescale`` attribute.
+* The FORTRAN subroutine ``norm`` produces L^1norm instead of L^2 for complex vectors.
+* The FORTRAN subroutine ``tbpm_ldos`` does not set initial state properly.
+
 v1.0 | 2022-02-18
 -----------------
 

@@ -17,9 +17,10 @@ modern computers. The main capabilities of TBPLaS include:
     * Band structure, density of states (DOS), wave functions, Lindhard functions
 * Tight-binding propagation method
     * DOS and local DOS
-      * AC and DC conductivity
-      * Polarizability and dielectric function
-      * Quasi-eigenstates
+    * AC and DC conductivity
+    * Polarizability and dielectric function
+    * Quasi-eigenstates
+    * Time-dependent wave function
 * Kernel polynomial method
     * DC and Hall Conductivity
 * Fields and strains
@@ -81,8 +82,8 @@ More detailed tutorials can be found in the documentation.
 Documentation
 -------------
 
-The documentation is available online at `<http://yuan.whu.edu.cn/tbplas/documentation>`_. A local
-copy is located under *doc/build/html/index.html*.
+The documentation is available online at `<http://www.tbplas.net>`_. A local copy can be found
+under *doc/build/html/index.html*.
 
 Citation
 --------
