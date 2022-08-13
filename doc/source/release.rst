@@ -38,8 +38,13 @@ v1.1 | 2022-08-13
 
 * :func:`merge_prim_cell` does not set the ``extend`` attribute properly.
 * ``reset_array`` method of :class:`.Sample` class does not reset the ``rescale`` attribute.
-* The FORTRAN subroutine ``norm`` produces L^1norm instead of L^2 for complex vectors.
+* The FORTRAN subroutine ``norm`` produces L^1 norm instead of L^2 for complex vectors.
 * The FORTRAN subroutine ``tbpm_ldos`` does not set initial state properly.
+
+.. rubric:: Misc.
+
+* Updated documentation, examples and configuration files.
+* Added more examples.
 
 v1.0 | 2022-02-18
 -----------------
