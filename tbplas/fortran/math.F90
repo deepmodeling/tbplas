@@ -510,8 +510,7 @@ FUNCTION norm_z(X)
 #ifdef BLAS
     norm_z = dznrm2(SIZE(X), X, 1)
 #else
-    norm_z = 0D0
-    norm_z = norm_z + SUM(ABS(X(:)))
+    norm_z = DSQRT(DBLE(DOT_PRODUCT(X, X)))
 #endif
 END FUNCTION norm_z
 
@@ -708,7 +707,7 @@ SUBROUTINE axpbypz(a, X, b, Y, Z)
     REAL(KIND=8), INTENT(IN) :: b
     COMPLEX(KIND=8), INTENT(IN), DIMENSION(:) :: X, Y
     ! output
-    COMPLEX(KIND=8), INTENT(OUT), DIMENSION(SIZE(X)) :: Z
+    COMPLEX(KIND=8), INTENT(INOUT), DIMENSION(SIZE(X)) :: Z
 
     ! declare vars
     INTEGER :: i
