@@ -139,6 +139,7 @@ class TestMaterials(unittest.TestCase):
         label_ref = ["p11+", "p12+", "p13+", "p11-", "p12-", "p13-",
                      "p21+", "p22+", "p23+", "p21-", "p22-", "p23-"]
         label_test = [orb.label for orb in prim_cell.orbital_list]
+        self.assertListEqual(label_ref, label_test)
 
     def test03_tmdc(self):
         """

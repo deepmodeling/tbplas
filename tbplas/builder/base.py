@@ -520,11 +520,6 @@ class HopDict:
         self.mat_shape = (num_orb, num_orb)
 
     @staticmethod
-    def _get_minus_rn(rn):
-        """Get minus cell index."""
-        return tuple([-v for v in rn])
-
-    @staticmethod
     def _check_rn(rn):
         """
         Check and complete cell index.
@@ -560,7 +555,6 @@ class HopDict:
             hopping matrix
         :raises CellIndexLenError: if len(rn) != 2 or 3
         :raises ValueError: if hop_mat.shape does not match number of orbitals
-            or hopping matrix at (0, 0, 0) is not Hermitian
         :raises PCHopDiagonalError: if on-site energies are included in hopping
             matrix
         """
@@ -573,27 +567,14 @@ class HopDict:
             raise ValueError(f"Shape of hopping matrix {hop_mat.shape} does not "
                              f"match {self.mat_shape}")
 
-        # Special check for (0, 0, 0) cell
+        # Check for diagonal terms
         if rn == (0, 0, 0):
             for i in range(hop_mat.shape[0]):
                 if abs(hop_mat.item(i, i)) >= 1e-5:
                     raise exc.PCHopDiagonalError(rn, i)
-                for j in range(i+1, hop_mat.shape[0]):
-                    h_ij = hop_mat.item(i, j)
-                    h_ji = hop_mat.item(j, i)
-                    if abs(h_ij - h_ji.conjugate()) >= 1e-5:
-                        raise ValueError(f"Hopping matrix at (0, 0, 0) is not "
-                                         f"Hermitian")
 
         # Set hopping matrix
-        if rn in self.dict.keys():
-            self.dict[rn] = hop_mat
-        else:
-            minus_rn = self._get_minus_rn(rn)
-            if minus_rn in self.dict.keys():
-                self.dict[minus_rn] = hop_mat.T.conj()
-            else:
-                self.dict[rn] = hop_mat
+        self.dict[rn] = hop_mat
 
     def set_zero_mat(self, rn):
         """
@@ -633,19 +614,11 @@ class HopDict:
             raise exc.PCHopDiagonalError(rn, element[0])
 
         # Set matrix element
-        if rn in self.dict.keys():
-            self.dict[rn][element[0], element[1]] = hop
-        else:
-            minus_rn = self._get_minus_rn(rn)
-            if minus_rn in self.dict.keys():
-                self.dict[minus_rn][element[1], element[0]] = hop.conjugate()
-            else:
-                self.dict[rn] = np.zeros(self.mat_shape, dtype=complex)
-                self.dict[rn][element[0], element[1]] = hop
-
-        # Special treatment for (0, 0, 0) cell
-        if rn == (0, 0, 0):
-            self.dict[rn][element[1], element[0]] = hop.conjugate()
+        try:
+            hop_mat = self.dict[rn]
+        except KeyError:
+            hop_mat = self.dict[rn] = np.zeros(self.mat_shape, dtype=complex)
+        hop_mat[element[0], element[1]] = hop
 
     def delete_mat(self, rn):
         """
@@ -660,9 +633,4 @@ class HopDict:
         rn = self._check_rn(rn)
 
         # Delete hopping matrix
-        if rn in self.dict.keys():
-            self.dict.pop(rn, None)
-        else:
-            minus_rn = self._get_minus_rn(rn)
-            if minus_rn in self.dict.keys():
-                self.dict.pop(minus_rn, None)
+        self.dict.pop(rn, None)

@@ -668,11 +668,6 @@ class TestPrimitive(unittest.TestCase):
         # Test initialization
         self.assertEqual(hop_dict.mat_shape, (cell.num_orb, cell.num_orb))
 
-        # Test __get_minus_sign
-        rn = (0, -1, 3, 2)
-        minus_rn = (0, 1, -3, -2)
-        self.assertTupleEqual(minus_rn, hop_dict._get_minus_rn(rn))
-
         # Test set_mat and set_zero_mat
         # Exception handling
         def _test():
@@ -690,12 +685,6 @@ class TestPrimitive(unittest.TestCase):
         th.test_raise(_test, exc.PCHopDiagonalError, r"hopping term .+ is "
                                                      r"diagonal")
 
-        def _test():
-            hop_dict.set_mat((0, 0, 0),
-                             np.array([[0.0, 1-1.2j], [1+1.3j, 0.0]]))
-        th.test_raise(_test, ValueError, r"Hopping matrix at .+ is not "
-                                         r"Hermitian")
-
         # Normal case of set_zero_mat
         hop_dict.set_zero_mat((0, 0))
         hop_dict.set_zero_mat((0, 1))
@@ -712,10 +701,6 @@ class TestPrimitive(unittest.TestCase):
         th.test_equal_array(hop_dict.dict[(0, 0, 0)], hop_mat0)
         hop_dict.set_mat((0, 1), hop_mat1)
         th.test_equal_array(hop_dict.dict[(0, 1, 0)], hop_mat1)
-        # Set conjugate hopping term
-        hop_dict.set_mat((0, -1), hop_mat1)
-        th.test_equal_array(hop_dict.dict[(0, 1, 0)], hop_mat1.T.conj())
-        self.assertTrue((0, -1, 0) not in hop_dict.dict.keys())
         # Zero all hopping matrices
         hop_dict.set_zero_mat((0, 0))
         th.test_equal_array(hop_dict.dict[(0, 0, 0)],
@@ -738,9 +723,8 @@ class TestPrimitive(unittest.TestCase):
         hop_dict.set_mat((0, 1), hop_mat1)
         hop_dict.set_element((0, 0), (0, 1), 1+1.3j)
         self.assertEqual(hop_dict.dict[(0, 0, 0)].item(0, 1), 1+1.3j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)].item(1, 0), 1-1.3j)
         hop_dict.set_element((0, -1), (0, 1), 0.5-1.5j)
-        self.assertEqual(hop_dict.dict[(0, 1, 0)].item(1, 0), 0.5+1.5j)
+        self.assertEqual(hop_dict.dict[(0, -1, 0)].item(0, 1), 0.5-1.5j)
         hop_dict.set_element((1, 0), (0, 1), 1.2j)
         self.assertTrue((1, 0, 0) in hop_dict.dict.keys())
         self.assertEqual(hop_dict.dict[(1, 0, 0)].item(0, 1), 1.2j)
@@ -750,8 +734,6 @@ class TestPrimitive(unittest.TestCase):
         self.assertTrue((0, 0, 0) not in hop_dict.dict.keys())
         hop_dict.delete_mat((0, 1))
         self.assertTrue((0, 1, 0) not in hop_dict.dict.keys())
-        hop_dict.delete_mat((-1, 0))
-        self.assertTrue((1, 0, 0) not in hop_dict.dict.keys())
 
     def test15_add_hopping_dict(self):
         """
