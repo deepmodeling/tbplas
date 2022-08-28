@@ -404,7 +404,7 @@ class PrimitiveCell(Lockable):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def add_hopping_dict(self, hop_dict: HopDict, eng_cutoff=1e-5,
+    def add_hopping_dict(self, hop_dict: HopDict, hop_eng_cutoff=1e-5,
                          sync_array=True, **kwargs):
         """
         Add a matrix of hopping terms to the primitive cell, or update existing
@@ -412,9 +412,18 @@ class PrimitiveCell(Lockable):
 
         Reserved for compatibility with old version of TBPLaS.
 
+        NOTE: the 'HopDict' class of old version of TBPLaS is poorly designed.
+        Some users prefer to use R and -R for distinguishing 1st nearest and 2nd
+        nearest hopping neighbours, e.g., example/19-z2.py, making it impossible
+        to implement automatic conjugate relationship handling. However, they
+        may forget to set up the conjugate term manually. This sick situation
+        leads to the result that zero hopping terms overwrites their conjugate
+        counterparts by accident. That's why we need to filter zero hopping
+        terms with respect to hop_eng_cutoff.
+
         :param hop_dict: instance of 'HopDict' class
             hopping dictionary
-        :param eng_cutoff: float
+        :param hop_eng_cutoff: float
             energy cutoff for hopping terms in eV
             Hopping terms with energy below this threshold will be dropped.
         :param sync_array: boolean
@@ -429,7 +438,7 @@ class PrimitiveCell(Lockable):
             for orb_i in range(hop_mat.shape[0]):
                 for orb_j in range(hop_mat.shape[1]):
                     hop_eng = hop_mat.item(orb_i, orb_j)
-                    if abs(hop_eng) >= eng_cutoff:
+                    if abs(hop_eng) >= hop_eng_cutoff:
                         self.add_hopping(rn, orb_i, orb_j, hop_eng,
                                          sync_array=False)
         if sync_array:
