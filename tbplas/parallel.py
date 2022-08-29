@@ -15,7 +15,7 @@ import os
 
 import numpy as np
 
-from .utils import split_list, split_range
+from .utils import split_list, split_range, get_datetime
 
 
 class MPIEnv:
@@ -229,3 +229,15 @@ class MPIEnv:
         """
         if self.is_master:
             print(text, flush=True)
+
+    def log(self, event="", fmt="%x %X"):
+        """
+        Log the date and time of event.
+
+        :param event: string, notice of the event
+        :param fmt: string, date and time format
+        :return: None.
+        """
+        if self.is_master:
+            date_time = get_datetime(fmt=fmt)
+            print(f"{event} at {date_time}", flush=True)

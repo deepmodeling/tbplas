@@ -26,9 +26,12 @@ Functions
         #               FOO                #
         #----------------------------------#
         to stdout
+    get_datetime: user function
+        get current date and time
 """
 
 import time
+import datetime
 import random
 import os
 from io import StringIO
@@ -418,3 +421,15 @@ def print_banner_block(text, width=80, mark="-", end="#"):
     print(border)
     print(banner_with_spaces)
     print(border)
+
+
+def get_datetime(fmt="%x %X"):
+    """
+    Return current date and time.
+
+    :param fmt: string, date and time format
+    :return: current date and time
+    :rtype: string
+    """
+    now = datetime.datetime.now()
+    return now.strftime(fmt)
