@@ -2122,7 +2122,7 @@ def prod_dp_arb(double [:,::1] bands, double complex [:,:,::1] states,
 @cython.wraparound(False)
 def dyn_pol(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
             double [::1] omegas, double delta,
-            long omega_min, long omega_max, long iq,
+            long k_min, long k_max, long iq,
             double complex [:,::1] dyn_pol):
     """
     Calculate dynamic polarizability using Lindhard function,
@@ -2138,10 +2138,10 @@ def dyn_pol(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
         frequencies on which dyn_pol is evaluated in eV
     delta: double
         broadening parameter in eV
-    omega_min: int64
-        lower bound of omega index assigned to this process
-    omega_max: int64
-        upper bound of omega index assigned to this process
+    k_min: int64
+        lower bound of k-index index assigned to this process
+    k_max: int64
+        upper bound of k-index index assigned to this process
     iq: int64
         index of q-point
     dyn_pol: (num_qpt, num_omega)
@@ -2151,19 +2151,19 @@ def dyn_pol(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
     -------
     None. Results are saved in dyn_pol.
     """
-    cdef long num_kpt, num_orb
+    cdef long num_omega, num_orb
     cdef long iw, ik, jj, ll
     cdef double omega
     cdef double complex dp_sum
 
-    num_kpt = delta_eng.shape[0]
+    num_omega = omegas.shape[0]
     num_orb = delta_eng.shape[1]
 
-    # NOTE: the actual range of omega_index is [omega_min, omega_max]
-    for iw in range(omega_min, omega_max+1):
+    # NOTE: the actual range of k-index is [k_min, k_max]
+    for iw in range(num_omega):
         omega = omegas[iw]
         dp_sum = 0.0
-        for ik in range(num_kpt):
+        for ik in range(k_min, k_max+1):
             for jj in range(num_orb):
                 for ll in range(num_orb):
                     dp_sum += prod_df[ik, jj, ll] / \
@@ -2269,7 +2269,7 @@ def prod_ac(double [:,::1] bands, double complex [:,:,::1] states,
 @cython.wraparound(False)
 def ac_cond(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
             double [::1] omegas, double delta,
-            long omega_min, long omega_max, double complex [::1] ac_cond):
+            long k_min, long k_max, double complex [::1] ac_cond):
     """
     Evaluate full AC conductivity using Kubo-Greenwood formula.
 
@@ -2283,10 +2283,10 @@ def ac_cond(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
         frequencies on which dyn_pol is evaluated in eV
     delta: double
         broadening parameter in eV
-    omega_min: int64
-        lower bound of index of omega for this process
-    omega_max: int64
-        upper bound of index of omega for this process
+    k_min: int64
+        lower bound of k-index for this process
+    k_max: int64
+        upper bound of k-index for this process
     ac_cond: (num_omega,) complex128 array
         full ac conductivity
 
@@ -2294,19 +2294,19 @@ def ac_cond(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
     -------
     None. Results are saved in ac_cond.
     """
-    cdef long num_kpt, num_orb
+    cdef long num_omega, num_orb
     cdef long iw, ik, mm, nn
     cdef double omega
     cdef double complex ac_sum
 
-    num_kpt = delta_eng.shape[0]
+    num_omega = omegas.shape[0]
     num_orb = delta_eng.shape[1]
 
-    # NOTE: the actual range of omega_index is [omega_min, omega_max]
-    for iw in range(omega_min, omega_max+1):
+    # NOTE: the actual range of k-index is [k_min, k_max]
+    for iw in range(num_omega):
         omega = omegas[iw]
         ac_sum = 0.0
-        for ik in range(num_kpt):
+        for ik in range(k_min, k_max+1):
             for mm in range(num_orb):
                 for nn in range(num_orb):
                     ac_sum += prod_df[ik, mm, nn] / \

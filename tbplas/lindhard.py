@@ -306,7 +306,8 @@ class Lindhard(MPIEnv):
         i_min, i_max = min(i_index), max(i_index)
         return i_min, i_max
 
-    def _get_eigen_states(self, k_points: np.ndarray, convention=1):
+    def _get_eigen_states(self, k_points: np.ndarray, convention=1,
+                          all_reduce=True):
         """
         Calculate eigenstates and eigenvalues for given k-points.
 
@@ -314,6 +315,9 @@ class Lindhard(MPIEnv):
             FRACTIONAL coordinates of k-points
         :param convention: integer
             convention to construct Hamiltonian
+        :param all_reduce: boolean
+            whether to call MPI_Allreduce to synchronize the wave functions on
+            each process
         :return: bands: (num_kpt, num_orb) float64 array
             eigenvalues of states on k-points in eV
         :return: states: (num_kpt, num_orb, num_orb) complex128 array
@@ -347,8 +351,9 @@ class Lindhard(MPIEnv):
             states[i_k] = eigenstates.T
 
         # Collect energies and wave functions
-        bands = self.all_reduce(bands)
-        states = self.all_reduce(states)
+        if all_reduce:
+            bands = self.all_reduce(bands)
+            states = self.all_reduce(states)
         return bands, states
 
     def _get_dnk(self):
@@ -494,8 +499,11 @@ class Lindhard(MPIEnv):
         dyn_pol = np.zeros((num_qpt, num_omega), dtype=np.complex128)
 
         # Get eigenvalues and eigenstates
+        # It is important not to synchronize the wave functions on each process.
+        # Otherwise, OverflowError may be raised if the kmesh_grid is too dense.
         kmesh_frac = self.grid2frac(self.kmesh_grid)
-        bands, states = self._get_eigen_states(kmesh_frac, convention=2)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=2,
+                                               all_reduce=False)
 
         # Transpose arrays for compatibility with FORTRAN backend
         if use_fortran:
@@ -506,16 +514,16 @@ class Lindhard(MPIEnv):
             prod_df = prod_df.T
             dyn_pol = dyn_pol.T
 
-        # Distribute k-points and frequencies
+        # Distribute k-points
         k_min, k_max = self._dist_job(num_kpt)
-        omega_min, omega_max = self._dist_job(num_omega)
 
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
             # Get eigenvalues and eigenstates on k+q grid
             kq_mesh_frac = kmesh_frac + q_points_frac[i_q]
             bands_kq, states_kq = self._get_eigen_states(kq_mesh_frac,
-                                                         convention=2)
+                                                         convention=2,
+                                                         all_reduce=False)
 
             # Setup working arrays
             delta_eng *= 0.0
@@ -531,17 +539,15 @@ class Lindhard(MPIEnv):
                 core.prod_dp_arb(bands, states, bands_kq, states_kq,
                                  self.beta, self.mu, q_point, orb_pos,
                                  k_min, k_max, delta_eng, prod_df)
-            delta_eng = self.all_reduce(delta_eng)
-            prod_df = self.all_reduce(prod_df)
 
             # Evaluate dyn_pol
             if use_fortran:
                 # NOTE: FORTRAN array index begins from 1!
                 f2py.dyn_pol_f(delta_eng, prod_df, self.omegas, self.delta,
-                               omega_min+1, omega_max+1, i_q+1, dyn_pol)
+                               k_min+1, k_max+1, i_q+1, dyn_pol)
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
-                             omega_min, omega_max, i_q, dyn_pol)
+                             k_min, k_max, i_q, dyn_pol)
             dyn_pol = self.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
@@ -638,8 +644,11 @@ class Lindhard(MPIEnv):
             hop_dr[i_h] = orb_pos[orb_j] + rn - orb_pos[orb_i]
 
         # Get eigenvalues and eigenstates
+        # It is important not to synchronize the wave functions on each process.
+        # Otherwise, OverflowError may be raised if the kmesh_grid is too dense.
         kmesh_frac = self.grid2frac(self.kmesh_grid)
-        bands, states = self._get_eigen_states(kmesh_frac, convention=1)
+        bands, states = self._get_eigen_states(kmesh_frac, convention=1,
+                                               all_reduce=False)
 
         # Transpose arrays for compatibility with FORTRAN backed
         # hop_eng, ac_cond are vectors and need no transposing.
@@ -652,9 +661,8 @@ class Lindhard(MPIEnv):
             delta_eng = delta_eng.T
             prod_df = prod_df.T
 
-        # Distribute k-points and frequencies
+        # Distribute k-points
         k_min, k_max = self._dist_job(num_kpt)
-        omega_min, omega_max = self._dist_job(num_omega)
 
         # Setup working arrays
         if use_fortran:
@@ -668,17 +676,15 @@ class Lindhard(MPIEnv):
             core.prod_ac(bands, states, hop_ind, hop_eng, hop_dr, kmesh,
                          self.beta, self.mu, comp, k_min, k_max,
                          delta_eng, prod_df)
-        delta_eng = self.all_reduce(delta_eng)
-        prod_df = self.all_reduce(prod_df)
 
         # Evaluate ac_cond
         if use_fortran:
             # NOTE: FORTRAN array index begins from 1!
             f2py.ac_cond_f(delta_eng, prod_df, self.omegas, self.delta,
-                           omega_min+1, omega_max+1, ac_cond)
+                           k_min+1, k_max+1, ac_cond)
         else:
             core.ac_cond(delta_eng, prod_df, self.omegas, self.delta,
-                         omega_min, omega_max, ac_cond)
+                         k_min, k_max, ac_cond)
         ac_cond = self.all_reduce(ac_cond)
 
         # Multiply prefactor

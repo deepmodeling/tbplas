@@ -116,7 +116,7 @@ end subroutine prod_dp_arb
 ! calculate dynamic polarizability using Lindhard function
 subroutine dyn_pol_f(delta_eng, num_orb, num_kpt, prod_df, &
                      omegas, num_omega, delta, &
-                     omega_min, omega_max, i_q, &
+                     k_min, k_max, i_q, &
                      dyn_pol, num_qpt)
     implicit none
 
@@ -126,7 +126,7 @@ subroutine dyn_pol_f(delta_eng, num_orb, num_kpt, prod_df, &
     complex(kind=8), intent(in) :: prod_df(num_orb, num_orb, num_kpt)
     real(kind=8), intent(in) :: omegas(num_omega)
     real(kind=8), intent(in) :: delta
-    integer, intent(in) :: num_omega, omega_min, omega_max, i_q
+    integer, intent(in) :: num_omega, k_min, k_max, i_q
     complex(kind=8), intent(inout) :: dyn_pol(num_omega, num_qpt)
     integer, intent(in) :: num_qpt
 
@@ -138,10 +138,10 @@ subroutine dyn_pol_f(delta_eng, num_orb, num_kpt, prod_df, &
     ! calculate dyn_pol
     cdelta = dcmplx(0.0D0, delta)
     !$OMP PARALLEL DO PRIVATE(omega, dp_sum, i_k, jj, ll)
-    do i_w = omega_min, omega_max
+    do i_w = 1, num_omega
         omega = omegas(i_w)
         dp_sum = dcmplx(0.0D0, 0.0D0)
-        do i_k = 1, num_kpt
+        do i_k = k_min, k_max
             do jj = 1, num_orb
                 do ll = 1, num_orb
                 dp_sum = dp_sum + prod_df(ll, jj, i_k) &
@@ -244,7 +244,7 @@ end subroutine prod_ac
 ! calculate full ac conductivity using Kubo-Greenwood formula
 subroutine ac_cond_f(delta_eng, num_orb, num_kpt, prod_df, &
                      omegas, num_omega, delta, &
-                     omega_min, omega_max, ac_cond)
+                     k_min, k_max, ac_cond)
     implicit none
 
     ! input and output
@@ -254,7 +254,7 @@ subroutine ac_cond_f(delta_eng, num_orb, num_kpt, prod_df, &
     real(kind=8), intent(in) :: omegas(num_omega)
     integer, intent(in) :: num_omega
     real(kind=8), intent(in) :: delta
-    integer, intent(in) :: omega_min, omega_max
+    integer, intent(in) :: k_min, k_max
     complex(kind=8), intent(inout) :: ac_cond(num_omega)
 
     ! local variables
@@ -265,10 +265,10 @@ subroutine ac_cond_f(delta_eng, num_orb, num_kpt, prod_df, &
     ! calculate ac_cond
     cdelta = dcmplx(0.0D0, delta)
     !$OMP PARALLEL DO PRIVATE(omega, ac_sum, i_k, mm, nn)
-    do i_w = omega_min, omega_max
+    do i_w = 1, num_omega
         omega = omegas(i_w)
         ac_sum = dcmplx(0.0D0, 0.0D0)
-        do i_k = 1, num_kpt
+        do i_k = k_min, k_max
             do mm = 1, num_orb
                 do nn = 1, num_orb
                     ac_sum = ac_sum + prod_df(nn, mm, i_k) &
