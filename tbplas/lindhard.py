@@ -425,9 +425,8 @@ class Lindhard(MPIEnv):
             prod_df = prod_df.T
             dyn_pol = dyn_pol.T
 
-        # Distribute k-points and frequencies
+        # Distribute k-points
         k_min, k_max = self._dist_job(num_kpt)
-        omega_min, omega_max = self._dist_job(num_omega)
 
         # Evaluate dyn_pol for all q-points
         for i_q, q_point in enumerate(q_points):
@@ -455,10 +454,10 @@ class Lindhard(MPIEnv):
             if use_fortran:
                 # NOTE: FORTRAN array index begins from 1!
                 f2py.dyn_pol_f(delta_eng, prod_df, self.omegas, self.delta,
-                               omega_min+1, omega_max+1, i_q+1, dyn_pol)
+                               k_min+1, k_max+1, i_q+1, dyn_pol)
             else:
                 core.dyn_pol(delta_eng, prod_df, self.omegas, self.delta,
-                             omega_min, omega_max, i_q, dyn_pol)
+                             k_min, k_max, i_q, dyn_pol)
             dyn_pol = self.all_reduce(dyn_pol)
 
         # Multiply dyn_pol by prefactor
