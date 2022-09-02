@@ -22,4 +22,9 @@ for kind in __pycache__ sim_data; do
 done
 
 # Compress
-tar -czf tbplas.tar.gz tbplas
+tar -cjf tbplas.tar.bz2 tbplas
+mv tbplas.tar.bz2 ..
+
+# Clean
+cd ..
+rm -rf tmp

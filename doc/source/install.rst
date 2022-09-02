@@ -89,7 +89,7 @@ and `MPI4PY <https://mpi4py.readthedocs.io/en/stable/install.html>`_.
 Get the source code
 -------------------
 
-The source code is available at `this link <attachments/tbplas.zip>`_.
+The source code is available at `this link <attachments/tbplas.tar.bz2>`_.
 If you have downloading problems, send an e-mail to the development team at :ref:`developers`.
 
 Configuration
