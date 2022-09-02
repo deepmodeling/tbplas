@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+v1.2 | 2022-09-02
+-----------------
+
+.. rubric:: New features
+
+* Added example for calculating Z2 topological invariant
+* Added ``log`` method to :class:`.Lindhard`, :class:`.Solver`` and :class:`.Analyzer``
+  for reporting time and date
+
+.. rubric:: Improvments
+
+* Removed unnecessary MPI_Allreduce calls in :class:`.Lindhard`
+
+.. rubric:: Changes
+
+* Legacy :class:`.HopDict` class no longer handles conjugate terms automatically.
+
 v1.1 | 2022-08-13
 -----------------
 

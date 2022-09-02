@@ -22,14 +22,13 @@ sys.path.insert(0, os.path.abspath('../../.'))
 # -- Project information -----------------------------------------------------
 
 project = 'TBPLaS'
-# copyright = '2017-2022, Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang & Shengjun Yuan'
 copyright = '2017-2022, the TBPLaS development team'
-author = 'Edo van Veen, Guus Slotman, Kaixiang Huang Yunhai Li, Xueheng Kuang & Shengjun Yuan'
+author = 'Yunhai Li, Zhen Zhan, Yonggang Li and Shengjun Yuan'
 
 # The short X.Y version
-version = '1.1'
+version = '1.2'
 # The full version, including alpha/beta/rc tags
-release = '1.1-rc'
+release = '1.2.0'
 
 
 # -- General configuration ---------------------------------------------------
