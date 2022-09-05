@@ -32,5 +32,6 @@ If you are interested, you can :ref:`get_src`, :doc:`install` it and start learn
     Release Notes <release.rst>
     Contact <contact.rst>
     Developers <developers.rst>
+    Publications <publication.rst>
 
 * :ref:`genindex`
