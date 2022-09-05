@@ -142,10 +142,10 @@ The output is shown in the left panel of the figure, from which we can see the p
 
     Twisted bilayer graphene without (left) and with (right) inter-layer hopping terms.
 
+.. _interhop:
+
 Add inter-layer hoppings
 ------------------------
-
-.. _inter_hop:
 
 Now we come to the most difficult part: adding inter-layer hopping terms. This task is strongly
 system-dependent and the example we show here is just for demonstration purpose. Since the hopping
@@ -272,5 +272,5 @@ layer:
     layer_twisted = tb.make_hetero_layer(prim_cell_twisted, hetero_lattice)
     extend_intra_hop(layer_twisted, max_distance=0.40)
 
-Other parts of :ref:`inter_hop` does change. The resulting hetero-structure has too many hopping terms
+Other parts of :ref:`interhop` does change. The resulting hetero-structure has too many hopping terms
 and will not shown here.
