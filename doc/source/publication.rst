@@ -1,7 +1,7 @@
 Publications
 ============
 
-This list summarizes the research articles published utilizing TBPLaS.
+This list summarizes the research articles published utilizing TBPLaS or its earlier version Tipsi since 2015.
 
 Moiré superlattices
 -------------------

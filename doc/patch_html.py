@@ -47,7 +47,7 @@ def main():
     html_files = os.popen("find build/html -name '*.html'").readlines()
     for html in html_files:
         patch_stat(html.rstrip("\n"))
-    patch_icp("build/html/index.html")
+        patch_icp(html.rstrip("\n"))
 
 
 if __name__ == "__main__":
