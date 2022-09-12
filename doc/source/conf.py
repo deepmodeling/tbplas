@@ -147,7 +147,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'TBPLaS.tex', 'TBPLaS Documentation',
-     'Edo van Veen, Guus Slotman, Kaixiang Huang, Yunhai Li, Xueheng Kuang \\& Shengjun Yuan', 'manual'),
+     'Yunhai Li, Zhen Zhan, Yonggang Li \\& Shengjun Yuan', 'manual'),
 ]
 
 

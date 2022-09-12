@@ -7,8 +7,6 @@ Functions
 
 Classes
 -------
-    BaseSolver: developer class
-        base class for Solver and Analyzer
     Solver: user class
         wrapper class over FORTRAN TBPM subroutines
 """

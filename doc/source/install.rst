@@ -9,7 +9,6 @@ Operating system
 
 .. rubric:: Linux
 
-
 TBPLaS has been developed and tested on Linux. Ideally, it should work on most Linux distributions.
 As examples, we have successfully installed and run TBPLaS on CentOS 7.7, openSUSE Leap 15.3 and
 Ubuntu 20.04 LTS.
@@ -31,7 +30,7 @@ Unfortunately, we have no experience of MacOS. You are encouraged to send us fee
 Compilers and math libraries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The performance-critical parts of TBPLaS are written in C and FORTRAN. Also, sparse matrices are utilized to
+The performance-critical parts of TBPLaS are written in Cython and FORTRAN. Also, sparse matrices are utilized to
 reduce memory cost. So, you need both C and FORTRAN compilers to compile TBPLaS, and link it to vendor-provided
 math libraries for optimal performance. For Intel CPUs, it is recommended to use Intel compilers and Math Kernel
 Library (MKL), which are now bundled as oneAPI. If the Intel toolchain is not available, GNU Compiler Collection
@@ -44,13 +43,13 @@ may still work, although not recommended.
 Python
 ^^^^^^
 
-TBPLaS requires Python 3.6.x or newer. Python 2 is not supported.
+TBPLaS requires Python 3.6 or newer. Python 2 is not supported.
 
 In addition to the Python interpreter, development headers are also required. The actual package name of
-development headers may vary among Linux distributions, e.g., python3-devel on rpm-based distributions such
-as RedHat/CentOS/Fedora/openSUSE, and python3-dev on deb-based distributions like Debian/Ubuntu. Check the
-manual of your distributions package manager (``yum`` / ``dnf`` / ``zypper`` / ``apt-get``) for guidelines
-on searching and installing the package.
+development headers may vary among Linux distributions, e.g., ``python3-devel`` on rpm-based distributions
+such as RedHat/CentOS/Fedora/openSUSE, and ``python3-dev`` on deb-based distributions like Debian/Ubuntu.
+Check the manual of your distribution package manager (``yum`` / ``dnf`` / ``zypper`` / ``apt-get``) for
+guidelines on searching and installing the package.
 
 If you are a newbie to Linux, or if you do not have root privileges, or if you are working with a computer
 without Internet access, try the `Anaconda <https://www.anaconda.com/products/individual>`_ offline installer,
@@ -191,7 +190,7 @@ TBPLaS uses 32-bit integer by default, even if it has been compiled and installe
 usage is reduced in this approach, segmentation fault may be raised if the model is very large (billions of orbitals).
 In that case, the version with 64-bit integer should be used.
 
-To compile the 64-bit version, first goto ``tbplas/fortran`` directory and pre-process the FORTRAN source files by:
+To compile the 64-bit version, first go to ``tbplas/fortran`` directory and pre-process the FORTRAN source files by:
 
 .. code-block:: bash
 
@@ -219,24 +218,24 @@ while for gfortran it should be ``-fdefault-integer-8``:
     opt = -fopenmp -O3 -mtune=native
     f90flags = -fno-second-underscore -cpp -fdefault-integer-8
 
-Also, note that MKL does not work with 64-bit integer.
+Note that MKL **does not** work with 64-bit integer.
 
 Compilation
 -----------
 Once ``setup.cfg`` has been properly configured, you can build TBPLaS with this command: ``python setup.py build``.
-If everything goes well, a new ``build`` directory will be created. The C and FORTRAN extensions can be found under
-``lib.linux-x86_64-3.x`` sub-directory, with x being the minor version of Python interpreter. If any error occurs,
-check ``setup.cfg`` carefully as described in previous sections.
+If everything goes well, a new ``build`` directory will be created. The Cython and FORTRAN extensions can be found
+under ``lib.linux-x86_64-3.x`` sub-directory, with x being the minor version of Python interpreter. If any error
+occurs, check ``setup.cfg`` carefully as described in previous sections.
 
 Installation
 ------------
 
-TBPLaS can be installed to the default path, user-specified path, or kept in the source code directory. Installin
-into the default path is the simplest way, since it does not involve setting up environment variables. However,
-it is difficult to keep multiple versions or to update TBPLaS in that approach. Installing into user-specified
-path solves this problem, yet it requires appending a **long** path to environment variables. Keeping the source
-code simplifies the environment setting process, and offers the access to source code if necessary. So, personally,
-we suggest keeping the source code directory.
+TBPLaS can be installed to the default path, user-specified path, or kept in the source code directory. Installing
+into the default path is the simplest way, since it does not need to up environment variables. However, it is difficult
+to keep multiple versions or to update TBPLaS in that approach. Installing into user-specified path solves this problem,
+yet it requires appending a **long** path to environment variables. Keeping the source code simplifies the environment
+setting process, and offers the access to source code if necessary. So, personally, we suggest keeping the source code
+directory.
 
 Installing into default path
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -271,8 +270,8 @@ you will not need to type it every time you log in or open a new terminal.
 Keeping TBPLaS in the source code directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To keep TBPLaS in the source code directory you need to manually copy C/FORTRAN extensions from build directory to
-proper destinations:
+To keep TBPLaS in the source code directory you need to manually copy Cython/FORTRAN extensions from build directory
+to proper destinations:
 
 .. code-block:: shell
     :emphasize-lines: 0

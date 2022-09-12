@@ -6,21 +6,18 @@ API Reference
 .. autosummary::
     :toctree: _api
 
+    .. Primitive cell classes and functions
     PrimitiveCell
+    HopDict
     PCInterHopping
     Lindhard
-    SuperCell
-    SCInterHopping
-    Sample
-    Config
-    Solver
-    Analyzer
-    Visualizer
     gen_lattice_vectors
-    rotate_coord
+    gen_lattice_vectors2
     cart2frac
     frac2cart
+    rotate_coord
     gen_kpath
+    gen_kdist
     gen_kmesh
     extend_prim_cell
     reshape_prim_cell
@@ -33,3 +30,18 @@ API Reference
     make_black_phosphorus
     make_tmdc
     wan2pc
+
+    .. Sample classes and functions
+    SuperCell
+    SCInterHopping
+    Sample
+
+    .. TBPM classes and functions
+    Config
+    Solver
+    Analyzer
+    Visualizer
+    read_config
+    window_exp
+    window_exp_ten
+    window_hanning

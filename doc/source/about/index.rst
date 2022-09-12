@@ -14,10 +14,10 @@ The main features of TBPLaS include:
         * Defects, impurities and disorders
         * Hetero-structures, quasicrystal, fractals
         * 1D, 2D and 3D structures
+        * Interfaces to Wannier90 and LAMMPS
     * Exact-diagonalization
-        * Band structure, density of states (DOS), wave functions, Lindhard functions
-    * Recursive Green's function method
-        * Local density of states (LDOS)
+        * Band structure, density of states (DOS), wave functions, topological invariants
+        * Polarizability, dielectric function, AC conductivity
     * Tight-binding propagation method (TBPM)
         * DOS, LDOS and carrier density
         * Optical (AC) conductivity and absorption spectrum
@@ -26,14 +26,17 @@ The main features of TBPLaS include:
         * Polarization function, response function, dielectric function, energy loss function
         * Plasmon dispersion, plasmon lifetime and damping rate
         * Quasi-eigenstate and realspace charge density
+        * Time-dependent wave function
     * Kernel polynomial method
         * Electronic (DC) and Hall Conductivity  
+    * Recursive Green's function method
+        * Local density of states (LDOS)
     * Fields and strains
         * Homogeneous magnetic field via Peierls substitution
         * User-defined electric field
         * Arbitary deformation with strain and/or stress
 * Efficiency
-    * FORTRAN and Cython (C-Extensions for Python) for performance-critical parts
+    * Cython (C-Extensions for Python) and FORTRAN for performance-critical parts
     * Hybrid parallelism based on MPI and OpenMP
     * Sparse matrices for reducing memory cost
     * Lazy-evaluation techniques to reduce unnecessary operations

@@ -1,31 +1,39 @@
 Introduction
 ============
 
-TBPLaS (Tight-binding Package for Large-scale Simulation) is a package for building and solving
-tight-binding models, with emphasis on handling large systems. TBPLaS implements the tight-binding
-propagation method (TBPM), as well as methods based on exact diagonalization. Sparse matrices,
-C/FORTRAN extensions and hybrid OpenMP+MPI parallelization are utilized for optimal performance on
-modern computers. The main capabilities of TBPLaS include:
+TBPLaS (Tight-Binding Package for Large-scale Simulation) is a package for building and solving
+tight-binding models, with emphasis on handling large systems. TBPLaS implements exact
+diagonalization-based methods, the tight-binding propagation method (TBPM), kernel polynomial
+method (KPM), and Green's function method. Sparse matrices, Cython/FORTRAN extensions and hybrid
+OpenMP+MPI parallelization are utilized for optimal performance on modern computers. The main
+capabilities of TBPLaS include:
 
 * Modeling
     * Models with arbitrary shape and boundary conditions
-    * Impurities and disorders
+    * Defects, impurities and disorders
     * Hetero-structures, quasicrystal, fractals
-    * 2D and 3D structures
-    * Interfaced to Wannier90 and LAMMPS
+    * 1D, 2D and 3D structures
+    * Interfaces to Wannier90 and LAMMPS
 * Exact-diagonalization
-    * Band structure, density of states (DOS), wave functions, Lindhard functions
-* Tight-binding propagation method
-    * DOS and local DOS
-    * AC and DC conductivity
-    * Polarizability and dielectric function
-    * Quasi-eigenstates
+    * Band structure, density of states (DOS), wave functions, topological invariants
+    * Polarizability, dielectric function, AC conductivity
+* Tight-binding propagation method (TBPM)
+    * DOS, LDOS and carrier density
+    * Optical (AC) conductivity and absorption spectrum
+    * Electronic (DC) conductivity and time-dependent diffusion coefficient
+    * Carrier velocity, mobility, elastic mean free path, Anderson localization length 
+    * Polarization function, response function, dielectric function, energy loss function
+    * Plasmon dispersion, plasmon lifetime and damping rate
+    * Quasi-eigenstate and realspace charge density
     * Time-dependent wave function
 * Kernel polynomial method
-    * DC and Hall Conductivity
+    * Electronic (DC) and Hall Conductivity  
+* Recursive Green's function method
+    * Local density of states (LDOS)
 * Fields and strains
     * Homogeneous magnetic field via Peierls substitution
-    * User-defined electric field and strain
+    * User-defined electric field
+    * Arbitary deformation with strain and/or stress
 
 Installation
 ------------
@@ -68,7 +76,7 @@ Procedure
    Examples of *setup.cfg* are placed under *config* directory.
 2. Build the extensions with ``python setup.py build``.
 3. Install TBPLaS into the default path with ``python setup.py install``,
-   or into user-defined path with ``python setup.py install --prefix=/user_define_path``.
+   or into user-defined path with ``python setup.py install --prefix=/user_defined_path``.
 4. Add installation path to the *PYTHONPATH* environment variable (optimal).
 
 Now, you can try TBPLaS in python using ``import tbplas``.

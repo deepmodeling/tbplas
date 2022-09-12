@@ -31,6 +31,10 @@ Current developers
 
   * School of Physics and Technology, Wuhan University
 
+* Mr. Yonggang Li
+
+  * School of Physics and Technology, Wuhan University
+
 Former developers
 -----------------
 
