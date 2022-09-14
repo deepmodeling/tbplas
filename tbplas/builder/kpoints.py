@@ -29,8 +29,12 @@ def gen_kpath(hs_kpoints, num_interp):
         fractional coordinates of k-points along the path
     :return: hs_index: (nk,) int32 array
         indices of highly symmetric k-points in kpath
+    :raise ValueError: if len(num_interp) != nk - 1
     """
-    assert hs_kpoints.shape[0] == len(num_interp) + 1
+    if not isinstance(hs_kpoints, np.ndarray):
+        hs_kpoints = np.array(hs_kpoints)
+    if hs_kpoints.shape[0] != len(num_interp) + 1:
+        raise ValueError("Length of num_interp should be nk-1")
     kpath = []
     for i in range(len(num_interp)):
         k0 = hs_kpoints[i]
@@ -71,8 +75,10 @@ def gen_kmesh(grid_size):
         dimension of mesh grid along three directions
     :return: kmesh: (na*nb*nc, 3) float64 array
         fractional coordinates of kpoints in the grid
+    :raise ValueError: if len(grid_size) != 3
     """
-    assert len(grid_size) == 3
+    if len(grid_size) != 3:
+        raise ValueError("Length of grid_size should be 3")
     kmesh = np.array([[kx, ky, kz]
                      for kx in np.linspace(0, 1-1./grid_size[0], grid_size[0])
                      for ky in np.linspace(0, 1-1./grid_size[1], grid_size[1])
