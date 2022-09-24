@@ -86,6 +86,9 @@ class Config:
     quasi_eigenstates['energies'] : list of floats
         List of energies of quasi-eigenstates in eV.
         Default value: [-0.1, 0., 0.1].
+    _legal_params: dict of sets
+        names of legal parameters, reserved for checking purposes.
+        DO NOT CHANGE IT!
     """
     def __init__(self):
         # generic standard values
@@ -125,6 +128,14 @@ class Config:
                      'direction': 1,
                      'ne_integral': 2048}
 
+        # Set legal parameter names
+        self._legal_params = {
+            'generic': set(self.generic.keys()),
+            'LDOS': set(self.LDOS.keys()),
+            'dyn_pol': set(self.dyn_pol.keys()),
+            'dckb': set(self.dckb.keys())
+        }
+
     def set_temperature(self, temperature=300):
         """
         Set temperature.
@@ -133,6 +144,26 @@ class Config:
             temperature in Kelvin
         """
         self.generic['beta'] = 1.0 / (KB * temperature)
+
+    def check_params(self):
+        """
+        Check the sanity of parameters.
+
+        :return: None
+        :raises ValueError: if illegal parameters are detected.
+        """
+        def _check(attr, attr_name):
+            set_check = set(attr.keys())
+            set_ref = self._legal_params[attr_name]
+            set_diff = set_check.difference(set_ref)
+            for key in set_diff:
+                raise ValueError(f"Undefined parameter {key} in"
+                                 f" config.{attr_name}")
+
+        _check(self.generic, 'generic')
+        _check(self.LDOS, 'LDOS')
+        _check(self.dyn_pol, 'dyn_pol')
+        _check(self.dckb, 'dckb')
 
 
 def read_config(filename):

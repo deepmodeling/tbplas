@@ -95,11 +95,13 @@ class Analyzer(MPIEnv):
             dimension of the sample
         :param enable_mpi: boolean
             whether to enable parallelism using MPI
-        :raises ValueError: if dimension is neither 2 nor 3
+        :raises ValueError: if dimension is neither 2 nor 3, or if illegal
+            parameters are detected in config
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=False)
         self.sample = sample
         self.config = config
+        self.config.check_params()
         if dimension not in (2, 3):
             raise ValueError(f"Unsupported dimension: {dimension}")
         self.dimension = dimension

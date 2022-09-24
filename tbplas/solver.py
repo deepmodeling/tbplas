@@ -99,10 +99,12 @@ class Solver(MPIEnv):
             whether to enable parallelism using MPI
         :param kwargs: dictionary
             arguments for method 'set_output'
+        :raises ValueError: if illegal parameters are detected in config
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=True)
         self.sample = sample
         self.config = config
+        self.config.check_params()
         self.output = dict()
         self.set_output(**kwargs)
 
