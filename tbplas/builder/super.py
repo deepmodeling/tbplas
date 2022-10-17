@@ -623,12 +623,13 @@ class SuperCell(OrbitalSet):
 
     def _init_dr(self, orb_pos):
         """Get initial dr in the general case."""
-        dr = core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
-                            self.dim, self.pbc, self.num_orb_pc,
-                            self.orb_id_pc, self.vac_id_sc,
-                            self.sc_lat_vec, orb_pos,
-                            data_kind=1)
-        return dr
+        hop_i, hop_j, hop_v, dr = \
+            core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
+                           self.dim, self.pbc, self.num_orb_pc,
+                           self.orb_id_pc, self.vac_id_sc,
+                           self.sc_lat_vec, orb_pos,
+                           data_kind=1)
+        return hop_i, hop_j, hop_v, dr
 
     def get_hop(self):
         """
@@ -695,8 +696,7 @@ class SuperCell(OrbitalSet):
         orb_pos = self.get_orb_pos()
 
         # Get initial hopping terms and dr
-        hop_i, hop_j, hop_v = self._init_hop()
-        dr = self._init_dr(orb_pos)
+        hop_i, hop_j, hop_v, dr = self._init_dr(orb_pos)
 
         # Apply hopping modifier
         if self.hop_modifier.num_hop != 0:

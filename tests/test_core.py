@@ -252,7 +252,7 @@ class TestCore(unittest.TestCase):
         self.timer.tic(record)
         sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
         sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
-                             dtype=np.int)
+                             dtype=np.int64)
         self.timer.toc(record)
         th.test_equal_array(sc_test, sc_ref)
 
@@ -261,7 +261,7 @@ class TestCore(unittest.TestCase):
         self.timer.tic(record)
         sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
         sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
-                             dtype=np.int)
+                             dtype=np.int64)
         self.timer.toc(record)
         th.test_equal_array(sc_test, sc_ref)
 

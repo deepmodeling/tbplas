@@ -898,7 +898,7 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     data_kind: int32
         which arrays to generate
         0 - hop_i, hop_j, hop_v
-        1 - dr
+        1 - hop_i, hop_j, hop_v, dr
 
     Returns
     -------
@@ -941,11 +941,10 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     num_hop_sc = _get_num_hop_sc(pc_hop_ind,
                                  dim, pbc, num_orb_pc,
                                  orb_id_pc, vac_id_sc)
-    if data_kind == 0:
-        hop_i = np.zeros(num_hop_sc, dtype=np.int64)
-        hop_j = np.zeros(num_hop_sc, dtype=np.int64)
-        hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
-    else:
+    hop_i = np.zeros(num_hop_sc, dtype=np.int64)
+    hop_j = np.zeros(num_hop_sc, dtype=np.int64)
+    hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
+    if data_kind == 1:
         dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
 
     # Initialize variables
@@ -985,11 +984,10 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
                     # Check if id_sc_j corresponds to a vacancy
                     if vac_id_sc is None or id_sc_j != -1:
-                        if data_kind == 0:
-                            hop_i[ptr] = id_sc_i
-                            hop_j[ptr] = id_sc_j
-                            hop_v[ptr] = pc_hop_eng[ih]
-                        else:
+                        hop_i[ptr] = id_sc_i
+                        hop_j[ptr] = id_sc_j
+                        hop_v[ptr] = pc_hop_eng[ih]
+                        if data_kind == 1:
                             na = _fast_div(ja0, dim[0])
                             nb = _fast_div(jb0, dim[1])
                             nc = _fast_div(jc0, dim[2])
@@ -1014,7 +1012,7 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     if data_kind == 0:
         return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v)
     else:
-        return np.asarray(dr)
+        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
 
 
 @cython.boundscheck(False)
