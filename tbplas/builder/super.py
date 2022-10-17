@@ -622,7 +622,7 @@ class SuperCell(OrbitalSet):
         return hop_i, hop_j, hop_v
 
     def _init_dr(self, orb_pos):
-        """Get initial dr in the general case."""
+        """Get initial hop_i, hop_j, hop_v and dr in the general case."""
         hop_i, hop_j, hop_v, dr = \
             core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
                            self.dim, self.pbc, self.num_orb_pc,
