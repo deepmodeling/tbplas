@@ -372,7 +372,7 @@ class TestSuper(unittest.TestCase):
         # Normal case
         id_sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
         id_sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
-                                dtype=np.int)
+                                dtype=np.int64)
         th.test_equal_array(id_sc_test, id_sc_ref)
 
     def test13_get_orb_eng(self):
