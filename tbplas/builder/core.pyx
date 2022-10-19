@@ -1017,6 +1017,177 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def split_pc_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng):
+    """
+    Split the hopping terms of primitive cell into intra-cell and inter-cell
+    categories.
+
+    Parameters
+    ----------
+    pc_hop_ind: (num_hop, 5) int32 array
+        indices of hopping terms in the primitive cell
+    pc_hop_eng: (num_hop,) complex128 array
+        energies of hopping terms in the primitive cell
+
+    Returns
+    -------
+    ind_intra: (num_hop_intra, 5) int32 array
+        indices of intra-cell hopping terms
+    eng_intra: (num_hop_intra,) complex128 array
+        energies of intra-cell hopping terms
+    ind_inter: (num_hop_inter, 5) int32 array
+        indices of inter-cell hopping terms
+    eng_inter: (num_hop_inter,) complex128 array
+        energies of inter-cell hopping terms
+    """
+    # Loop counters and bounds
+    cdef int num_hop, num_hop_intra, num_hop_inter
+    cdef int ih, ptr_intra, ptr_inter, j
+    cdef int [::1] status
+
+    # Results
+    cdef int [:,::1] ind_intra, ind_inter
+    cdef double complex [::1] eng_intra, eng_inter
+
+    # Determine the intra-cell and inter-cell hopping terms
+    num_hop = pc_hop_ind.shape[0]
+    status = np.zeros(num_hop, dtype=np.int32)
+    for ih in range(num_hop):
+        if pc_hop_ind[ih, 0] == 0 and \
+           pc_hop_ind[ih, 1] == 0 and \
+           pc_hop_ind[ih, 2] == 0:
+            status[ih] = 1
+        else:
+            status[ih] = 0
+
+    # Allocate results
+    num_hop_intra = np.sum(status)
+    num_hop_inter = num_hop - num_hop_intra
+    ind_intra = np.zeros((num_hop_intra, 5), dtype=np.int32)
+    ind_inter = np.zeros((num_hop_inter, 5), dtype=np.int32)
+    eng_intra = np.zeros(num_hop_intra, dtype=np.complex128)
+    eng_inter = np.zeros(num_hop_inter, dtype=np.complex128)
+
+    # Splitting hopping terms
+    ptr_intra = 0
+    ptr_inter = 0
+    for ih in range(num_hop):
+        if status[ih] == 1:
+            for j in range(5):
+                ind_intra[ptr_intra, j] = pc_hop_ind[ih, j]
+            eng_intra[ptr_intra] = pc_hop_eng[ih]
+            ptr_intra += 1
+        else:
+            for j in range(5):
+                ind_inter[ptr_inter, j] = pc_hop_ind[ih, j]
+            eng_inter[ptr_inter] = pc_hop_eng[ih]
+            ptr_inter += 1
+
+    return np.asarray(ind_intra), np.asarray(eng_intra), np.asarray(ind_inter), np.asarray(eng_inter)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_hop_intra(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
+                    int [::1] dim, int num_orb_pc,
+                    double [:,::1] sc_orb_pos, int data_kind):
+    """
+    Build the arrays of hopping terms arising from intra-primitice cell hopping
+    terms for constructing sparse Hamiltonian and dr in CSR format.
+
+    Parameters
+    ----------
+    pc_hop_ind: (num_hop_pc, 5) int32 array
+        reduced hopping indices of primitive cell
+    pc_hop_eng: (num_orb_pc,) complex128 array
+        reduced hopping energies of primitive cell in eV
+    dim: (3,) int32 array
+        dimension of the super cell
+    num_orb_pc: int32
+        number of orbitals in primitive cell
+    sc_orb_pos: (num_orb_sc, 3) float64 array
+        CARTESIAN coordinates of orbitals of super cell in NM
+    data_kind: int32
+        which arrays to generate
+        0 - hop_i, hop_j, hop_v
+        1 - hop_i, hop_j, hop_v, dr
+
+    Returns
+    -------
+    hop_i: (num_hop_sc,) int64 array
+        reduced orbital indices of bra <i| in sc representation
+    hop_j: (num_hop_sc,) int64 array
+        reduced orbital indices of ket |j> in sc representation
+    hop_v: (num_hop_sc,) complex128 array
+        reduced hopping energy of <i|H|j> in eV
+    dr: (num_hop_sc, 3) float64 array
+        reduced distances corresponding to hop_i and hop_j in NM
+
+    NOTES
+    -----
+    See 'build_hop'.
+    """
+    # Loop counters and bounds
+    cdef int num_hop_pc, ih
+    cdef long num_hop_sc, ptr
+
+    # Cell and orbital IDs
+    cdef int ia, ib, ic
+    cdef int [::1] offset_pc
+    cdef long offset_sc, id_sc_i, id_sc_j
+
+    # Results
+    cdef long [::1] hop_i, hop_j
+    cdef double complex [::1] hop_v
+    cdef double [:,::1] dr
+
+    # Get the number of hopping terms and allocate arrays
+    num_hop_pc = pc_hop_ind.shape[0]
+    num_hop_sc = num_hop_pc * np.prod(dim)
+    hop_i = np.zeros(num_hop_sc, dtype=np.int64)
+    hop_j = np.zeros(num_hop_sc, dtype=np.int64)
+    hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
+    if data_kind == 1:
+        dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
+
+    # Fill the arrays
+    offset_pc = np.zeros(4, dtype=np.int32)
+    ptr = 0
+    for ia in range(dim[0]):
+        offset_pc[0] = ia
+        for ib in range(dim[1]):
+            offset_pc[1] = ib
+            for ic in range(dim[2]):
+                # Evaluate the offset
+                offset_pc[2] = ic
+                offset_pc[3] = 0
+                offset_sc = _id_pc2sc(dim, num_orb_pc, offset_pc)
+
+                # Copy data
+                for ih in range(num_hop_pc):
+                    id_sc_i = offset_sc + pc_hop_ind[ih, 3]
+                    id_sc_j = offset_sc + pc_hop_ind[ih, 4]
+                    hop_i[ptr] = id_sc_i
+                    hop_j[ptr] = id_sc_j
+                    hop_v[ptr] = pc_hop_eng[ih]
+                    if data_kind == 1:
+                        dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
+                                   - sc_orb_pos[id_sc_i, 0]
+                        dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
+                                   - sc_orb_pos[id_sc_i, 1]
+                        dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
+                                   - sc_orb_pos[id_sc_i, 2]
+                    ptr += 1
+
+    # Conditional return
+    if data_kind == 0:
+        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v)
+    else:
+        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def find_equiv_hopping(long [::1] hop_i, long [::1] hop_j, long bra, long ket):
     """
     Find the index of equivalent hopping term of <bra|H|ket> in hop_i and hop_j,

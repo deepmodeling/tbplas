@@ -3,8 +3,11 @@
 import unittest
 
 import numpy as np
+from scipy.sparse import coo_matrix
 
-from tbplas import gen_lattice_vectors, PrimitiveCell, SuperCell
+import tbplas.builder.core as core
+from tbplas import (gen_lattice_vectors, extend_prim_cell,
+                    PrimitiveCell, SuperCell)
 import tbplas.builder.exceptions as exc
 from tbplas.builder.super import OrbitalSet
 from tbplas.utils import TestHelper
@@ -157,7 +160,7 @@ class TestSuper(unittest.TestCase):
 
         :return: None.
         """
-        # Feed a list of vacancies with a illegal one.
+        # Feed a list of vacancies with an illegal one.
         # Errors should be raised
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
         vacancies = [(0, 0, 0, 1), (3, 0, 0, 1)]
@@ -425,6 +428,53 @@ class TestSuper(unittest.TestCase):
         hop_i = sc.get_hop()[0]
         dr = sc.get_dr()
         self.assertEqual(hop_i.shape[0], dr.shape[0])
+
+    def test15_fast_algo(self):
+        """
+        Test the fast algorithm to build hopping terms.
+
+        :return: None
+        """
+        # Test the core function to split hopping terms
+        pc_hop_ind = np.array([
+            (0, 0, 0, 1, 0),
+            (0, 0, 0, 1, 1),
+            (1, 0, 0, 1, 0),
+            (0, -1, 0, 1, 1),
+            (0, 0, 2, 1, 1)], dtype=np.int32
+        )
+        pc_hop_eng = np.array([1.0, -1.0, 2.5, 1.3, 0.6], dtype=np.complex128)
+
+        ind_intra, eng_intra, ind_inter, eng_inter = \
+            core.split_pc_hop(pc_hop_ind, pc_hop_eng)
+        ind_intra_ref = pc_hop_ind[[0, 1]]
+        eng_intra_ref = pc_hop_eng[[0, 1]]
+        ind_inter_ref = pc_hop_ind[[2, 3, 4]]
+        eng_inter_ref = pc_hop_eng[[2, 3, 4]]
+
+        th = TestHelper(self)
+        th.test_equal_array(ind_intra, ind_intra_ref)
+        th.test_equal_array(eng_intra, eng_intra_ref)
+        th.test_equal_array(ind_inter, ind_inter_ref)
+        th.test_equal_array(eng_inter, eng_inter_ref)
+
+        # Check the hopping terms generated using different algorithms
+        prim_cell = extend_prim_cell(self.cell, dim=(10, 10, 1))
+        super_cell = SuperCell(prim_cell, dim=(10, 10, 1), pbc=(True, True, False))
+
+        i1, j1, v1 = super_cell.get_hop(use_fast=False)
+        dr1 = super_cell.get_dr(use_fast=False)
+        i2, j2, v2 = super_cell.get_hop(use_fast=True)
+        dr2 = super_cell.get_dr(use_fast=True)
+
+        shape = (super_cell.num_orb_sc, super_cell.num_orb_sc)
+        h1 = coo_matrix((v1, (i1, j1)), shape=shape)
+        h2 = coo_matrix((v2, (i2, j2)), shape=shape)
+        th.test_equal_array(h1, h2)
+        for i in range(3):
+            h1 = coo_matrix((dr1[:, i], (i1, j1)), shape=shape)
+            h2 = coo_matrix((dr2[:, i], (i2, j2)), shape=shape)
+            th.test_equal_array(h1, h2)
 
 
 if __name__ == "__main__":

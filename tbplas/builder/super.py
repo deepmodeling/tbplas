@@ -631,13 +631,68 @@ class SuperCell(OrbitalSet):
                            data_kind=1)
         return hop_i, hop_j, hop_v, dr
 
-    def get_hop(self):
+    def _init_hop_fast(self):
+        """Get initial hop_i, hop_j and hop_v using a fast algorithm."""
+        # Split hopping terms
+        ind_intra, eng_intra, ind_inter, eng_inter = \
+            core.split_pc_hop(self.pc_hop_ind, self.pc_hop_eng)
+
+        # Build hopping terms from intra-cell terms
+        i_intra, j_intra, v_intra = \
+            core.build_hop_intra(ind_intra, eng_intra,
+                                 self.dim, self.num_orb_pc,
+                                 None, data_kind=0)
+
+        # Build hopping terms from inter-cell terms
+        i_inter, j_inter, v_inter =  \
+            core.build_hop(ind_inter, eng_inter,
+                           self.dim, self.pbc, self.num_orb_pc,
+                           self.orb_id_pc, self.vac_id_sc,
+                           self.sc_lat_vec, None,
+                           data_kind=0)
+
+        # Assemble hopping terms
+        hop_i = np.append(i_intra, i_inter)
+        hop_j = np.append(j_intra, j_inter)
+        hop_v = np.append(v_intra, v_inter)
+        return hop_i, hop_j, hop_v
+
+    def _init_dr_fast(self, orb_pos):
+        """Get initial hop_i, hop_j, hop_v and dr using a fast algorithm."""
+        # Split hopping terms
+        ind_intra, eng_intra, ind_inter, eng_inter = \
+            core.split_pc_hop(self.pc_hop_ind, self.pc_hop_eng)
+
+        # Build dr from intra-cell hopping terms
+        i_intra, j_intra, v_intra, dr_intra = \
+            core.build_hop_intra(ind_intra, eng_intra,
+                                 self.dim, self.num_orb_pc,
+                                 orb_pos, data_kind=1)
+
+        # Build dr from inter-cell hopping terms
+        i_inter, j_inter, v_inter, dr_inter = \
+            core.build_hop(ind_inter, eng_inter,
+                           self.dim, self.pbc, self.num_orb_pc,
+                           self.orb_id_pc, self.vac_id_sc,
+                           self.sc_lat_vec, orb_pos,
+                           data_kind=1)
+
+        # Assemble dr
+        hop_i = np.append(i_intra, i_inter)
+        hop_j = np.append(j_intra, j_inter)
+        hop_v = np.append(v_intra, v_inter)
+        dr = np.vstack((dr_intra, dr_inter))
+        return hop_i, hop_j, hop_v, dr
+
+    def get_hop(self, use_fast="auto"):
         """
         Get indices and energies of all hopping terms in the supercell.
 
         NOTE: The hopping terms will be reduced by conjugate relation.
         So only half of them will be returned as results.
 
+        :param use_fast: string
+            whether to enable the fast algorithm to build the hopping terms
         :return: hop_i: (num_hop_sc,) int64 array
             row indices of hopping terms reduced by conjugate relation
         :return: hop_j: (num_hop_sc,) int64 array
@@ -648,7 +703,12 @@ class SuperCell(OrbitalSet):
         self.sync_array()
 
         # Get initial hopping terms
-        hop_i, hop_j, hop_v = self._init_hop()
+        if use_fast == "auto":
+            use_fast = (len(self.vacancy_list) == 0)
+        if use_fast:
+            hop_i, hop_j, hop_v = self._init_hop_fast()
+        else:
+            hop_i, hop_j, hop_v = self._init_hop()
 
         # Apply hopping modifier
         if self.hop_modifier.num_hop != 0:
@@ -676,7 +736,7 @@ class SuperCell(OrbitalSet):
             hop_v = np.append(hop_v, hop_v_new)
         return hop_i, hop_j, hop_v
 
-    def get_dr(self):
+    def get_dr(self, use_fast="auto"):
         """
         Get distances of all hopping terms in the supercell.
 
@@ -689,6 +749,8 @@ class SuperCell(OrbitalSet):
         for adding magnetic field, calculating band structure and many
         properties involving dx and dy.
 
+        :param use_fast: string
+            whether to enable the fast algorithm to build the hopping distances
         :return: dr: (num_hop_sc, 3) float64 array
             distances of hopping terms in accordance with hop_i and hop_j in nm
         """
@@ -696,7 +758,12 @@ class SuperCell(OrbitalSet):
         orb_pos = self.get_orb_pos()
 
         # Get initial hopping terms and dr
-        hop_i, hop_j, hop_v, dr = self._init_dr(orb_pos)
+        if use_fast == "auto":
+            use_fast = (len(self.vacancy_list) == 0)
+        if use_fast:
+            hop_i, hop_j, hop_v, dr = self._init_dr_fast(orb_pos)
+        else:
+            hop_i, hop_j, hop_v, dr = self._init_dr(orb_pos)
 
         # Apply hopping modifier
         if self.hop_modifier.num_hop != 0:
