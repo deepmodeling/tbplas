@@ -360,7 +360,7 @@ class Hopping(ABC):
         Flatten all hopping terms into a list.
 
         :return: hopping terms as a list
-        :rtype: list of (rb, rb, rc, orb_i, orb_j)
+        :rtype: list of (rb, rb, rc, orb_i, orb_j, energy)
         """
         self.clean()
         hop_list = []
