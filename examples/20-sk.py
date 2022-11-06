@@ -110,8 +110,7 @@ def test_mos2():
         cell.add_orbital(coord, energy=energy, label=label)
 
     # Get hopping terms in the nearest approximation
-    neighbors = tb.find_neighbors(cell, cell, a_max=2, b_max=2,
-                                  max_distance=0.32)
+    neighbors = tb.find_neighbors(cell, a_max=2, b_max=2, max_distance=0.32)
 
     # Add hopping terms
     sk = tb.SK()
@@ -166,8 +165,7 @@ def test_bp():
         cell.add_orbital(coord, energy=energy, label=label)
 
     # Get hopping terms in the nearest approximation
-    neighbors = tb.find_neighbors(cell, cell, a_max=2, b_max=2,
-                                  max_distance=1.0)
+    neighbors = tb.find_neighbors(cell, a_max=2, b_max=2, max_distance=1.0)
 
     # Add hopping terms
     sk = tb.SK()

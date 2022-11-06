@@ -421,7 +421,7 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
     return merged_cell
 
 
-def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell,
+def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell = None,
                    a_max: int = 0, b_max: int = 0, c_max: int = 0,
                    max_distance: float = 1.0) -> List[namedtuple]:
     """
@@ -432,13 +432,16 @@ def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell,
     [-a_max, a_max] * [-b_max, b_max] * [-c_max, c_max].
 
     :param pc_bra: the 'bra' primitive cell
-    :param pc_ket: the 'ket' primitive cell
+    :param pc_ket: the 'ket' primitive cell, default to pc_ket if not set
     :param a_max: upper bound of range on a-axis
     :param b_max: upper bound of range on b-axis
     :param c_max: upper bound of range on c-axis
     :param max_distance: cutoff distance in NM
     :return: list of neighbors as named tuples
     """
+    if pc_ket is None:
+        pc_ket = pc_bra
+
     # Get orbital positions
     pc_bra.sync_array()
     pc_ket.sync_array()
