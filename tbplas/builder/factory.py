@@ -16,17 +16,22 @@ Functions
     merge_prim_cell: user function
         merge primitive cells and inter-hopping dictionaries to build a large
         primitive cell
-
+    find_neighbors: user function
+        searching for neighbours between the (0, 0, 0) cell of pc_bra and nearby
+        cells of pc_ket up to given cutoff distance.
 
 Classes
 -------
     PCInterHopping: user class
         container for holding hopping terms between different primitive cells in
         hetero-structure
+    SK: user class
+        for evaluating hopping integrals using Slater-Koster formula
 """
 
 import math
-from typing import Union
+from typing import Union, List, Tuple
+from collections import namedtuple
 
 import numpy as np
 from scipy.spatial import KDTree
@@ -414,3 +419,539 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
     # update the timestamps of orb_list and hop_dict.
     merged_cell.sync_array()
     return merged_cell
+
+
+def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell,
+                   a_max: int = 0, b_max: int = 0, c_max: int = 0,
+                   max_distance: float = 1.0) -> List[namedtuple]:
+    """
+    Find neighbours between the (0, 0, 0) cell of pc_bra and nearby cells of
+    pc_ket up to given cutoff distance.
+
+    The searching range of nearby cells is:
+    [-a_max, a_max] * [-b_max, b_max] * [-c_max, c_max].
+
+    :param pc_bra: the 'bra' primitive cell
+    :param pc_ket: the 'ket' primitive cell
+    :param a_max: upper bound of range on a-axis
+    :param b_max: upper bound of range on b-axis
+    :param c_max: upper bound of range on c-axis
+    :param max_distance: cutoff distance in NM
+    :return: list of neighbors as named tuples
+    """
+    # Get orbital positions
+    pc_bra.sync_array()
+    pc_ket.sync_array()
+    pos_bra = pc_bra.orb_pos_nm
+    pos_ket = pc_ket.orb_pos_nm
+
+    # Prepare for the loop
+    tree_bra = KDTree(pos_bra)
+    neighbor_rn = [(ia, ib, ic)
+                   for ia in range(-a_max, a_max+1)
+                   for ib in range(-b_max, b_max+1)
+                   for ic in range(-c_max, c_max+1)]
+    Term = namedtuple("Term", ["rn", "pair", "rij", "distance"])
+
+    # Loop over neighboring cells to search for orbital pairs
+    neighbors = []
+    for rn in neighbor_rn:
+        pos_ket_rn = pos_ket + np.matmul(rn, pc_ket.lat_vec)
+        tree_ket_rn = KDTree(pos_ket_rn)
+        dist_matrix = tree_bra.sparse_distance_matrix(tree_ket_rn,
+                                                      max_distance=max_distance)
+        for pair, distance in dist_matrix.items():
+            if distance > 0.0:
+                i, j = pair
+                rij = pos_ket_rn[j] - pos_bra[i]
+                neighbors.append(Term(rn, pair, rij, distance))
+    neighbors = sorted(neighbors, key=lambda x: x.distance)
+    return neighbors
+
+
+class SK:
+    """
+    Class for evaluating hopping integrals using Slater-Koster formula.
+
+    The maximum supported angular momentum is l=2 (d orbitals).
+    Reference: https://journals.aps.org/pr/abstract/10.1103/PhysRev.94.1498
+
+    The reason why we make orbital labels as attributes is to avoid misspelling,
+    which is likely to happen as we have to repeat them many times.
+    """
+    def __init__(self) -> None:
+        self.s = "s"
+        self.px = "px"
+        self.py = "py"
+        self.pz = "pz"
+        self.dxy = "dxy"
+        self.dyz = "dyz"
+        self.dzx = "dzx"
+        self.dx2_y2 = "dx2-y2"
+        self.dz2 = "dz2"
+        self.p_labels = {self.px, self.py, self.pz}
+        self.d_labels = {self.dxy, self.dyz, self.dzx, self.dx2_y2, self.dz2}
+        self.sqrt3 = math.sqrt(3)
+        self.half_sqrt3 = self.sqrt3 * 0.5
+
+    def _check_p_labels(self, *labels: str) -> None:
+        """
+        Check the sanity of labels of p orbitals.
+
+        :param labels: labels to check
+        :raises ValueError: if any label is not in self.p_labels
+        """
+        for label in labels:
+            if label not in self.p_labels:
+                raise ValueError(f"Illegal label: {label}")
+
+    def _check_d_labels(self, *labels: str) -> None:
+        """
+        Check the sanity of labels of d orbitals.
+
+        :param labels: labels to check
+        :raises ValueError: if any label is not in self.d_labels
+        """
+        for label in labels:
+            if label not in self.d_labels:
+                raise ValueError(f"Illegal label: {label}")
+
+    @staticmethod
+    def _perm_vector(vector: np.ndarray, x_new: str) -> np.ndarray:
+        """
+        Permute a given vector according to the new x_axis.
+
+        :param vector: vector to permute
+        :param x_new: label of the new x_axis
+        :return: permuted vector
+        :raises ValueError: if x_new is not in 'x', 'y', 'z'
+        """
+        if x_new == "x":
+            return vector
+        elif x_new == "y":
+            return vector[[1, 2, 0]]
+        elif x_new == "z":
+            return vector[[2, 0, 1]]
+        else:
+            raise ValueError(f"Illegal x_new {x_new}")
+
+    @staticmethod
+    def _remap_label(label: str, x_new: str) -> str:
+        """
+        Remap orbital label after permutation.
+
+        :param label: orbital label to remap
+        :param x_new: index of the new 'x' direction
+        :return: remapped orbital label
+        :raises ValueError: if x_new is not in 'x', 'y', 'z'
+        """
+        if x_new == "x":
+            return label
+        else:
+            if x_new == "y":
+                # keys: x, y, z, values: x_new, y_new, z_new
+                map_table = {"x": "z", "y": "x", "z": "y"}
+            elif x_new == "z":
+                # keys: x, y, z, values: x_new, y_new, z_new
+                map_table = {"x": "y", "y": "z", "z": "x"}
+            else:
+                raise ValueError(f"Illegal new_x {x_new}")
+            new_label = label[0]
+            for c in label[1:]:
+                new_label += map_table[c]
+            return new_label
+
+    @staticmethod
+    def _eval_dir_cos(r: np.ndarray) -> Tuple[float, float, float]:
+        """
+        Evaluate direction cosines for given displacement vector.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :return: the direction cosines along x, y, and z directions
+        :raises ValueError: if the norm of r is too small
+        """
+        norm = np.linalg.norm(r)
+        if norm <= 1.0e-15:
+            raise ValueError("Norm of displacement vector too small")
+        dir_cos = r / norm
+        l, m, n = dir_cos.item(0), dir_cos.item(1), dir_cos.item(2)
+        return l, m, n
+
+    @staticmethod
+    def ss(v_sss: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <s,0|H|s,r>.
+
+        :param v_sss: V_ss_sigma
+        :return: hopping integral
+        """
+        return v_sss
+
+    def sp(self, r: np.ndarray, label_p: str = "px",
+           v_sps: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <s,0|H|p,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_p: label of p orbital
+        :param v_sps: V_sp_sigma
+        :return: hopping integral
+        :raises ValueError: if label_p is not in self.p_labels
+        """
+        self._check_p_labels(label_p)
+        l, m, n = self._eval_dir_cos(r)
+        if label_p == self.px:
+            t = l * v_sps
+        elif label_p == self.py:
+            t = m * v_sps
+        else:
+            t = n * v_sps
+        return t
+
+    def sd(self, r: np.ndarray, label_d: str = "dxy",
+           v_sds: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <s,0|H|d,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_d: label of d orbital
+        :param v_sds: V_sd_sigma
+        :return: hopping integral
+        :raises ValueError: if label_d is not in self.d_labels
+        """
+        self._check_d_labels(label_d)
+
+        # Permute the coordinates
+        if label_d == self.dyz:
+            x_new = "y"
+        elif label_d == self.dzx:
+            x_new = "z"
+        else:
+            x_new = "x"
+        r = self._perm_vector(r, x_new)
+        label_d = self._remap_label(label_d, x_new)
+
+        # Evaluate the hopping integral
+        l, m, n = self._eval_dir_cos(r)
+        if label_d == self.dxy:
+            t = self.sqrt3 * l * m * v_sds
+        elif label_d == self.dx2_y2:
+            t = self.half_sqrt3 * (l ** 2 - m ** 2) * v_sds
+        elif label_d == self.dz2:
+            t = (n ** 2 - 0.5 * (l ** 2 + m ** 2)) * v_sds
+        else:
+            raise ValueError(f"Undefined label pair s {label_d}")
+        return t
+
+    def pp(self, r: np.ndarray, label_i: str = "px", label_j: str = "px",
+           v_pps: complex = 0.0, v_ppp: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <p_i,0|H|p_j,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_i: label of p_i orbital
+        :param label_j: label of p_j orbital
+        :param v_pps: V_pp_sigma
+        :param v_ppp: V_pp_pi
+        :return: hopping integral
+        :raises ValueError: if label_i or label_j is not in self.p_labels
+        """
+        self._check_p_labels(label_i, label_j)
+
+        # Permute the coordinates
+        x_new = label_i[1]
+        r = self._perm_vector(r, x_new)
+        label_i = self._remap_label(label_i, x_new)
+        label_j = self._remap_label(label_j, x_new)
+
+        # After permutation, label_i will always be px.
+        # Otherwise, something must be wrong.
+        if label_i != self.px:
+            raise ValueError(f"Undefined label pair {label_i} {label_j}")
+
+        # The minimal hopping table in the reference.
+        l, m, n = self._eval_dir_cos(r)
+        if label_j == self.px:
+            t = l ** 2 * v_pps + (1 - l ** 2) * v_ppp
+        elif label_j == self.py:
+            t = l * m * (v_pps - v_ppp)
+        else:
+            t = l * n * (v_pps - v_ppp)
+        return t
+
+    def pd(self, r: np.ndarray, label_p: str = "px", label_d: str = "dxy",
+           v_pds: complex = 0.0, v_pdp: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <p,0|H|d,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_p: label of p orbital
+        :param label_d: label of d orbital
+        :param v_pds: V_pd_sigma
+        :param v_pdp: V_pd_pi
+        :return: hopping integral
+        :raises ValueError: if label_p is not in self.p_labels or
+            label_d is not in self.d_labels
+        """
+        self._check_p_labels(label_p)
+        self._check_d_labels(label_d)
+
+        # Permute coordinates
+        perm_labels = (self.dxy, self.dyz, self.dzx)
+        if label_d in perm_labels:
+            x_new = label_p[1]
+            r = self._perm_vector(r, x_new)
+            label_p = self._remap_label(label_p, x_new)
+            label_d = self._remap_label(label_d, x_new)
+
+        # Evaluate hopping integral
+        l, m, n = self._eval_dir_cos(r)
+        l2, m2, n2 = l ** 2, m ** 2, n ** 2
+        l2_p_m2 = l2 + m2
+        l2_m_m2 = l2 - m2
+        sqrt3 = self.sqrt3
+        sqrt3_2 = self.half_sqrt3
+
+        if label_p == self.px:
+            if label_d == self.dxy:
+                t = sqrt3 * l2 * m * v_pds + m * (1 - 2 * l2) * v_pdp
+            elif label_d == self.dyz:
+                t = l * m * n * (sqrt3 * v_pds - 2 * v_pdp)
+            elif label_d == self.dzx:
+                t = sqrt3 * l2 * n * v_pds + n * (1 - 2 * l2) * v_pdp
+            elif label_d == self.dx2_y2:
+                t = sqrt3_2 * l * l2_m_m2 * v_pds + l * (1 - l2_m_m2) * v_pdp
+            else:
+                t = l * (n2 - 0.5 * l2_p_m2) * v_pds - sqrt3 * l * n2 * v_pdp
+        elif label_p == self.py:
+            if label_d == self.dx2_y2:
+                t = sqrt3_2 * m * l2_m_m2 * v_pds - m * (1 + l2_m_m2) * v_pdp
+            elif label_d == self.dz2:
+                t = m * (n2 - 0.5 * l2_p_m2) * v_pds - sqrt3 * m * n2 * v_pdp
+            else:
+                raise ValueError(f"Undefined label pair {label_p} {label_d}")
+        else:
+            if label_d == self.dx2_y2:
+                t = sqrt3_2 * n * l2_m_m2 * v_pds - n * l2_m_m2 * v_pdp
+            elif label_d == self.dz2:
+                t = n * (n2 - 0.5 * l2_p_m2) * v_pds + sqrt3 * n * l2_p_m2 * v_pdp
+            else:
+                raise ValueError(f"Undefined label pair {label_p} {label_d}")
+        return t
+
+    def dd(self, r: np.ndarray, label_i: str = "dxy", label_j: str = "dxy",
+           v_dds: complex = 0.0, v_ddp: complex = 0.0, v_ddd: complex = 0) -> complex:
+        """
+        Evaluate the hopping integral <d_i,0|H|d_j,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_i: label of d_i orbital
+        :param label_j: label of d_j orbital
+        :param v_dds: V_dd_sigma
+        :param v_ddp: V_dd_pi
+        :param v_ddd: V_dd_delta
+        :return: hopping integral
+        :raises ValueError: if label_i or label_j is not in self.d_labels
+        """
+        self._check_d_labels(label_i, label_j)
+
+        # Number the orbitals such that we can filter the diagonal terms
+        # The order of the orbitals strictly follows the reference.
+        # DO NOT CHANGE IT UNLESS YOU KNOW WHAT YOU ARE DOING!
+        d_labels = (self.dxy, self.dyz, self.dzx, self.dx2_y2, self.dz2)
+        id_i = d_labels.index(label_i)
+        id_j = d_labels.index(label_j)
+
+        if id_i > id_j:
+            t = self.dd(r=-r, label_i=label_j, label_j=label_i, v_dds=v_dds,
+                        v_ddp=v_ddp, v_ddd=v_ddd).conjugate()
+        else:
+            # Permute the coordinates if essential
+            if label_i == self.dyz and label_j in (self.dyz, self.dzx):
+                x_new = "y"
+            elif label_i == self.dzx and label_j == self.dzx:
+                x_new = "z"
+            else:
+                x_new = "x"
+            r = self._perm_vector(r, x_new)
+            label_i = self._remap_label(label_i, x_new)
+            label_j = self._remap_label(label_j, x_new)
+
+            # Evaluate hopping integral
+            l, m, n = self._eval_dir_cos(r)
+            l2, m2, n2 = l ** 2, m ** 2, n ** 2
+            l2_p_m2 = l2 + m2
+            l2_m_m2 = l2 - m2
+            lm, mn, nl = l * m, m * n, n * l
+            l2m2 = l2 * m2
+            sqrt3 = self.sqrt3
+
+            if label_i == self.dxy:
+                if label_j == self.dxy:
+                    factor = 1.0
+                    t1 = 3 * l2m2
+                    t2 = l2_p_m2 - 4 * l2m2
+                    t3 = n2 + l2m2
+                elif label_j == self.dyz:
+                    factor = nl
+                    t1 = 3 * m2
+                    t2 = 1 - 4 * m2
+                    t3 = m2 - 1
+                elif label_j == self.dzx:
+                    factor = mn
+                    t1 = 3 * l2
+                    t2 = 1 - 4 * l2
+                    t3 = l2 - 1
+                elif label_j == self.dx2_y2:
+                    factor = lm * l2_m_m2
+                    t1 = 1.5
+                    t2 = -2
+                    t3 = 0.5
+                else:
+                    factor = sqrt3 * lm
+                    t1 = n2 - 0.5 * l2_p_m2
+                    t2 = -2 * n2
+                    t3 = 0.5 * (1 + n2)
+            elif label_i == self.dyz:
+                if label_j == self.dx2_y2:
+                    factor = mn
+                    t1 = 1.5 * l2_m_m2
+                    t2 = -(1 + 2 * l2_m_m2)
+                    t3 = 1 + 0.5 * l2_m_m2
+                elif label_j == self.dz2:
+                    factor = sqrt3 * mn
+                    t1 = n2 - 0.5 * l2_p_m2
+                    t2 = l2_p_m2 - n2
+                    t3 = -0.5 * l2_p_m2
+                else:
+                    raise ValueError(f"Undefined label pair {label_i} {label_j}")
+            elif label_i == self.dzx:
+                if label_j == self.dx2_y2:
+                    factor = nl
+                    t1 = 1.5 * l2_m_m2
+                    t2 = 1 - 2 * l2_m_m2
+                    t3 = -1 * (1 - 0.5 * l2_m_m2)
+                elif label_j == self.dz2:
+                    factor = sqrt3 * nl
+                    t1 = n2 - 0.5 * l2_p_m2
+                    t2 = l2_p_m2 - n2
+                    t3 = -0.5 * l2_p_m2
+                else:
+                    raise ValueError(f"Undefined label pair {label_i} {label_j}")
+            elif label_i == self.dx2_y2:
+                if label_j == self.dx2_y2:
+                    factor = 1
+                    t1 = 0.75 * l2_m_m2 ** 2
+                    t2 = l2_p_m2 - l2_m_m2 ** 2
+                    t3 = n2 + 0.25 * l2_m_m2 ** 2
+                elif label_j == self.dz2:
+                    factor = sqrt3 * l2_m_m2
+                    t1 = 0.5 * (n2 - 0.5 * l2_p_m2)
+                    t2 = -n2
+                    t3 = 0.25 * (1 + n2)
+                else:
+                    raise ValueError(f"Undefined label pair {label_i} {label_j}")
+            else:
+                if label_j == self.dz2:
+                    factor = 1
+                    t1 = (n2 - 0.5 * l2_p_m2) ** 2
+                    t2 = 3 * n2 * l2_p_m2
+                    t3 = 0.75 * l2_p_m2 ** 2
+                else:
+                    raise ValueError(f"Undefined label pair {label_i} {label_j}")
+            t = factor * (t1 * v_dds + t2 * v_ddp + t3 * v_ddd)
+        return t
+
+    def ps(self, r: np.ndarray, label_p: str = "px",
+           v_sps: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <p,0|H|s,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_p: label of p orbital
+        :param v_sps: V_sp_sigma
+        :return: hopping integral
+        :raises ValueError: if label_p is not in self.p_labels
+        """
+        return self.sp(r=-r, label_p=label_p, v_sps=v_sps).conjugate()
+
+    def ds(self, r: np.ndarray, label_d: str = "dxy",
+           v_sds: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <d,0|H|s,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_d: label of d orbital
+        :param v_sds: V_sd_sigma
+        :return: hopping integral
+        :raises ValueError: if label_d is not in self.d_labels
+        """
+        return self.sd(r=-r, label_d=label_d, v_sds=v_sds).conjugate()
+
+    def dp(self, r: np.ndarray, label_p: str = "px", label_d: str = "dxy",
+           v_pds: complex = 0.0, v_pdp: complex = 0.0) -> complex:
+        """
+        Evaluate the hopping integral <d,0|H|p,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_p: label of p orbital
+        :param label_d: label of d orbital
+        :param v_pds: V_pd_sigma
+        :param v_pdp: V_pd_pi
+        :return: hopping integral
+        :raises ValueError: if label_p is not in self.p_labels or
+            label_d is not in self.d_labels
+        """
+        return self.pd(r=-r, label_p=label_p, label_d=label_d, v_pds=v_pds,
+                       v_pdp=v_pdp).conjugate()
+
+    def eval(self, r: np.ndarray, label_i: str = "s", label_j: str = "s",
+             v_sss: complex = 0.0, v_sps: complex = 0.0, v_sds: complex = 0.0,
+             v_pps: complex = 0.0, v_ppp: complex = 0.0,
+             v_pds: complex = 0.0, v_pdp: complex = 0.0,
+             v_dds: complex = 0.0, v_ddp: complex = 0.0, v_ddd: complex = 0.0) -> complex:
+        """
+        Common interface for evaluating hopping integral <i,0|H|j,r>.
+
+        :param r: Cartesian coordinates of the displacement vector
+        :param label_i: label for orbital i
+        :param label_j: label for orbital j
+        :param v_sss: V_ss_sigma
+        :param v_sps: V_sp_sigma
+        :param v_sds: V_sd_sigma
+        :param v_pps: V_pp_sigma
+        :param v_ppp: V_pp_pi
+        :param v_pds: V_pd_sigma
+        :param v_pdp: V_pd_pi
+        :param v_dds: V_dd_sigma
+        :param v_ddp: V_dd_pi
+        :param v_ddd: V_dd_delta
+        :return: hopping integral
+        :raises ValueError: if label_i or label_j is not in predefined labels
+        """
+        if label_i == self.s:
+            if label_j == self.s:
+                t = self.ss(v_sss=v_sss)
+            elif label_j in self.p_labels:
+                t = self.sp(r=r, label_p=label_j, v_sps=v_sps)
+            else:
+                t = self.sd(r=r, label_d=label_j, v_sds=v_sds)
+        elif label_i in self.p_labels:
+            if label_j == self.s:
+                t = self.ps(r=r, label_p=label_i, v_sps=v_sps)
+            elif label_j in self.p_labels:
+                t = self.pp(r=r, label_i=label_i, label_j=label_j,
+                            v_pps=v_pps, v_ppp=v_ppp)
+            else:
+                t = self.pd(r=r, label_p=label_i, label_d=label_j,
+                            v_pds=v_pds, v_pdp=v_pdp)
+        else:
+            if label_j == self.s:
+                t = self.ds(r=r, label_d=label_i, v_sds=v_sds)
+            elif label_j in self.p_labels:
+                t = self.dp(r=r, label_d=label_i, label_p=label_j,
+                            v_pds=v_pds, v_pdp=v_pdp)
+            else:
+                t = self.dd(r=r, label_i=label_i, label_j=label_j,
+                            v_dds=v_dds, v_ddp=v_ddp, v_ddd=v_ddd)
+        return t
