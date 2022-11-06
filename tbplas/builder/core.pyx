@@ -1017,9 +1017,10 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def split_pc_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng):
+def split_pc_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
+                 int [::1] pbc):
     """
-    Split the hopping terms of primitive cell into intra-cell and inter-cell
+    Split the hopping terms of primitive cell into periodic and free
     categories.
 
     Parameters
@@ -1028,72 +1029,102 @@ def split_pc_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng):
         indices of hopping terms in the primitive cell
     pc_hop_eng: (num_hop,) complex128 array
         energies of hopping terms in the primitive cell
+    pbc: (3,) int32 array
+        periodic boundary conditions
 
     Returns
     -------
-    ind_intra: (num_hop_intra, 5) int32 array
-        indices of intra-cell hopping terms
-    eng_intra: (num_hop_intra,) complex128 array
-        energies of intra-cell hopping terms
-    ind_inter: (num_hop_inter, 5) int32 array
-        indices of inter-cell hopping terms
-    eng_inter: (num_hop_inter,) complex128 array
-        energies of inter-cell hopping terms
+    ind_pbc: (num_hop_pbc, 5) int32 array
+        indices of periodic hopping terms
+    eng_pbc: (num_hop_pbc,) complex128 array
+        energies of periodic hopping terms
+    ind_free: (num_hop_free, 5) int32 array
+        indices of free hopping terms
+    eng_free: (num_hop_free,) complex128 array
+        energies of free hopping terms
     """
     # Loop counters and bounds
-    cdef int num_hop, num_hop_intra, num_hop_inter
-    cdef int ih, ptr_intra, ptr_inter, j
+    cdef int num_hop, num_hop_pbc, num_hop_free
+    cdef int ih, j, ptr_pbc, ptr_free
     cdef int [::1] status
 
     # Results
-    cdef int [:,::1] ind_intra, ind_inter
-    cdef double complex [::1] eng_intra, eng_inter
+    cdef int [:,::1] ind_pbc, ind_free
+    cdef double complex [::1] eng_pbc, eng_free
 
-    # Determine the intra-cell and inter-cell hopping terms
+    # Determine pbc and free hopping terms
+    # status: 0-free, 1-pbc
     num_hop = pc_hop_ind.shape[0]
     status = np.zeros(num_hop, dtype=np.int32)
     for ih in range(num_hop):
-        if pc_hop_ind[ih, 0] == 0 and \
-           pc_hop_ind[ih, 1] == 0 and \
-           pc_hop_ind[ih, 2] == 0:
-            status[ih] = 1
-        else:
-            status[ih] = 0
+        status[ih] = 1
+        for j in range(3):
+            if pbc[j] == 0 and pc_hop_ind[ih, j] != 0:
+                status[ih] = 0
+                break
 
     # Allocate results
-    num_hop_intra = np.sum(status)
-    num_hop_inter = num_hop - num_hop_intra
-    ind_intra = np.zeros((num_hop_intra, 5), dtype=np.int32)
-    ind_inter = np.zeros((num_hop_inter, 5), dtype=np.int32)
-    eng_intra = np.zeros(num_hop_intra, dtype=np.complex128)
-    eng_inter = np.zeros(num_hop_inter, dtype=np.complex128)
+    num_hop_pbc = np.sum(status)
+    num_hop_free = num_hop - num_hop_pbc
+    ind_pbc = np.zeros((num_hop_pbc, 5), dtype=np.int32)
+    ind_free = np.zeros((num_hop_free, 5), dtype=np.int32)
+    eng_pbc = np.zeros(num_hop_pbc, dtype=np.complex128)
+    eng_free = np.zeros(num_hop_free, dtype=np.complex128)
 
     # Splitting hopping terms
-    ptr_intra = 0
-    ptr_inter = 0
+    ptr_pbc = 0
+    ptr_free = 0
     for ih in range(num_hop):
         if status[ih] == 1:
             for j in range(5):
-                ind_intra[ptr_intra, j] = pc_hop_ind[ih, j]
-            eng_intra[ptr_intra] = pc_hop_eng[ih]
-            ptr_intra += 1
+                ind_pbc[ptr_pbc, j] = pc_hop_ind[ih, j]
+            eng_pbc[ptr_pbc] = pc_hop_eng[ih]
+            ptr_pbc += 1
         else:
             for j in range(5):
-                ind_inter[ptr_inter, j] = pc_hop_ind[ih, j]
-            eng_inter[ptr_inter] = pc_hop_eng[ih]
-            ptr_inter += 1
+                ind_free[ptr_free, j] = pc_hop_ind[ih, j]
+            eng_free[ptr_free] = pc_hop_eng[ih]
+            ptr_free += 1
 
-    return np.asarray(ind_intra), np.asarray(eng_intra), np.asarray(ind_inter), np.asarray(eng_inter)
+    return np.asarray(ind_pbc), np.asarray(eng_pbc), np.asarray(ind_free), np.asarray(eng_free)
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_hop_intra(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
-                    int [::1] dim, int num_orb_pc,
-                    double [:,::1] sc_orb_pos, int data_kind):
+cdef int _zero_rn(int [:,::1] pc_hop_ind, int ih):
     """
-    Build the arrays of hopping terms arising from intra-primitice cell hopping
-    terms for constructing sparse Hamiltonian and dr in CSR format.
+    Check if the given hopping term has rn == (0, 0, 0).
+
+    Parameters
+    ----------
+    pc_hop_ind: (num_hop_pc, 5) int32 array
+        reduced hopping indices of primitive cell
+    ih: int32
+        index of the hopping term to check
+
+    Returns
+    -------
+    is_zero: int32
+        1 if rn == (0, 0, 0), 0 otherwise.
+    """
+    cdef int is_zero, i
+    is_zero = 1
+    for i in range(3):
+        if pc_hop_ind[ih, i] != 0:
+            is_zero = 0
+            break
+    return is_zero
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_hop_pbc(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
+                  int [::1] dim, int [::1] pbc, int num_orb_pc,
+                  double [:,::1] sc_lattice, double [:,::1] sc_orb_pos,
+                  int data_kind):
+    """
+    Build the arrays of hopping terms arising from periodic hopping terms in the
+    primitive cell for constructing sparse Hamiltonian and dr in CSR format.
 
     Parameters
     ----------
@@ -1103,8 +1134,12 @@ def build_hop_intra(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
         reduced hopping energies of primitive cell in eV
     dim: (3,) int32 array
         dimension of the super cell
+    pbc: (3,) int32 array
+        periodic conditions
     num_orb_pc: int32
         number of orbitals in primitive cell
+    sc_lattice: (3, 3) float64 array
+        CARTESIAN lattice vectors of supercell in NM
     sc_orb_pos: (num_orb_sc, 3) float64 array
         CARTESIAN coordinates of orbitals of super cell in NM
     data_kind: int32
@@ -1133,8 +1168,12 @@ def build_hop_intra(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
     # Cell and orbital IDs
     cdef int ia, ib, ic
-    cdef int [::1] offset_pc
-    cdef long offset_sc, id_sc_i, id_sc_j
+    cdef int zero_rn
+    cdef int ja0, jb0, jc0
+    cdef int na, nb, nc
+    cdef int [::1] offset_pc_i, offset_pc_j
+    cdef long offset_sc_i, offset_sc_j
+    cdef long id_sc_i, id_sc_j
 
     # Results
     cdef long [::1] hop_i, hop_j
@@ -1150,33 +1189,65 @@ def build_hop_intra(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     if data_kind == 1:
         dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
 
-    # Fill the arrays
-    offset_pc = np.zeros(4, dtype=np.int32)
+    # Initialize variables
+    offset_pc_i = np.zeros(4, dtype=np.int32)
+    offset_pc_j = np.zeros(4, dtype=np.int32)
     ptr = 0
-    for ia in range(dim[0]):
-        offset_pc[0] = ia
-        for ib in range(dim[1]):
-            offset_pc[1] = ib
-            for ic in range(dim[2]):
-                # Evaluate the offset
-                offset_pc[2] = ic
-                offset_pc[3] = 0
-                offset_sc = _id_pc2sc(dim, num_orb_pc, offset_pc)
 
-                # Copy data
+    for ia in range(dim[0]):
+        offset_pc_i[0] = ia
+        for ib in range(dim[1]):
+            offset_pc_i[1] = ib
+            for ic in range(dim[2]):
+                offset_pc_i[2] = ic
+                offset_pc_i[3] = 0
+
+                # Evaluate the offset for orbital i
+                offset_sc_i = _id_pc2sc(dim, num_orb_pc, offset_pc_i)
+
                 for ih in range(num_hop_pc):
-                    id_sc_i = offset_sc + pc_hop_ind[ih, 3]
-                    id_sc_j = offset_sc + pc_hop_ind[ih, 4]
+                    # Evaluate the offset for orbital j
+                    zero_rn = _zero_rn(pc_hop_ind, ih)
+                    if zero_rn == 1:
+                        offset_sc_j = offset_sc_i
+                    else:
+                        ja0 = ia + pc_hop_ind[ih, 0]
+                        jb0 = ib + pc_hop_ind[ih, 1]
+                        jc0 = ic + pc_hop_ind[ih, 2]
+                        offset_pc_j[0] = _wrap_pbc(ja0, dim[0], pbc[0])
+                        offset_pc_j[1] = _wrap_pbc(jb0, dim[1], pbc[1])
+                        offset_pc_j[2] = _wrap_pbc(jc0, dim[2], pbc[2])
+                        offset_pc_j[3] = 0
+                        offset_sc_j = _id_pc2sc(dim, num_orb_pc, offset_pc_j)
+
+                    # Fill hopping terms
+                    id_sc_i = offset_sc_i + pc_hop_ind[ih, 3]
+                    id_sc_j = offset_sc_j + pc_hop_ind[ih, 4]
                     hop_i[ptr] = id_sc_i
                     hop_j[ptr] = id_sc_j
                     hop_v[ptr] = pc_hop_eng[ih]
                     if data_kind == 1:
+                        if zero_rn == 1:
+                            na, nb, nc = 0, 0, 0
+                        else:
+                            na = _fast_div(ja0, dim[0])
+                            nb = _fast_div(jb0, dim[1])
+                            nc = _fast_div(jc0, dim[2])
                         dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
-                                   - sc_orb_pos[id_sc_i, 0]
+                                   - sc_orb_pos[id_sc_i, 0] \
+                                   + na * sc_lattice[0, 0] \
+                                   + nb * sc_lattice[1, 0] \
+                                   + nc * sc_lattice[2, 0]
                         dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
-                                   - sc_orb_pos[id_sc_i, 1]
+                                   - sc_orb_pos[id_sc_i, 1] \
+                                   + na * sc_lattice[0, 1] \
+                                   + nb * sc_lattice[1, 1] \
+                                   + nc * sc_lattice[2, 1]
                         dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
-                                   - sc_orb_pos[id_sc_i, 2]
+                                   - sc_orb_pos[id_sc_i, 2] \
+                                   + na * sc_lattice[0, 2] \
+                                   + nb * sc_lattice[1, 2] \
+                                   + nc * sc_lattice[2, 2]
                     ptr += 1
 
     # Conditional return

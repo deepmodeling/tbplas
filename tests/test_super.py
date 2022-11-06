@@ -6,8 +6,9 @@ import numpy as np
 from scipy.sparse import coo_matrix
 
 import tbplas.builder.core as core
+
 from tbplas import (gen_lattice_vectors, extend_prim_cell,
-                    PrimitiveCell, SuperCell)
+                    PrimitiveCell, SuperCell, Timer)
 import tbplas.builder.exceptions as exc
 from tbplas.builder.super import OrbitalSet
 from tbplas.utils import TestHelper
@@ -444,19 +445,20 @@ class TestSuper(unittest.TestCase):
             (0, 0, 2, 1, 1)], dtype=np.int32
         )
         pc_hop_eng = np.array([1.0, -1.0, 2.5, 1.3, 0.6], dtype=np.complex128)
+        pbc = np.array([0, 1, 0], dtype=np.int32)
 
-        ind_intra, eng_intra, ind_inter, eng_inter = \
-            core.split_pc_hop(pc_hop_ind, pc_hop_eng)
-        ind_intra_ref = pc_hop_ind[[0, 1]]
-        eng_intra_ref = pc_hop_eng[[0, 1]]
-        ind_inter_ref = pc_hop_ind[[2, 3, 4]]
-        eng_inter_ref = pc_hop_eng[[2, 3, 4]]
+        ind_pbc, eng_pbc, ind_free, eng_free = \
+            core.split_pc_hop(pc_hop_ind, pc_hop_eng, pbc)
+        ind_pbc_ref = pc_hop_ind[[0, 1, 3]]
+        eng_pbc_ref = pc_hop_eng[[0, 1, 3]]
+        ind_free_ref = pc_hop_ind[[2, 4]]
+        eng_free_ref = pc_hop_eng[[2, 4]]
 
         th = TestHelper(self)
-        th.test_equal_array(ind_intra, ind_intra_ref)
-        th.test_equal_array(eng_intra, eng_intra_ref)
-        th.test_equal_array(ind_inter, ind_inter_ref)
-        th.test_equal_array(eng_inter, eng_inter_ref)
+        th.test_equal_array(ind_pbc, ind_pbc_ref)
+        th.test_equal_array(eng_pbc, eng_pbc_ref)
+        th.test_equal_array(ind_free, ind_free_ref)
+        th.test_equal_array(eng_free, eng_free_ref)
 
         # Check the hopping terms generated using different algorithms
         prim_cell = extend_prim_cell(self.cell, dim=(10, 10, 1))
