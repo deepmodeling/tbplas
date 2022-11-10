@@ -1,106 +1,11 @@
 #! /usr/bin/env python
 
-from math import pi, sqrt
+from math import sqrt, pi
 
 import numpy as np
-import scipy.linalg.lapack as spla
 import matplotlib.pyplot as plt
 
 import tbplas as tb
-from tbplas.builder import core
-
-
-def get_eigsys_hermitian(h_mat: np.ndarray):
-    """Get eigenvalues and eigenstates for Hermitian matrix."""
-    eigenvalues, eigenstates, info = spla.zheev(h_mat)
-    idx = eigenvalues.argsort()[::1]
-    return eigenvalues[idx], eigenstates[:, idx]
-
-
-def get_eigsys_generic(g_mat: np.ndarray):
-    """Get eigenvalues and eigenstates for generic matrix."""
-    eigenvalues, l_eigenstates, r_eigenstates, info = spla.zgeev(g_mat)
-    idx = eigenvalues.argsort()[::1]
-    return eigenvalues[idx], l_eigenstates[:, idx], r_eigenstates[:, idx]
-
-
-def get_phase(z: np.ndarray):
-    """Calculates the phase of a complex array."""
-    phase = np.angle(z)
-    norm = np.absolute(z)
-    for i in range(phase.shape[0]):
-        if norm.item(i) < 1e-14:
-            phase[i] = 0.0
-    return phase
-
-
-def set_ham(prim_cell: tb.PrimitiveCell, ham: np.ndarray, kpt: np.ndarray):
-    """Set up Hamiltonian for given k-point."""
-    ham *= 0.0
-    core.set_ham(prim_cell.orb_pos, prim_cell.orb_eng,
-                 prim_cell.hop_ind, prim_cell.hop_eng,
-                 kpt, ham)
-
-
-def get_z2(prim_cell: tb.PrimitiveCell, num_occ: int, mom_res: int):
-    """
-    Evaluate the phase factor in ref arxiv: 1101.2011v1.
-
-    :param prim_cell: primitive cell to investigate
-    :param num_occ: number of occupied orbitals
-    :param mom_res: resolution of momenta grid
-    :return phase: phase factor
-    :rtype: np.ndarray
-    """
-    # Set up and plot momenta grid
-    momenta = np.array([[(0., 0., 0.) for _ in range(mom_res)]
-                        for _ in range(mom_res)])
-    for i in range(mom_res):
-        for j in range(mom_res):
-            x_frac = 1. * i / mom_res
-            y_frac = 0.5 * j / mom_res
-            momenta[i, j] = (x_frac, y_frac, 0)
-
-    # Declare arrays
-    ham = np.zeros((prim_cell.num_orb, prim_cell.num_orb), dtype=complex)
-    f_mat = np.zeros((num_occ, num_occ, mom_res), dtype=complex)
-    theta = np.zeros((num_occ, mom_res))
-
-    # Iterate over y-momentum
-    for j in range(mom_res):
-        momentum_new = momenta[-1, j]
-        set_ham(prim_cell, ham, momentum_new)
-        eigenvalues_new, eigenstates_new = get_eigsys_hermitian(ham)
-
-        # Iterate over x-momentum
-        for i in range(mom_res):
-            eigenstates_old = eigenstates_new[:, :]
-            momentum_new = momenta[i, j]
-
-            # Get eigenvalues and eigenstates.
-            set_ham(prim_cell, ham, momentum_new)
-            eigenvalues_new, eigenstates_new = get_eigsys_hermitian(ham)
-
-            # Calculate F
-            # eigenstates[:, 0] is first eigenstate
-            # iterate up to eigenstate N, which is Fermi level
-            for m in range(num_occ):
-                for n in range(num_occ):
-                    f_mat[m, n, i] = np.vdot(eigenstates_old[:, m],
-                                             eigenstates_new[:, n])
-
-        # Calculate d_mat
-        d_mat = np.matrix(f_mat[:, :, 1])
-        for i in range(2, mom_res):
-            d_mat = d_mat * np.matrix(f_mat[:, :, i])
-        d_mat = d_mat * np.matrix(f_mat[:, :, 0])
-
-        # Get eigenvalues and eigenstates of D and theta
-        eigenvalues = get_eigsys_generic(d_mat)[0]
-        eigenphases = get_phase(eigenvalues)
-        idx = eigenphases.argsort()[::1]
-        theta[:, j] = eigenphases[idx]
-    return theta
 
 
 def make_hop_dict(hop, lamb_so, lamb_r):
@@ -171,14 +76,16 @@ def main():
     hop = -1.
     lamb_so = 0.06 * hop
     lamb_r = 0.05 * hop
-    mom_res = 200
-    theta_file_name = "test_graphene"
 
     # QSH phase
-    # lamb_nu = 0.1 * hop
+    lamb_nu = 0.1 * hop
 
     # normal insulating phase
-    lamb_nu = 0.4 * hop
+    # lamb_nu = 0.4 * hop
+
+    # Whether to reorder the phases for improving continuity and smoothness
+    # CAUTION: this operation may fail!
+    reorder_phases = False
 
     # Lattice
     vectors = np.array([[0.5 * lat * sqrt(3), -0.5 * lat, 0.],
@@ -212,16 +119,37 @@ def main():
     vis = tb.Visualizer()
     vis.plot_bands(k_len, bands, k_idx, k_label)
 
-    # Get theta
-    theta = get_z2(prim_cell, num_occ=2, mom_res=mom_res)
+    # Get phases
+    ka_array = np.linspace(-0.5, 0.5, 200)
+    kb_array = np.linspace(0.0, 0.5, 200)
+    kc = 0.0
+    z2 = tb.Z2(prim_cell, num_occ=2)
+    kb_array, phases = z2.calc_phases(ka_array, kb_array, kc)
+    if reorder_phases:
+        phases = z2.reorder_phases(phases)
+        num_crossing = z2.count_crossing(phases, phase_ref=0.2)
+        print(f"Number of crossing: {num_crossing}")
+
+    # Regular plot
+    fig, ax = plt.subplots()
     for i in range(2):
-        plt.scatter(0.5 / mom_res * np.arange(len(theta[i])),
-                    0.5 / pi * theta[i], s=3, lw=0)
-    plt.ylim((-0.5, 0.5))
-    plt.xlim((0, 0.5))
-    plt.ylabel("angle")
-    plt.xlabel("ky")
-    plt.savefig(theta_file_name+".png")
+        if reorder_phases:
+            ax.plot(kb_array, phases[:, i] / pi)
+        else:
+            ax.scatter(kb_array, phases[:, i] / pi, s=1, c="r")
+    ax.grid()
+    plt.show()
+    plt.close()
+
+    # Polar plot
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    for i in range(2):
+        if reorder_phases:
+            ax.plot(phases[:, i], kb_array)
+        else:
+            ax.scatter(phases[:, i], kb_array, s=1, c="r")
+    plt.show()
+    plt.close()
 
 
 if __name__ == '__main__':
