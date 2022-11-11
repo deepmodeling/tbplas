@@ -40,15 +40,15 @@ class Z2:
         """
         :param cell: primitive cell under investigation
         :param num_occ: number of occupied bands of the primitive cell
-        :raises ValueError: if num_occ is odd or larger than num_orb of
-            the primitive cell
+        :raises ValueError: if num_occ is larger than num_orb of the
+            primitive cell
         """
         cell.sync_array()
         num_orb = cell.num_orb
         if num_occ not in range(1, num_orb+1):
             raise ValueError(f"num_occ {num_occ} should be in [1, {num_orb}]")
-        if num_occ % 2 != 0:
-            raise ValueError(f"num_occ {num_occ} is not a even number")
+        # if num_occ % 2 != 0:
+        #     raise ValueError(f"num_occ {num_occ} is not a even number")
         self.cell = cell
         self.num_occ = num_occ
         self.h_mat = np.zeros((num_orb, num_orb), dtype=np.complex128)
