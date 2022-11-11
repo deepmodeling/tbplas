@@ -13,15 +13,15 @@ import numpy as np
 import scipy.linalg.lapack as spla
 
 from .builder import core, PrimitiveCell
+from .parallel import MPIEnv
 
 
-class Z2:
+class Z2(MPIEnv):
     """
     Class for evaluating the Z2 topological invariant.
 
     Reference: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.075119
 
-    TODO: MPI parallelization for calc_phases
 
     Attributes
     ----------
@@ -36,21 +36,32 @@ class Z2:
     f_mat: (num_occ, num_occ) complex128 array
         F matrix for (ka_i, ka_i+1)
     """
-    def __init__(self, cell: PrimitiveCell, num_occ: int) -> None:
+    def __init__(self, cell: PrimitiveCell, num_occ: int,
+                 enable_mpi=False) -> None:
         """
         :param cell: primitive cell under investigation
         :param num_occ: number of occupied bands of the primitive cell
+        :param enable_mpi: whether to enable parallelization over k-points
         :raises ValueError: if num_occ is larger than num_orb of the
             primitive cell
         """
-        cell.sync_array()
-        num_orb = cell.num_orb
+        # Initialize parallel environment
+        super().__init__(enable_mpi=enable_mpi, echo_details=True)
+
+        # Set and lock cell
+        self.cell = cell
+        self.cell.lock()
+        self.cell.sync_array()
+
+        # Check and set num_occ
+        num_orb = self.cell.num_orb
         if num_occ not in range(1, num_orb+1):
             raise ValueError(f"num_occ {num_occ} should be in [1, {num_orb}]")
         # if num_occ % 2 != 0:
         #     raise ValueError(f"num_occ {num_occ} is not a even number")
-        self.cell = cell
         self.num_occ = num_occ
+
+        # Initialize working arrays
         self.h_mat = np.zeros((num_orb, num_orb), dtype=np.complex128)
         self.d_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
         self.f_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
@@ -158,8 +169,12 @@ class Z2:
         num_kb = kb_array.shape[0]
         phases = np.zeros((num_kb, self.num_occ), dtype=np.float64)
 
+        # Distribute kb_array among processes
+        k_index = self.dist_range(num_kb)
+
         # Loop over b-axis to fill the phase
-        for ib, kb in enumerate(kb_array):
+        for ib in k_index:
+            kb = kb_array.item(ib)
             # As the D matrix is evaluated through iterative matrix
             # multiplication, it should be initialized as an eye matrix.
             self.d_mat = np.eye(self.num_occ, dtype=np.complex128)
@@ -186,6 +201,9 @@ class Z2:
             phase_ib = self._eval_phase(eigenvalues)
             idx = phase_ib.argsort()
             phases[ib] = phase_ib[idx]
+
+        # Collect data
+        phases = self.all_reduce(phases)
         return kb_array, phases
 
     def reorder_phases(self, phases: np.ndarray, threshold: float = 0.1,
