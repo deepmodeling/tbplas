@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 import tbplas as tb
 
 
-def make_hop_dict(hop, lamb_so, lamb_r):
+def make_hop_dict(t, lamb_so, lamb_r):
     def _hop_1st(vec):
         a = vec[1] + 1j * vec[0]
         ac = vec[1] - 1j * vec[0]
-        return np.array([[hop, 1j * a * lamb_r], [1j * ac * lamb_r, hop]])
+        return np.array([[t, 1j * a * lamb_r], [1j * ac * lamb_r, t]])
 
     def _hop_2nd(vec0, vec1):
         b = 2. / sqrt(3.) * np.cross(vec0, vec1)
@@ -73,15 +73,15 @@ def main():
 
     # Parameters
     lat = 1.
-    hop = -1.
-    lamb_so = 0.06 * hop
-    lamb_r = 0.05 * hop
+    t = -1.
+    lamb_so = 0.06 * t
+    lamb_r = 0.05 * t
 
     # QSH phase
-    lamb_nu = 0.1 * hop
+    lamb_nu = 0.1 * t
 
     # normal insulating phase
-    # lamb_nu = 0.4 * hop
+    # lamb_nu = 0.4 * t
 
     # Whether to reorder the phases for improving continuity and smoothness
     # CAUTION: this operation may fail!
@@ -100,7 +100,7 @@ def main():
     prim_cell.add_orbital([1./3, 1./3], -lamb_nu)
 
     # Add hopping terms
-    hop_dict = make_hop_dict(hop, lamb_so, lamb_r)
+    hop_dict = make_hop_dict(t, lamb_so, lamb_r)
     prim_cell.add_hopping_dict(hop_dict)
 
     # Plot model

@@ -433,6 +433,8 @@ def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell = None,
     Find neighbours between the (0, 0, 0) cell of pc_bra and nearby cells of
     pc_ket up to given cutoff distance.
 
+    NOTE: only neighbours with distance > 0 will be returned.
+
     The searching range of nearby cells is:
     [-a_max, a_max] * [-b_max, b_max] * [-c_max, c_max].
 
