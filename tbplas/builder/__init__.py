@@ -12,4 +12,4 @@ from .super import SuperCell
 from .sample import SCInterHopping, Sample
 from .factory import (extend_prim_cell, reshape_prim_cell, spiral_prim_cell,
                       make_hetero_layer, PCInterHopping, merge_prim_cell,
-                      find_neighbors, SK, SOC)
+                      find_neighbors, SK, SOC, ParamFit)
