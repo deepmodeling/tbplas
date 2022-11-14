@@ -270,24 +270,15 @@ you will not need to type it every time you log in or open a new terminal.
 Keeping TBPLaS in the source code directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To keep TBPLaS in the source code directory you need to manually copy Cython/FORTRAN extensions from build directory
-to proper destinations:
+To keep TBPLaS in the source code directory, you need to manually copy Cython/FORTRAN extensions from build directory
+to proper destinations with ``./scripts/cp_so.sh``. Then add the source code directory to ``PYTHONPATH``. For instance,
 
 .. code-block:: shell
     :emphasize-lines: 0
 
-    cp build/lib.linux-x86_64-3.8/TBPLaS/builder/core.cpython-38-x86_64-linux-gnu.so TBPLaS/builder
-    cp build/lib.linux-x86_64-3.8/TBPLaS/fortran/f2py.cpython-38-x86_64-linux-gnu.so TBPLaS/fortran
+    export PYTHONPATH=/home/foo/bar/tbplas_src:$PYTHONPATH
 
-Note the actual locations and names of the extensions depends on the version of your Python interpreter. Then add
-source code directory to PYTHONPATH. For instance,
-
-.. code-block:: shell
-    :emphasize-lines: 0
-
-    export PYTHONPATH=/home/foo/bar/TBPLaS_src:$PYTHONPATH
-
-with ``TBPLaS_src`` being the source code directory, in which ``setup.py`` and other files reside. Also, do not forget
+with ``tbplas_src`` being the source code directory, in which ``setup.py`` and other files reside. Also, do not forget
 to add this command to your ``~/.bashrc`` to make it permanently effective.
 
 Testing
