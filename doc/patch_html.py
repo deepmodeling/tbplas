@@ -3,7 +3,7 @@
 import os
 
 
-def patch_stat(html):
+def patch_stat(content):
     patch = """
     <script>
         var _hmt = _hmt || [];
@@ -14,42 +14,36 @@ def patch_stat(html):
         s.parentNode.insertBefore(hm, s);
         })();
     </script>\n\n"""
-    nl_head = None
-    with open(html, "r") as f:
-        content = f.readlines()
-        try:
-            nl_head = content.index("</head>\n")
-        except ValueError:
-            pass
+    try:
+        nl_head = content.index("</head>\n")
+    except ValueError:
+        nl_head = None
     if nl_head is not None:
         content.insert(nl_head, patch)
-        with open(html, "w") as f:
-            f.writelines(content)
 
 
-def patch_icp(html):
+def patch_icp(content):
     icp = """
     <div align=center>
         <br>
             <a href="http://beian.miit.gov.cn/"; target=_blank>鄂ICP备2022004007号</a>
         </br>
     </div>\n\n"""
-    with open(html, "r") as f:
-        content = f.readlines()
-        nl_footer = content.index("</footer>\n")
-        content.insert(nl_footer-1, icp)
-
-    with open(html, "w") as f:
-        f.writelines(content)
+    nl_footer = content.index("</footer>\n")
+    content.insert(nl_footer-1, icp)
 
 
 def main():
     html_files = os.popen("find build/html -name '*.html'").readlines()
     for html in html_files:
-        patch_stat(html.rstrip("\n"))
-        patch_icp(html.rstrip("\n"))
+        file_name = html.rstrip("\n")
+        with open(file_name, "r") as f:
+            content = f.readlines()
+            patch_stat(content)
+            patch_icp(content)
+        with open(file_name, "w") as f:
+            f.writelines(content)
 
 
 if __name__ == "__main__":
     main()
-
