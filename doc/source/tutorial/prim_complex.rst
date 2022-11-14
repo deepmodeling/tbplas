@@ -4,9 +4,9 @@ Build complex primitive cells
 =============================
 
 In this tutorial we demonstrate how to construct complex primitive cells using the python-based modeling
-tools. As aforementioned in :ref:`workflow`, two sets of modeling tools are provied: Python-based and
-Cython-based. Python-based tools are designed for models of moderate size, and all work at the primitive
-cell level. Here are the summary of the Python-based tools:
+tools. TBPLaS offers two sets of modeling tools: Python-based and Cython-based. Python-based tools are
+designed for models of moderate size, and all work at the primitive cell level. Here are the summary of
+the Python-based tools:
 
 * reshape_prim_cell
 * extend_prim_cell

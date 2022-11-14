@@ -7,7 +7,6 @@ Tutorials
     :caption: Contents
 
     Background <background.rst>
-    Overview <overview.rst>
     Set up a primitive cell <prim_cell.rst>
     Bands and DOS of primitive cell <prim_bands.rst>
     Build complex primitive cells <prim_complex.rst>
