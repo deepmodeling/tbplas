@@ -10,7 +10,11 @@ API Reference
     PrimitiveCell
     HopDict
     PCInterHopping
+    SK
+    SOC
+    ParamFit
     Lindhard
+    Z2
     gen_lattice_vectors
     gen_lattice_vectors2
     cart2frac
@@ -27,6 +31,7 @@ API Reference
     make_antimonene
     make_graphene_diamond
     make_graphene_rect
+    make_graphene_sp
     make_black_phosphorus
     make_tmdc
     wan2pc
