@@ -158,6 +158,47 @@ class Visualizer(MPIEnv):
         """
         self.plot_xy(energies, dos, x_label, y_label, **kwargs)
 
+    def plot_phases(self, kb_array: np.ndarray, phases: np.ndarray,
+                    scatter: bool = True, polar: bool = False,
+                    x_label: str = "$k_b (G_b)$", y_label: str = r"$\theta$",
+                    color: str = "r", linewidth: float = 1.2,
+                    fig_name: str = None, fig_dpi: int = 300):
+        """
+        :param kb_array: (num_kb,) float64 array
+            FRACTIONAL coordinates of the loop along b-axis
+        :param phases: (num_kpt, num_occ) float64 array
+            phases of WF centers
+        :param scatter: whether to do scatter plot instead of line plot
+        :param polar: whether to plot in polar coordinate system
+        :param x_label: label for x-axis
+        :param y_label: label for y-axis
+        :param color: line color
+        :param linewidth: line width
+        :param fig_name: file name of figure
+        :param fig_dpi: dpi of output figure
+        :return: None
+        """
+        if self.is_master:
+            if polar:
+                fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+            else:
+                fig, ax = plt.subplots()
+
+            for ib in range(phases.shape[1]):
+                if polar:
+                    x, y = phases[:, ib], kb_array
+                else:
+                    x, y = kb_array, phases[:, ib]
+                if scatter:
+                    ax.scatter(x, y, s=1, color=color, linewidth=linewidth)
+                else:
+                    ax.plot(x, y, c=color)
+
+            plt.xlabel(x_label)
+            plt.ylabel(y_label)
+            plt.tight_layout()
+            self.__output(fig_name, fig_dpi)
+
     def plot_wfc(self, sample: Sample, wfc: np.ndarray, scatter=True,
                  site_size=5, num_grid=(200, 200), cmap="viridis",
                  with_colorbar=False, fig_name=None, fig_dpi=300):

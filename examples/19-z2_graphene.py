@@ -151,6 +151,12 @@ def main():
     plt.show()
     plt.close()
 
+    # Visualizer
+    vis = tb.Visualizer()
+    scatter = not reorder_phases
+    vis.plot_phases(kb_array, phases, scatter=scatter)
+    vis.plot_phases(kb_array, phases, scatter=scatter, polar=True)
+
 
 if __name__ == '__main__':
     main()
