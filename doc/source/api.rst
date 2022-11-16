@@ -27,6 +27,7 @@ API Reference
     reshape_prim_cell
     spiral_prim_cell
     make_hetero_layer
+    find_neighbors
     merge_prim_cell
     make_antimonene
     make_graphene_diamond
