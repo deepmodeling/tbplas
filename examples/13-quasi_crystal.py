@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 
 import math
+from typing import Union
 
 import numpy as np
 from numpy.linalg import norm
-from scipy.spatial import KDTree
 
 import tbplas as tb
 
@@ -37,28 +37,19 @@ def calc_hop(rij: np.ndarray):
     return hop
 
 
-def extend_hop(prim_cell: tb.PrimitiveCell, max_distance=0.75):
+def extend_hop(cell: Union[tb.PrimitiveCell, tb.SuperCell], max_distance=0.75):
     """
     Extend the hopping terms in primitive cell up to cutoff distance.
 
-    :param prim_cell: tb.PrimitiveCell
-        primitive cell to extend
+    :param cell: primitive cell or supercell to extend
     :param max_distance: cutoff distance in NM
     :return: None. Incoming primitive cell is modified
     """
-    prim_cell.sync_array()
-    pos_r0 = prim_cell.orb_pos_nm
-    tree_r0 = KDTree(pos_r0)
-    neighbors = [(0, 0, 0)]
-    for rn in neighbors:
-        pos_rn = pos_r0 + np.matmul(rn, prim_cell.lat_vec)
-        tree_rn = KDTree(pos_rn)
-        dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
-                                                     max_distance=max_distance)
-        for index, distance in dist_matrix.items():
-            if distance > 0.0:
-                rij = pos_rn[index[1]] - pos_r0[index[0]]
-                prim_cell.add_hopping(rn, index[0], index[1], calc_hop(rij))
+    neighbors = tb.find_neighbors(cell, a_max=0, b_max=0,
+                                  max_distance=max_distance)
+    for term in neighbors:
+        i, j = term.pair
+        cell.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
 
 def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
@@ -103,36 +94,13 @@ def cutoff_sc(super_cell, center, radius=3.0):
     super_cell.set_vacancies(super_cell.orb_id_sc2pc_array(idx_remove))
 
 
-def extend_hop_sc(super_cell, max_distance=0.75):
-    pos_r0 = super_cell.get_orb_pos()
-    tree_r0 = KDTree(pos_r0)
-    neighbors = [(0, 0, 0)]
-    for rn in neighbors:
-        pos_rn = pos_r0 + np.matmul(rn, super_cell.sc_lat_vec)
-        tree_rn = KDTree(pos_rn)
-        dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
-                                                     max_distance=max_distance)
-        for index, distance in dist_matrix.items():
-            if distance > 0.0:
-                rij = pos_rn[index[1]] - pos_r0[index[0]]
-                super_cell.add_hopping(rn, index[0], index[1], calc_hop(rij))
-
-
 def make_inter_hop(sc0, sc1, max_distance=0.75):
     inter_hop = tb.SCInterHopping(sc0, sc1)
-    pos_r0 = sc0.get_orb_pos()
-    pos_r1 = sc1.get_orb_pos()
-    tree_r0 = KDTree(pos_r0)
-    neighbors = [(0, 0, 0)]
-    for rn in neighbors:
-        pos_rn = pos_r1 + np.matmul(rn, sc1.sc_lat_vec)
-        tree_rn = KDTree(pos_rn)
-        dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
-                                                     max_distance=max_distance)
-        for index, distance in dist_matrix.items():
-            if distance > 0.0:
-                rij = pos_rn[index[1]] - pos_r0[index[0]]
-                inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
+    neighbors = tb.find_neighbors(sc0, sc1, a_max=0, b_max=0,
+                                  max_distance=max_distance)
+    for term in neighbors:
+        i, j = term.pair
+        inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
     return inter_hop
 
 
@@ -157,8 +125,8 @@ def make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center,
     inter_hop = make_inter_hop(sc_fixed, sc_twisted, max_distance=0.75)
 
     # Extend hopping terms
-    extend_hop_sc(sc_fixed, max_distance=0.75)
-    extend_hop_sc(sc_twisted, max_distance=0.75)
+    extend_hop(sc_fixed, max_distance=0.75)
+    extend_hop(sc_twisted, max_distance=0.75)
     sample = tb.Sample(sc_fixed, sc_twisted, inter_hop)
     return sample
 

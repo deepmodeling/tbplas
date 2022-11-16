@@ -4,7 +4,6 @@ import math
 
 import numpy as np
 from numpy.linalg import norm
-from scipy.spatial import KDTree
 
 import tbplas as tb
 
@@ -114,19 +113,11 @@ def extend_hop(prim_cell: tb.PrimitiveCell, max_distance=0.75):
     :param max_distance: cutoff distance in NM
     :return: None. Incoming primitive cell is modified
     """
-    prim_cell.sync_array()
-    pos_r0 = prim_cell.orb_pos_nm
-    tree_r0 = KDTree(pos_r0)
-    neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
-    for rn in neighbors:
-        pos_rn = pos_r0 + np.matmul(rn, prim_cell.lat_vec)
-        tree_rn = KDTree(pos_rn)
-        dist_matrix = tree_r0.sparse_distance_matrix(tree_rn,
-                                                     max_distance=max_distance)
-        for index, distance in dist_matrix.items():
-            if distance > 0.0:
-                rij = pos_rn[index[1]] - pos_r0[index[0]]
-                prim_cell.add_hopping(rn, index[0], index[1], calc_hop(rij))
+    neighbors = tb.find_neighbors(prim_cell, a_max=1, b_max=1,
+                                  max_distance=max_distance)
+    for term in neighbors:
+        i, j = term.pair
+        prim_cell.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
 
 def main():
@@ -174,39 +165,21 @@ def main():
     if algo == 0:
         merged_cell = tb.merge_prim_cell(layer_fixed, layer_twisted)
         extend_hop(merged_cell, max_distance=0.75)
+
     # The second approach is complex, but more general. We build the inter-cell
     # hopping terms first, then extend the layers. Finally, we merge them to
     # yield the hetero-structure.
     else:
-        # Interlayer hopping terms are position-dependent. So we need to get
-        # the orbital positions of 'fixed' and 'twisted' layers first.
-        layer_fixed.sync_array()
-        pos_fixed = layer_fixed.orb_pos_nm
-        layer_twisted.sync_array()
-        pos_twisted = layer_twisted.orb_pos_nm
-
-        # Loop over neighbouring cells to build inter-hopping dictionary.
-        # We only need to take the hopping terms from (0, 0, 0) cell of 'fixed'
-        # layer to any cell of 'twisted' layer. The conjugate terms are handled
-        # automatically.
-        # We utilize KDTree from scipy to detect interlayer neighbours up to
-        # cutoff distance.
+        # Find the hopping neighbors between 'fixed' and 'twisted' layers up to
+        # cutoff distance. We only need to take the hopping terms from (0, 0, 0)
+        # cell of 'fixed' layer to any cell of 'twisted' layer. The conjugate
+        # terms are handled automatically.
         inter_hop = tb.PCInterHopping(layer_fixed, layer_twisted)
-        tree_fixed = KDTree(pos_fixed)
-        neighbors = [(ia, ib, 0) for ia in range(-1, 2) for ib in range(-1, 2)]
-        for rn in neighbors:
-            # Get Cartesian coordinates of orbitals Rn cell of twisted layer
-            pos_rn = pos_twisted + np.matmul(rn, layer_twisted.lat_vec)
-
-            # Get the distance matrix between fixed and twisted layers
-            tree_rn = KDTree(pos_rn)
-            dist_matrix = tree_fixed.sparse_distance_matrix(tree_rn,
-                                                            max_distance=0.75)
-
-            # Add terms to inter_hop
-            for index in dist_matrix.keys():
-                rij = pos_rn[index[1]] - pos_fixed[index[0]]
-                inter_hop.add_hopping(rn, index[0], index[1], calc_hop(rij))
+        neighbors = tb.find_neighbors(layer_fixed, layer_twisted,
+                                      a_max=1, b_max=1, max_distance=0.75)
+        for term in neighbors:
+            i, j = term.pair
+            inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
         # Then we need to extend the hopping terms in each layer up to cutoff
         # distance by calling 'extend_intra_hop'.

@@ -50,6 +50,7 @@ from . import exceptions as exc
 from .lattice import cart2frac, rotate_coord
 from .base import check_coord, InterHopping
 from .primitive import PrimitiveCell
+from .super import SuperCell
 
 
 def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
@@ -430,34 +431,46 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
     return merged_cell
 
 
-def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell = None,
+def find_neighbors(cell_bra: Union[PrimitiveCell, SuperCell],
+                   cell_ket: Union[PrimitiveCell, SuperCell] = None,
                    a_max: int = 0, b_max: int = 0, c_max: int = 0,
                    max_distance: float = 1.0) -> List[namedtuple]:
     """
-    Find neighbours between the (0, 0, 0) cell of pc_bra and nearby cells of
-    pc_ket up to given cutoff distance.
+    Find neighbours between the (0, 0, 0) cell of model_bra and nearby cells of
+    cell_ket up to given cutoff distance.
 
     NOTE: only neighbours with distance > 0 will be returned.
 
     The searching range of nearby cells is:
     [-a_max, a_max] * [-b_max, b_max] * [-c_max, c_max].
 
-    :param pc_bra: the 'bra' primitive cell
-    :param pc_ket: the 'ket' primitive cell, default to pc_ket if not set
+    :param cell_bra: the 'bra' primitive cell or supercell
+    :param cell_ket: the 'ket' primitive cell or supercell
+        default to pc_ket if not set
     :param a_max: upper bound of range on a-axis
     :param b_max: upper bound of range on b-axis
     :param c_max: upper bound of range on c-axis
     :param max_distance: cutoff distance in NM
     :return: list of neighbors as named tuples
     """
-    if pc_ket is None:
-        pc_ket = pc_bra
+    if cell_ket is None:
+        cell_ket = cell_bra
 
     # Get orbital positions
-    pc_bra.sync_array()
-    pc_ket.sync_array()
-    pos_bra = pc_bra.orb_pos_nm
-    pos_ket = pc_ket.orb_pos_nm
+    cell_bra.sync_array()
+    cell_ket.sync_array()
+    if isinstance(cell_bra, PrimitiveCell):
+        pos_bra = cell_bra.orb_pos_nm
+        pos_ket = cell_ket.orb_pos_nm
+    else:
+        pos_bra = cell_bra.get_orb_pos()
+        pos_ket = cell_ket.get_orb_pos()
+
+    # Get lattice vectors of cell_ket
+    if isinstance(cell_ket, PrimitiveCell):
+        lat_ket = cell_ket.lat_vec
+    else:
+        lat_ket = cell_ket.sc_lat_vec
 
     # Prepare for the loop
     tree_bra = KDTree(pos_bra)
@@ -470,7 +483,7 @@ def find_neighbors(pc_bra: PrimitiveCell, pc_ket: PrimitiveCell = None,
     # Loop over neighboring cells to search for orbital pairs
     neighbors = []
     for rn in neighbor_rn:
-        pos_ket_rn = pos_ket + np.matmul(rn, pc_ket.lat_vec)
+        pos_ket_rn = pos_ket + np.matmul(rn, lat_ket)
         tree_ket_rn = KDTree(pos_ket_rn)
         dist_matrix = tree_bra.sparse_distance_matrix(tree_ket_rn,
                                                       max_distance=max_distance)
