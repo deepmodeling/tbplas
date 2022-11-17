@@ -762,7 +762,7 @@ class PrimitiveCell(Lockable):
                 print(" ", rn, pair, energy)
 
     def calc_bands(self, k_path: np.ndarray, orbital_indices=None,
-                   enable_mpi=False):
+                   enable_mpi=False, echo_details=True):
         """
         Calculate band structure along given k_path.
 
@@ -772,6 +772,9 @@ class PrimitiveCell(Lockable):
             orbital indices to evaluate weights
         :param enable_mpi: boolean
             whether to enable parallelization over k-points using mpi
+        :param echo_details: boolean
+            whether to output parallelization details, intended for muting
+            verbose output when fitting on-site energies and hopping terms
         :return: k_len: (num_kpt,) float64 array in 1/NM
             length of k-path in reciprocal space, for plotting band structure
         :return: bands: (num_kpt, num_orb) float64 array
@@ -794,7 +797,7 @@ class PrimitiveCell(Lockable):
         k_len = kpt.gen_kdist(self.lat_vec, k_path)
 
         # Distribute k-points over processes
-        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=True)
+        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=echo_details)
         k_index = mpi_env.dist_range(num_k_points)
 
         # Function for collecting weights
