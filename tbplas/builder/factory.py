@@ -1308,6 +1308,8 @@ class ParamFit(ABC):
         else:
             if weights.shape[0] != num_bands:
                 raise ValueError(f"Length of weights should be {num_bands}")
+            weights = np.abs(weights)
+            weights /= weights.sum()
             self.weights = weights
 
     @abstractmethod
