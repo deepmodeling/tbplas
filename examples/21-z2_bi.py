@@ -42,6 +42,46 @@ def calc_hop(sk, rij, label_i, label_j):
                    v_pps=data["v_pps"], v_ppp=data["v_ppp"])
 
 
+def make_cell():
+    # Lattice constants from ref. 2
+    a = 4.5332
+    c = 11.7967
+    mu = 0.2341
+
+    # Lattice vectors of bulk from ref. 2
+    a1 = np.array([-0.5*a, -sqrt(3)/6*a, c/3])
+    a2 = np.array([0.5*a, -sqrt(3)/6*a, c/3])
+    a3 = np.array([0, sqrt(3)/3*a, c/3])
+
+    # Lattice vectors and atomic positions of bilayer from ref. 2 & 3
+    a1_2d = a2 - a1
+    a2_2d = a3 - a1
+    a3_2d = np.array([0, 0, c])
+    lat_vec = np.array([a1_2d, a2_2d, a3_2d])
+    atom_position = np.array([[0, 0, 0], [1/3, 1/3, 2*mu-1/3]])
+
+    # Create cell and add orbitals with energies from ref. 2
+    cell = tb.PrimitiveCell(lat_vec, unit=tb.ANG)
+    atom_label = ("Bi1", "Bi2")
+    e_s, e_p = -10.906, -0.486
+    orbital_energy = {"s": e_s, "px": e_p, "py": e_p, "pz": e_p}
+    for i, pos in enumerate(atom_position):
+        for orbital, energy in orbital_energy.items():
+            label = f"{atom_label[i]}:{orbital}"
+            cell.add_orbital(pos, label=label, energy=energy)
+
+    # Add hopping terms
+    neighbors = tb.find_neighbors(cell, a_max=5, b_max=5, max_distance=0.454)
+    sk = tb.SK()
+    for term in neighbors:
+        i, j = term.pair
+        label_i = cell.get_orbital(i).label
+        label_j = cell.get_orbital(j).label
+        hop = calc_hop(sk, term.rij, label_i, label_j)
+        cell.add_hopping(term.rn, i, j, hop)
+    return cell
+
+
 def add_soc(cell):
     # Double the orbitals and hopping terms
     cell = tb.merge_prim_cell(cell, cell)
@@ -82,44 +122,8 @@ def add_soc(cell):
 
 
 def main():
-    # Lattice constants from ref. 2
-    a = 4.5332
-    c = 11.7967
-    mu = 0.2341
-
-    # Lattice vectors of bulk from ref. 2
-    a1 = np.array([-0.5*a, -sqrt(3)/6*a, c/3])
-    a2 = np.array([0.5*a, -sqrt(3)/6*a, c/3])
-    a3 = np.array([0, sqrt(3)/3*a, c/3])
-
-    # Lattice vectors and atomic positions of bilayer from ref. 2 & 3
-    a1_2d = a2 - a1
-    a2_2d = a3 - a1
-    a3_2d = np.array([0, 0, c])
-    lat_vec = np.array([a1_2d, a2_2d, a3_2d])
-    atom_position = np.array([[0, 0, 0], [1/3, 1/3, 2*mu-1/3]])
-
-    # Create cell and add orbitals
-    cell = tb.PrimitiveCell(lat_vec, unit=tb.ANG)
-    atom_label = ("Bi1", "Bi2")
-    e_s, e_p = -10.906, -0.486
-    orbital_energy = {"s": e_s, "px": e_p, "py": e_p, "pz": e_p}  # ref. 2
-    for i, pos in enumerate(atom_position):
-        for orbital, energy in orbital_energy.items():
-            label = f"{atom_label[i]}:{orbital}"
-            cell.add_orbital(pos, label=label, energy=energy)
-
-    # Add hopping terms
-    neighbors = tb.find_neighbors(cell, a_max=5, b_max=5, max_distance=0.454)
-    sk = tb.SK()
-    for term in neighbors:
-        i, j = term.pair
-        label_i = cell.get_orbital(i).label
-        label_j = cell.get_orbital(j).label
-        hop = calc_hop(sk, term.rij, label_i, label_j)
-        cell.add_hopping(term.rn, i, j, hop)
-
-    # Add soc
+    # Create cell and add soc
+    cell = make_cell()
     cell = add_soc(cell)
 
     # Evaluate Z2
