@@ -102,7 +102,7 @@ def main():
     # Fit the sk parameters
     # Reference:
     # https://journals.aps.org/prb/abstract/10.1103/PhysRevB.82.245412
-    k_points = tb.gen_kmesh((100, 100, 1))
+    k_points = tb.gen_kmesh((120, 120, 1))
     weights = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     fit = MyFit(k_points, weights)
     sk0 = np.array([-8.370, 0.0,
