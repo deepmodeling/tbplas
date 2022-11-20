@@ -1,7 +1,10 @@
 #! /usr/bin/env python
+"""
+Example for constructing quasi-crystal at primitive cell and sample levels.
+"""
 
 import math
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 from numpy.linalg import norm
@@ -9,15 +12,12 @@ from numpy.linalg import norm
 import tbplas as tb
 
 
-def calc_hop(rij: np.ndarray):
+def calc_hop(rij: np.ndarray) -> float:
     """
     Calculate hopping parameter according to Slater-Koster relation.
-    See ref. [2] for the formulae.
 
-    :param rij: (3,) array
-        displacement vector between two orbitals in NM
-    :return: hop: float
-        hopping parameter
+    :param rij: (3,) array, displacement vector between two orbitals in NM
+    :return: hopping parameter in eV
     """
     a0 = 0.1418
     a1 = 0.3349
@@ -37,13 +37,14 @@ def calc_hop(rij: np.ndarray):
     return hop
 
 
-def extend_hop(cell: Union[tb.PrimitiveCell, tb.SuperCell], max_distance=0.75):
+def extend_hop(cell: Union[tb.PrimitiveCell, tb.SuperCell],
+               max_distance=0.75) -> None:
     """
-    Extend the hopping terms in primitive cell up to cutoff distance.
+    Extend the hopping terms in primitive or supercell up to cutoff distance.
 
     :param cell: primitive cell or supercell to extend
     :param max_distance: cutoff distance in NM
-    :return: None. Incoming primitive cell is modified
+    :return: None. Incoming cell is modified.
     """
     neighbors = tb.find_neighbors(cell, a_max=0, b_max=0,
                                   max_distance=max_distance)
@@ -52,7 +53,42 @@ def extend_hop(cell: Union[tb.PrimitiveCell, tb.SuperCell], max_distance=0.75):
         cell.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
 
-def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
+def cutoff_sc(super_cell: tb.SuperCell, center: np.ndarray,
+              radius: float = 3.0) -> None:
+    """
+    Cutoff supercells up to given radius with respect to given center.
+
+    :param super_cell: supercell to cut
+    :param center: Cartesian coordinate of center in nm
+    :param radius: cutoff radius in nm
+    :return: None. The incoming supercell is modified.
+    """
+    idx_remove = []
+    orb_pos = super_cell.get_orb_pos()
+    for i, pos in enumerate(orb_pos):
+        if norm(pos[:2] - center[:2]) > radius:
+            idx_remove.append(i)
+    idx_remove = np.array(idx_remove, dtype=np.int64)
+    super_cell.set_vacancies(super_cell.orb_id_sc2pc_array(idx_remove))
+
+
+def make_quasi_crystal_pc(prim_cell: tb.PrimitiveCell,
+                          dim: Tuple[int, int, int],
+                          angle: float, center: np.ndarray,
+                          radius: float = 3.0,
+                          shift: float = 0.3) -> tb.PrimitiveCell:
+    """
+    Create quasi-crystal at primitive level.
+
+    :param prim_cell: primitive cell from which the quasi-crystal is built
+    :param dim: dimension of the extended primitive cell
+    :param angle: twisting angle in RADIAN
+    :param center: fractional coordinate of the twisting center in the primitive
+        cell
+    :param radius: radius of quasi-crystal in nm
+    :param shift: distance of shift along z-axis in NANOMETER
+    :return: quasi-crystal
+    """
     # Build fixed and twisted layers
     layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
     layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
@@ -63,7 +99,8 @@ def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
 
     # Rotate and reshape top layer
     tb.spiral_prim_cell(layer_twisted, angle=angle, center=center, shift=shift)
-    conv_mat = np.matmul(layer_fixed.lat_vec, np.linalg.inv(layer_twisted.lat_vec))
+    conv_mat = np.matmul(layer_fixed.lat_vec,
+                         np.linalg.inv(layer_twisted.lat_vec))
     layer_twisted = tb.reshape_prim_cell(layer_twisted, conv_mat)
 
     # Merge bottom and top layers
@@ -84,28 +121,25 @@ def make_quasi_crystal_pc(prim_cell, dim, angle, center, radius=3.0, shift=0.3):
     return final_cell
 
 
-def cutoff_sc(super_cell, center, radius=3.0):
-    idx_remove = []
-    orb_pos = super_cell.get_orb_pos()
-    for i, pos in enumerate(orb_pos):
-        if norm(pos[:2] - center[:2]) > radius:
-            idx_remove.append(i)
-    idx_remove = np.array(idx_remove, dtype=np.int64)
-    super_cell.set_vacancies(super_cell.orb_id_sc2pc_array(idx_remove))
+def make_quasi_crystal_sample(pc_fixed: tb.PrimitiveCell,
+                              pc_twisted: tb.PrimitiveCell,
+                              dim: Tuple[int, int, int],
+                              angle: float, center: np.ndarray,
+                              radius: float = 3.0,
+                              shift: float = 0.3) -> tb.Sample:
+    """
+    Create quasi-crystal at primitive level.
 
-
-def make_inter_hop(sc0, sc1, max_distance=0.75):
-    inter_hop = tb.SCInterHopping(sc0, sc1)
-    neighbors = tb.find_neighbors(sc0, sc1, a_max=0, b_max=0,
-                                  max_distance=max_distance)
-    for term in neighbors:
-        i, j = term.pair
-        inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
-    return inter_hop
-
-
-def make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center,
-                              radius=3.0, shift=0.3):
+    :param pc_fixed: primitive cell of fixed layer
+    :param pc_twisted: primitive cell of twisted layer
+    :param dim: dimension of the extended primitive cell
+    :param angle: twisting angle in RADIAN
+    :param center: fractional coordinate of the twisting center in the primitive
+        cell
+    :param radius: radius of quasi-crystal in nm
+    :param shift: distance of shift along z-axis in NANOMETER
+    :return: quasi-crystal
+    """
     # Calculate the Cartesian coordinates of rotation center
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
     center = np.matmul(center, pc_fixed.lat_vec)
@@ -122,7 +156,12 @@ def make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center,
     cutoff_sc(sc_twisted, center, radius=radius)
 
     # Build inter-cell hopping terms
-    inter_hop = make_inter_hop(sc_fixed, sc_twisted, max_distance=0.75)
+    inter_hop = tb.SCInterHopping(sc_fixed, sc_twisted)
+    neighbors = tb.find_neighbors(sc_fixed, sc_twisted, a_max=0, b_max=0,
+                                  max_distance=0.75)
+    for term in neighbors:
+        i, j = term.pair
+        inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
     # Extend hopping terms
     extend_hop(sc_fixed, max_distance=0.75)
@@ -136,7 +175,7 @@ def main():
     prim_cell = tb.make_graphene_diamond()
     dim = (33, 33, 1)
     angle = 30 / 180 * math.pi
-    center = (2./3, 2./3, 0)
+    center = np.array((2./3, 2./3, 0))
     timer.tic("pc")
     cell = make_quasi_crystal_pc(prim_cell, dim, angle, center)
     timer.toc("pc")
@@ -149,17 +188,17 @@ def main():
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_diamond")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=['r', 'b'], hop_colors=['g'], hop_eng_cutoff=0.3)
+                sc_colors=["r", "b"], hop_colors=["g"], hop_eng_cutoff=0.3)
 
     pc_fixed = tb.make_graphene_rect()
     pc_twisted = tb.make_graphene_rect()
     dim = (36, 24, 1)
-    center = (0, 1./3, 0)
+    center = np.array((0, 1./3, 0))
     timer.tic("sample_rect")
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_rect")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=['b', 'r'], hop_colors=['g'], hop_eng_cutoff=0.3)
+                sc_colors=["b", "r"], hop_colors=["g"], hop_eng_cutoff=0.3)
 
     timer.report_total_time()
 

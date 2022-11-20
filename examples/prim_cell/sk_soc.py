@@ -18,7 +18,8 @@ import tbplas as tb
 import tbplas.builder.exceptions as exc
 
 
-def calc_hop_mos2(sk, rij, label_i, label_j):
+def calc_hop_mos2(sk: tb.SK, rij: np.ndarray, label_i: str,
+                  label_j: str) -> complex:
     """
     Evaluate the hopping integral <i,0|H|j,r> for single layer MoS2.
 
@@ -28,12 +29,11 @@ def calc_hop_mos2(sk, rij, label_i, label_j):
     [3] https://iopscience.iop.org/article/10.1088/2053-1583/1/3/034003/meta
     Note ref. 2 and ref. 3 share the same set of parameters.
 
-    :param tb.SK sk: SK instance
-    :param np.ndarray rij: displacement vector from orbital i to j in nm
-    :param str label_i: label of orbital i
-    :param str label_j: label of orbital j
+    :param sk: SK instance
+    :param rij: displacement vector from orbital i to j in nm
+    :param label_i: label of orbital i
+    :param label_j: label of orbital j
     :return: hopping integral in eV
-    :rtype: complex
     """
     # Parameters from ref. 3
     v_pps, v_ppp = 0.696, 0.278
@@ -49,13 +49,12 @@ def calc_hop_mos2(sk, rij, label_i, label_j):
                    v_dds=v_dds, v_ddp=v_ddp, v_ddd=v_ddd)
 
 
-def add_soc_mos2(cell):
+def add_soc_mos2(cell: tb.PrimitiveCell) -> tb.PrimitiveCell:
     """
     Add spin-orbital coupling to the primitive cell.
 
-    :param tb.PrimitiveCell cell: primitive cell to modify
+    :param cell: primitive cell to modify
     :return: primitive cell with soc
-    :rtype: tb.PrimitiveCell
     """
     # Double the orbitals and hopping terms
     cell = tb.merge_prim_cell(cell, cell)
@@ -103,19 +102,19 @@ def add_soc_mos2(cell):
     return cell
 
 
-def calc_hop_bp(sk, rij, label_i, label_j):
+def calc_hop_bp(sk: tb.SK, rij: np.ndarray, label_i: str,
+                label_j: str) -> complex:
     """
     Evaluate the hopping integral <i,0|H|j,r> for single layer black phosphorus.
 
     Reference:
     https://www.sciencedirect.com/science/article/pii/S0927025617306705
 
-    :param tb.SK sk: SK instance
-    :param np.ndarray rij: displacement vector from orbital i to j in nm
-    :param str label_i: label of orbital i
-    :param str label_j: label of orbital j
+    :param sk: SK instance
+    :param rij: displacement vector from orbital i to j in nm
+    :param label_i: label of orbital i
+    :param label_j: label of orbital j
     :return: hopping integral in eV
-    :rtype: complex
     """
     r = norm(rij)
     r0 = 0.2224
@@ -250,5 +249,6 @@ def test_bp():
 
 
 if __name__ == "__main__":
-    test_mos2(False)
+    test_mos2()
+    test_mos2(True)
     test_bp()

@@ -4,8 +4,10 @@ In this tutorial we show how to build a fractal, Sierpinski carpet. We will try
 two approaches, namely top-down and bottom-up. The first approach is implemented
 by etching orbitals falling in void regions of a mask, while the second approach
 is implemented by replication of lower order fractal according to give pattern.
-Both approaches produce the same sample.
+Both approaches produce the same model.
 """
+
+from typing import List
 
 import numpy as np
 
@@ -30,18 +32,13 @@ class Box:
         whether the box is void or not
         Orbitals falling in a void box will be removed.
     """
-    def __init__(self, i0, j0, i1, j1, void=False):
+    def __init__(self, i0: int, j0: int, i1: int, j1: int, void: bool = False):
         """
-        :param i0: integer
-            x-component of grid coordinate of bottom left corner
-        :param j0: integer
-            y-component of grid coordinate of bottom left corner
-        :param i1: integer
-            x-component of grid coordinate of top right corner
-        :param j1: integer
-            y-component of grid coordinate of top right corner
-        :param void: boolean
-            whether the box is void or not
+        :param i0: x-component of grid coordinate of bottom left corner
+        :param j0: y-component of grid coordinate of bottom left corner
+        :param i1: x-component of grid coordinate of top right corner
+        :param j1: y-component of grid coordinate of top right corner
+        :param void: whether the box is void or not
         """
         self.i0 = i0
         self.j0 = j0
@@ -61,14 +58,11 @@ class Mask:
     num_grid: integer
         number of grid points when splitting boxes
     """
-    def __init__(self, starting_box: Box, num_grid: int, num_iter=0):
+    def __init__(self, starting_box: Box, num_grid: int, num_iter: int = 0):
         """
-        :param starting_box: list of 'Box' instances
-            starting partition of the area
-        :param num_grid: integer
-           number of grid points when splitting boxes
-        :param num_iter: integer
-            number of fractal iteration
+        :param starting_box: starting partition of the area
+        :param num_grid: umber of grid points when splitting boxes
+        :param num_iter: number of fractal iteration
         """
         self.boxes = [starting_box]
         self.num_grid = num_grid
@@ -78,14 +72,12 @@ class Mask:
                 new_boxes.extend(self.partition_box(box))
             self.boxes = new_boxes
 
-    def partition_box(self, box: Box):
+    def partition_box(self, box: Box) -> List[Box]:
         """
         Partition given box into smaller boxes.
 
-        :param box: instance of 'Box' class
-            box to split
-        :return: sub_boxes: list of 'Box' instances
-            smaller boxes split from given box
+        :param box: box to split
+        :return: smaller boxes split from given box
         """
         # Void box will be kept as-is
         if box.void:
@@ -110,82 +102,71 @@ class Mask:
                     sub_boxes.append(Box(i0, j0, i1, j1, void))
         return sub_boxes
 
-    def etch_super_cell(self, super_cell: tb.SuperCell):
+    def etch_prim_cell(self, prim_cell: tb.PrimitiveCell, width: int) -> None:
         """
-        Remove orbitals from supercell by checking if they fall in void boxes.
+        Remove orbitals from primitive cell by checking if they fall in void
+        boxes.
 
-        :param super_cell: instance of 'SuperCell' class
-            supercell to mask
-        :return: None
-            The incoming supercell is modified.
+        :param prim_cell: primitive cell to mask
+        :param width: total width of the primitive cell
+        :return: None. The incoming primitive cell is modified.
         """
-        super_cell.sync_array()
+        prim_cell.sync_array()
         masked_id_pc = []
         for box in self.boxes:
             if box.void:
-                id_pc = [(ia, ib, 0, 0)
+                id_pc = [(ia, ib)
                          for ia in range(box.i0, box.i1)
                          for ib in range(box.j0, box.j1)]
                 masked_id_pc.extend(id_pc)
-        super_cell.unlock()
-        super_cell.vacancy_list = masked_id_pc
-        super_cell.sync_array()
+        masked_id_pc = [i[0]*width + i[1] for i in masked_id_pc]
+        prim_cell.unlock()
+        prim_cell.remove_orbitals(masked_id_pc)
+        prim_cell.sync_array()
 
 
-def top_down(prim_cell: tb.PrimitiveCell,
-             start_width: int,
-             iteration: int,
-             extension: int):
+def top_down(prim_cell: tb.PrimitiveCell, start_width: int,
+             iteration: int, extension: int) -> tb.PrimitiveCell:
     """
     Build fractal in top-down approach.
 
-    :param prim_cell: instance of 'PrimitiveCell'
-        primitive cell of square lattice
-    :param start_width: integer
-        starting width of the sample
-    :param iteration: integer
-        iteration number of sample
-    :param extension: integer
-        extension of the sample width
-    :return: sample: instance of 'Sample' class
-        fractal sample
+    :param prim_cell: primitive cell of square lattice
+    :param start_width: starting width of the sample
+    :param iteration: iteration number of sample
+    :param extension: extension of the sample width
+    :return: fractal
     """
-    # Create the supercell
+    # Create the extended cell
     final_width = start_width * extension**iteration
-    super_cell = tb.SuperCell(prim_cell, dim=(final_width, final_width, 1),
-                              pbc=(False, False, False))
+    extended_cell = tb.extend_prim_cell(prim_cell,
+                                        dim=(final_width, final_width, 1))
+    extended_cell.apply_pbc((False, False, False))
 
     # Create the mask
     start_box = Box(0, 0, final_width - 1, final_width - 1)
     mask = Mask(start_box, num_grid=extension, num_iter=iteration)
 
-    # Etch the supercell
-    mask.etch_super_cell(super_cell)
-
-    # Make the sample
-    sample = tb.Sample(super_cell)
-    return sample
+    # Remove orbitals
+    mask.etch_prim_cell(extended_cell, final_width)
+    return extended_cell
 
 
-def bottom_up(prim_cell: tb.PrimitiveCell,
-              start_width: int,
-              iteration: int,
-              extension: int):
+def bottom_up(prim_cell: tb.PrimitiveCell, start_width: int,
+              iteration: int, extension: int) -> tb.PrimitiveCell:
     """
     Build fractal in bottom-up approach.
 
-    :param prim_cell: instance of 'PrimitiveCell'
-        primitive cell of square lattice
-    :param start_width: integer
-        starting width of the sample
-    :param iteration: integer
-        iteration number of sample
-    :param extension: integer
-        extension of the sample width
-    :return: sample: instance of 'Sample' class
-        fractal sample
+    :param prim_cell: primitive cell of square lattice
+    :param start_width: starting width of the sample
+    :param iteration: iteration number of sample
+    :param extension: extension of the sample width
+    :return: fractal
     """
+    # Create the extended cell
     final_width = start_width * extension**iteration
+    extended_cell = tb.extend_prim_cell(prim_cell,
+                                        dim=(final_width, final_width, 1))
+    extended_cell.apply_pbc((False, False, False))
 
     # Build 0-th order fractal
     fractal = [(ia, ib)
@@ -215,13 +196,13 @@ def bottom_up(prim_cell: tb.PrimitiveCell,
                   for ia in range(final_width)
                   for ib in range(final_width)]
     vacancies = list(set(full_sites).difference(set(fractal)))
-    vacancies = [(grid[0], grid[1], 0, 0) for grid in vacancies]
+    vacancies = [(grid[0], grid[1]) for grid in vacancies]
 
     # Create the sample
-    super_cell = tb.SuperCell(prim_cell, dim=(final_width, final_width, 1),
-                              pbc=(False, False, False), vacancies=vacancies)
-    sample = tb.Sample(super_cell)
-    return sample
+    masked_id_pc = [i[0] * final_width + i[1] for i in vacancies]
+    masked_id_pc = sorted(masked_id_pc)
+    extended_cell.remove_orbitals(masked_id_pc)
+    return extended_cell
 
 
 def main():
@@ -234,18 +215,18 @@ def main():
     prim_cell.add_hopping((1, 1), 0, 0, 1.0)
     prim_cell.add_hopping((1, -1), 0, 0, 1.0)
 
-    # Create sample using top-down approach
+    # Create fractal using top-down approach
     timer = tb.Timer()
     timer.tic("top_down")
-    sample = top_down(prim_cell, 2, 4, 3)
+    fractal = top_down(prim_cell, 2, 3, 3)
     timer.toc("top_down")
-    sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
+    fractal.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
 
-    # Create sample using bottom-up approach
+    # Create fractal using bottom-up approach
     timer.tic("bottom_up")
-    sample = bottom_up(prim_cell, 2, 4, 3)
+    fractal = bottom_up(prim_cell, 2, 3, 3)
     timer.toc("bottom_up")
-    sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
+    fractal.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
     timer.report_total_time()
 
 

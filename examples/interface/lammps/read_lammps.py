@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Example for reading structure from lammps output."""
 
 from scipy.spatial import KDTree
 from ase import io
@@ -30,8 +31,7 @@ for pair in pairs:
     prim_cell.add_hopping((0, 0, 0), pair[0], pair[1], energy=-2.7)
 
 # NOTE: if you modify orbital_list and hopping_dict of prim_cell manually,
-# then you should call sync_array with force_sync=True. Or alternatively,
-# update the timestamps of orb_list and hop_dict.
+# then you should call sync_array with force_sync=True.
 #prim_cell.sync_array(force_sync=True)
 
 # Plot the cell

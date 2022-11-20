@@ -7,9 +7,8 @@ import tbplas as tb
 
 
 # In this tutorial we show how to calculate the band structure and DOS of
-# primitive cell. First, we import graphene primitive cell in diamond
-# shape from the repository of tbplas. Alternatively, we can reuse the
-# model we created in example01.
+# primitive cell. First, we import graphene primitive cell in diamond shape
+# from the material repository.
 dia_cell = tb.make_graphene_diamond()
 
 # Then we create a path in the 1st Brillouin zone.

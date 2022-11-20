@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+"""Example for the fitting on-site energies and hopping terms."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 

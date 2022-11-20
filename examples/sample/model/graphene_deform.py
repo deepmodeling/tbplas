@@ -1,13 +1,25 @@
 #! /usr/bin/env python
+"""Example for adding deformation at Sample level."""
 
 import math
+from typing import Callable
 
 import numpy as np
 
 import tbplas as tb
 
 
-def make_deform(centers, sigma=1.0, scale_xy=0.5, scale_z=1.0):
+def make_deform(centers: np.ndarray, sigma: float = 1.0,
+                scale_xy: float = 0.5, scale_z: float = 1.0) -> Callable:
+    """
+    Generate deformation function as orb_pos_modifier.
+
+    :param centers: Cartesian coordinates of deformation centers in nm
+    :param sigma: broadening parameter
+    :param scale_xy: scaling factors for deformation in xOy plane
+    :param scale_z: scaling factor for deformation along z-direction
+    :return: deformation function
+    """
     def _deform(orb_pos):
         x, y, z = orb_pos[:, 0], orb_pos[:, 1], orb_pos[:, 2]
         norm_factor = 1.0 / (sigma * math.sqrt(2 * math.pi))
@@ -20,12 +32,19 @@ def make_deform(centers, sigma=1.0, scale_xy=0.5, scale_z=1.0):
     return _deform
 
 
-def make_rand_centers(num_center, xmax, ymax):
-    rand_x = np.random.rand(num_center) * xmax
-    rand_y = np.random.rand(num_center) * ymax
-    zero_z = np.zeros(num_center)
-    centers = np.vstack((rand_x, rand_y, zero_z))
-    return centers.T
+def make_rand_centers(num_center: int, x_max: int, y_max: int) -> np.ndarray:
+    """
+    Generate Cartesian coordinates of random deformation centers.
+
+    :param num_center: number of random centers
+    :param x_max: maximum of random x in nm
+    :param y_max: maximum of random y in nm
+    :return: Cartesian coordinates of random centers in nm
+    """
+    centers = np.zeros((num_center, 3), dtype=np.float64)
+    centers[:, 0] = np.random.rand(num_center) * x_max
+    centers[:, 1] = np.random.rand(num_center) * y_max
+    return centers
 
 
 def main():
@@ -53,6 +72,8 @@ def main():
     deform = make_deform(centers, sigma=0.5, scale_xy=0.0)
     super_cell = tb.SuperCell(prim_cell, dim, pbc, orb_pos_modifier=deform)
     sample = tb.Sample(super_cell)
+    sample.plot(with_cells=False, hop_as_arrows=False, view="ab",
+                with_orbitals=False)
     sample.plot(with_cells=False, hop_as_arrows=False, view="bc",
                 with_orbitals=False)
 
@@ -62,6 +83,8 @@ def main():
     super_cell = tb.SuperCell(prim_cell, dim, pbc, orb_pos_modifier=deform)
     sample = tb.Sample(super_cell)
     sample.plot(with_cells=False, hop_as_arrows=False, view="ab",
+                with_orbitals=False)
+    sample.plot(with_cells=False, hop_as_arrows=False, view="bc",
                 with_orbitals=False)
 
 

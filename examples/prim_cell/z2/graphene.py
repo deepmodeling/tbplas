@@ -1,5 +1,8 @@
 #! /usr/bin/env python
-
+"""
+Example for reproducing the Z2 invariant of monolayer graphene in the reference:
+https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.075119
+"""
 from math import sqrt, pi
 
 import numpy as np
@@ -8,7 +11,19 @@ import matplotlib.pyplot as plt
 import tbplas as tb
 
 
-def make_hop_dict(t, lamb_so, lamb_r):
+def make_hop_dict(t: float, lamb_so: float, lamb_r: float) -> tb.HopDict:
+    """
+    Prepare the hopping terms.
+
+    NOTE: This example is adapted from a legacy code and uses the 'HopDict'
+    class for holding the hopping terms for compatibility reasons. It is not
+    recommended to use this class any longer.
+
+    :param t: common hopping parameter
+    :param lamb_so: Kane-Mele spin-orbital coupling intensity
+    :param lamb_r: Rashba spin-orbital coupling intensity
+    :return: hopping terms
+    """
     def _hop_1st(vec):
         a = vec[1] + 1j * vec[0]
         ac = vec[1] - 1j * vec[0]
@@ -68,20 +83,16 @@ def make_hop_dict(t, lamb_so, lamb_r):
 
 
 def main():
-    # Reference:
-    # https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.075119
-
     # Parameters
     lat = 1.
     t = -1.
     lamb_so = 0.06 * t
     lamb_r = 0.05 * t
-
-    # QSH phase
-    lamb_nu = 0.1 * t
-
-    # normal insulating phase
-    # lamb_nu = 0.4 * t
+    is_qsh = True
+    if is_qsh:
+        lamb_nu = 0.1 * t  # QSH phase
+    else:
+        lamb_nu = 0.4 * t  # normal insulating phase
 
     # Whether to reorder the phases for improving continuity and smoothness
     # CAUTION: this operation may fail!

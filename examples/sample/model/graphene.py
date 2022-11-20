@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Example for constructing sample from the primitive cell."""
 
 import tbplas as tb
 
@@ -19,7 +20,7 @@ sample.plot()
 sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)
 
 # Now we create a sample with periodic boundary conditions along x and y
-# directions. Pay attention to the difference.
+# directions. Pay attention to the differences.
 super_cell_pbc = tb.SuperCell(prim_cell, dim=(6, 6, 1), pbc=(True, True, True))
 sample_pbc = tb.Sample(super_cell_pbc)
 sample_pbc.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False)

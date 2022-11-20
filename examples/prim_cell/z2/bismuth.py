@@ -21,7 +21,16 @@ import tbplas as tb
 import tbplas.builder.exceptions as exc
 
 
-def calc_hop(sk, rij, label_i, label_j):
+def calc_hop(sk: tb.SK, rij: np.ndarray, label_i: str, label_j: str) -> complex:
+    """
+    Evaluate the hopping integral <i,0|H|j,r>.
+
+    :param sk: SK instance
+    :param rij: displacement vector from orbital i to j in nm
+    :param label_i: label of orbital i
+    :param label_j: label of orbital j
+    :return: hopping integral in eV
+    """
     # Range-dependent slater-Koster parameters from ref. 2
     dict1 = {"v_sss": -0.608, "v_sps": 1.320, "v_pps": 1.854, "v_ppp": -0.600}
     dict2 = {"v_sss": -0.384, "v_sps": 0.433, "v_pps": 1.396, "v_ppp": -0.344}
@@ -42,7 +51,12 @@ def calc_hop(sk, rij, label_i, label_j):
                    v_pps=data["v_pps"], v_ppp=data["v_ppp"])
 
 
-def make_cell():
+def make_cell() -> tb.PrimitiveCell:
+    """
+    Make bilayer bismuth primitive cell without SOC.
+
+    :return: bilayer bismuth primitive cell
+    """
     # Lattice constants from ref. 2
     a = 4.5332
     c = 11.7967
@@ -82,7 +96,13 @@ def make_cell():
     return cell
 
 
-def add_soc(cell):
+def add_soc(cell: tb.PrimitiveCell) -> tb.PrimitiveCell:
+    """
+    Add spin-orbital coupling to the primitive cell.
+
+    :param cell: primitive cell to modify
+    :return: primitive cell with soc
+    """
     # Double the orbitals and hopping terms
     cell = tb.merge_prim_cell(cell, cell)
 

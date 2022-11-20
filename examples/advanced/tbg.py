@@ -1,4 +1,11 @@
 #! /usr/bin/env python
+"""
+Example for constructing twisted bilayer graphene.
+
+References:
+[1] https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.99.256802
+[2] https://journals.aps.org/prb/abstract/10.1103/PhysRevB.86.125413
+"""
 
 import math
 
@@ -8,45 +15,38 @@ from numpy.linalg import norm
 import tbplas as tb
 
 
-def calc_twist_angle(i):
+def calc_twist_angle(i: int) -> float:
     """
     Calculate twisting angle according to ref. [1].
 
-    :param i: integer
-        parameter controlling the twisting angle
-    :return: float
-        twisting angle in RADIANs, NOT degrees
+    :param i: parameter controlling the twisting angle
+    :return: twisting angle in RADIANs, NOT degrees
     """
     cos_ang = (3 * i ** 2 + 3 * i + 0.5) / (3 * i ** 2 + 3 * i + 1)
     return math.acos(cos_ang)
 
 
-def calc_twist_angle2(n, m):
+def calc_twist_angle2(n: int, m: int) -> float:
     """
     Calculate twisting angle according to ref. [2].
 
-    :param n: integer
-        parameter controlling the twisting angle
-    :param m: integer
-        parameter controlling the twisting angle
-    :return: float
-        twisting angle in RADIANs, NOT degrees
+    :param n: parameter controlling the twisting angle
+    :param m: parameter controlling the twisting angle
+    :return: twisting angle in RADIANs, NOT degrees
     """
     cos_ang = (n**2 + 4 * n * m + m**2) / (2 * (n**2 + n * m + m**2))
     return math.acos(cos_ang)
 
 
-def calc_hetero_lattice(i, prim_cell_fixed: tb.PrimitiveCell):
+def calc_hetero_lattice(i: int, prim_cell_fixed: tb.PrimitiveCell) -> np.ndarray:
     """
     Calculate Cartesian coordinates of lattice vectors of hetero-structure
     according to ref. [1].
 
-    :param i: integer
-        parameter controlling the twisting angle
-    :param prim_cell_fixed: instance of 'PrimitiveCell' class
-        primitive cell of fixed layer
-    :return: hetero_lattice: (3, 3) float64 array
-        Cartesian coordinates of hetero-structure lattice vectors in NANOMETER
+    :param i: parameter controlling the twisting angle
+    :param prim_cell_fixed: primitive cell of fixed layer
+    :return: (3, 3) float64 array, Cartesian coordinates of hetero-structure
+        lattice vectors in NANOMETER
     """
     hetero_lattice = np.array([[i, i + 1, 0],
                                [-(i + 1), 2 * i + 1, 0],
@@ -55,19 +55,17 @@ def calc_hetero_lattice(i, prim_cell_fixed: tb.PrimitiveCell):
     return hetero_lattice
 
 
-def calc_hetero_lattice2(n, m, prim_cell_fixed: tb.PrimitiveCell):
+def calc_hetero_lattice2(n: int, m: int,
+                         prim_cell_fixed: tb.PrimitiveCell) -> np.ndarray:
     """
     Calculate Cartesian coordinates of lattice vectors of hetero-structure
     according to ref. [2].
 
-    :param n: integer
-        parameter controlling the twisting angle
-    :param m: integer
-        parameter controlling the twisting angle
-    :param prim_cell_fixed: instance of 'PrimitiveCell' class
-        primitive cell of fixed layer
-    :return: hetero_lattice: (3, 3) float64 array
-        Cartesian coordinates of hetero-structure lattice vectors in NANOMETER
+    :param n: parameter controlling the twisting angle
+    :param m: parameter controlling the twisting angle
+    :param prim_cell_fixed: primitive cell of fixed layer
+    :return: (3, 3) float64 array, Cartesian coordinates of hetero-structure
+        lattice vectors in NANOMETER
     """
     hetero_lattice = np.array([[n, m, 0],
                                [-m, n + m, 0],
@@ -76,15 +74,13 @@ def calc_hetero_lattice2(n, m, prim_cell_fixed: tb.PrimitiveCell):
     return hetero_lattice
 
 
-def calc_hop(rij: np.ndarray):
+def calc_hop(rij: np.ndarray) -> float:
     """
     Calculate hopping parameter according to Slater-Koster relation.
     See ref. [2] for the formulae.
 
-    :param rij: (3,) array
-        displacement vector between two orbitals in NM
-    :return: hop: float
-        hopping parameter
+    :param rij: (3,) array, displacement vector between two orbitals in NM
+    :return: hopping parameter in eV
     """
     a0 = 0.1418
     a1 = 0.3349
@@ -104,12 +100,11 @@ def calc_hop(rij: np.ndarray):
     return hop
 
 
-def extend_hop(prim_cell: tb.PrimitiveCell, max_distance=0.75):
+def extend_hop(prim_cell: tb.PrimitiveCell, max_distance: float = 0.75) -> None:
     """
     Extend the hopping terms in primitive cell up to cutoff distance.
 
-    :param prim_cell: tb.PrimitiveCell
-        primitive cell to extend
+    :param prim_cell: primitive cell to extend
     :param max_distance: cutoff distance in NM
     :return: None. Incoming primitive cell is modified
     """
@@ -123,13 +118,7 @@ def extend_hop(prim_cell: tb.PrimitiveCell, max_distance=0.75):
 def main():
     # In this tutorial we show how to build twisted bilayer graphene. Firstly, we need
     # to define the functions for evaluating twisting angle and coordinates of lattice
-    # vectors. See the following papers for the formulae:
-    #
-    # [1] https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.99.256802
-    # [2] https://journals.aps.org/prb/abstract/10.1103/PhysRevB.86.125413
-    #
-    # See function 'calc_twist_angle', 'calc_twist_angle2', 'calc_hetero_lattice' and
-    # 'calc_hetero_lattice2' for the implementation.
+    # vectors. See the references for more details.
 
     # Evaluate twisting angle.
     i = 5
@@ -188,19 +177,6 @@ def main():
 
         # Finally, we merge layers and inter_hop to yield a hetero-structure
         merged_cell = tb.merge_prim_cell(layer_fixed, layer_twisted, inter_hop)
-
-    # Evaluate band structure of hetero-structure
-    k_points = np.array([
-       [0.0, 0.0, 0.0],
-       [2./3, 1./3, 0.0],
-       [1./2, 0.0, 0.0],
-       [0.0, 0.0, 0.0],
-    ])
-    k_label = ["G", "K", "M", "G"]
-    k_path, k_idx = tb.gen_kpath(k_points, [10, 10, 10])
-    k_len, bands = merged_cell.calc_bands(k_path)
-    vis = tb.Visualizer()
-    vis.plot_bands(k_len, bands, k_idx, k_label)
 
     # Visualize Moire's pattern
     angle = -math.atan(hetero_lattice[0, 1] / hetero_lattice[0, 0])

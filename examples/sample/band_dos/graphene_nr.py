@@ -1,28 +1,19 @@
 #! /usr/bin/env python
-
+"""
+Example for calculating band structure and DOS for graphene nano-ribbon at
+Sample level.
+"""
 import numpy as np
 
 import tbplas as tb
 
 
-# In example03 we have demonstrated how to build graphene nano-ribbons in
-# armchair and zigzag configuration at primitive cell level using
-# 'extend_prim_cell' and 'apply_pbc'. However, these functions are intended
-# to small cells. For large cells, the 'SuperCell' and 'Sample' classes are
-# recommended, which will be shown in this tutorial.
-
-# Just as in example03, we need the rectangular cell to build nano-ribbons.
+# Make samples.
 rect_cell = tb.make_graphene_rect()
-
-# Creating armchair graphene nano-ribbon is as easy as
 gnr_am = tb.Sample(tb.SuperCell(rect_cell, dim=(3, 3, 1),
                                 pbc=(False, True, False)))
-gnr_am.plot()
-
-# Similar for zigzag nano-ribbon
 gnr_zz = tb.Sample(tb.SuperCell(rect_cell, dim=(3, 3, 1),
                    pbc=(True, False, False)))
-gnr_zz.plot()
 
 # Now we evaluate their band structures. The results should be the same as
 # that of primitive cell.

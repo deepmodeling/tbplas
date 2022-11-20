@@ -1,7 +1,15 @@
 #! /usr/bin/env python
+"""
+Example for calculating response functions using the 'Lindhard' class.
+
+References:
+[1] https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.035439
+[2] https://journals.aps.org/prb/abstract/10.1103/PhysRevB.82.115448
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt
+
 import tbplas as tb
 
 
@@ -45,8 +53,7 @@ plt.close()
 
 timer.report_total_time()
 
-# Reproduce the result of Phys. Rev. B 84, 035439 (2011) with
-# |q| = 4.76 / nm and theta = 30 degrees.
+# Reproduce the result of ref. 1 with |q| = 4.76 / nm and theta = 30 degrees.
 lind = tb.Lindhard(cell=cell, energy_max=18, energy_step=1800,
                    kmesh_size=(1200, 1200, 1), mu=0.0, temperature=300, g_s=1,
                    back_epsilon=1.0, dimension=2)
@@ -58,7 +65,7 @@ plt.xticks(np.linspace(0.0, 18.0, 10))
 plt.show()
 plt.close()
 
-# Reproduce the result of Phys. Rev. B 82, 115448 (2010).
+# Reproduce the result of ref. 2.
 lind = tb.Lindhard(cell=cell, energy_max=t*3.5, energy_step=2048,
                    kmesh_size=(2048, 2048, 1), mu=0.0, temperature=300.0,
                    g_s=2, back_epsilon=1.0, dimension=2)
