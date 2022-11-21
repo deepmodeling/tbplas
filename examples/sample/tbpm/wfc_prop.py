@@ -1,6 +1,11 @@
 #! /usr/bin/env python
+"""
+Example for time-dependent wave function propagation with deformation and
+electric/magnetic field.
+"""
 
 import math
+from typing import Callable
 
 import numpy as np
 from numpy.linalg import norm
@@ -8,7 +13,18 @@ from numpy.linalg import norm
 import tbplas as tb
 
 
-def make_deform(center, sigma=0.5, extent=(1.0, 1.0), scale=(0.5, 0.5)):
+def make_deform(center: np.ndarray, sigma: float = 0.5,
+                extent: tuple = (1.0, 1.0),
+                scale: tuple = (0.5, 0.5)) -> Callable:
+    """
+    Generate deformation function as orb_pos_modifier.
+
+    :param center: Cartesian coordinate of deformation center in nm
+    :param sigma: broadening parameter
+    :param extent: extent of deformation along xOy and z directions
+    :param scale: scaling factor for deformation along xOy and z directions
+    :return: deformation function
+    """
     def _deform(orb_pos):
         x, y, z = orb_pos[:, 0], orb_pos[:, 1], orb_pos[:, 2]
         dx = (x - center[0]) * extent[0]
@@ -20,7 +36,14 @@ def make_deform(center, sigma=0.5, extent=(1.0, 1.0), scale=(0.5, 0.5)):
     return _deform
 
 
-def calc_hop(rij):
+def calc_hop(rij: np.ndarray) -> float:
+    """
+    Calculate hopping parameter according to Slater-Koster relation.
+    See ref. [2] for the formulae.
+
+    :param rij: (3,) array, displacement vector between two orbitals in NM
+    :return: hopping parameter in eV
+    """
     a0 = 0.1418
     a1 = 0.3349
     r_c = 0.6140
@@ -39,14 +62,31 @@ def calc_hop(rij):
     return hop
 
 
-def update_hop(sample):
+def update_hop(sample: tb.Sample) -> None:
+    """
+    Update hopping terms in presence of deformation.
+
+    :param sample: Sample to modify
+    :return: None.
+    """
     sample.init_hop()
     sample.init_dr()
     for i, rij in enumerate(sample.dr):
         sample.hop_v[i] = calc_hop(rij)
 
 
-def add_efield(sample, center, sigma=0.5, extent=(1.0, 1.0), v_pot=1.0):
+def add_efield(sample: tb.Sample, center: np.ndarray, sigma: float = 0.5,
+               extent: tuple = (1.0, 1.0), v_pot: float = 1.0) -> None:
+    """
+    Add electric field to sample.
+
+    :param sample: sample to add the field
+    :param center: Cartesian coordinate of the center in nm
+    :param sigma: broadening parameter
+    :param extent: extent of electric field along xOy and z directions
+    :param v_pot: electric field intensity in eV
+    :return: None.
+    """
     sample.init_orb_pos()
     sample.init_orb_eng()
     orb_pos = sample.orb_pos
@@ -57,7 +97,17 @@ def add_efield(sample, center, sigma=0.5, extent=(1.0, 1.0), v_pot=1.0):
         orb_eng[i] += v_pot * math.exp(-(dx**2 + dy**2) / (2 * sigma**2))
 
 
-def init_wfc_gaussian(sample, center, sigma=0.5, extent=(1.0, 1.0)):
+def init_wfc_gaussian(sample: tb.Sample, center: np.ndarray, sigma: float = 0.5,
+                      extent: tuple = (1.0, 1.0)) -> np.ndarray:
+    """
+    Generate Gaussian wave packet as initial wave function.
+
+    :param sample: sample for which the wave function shall be generated
+    :param center: Cartesian coordinate of the wave packet center in nm
+    :param sigma: broadening parameter
+    :param extent: extent of wave packet along xOy and z directions
+    :return: initial wave function
+    """
     sample.init_orb_pos()
     orb_pos = sample.orb_pos
     wfc = np.zeros(orb_pos.shape[0], dtype=np.complex128)
@@ -69,7 +119,14 @@ def init_wfc_gaussian(sample, center, sigma=0.5, extent=(1.0, 1.0)):
     return wfc
 
 
-def init_wfc_pw(sample, kpt):
+def init_wfc_pw(sample: tb.Sample, kpt: np.ndarray) -> np.ndarray:
+    """
+    Generate plane wave as initial wave function.
+
+    :param sample: sample for which the wave function shall be generated
+    :param kpt: Cartesian coordinate of wave vector in 1/nm
+    :return: initial wave function
+    """
     sample.init_orb_pos()
     orb_pos = sample.orb_pos
     wfc = np.zeros(orb_pos.shape[0], dtype=np.complex128)
@@ -80,14 +137,26 @@ def init_wfc_pw(sample, kpt):
     return wfc
 
 
-def init_wfc_random(sample):
+def init_wfc_random(sample: tb.Sample) -> np.ndarray:
+    """
+    Generate random initial wave function.
+
+    :param sample: sample for which the wave function shall be generated
+    :return: initial wave function
+    """
     phase = 2 * np.pi * np.random.rand(sample.num_orb_tot)
     wfc = np.exp(1j * phase)
     wfc /= np.linalg.norm(wfc)
     return wfc
 
 
-def init_wfc_uniform(sample):
+def init_wfc_uniform(sample: tb.Sample) -> np.ndarray:
+    """
+    Generate uniform initial wave function.
+
+    :param sample: sample for which the wave function shall be generated
+    :return: initial wave function
+    """
     wfc = np.ones(sample.num_orb_tot, dtype=np.complex128)
     wfc /= np.linalg.norm(wfc)
     return wfc
@@ -107,15 +176,15 @@ def main():
 
     # Perturbations
     with_deform = False
-    deform_center = (x_max * 0.75, y_max * 0.5)
+    deform_center = np.array([x_max * 0.75, y_max * 0.5])
     with_efield = False
     with_mfield = False
     mfield_gauge = 0
     mfiend_intensity = 50
 
     # Initial wave function
-    init_wfc = "uniform"
-    wfc_center = (x_max * 0.5, y_max * 0.5)
+    init_wfc = "gaussian"
+    wfc_center = np.array([x_max * 0.5, y_max * 0.5])
     wfc_extent = (1.0, 0.0)
     wfc_kpt = np.array([g_x, 0, 0])
 

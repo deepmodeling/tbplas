@@ -1,13 +1,18 @@
 #! /usr/bin/env python
+"""
+Calculate diffusion coefficient for graphene with 5% vacancies.
+
+Contributed by Meng Hai.
+"""
 
 import random
+
 import numpy as np
+
 import tbplas as tb
 
 
 def main():
-    # Calculate diffusion coefficient for graphene with 5% vacancies
-
     # Parameters
     width = 120
     height = 120
