@@ -21,7 +21,7 @@ repository for convenientce:
 
 The first Brillouin zone of a hexagonal lattice with :math:`\gamma=60^\circ` is shown as below:
 
-.. figure:: images/prim_bands/FBZ.png
+.. figure:: images/bands/FBZ.png
     :align: center
     :scale: 50%
 
@@ -78,7 +78,7 @@ or alternatively, using ``matplotlib`` directly:
     plt.show()
     plt.close()
 
-.. figure:: images/prim_bands/bands.png
+.. figure:: images/bands/bands.png
     :align: center
 
     Band structure of monolayer graphene.
@@ -108,6 +108,6 @@ Of course, we can also plot DOS using ``matplotlib`` directly:
     plt.show()
     plt.close()
 
-.. figure:: images/prim_bands/dos.png
+.. figure:: images/bands/dos.png
     :align: center
     :scale: 30%

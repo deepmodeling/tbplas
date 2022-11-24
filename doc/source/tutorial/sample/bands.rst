@@ -48,7 +48,7 @@ For zigzag-edged nano-ribbon, ``k_points`` should be replaced with:
 
 The output is shown in the figure, consistent with :ref:`prim_complex`.
 
-.. figure:: images/sample_bands/gnr_bands.png
+.. figure:: images/bands/gnr_bands.png
     :align: center
 
     Band structures of armchair and zigag-edged graphene nano-ribbons.
@@ -74,6 +74,6 @@ This is equivalent to evaluate the DOS of a graphene sample consisting of 20*20*
     vis = tb.Visualizer()
     vis.plot_dos(energies, dos)
 
-.. figure:: images/sample_bands/graph_dos.png
+.. figure:: images/bands/graph_dos.png
     :align: center
     :scale: 75%

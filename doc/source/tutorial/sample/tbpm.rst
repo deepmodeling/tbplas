@@ -123,7 +123,7 @@ And visualize the results:
 
 The output is shown in panel (a) of the figure:
 
-.. figure:: images/sample_tbpm/tbpm.png
+.. figure:: images/tbpm/tbpm.png
     :align: center
 
     Density of states (a), optical (AC) conductivity (b), dynamic polarizability (c) and electronic (DC)

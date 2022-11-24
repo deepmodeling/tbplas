@@ -79,7 +79,7 @@ can be dealt with. As an example, the dynamic polarization of q-point with grid 
 Note that we have put additional code into the example for benchmarking purposes. The output is shown in the left panel
 of the figure:
 
-.. figure:: images/prim_lind/dp.png
+.. figure:: images/lindhard/dp.png
     :align: center
 
     Dynamic polarization from calc_dyn_pol_regular and calc_dyn_pol_arbitrary.
@@ -138,7 +138,7 @@ and implemented in the :func:`calc_epsilon` method. As a more realistic example,
 The output is shown in the left panel of the figure below, as well as the reference taken from
 `Phys. Rev. B 84, 035439 (2011) <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.035439>`_.
 
-.. figure:: images/prim_lind/epsilon.png
+.. figure:: images/lindhard/epsilon.png
     :align: center
 
     Dielectric function of :math:`|q|=4.76 nm^{-1}` and :math:`\theta = 30^\circ`
@@ -170,7 +170,7 @@ input. We demonstrate the usage of this method by calculating the AC conductivit
 The result is shown in the left of the figure below, as well as the reference taken from
 `Phys. Rev. B 82, 115448 (2010) <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.82.115448>`_.
 
-.. figure:: images/prim_lind/ac_cond.png
+.. figure:: images/lindhard/ac_cond.png
     :align: center
 
     AC conductivity of monolayer graphene.

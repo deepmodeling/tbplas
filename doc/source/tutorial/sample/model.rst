@@ -34,7 +34,7 @@ how many times the primitive cell is replicated along :math:`a`, :math:`b` and :
 the ``pbc`` argument gives the boundary condition. Then we create a sample ``gnr_am`` from the :class:`.Sample`
 class. The output is shown in the left panel of the figure:
 
-.. figure:: images/sample_model/gnr.png
+.. figure:: images/model/gnr.png
     :align: center
     :scale: 60%
 
@@ -68,7 +68,7 @@ the graphene model with vacancies. We have a look at the model without vacancies
 
 The output is shown in the left panel of the figure:
 
-.. figure:: images/sample_model/graph_vac.png
+.. figure:: images/model/graph_vac.png
     :align: center
     :scale: 60%
 

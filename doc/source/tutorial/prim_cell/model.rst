@@ -12,7 +12,7 @@ Monolayer graphene has a hexagonal lattice, with lattice paprameters :math:`a=b=
 and :math:`\alpha=\beta=90^\circ`. The angle between lattice vectors :math:`a_1` and :math:`a_2`, namely :math:`\gamma`,
 can be either :math:`60^\circ` or :math:`120^\circ`, depending on the choice of lattice vectors, as shown in the figure:
 
-.. figure:: images/prim_cell/graph_lattice.png
+.. figure:: images/model/graph_lattice.png
     :align: center
     :scale: 60%
 
@@ -142,7 +142,7 @@ Add hopping terms
 With the orbitals ready, we can add the hopping terms. The hopping terms for primitive cell with :math:`\gamma=60^\circ`
 is shown in the figure below:
 
-.. figure:: images/prim_cell/graph_hop.png
+.. figure:: images/model/graph_hop.png
     :align: center
 
     Schematic plot of hopping terms of graphene. Primitive cells are indicated with dashed diamonds and numbered in blue
@@ -192,7 +192,7 @@ Dump the model
 
 Now we have successfully created the model. We can have a look at it by calling the ``plot`` method:
 
-.. figure:: images/prim_cell/graph_final.png
+.. figure:: images/model/graph_final.png
     :align: center
     :scale: 35%
 
@@ -207,14 +207,3 @@ and print the orbitals and hopping terms by calling the ``print`` method. The ou
         (0, 0, 0, 0, 1) -2.7
         (1, 0, 0, 1, 0) -2.7
         (0, 1, 0, 1, 0) -2.7
-
-Exercise
---------
-
-Try to make the rectangular cell or monolayer graphene:
-
-.. figure:: images/prim_cell/graph_rect.png
-    :align: center
-    :scale: 35%
-
-The answers can be found at :ref:`gnr`. 

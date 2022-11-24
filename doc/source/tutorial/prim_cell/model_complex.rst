@@ -74,7 +74,7 @@ But the function :func:`.reshape_prim_cell` offers a more convenient approach. I
 of the lattices of rectangular cell to diamond-shaped cell:
 
 
-.. figure:: images/prim_complex/rect_diamond.png
+.. figure:: images/model_complex/rect_diamond.png
     :align: center
 
     Rectangular and diamond-shaped primitive cells of monolayer graphene. The rectangular cell is indicated with blue
@@ -123,7 +123,7 @@ To produce a graphene nano-ribbon with desired width we need to extend the recta
 Here we extend the rectangular cell along :math:`a` and :math:`b` directions by 3 times through the ``dim`` parameter.
 The output is shown as below:
 
-.. figure:: images/prim_complex/gnr.png
+.. figure:: images/model_complex/gnr.png
     :align: center
 
     Extend rectangular primitive cell and graphene nano-ribbon with armchair edges (GNR-AM) or zigag edges (GNR-ZZ).
@@ -179,7 +179,7 @@ For zigzag-edged nano-ribbon, replace ``k_points`` with:
 
 The band structures should look like:
 
-.. figure:: images/prim_complex/gnr_bands.png
+.. figure:: images/model_complex/gnr_bands.png
     :align: center
 
     Band structures of armchair and zigag-edged graphene nano-ribbons.
@@ -205,7 +205,7 @@ primitive cell of graphene and extend it by 3 times along :math:`a` and :math:`b
 
 The output is shown in the right panel of the figure:
 
-.. figure:: images/prim_complex/rm_orb.png
+.. figure:: images/model_complex/rm_orb.png
 
     Structure of extended graphene primitive cell before and after removing orbitals and after trimming dangling
     terms. Blue circle indicates the dangling orbital.
@@ -247,7 +247,7 @@ From the extended cell we can also remove hopping terms, e.g. :math:`(0, 0) \rig
 
 The output is shown in the left panel of the figure:
 
-.. figure:: images/prim_complex/rm_hop.png
+.. figure:: images/model_complex/rm_hop.png
 
     Structure of extended graphene primitive cell after removing hopping and after trimming dangling terms. Blue circle
     indicates the dangling orbital.
