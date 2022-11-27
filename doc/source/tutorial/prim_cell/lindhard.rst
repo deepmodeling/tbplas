@@ -2,11 +2,11 @@ Response functions of primitive cell
 ====================================
 
 In this tutorial, we show how to calculate the response functions of primitive cell, namely dynamic polarization,
-dielectric function and optical (AC) conductivity, using the :class:`.Lindhard` class. :class:`.Lindhard` requires
-the energies and wave functions from exact diagonalization, so its application is limited to primitive cells of
-small or moderate size. For large models, the tight-binding propagation method (TBPM) is recommended, which will
-be discussed in :ref:`sample_tbpm`. Before beginning the tutorial, we import all necessary packages and create a
-graphene primitive cell as the example:
+dielectric function and optical (AC) conductivity, using the :class:`.Lindhard` class. The corresonding script is
+``examples/prim_cell/lindhard.py``. :class:`.Lindhard` requires the energies and wave functions from exact
+diagonalization, so its application is limited to primitive cells of small or moderate size. For large models, the
+tight-binding propagation method (TBPM) is recommended, which will be discussed in :ref:`sample_tbpm`. Before
+beginning the tutorial, we import all necessary packages and create a graphene primitive cell as the example:
 
 .. code-block:: python
 
@@ -187,7 +187,7 @@ direction should be along 'c' axis.
 
 Regarding the accuracy of results, the first approach suffers from the issue that dynamic polarization and AC
 conductivity scale inversely proportional to the product of supercell lengths, i.e., :math:`|c|` in 2d case and
-:math:`|a|*|b|`in 1d case. This is caused by elementary volume in reciprocal space (:math:`d^{3}k`) in Lindhard
+:math:`|a|*|b|` in 1d case. This is caused by elementary volume in reciprocal space (:math:`d^{3}k`) in Lindhard
 function. On the contrary, the second approach has no such issue. If the supercell lengths of non-periodic
 directions are set to 1 nm, then the first approach yields the same results as the second approach.
 

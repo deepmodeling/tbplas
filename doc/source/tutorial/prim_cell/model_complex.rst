@@ -4,9 +4,10 @@ Build complex primitive cells
 =============================
 
 In this tutorial we demonstrate how to construct complex primitive cells using the python-based modeling
-tools. TBPLaS offers two sets of modeling tools: Python-based and Cython-based. Python-based tools are
-designed for models of moderate size, and all work at the primitive cell level. Here are the summary of
-the Python-based tools:
+tools. The scripts are located at ``examples/prim_cell/model/graphene_rect.py`` and
+``examples/prim_cell/model/graphene_nr.py``. TBPLaS offers two sets of modeling tools: Python-based and
+Cython-based. Python-based tools are designed for models of moderate size, and all work at the primitive
+cell level. Here are the summary of the Python-based tools:
 
 * reshape_prim_cell
 * extend_prim_cell

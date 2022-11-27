@@ -1,7 +1,7 @@
 .. _sample_model:
 
-Build a sample
-==============
+Set up the sample
+=================
 
 In this tutorial we show how to build a sample using the Cython-based modeling tools. Cython tools
 are orders of magnitudes faster than their Python counterparts, and are designed for constructing

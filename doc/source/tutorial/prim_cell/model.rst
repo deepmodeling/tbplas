@@ -1,9 +1,10 @@
-Setting up primitive cell
-=========================
+Setting up the primitive cell
+=============================
 
-In this tutorial we show how to set up a primitive cell from the :class:`.PrimitiveCell` class taking
+In this tutorial we show how to set up the primitive cell from the :class:`.PrimitiveCell` class taking
 monolayer graphene as the example. We will discuss the geometric properties of graphene first, then
-set up the model step-by-step.
+set up the model step-by-step. The script in this tutorial can be found at
+``examples/prim_cell/model/graphene_diamond.py``.
 
 Geometric properties
 --------------------
@@ -200,10 +201,15 @@ and print the orbitals and hopping terms by calling the ``print`` method. The ou
 
 .. code-block:: text
 
+    Lattice vectors (nm):
+        0.24600   0.00000   0.00000
+        0.12300   0.21304   0.00000
+        0.00000   0.00000   1.00000
     Orbitals:
+        0.00000   0.00000   0.00000 0.0
         0.33333   0.33333   0.00000 0.0
-        0.66667   0.66667   0.00000 0.0
     Hopping terms:
-        (0, 0, 0, 0, 1) -2.7
-        (1, 0, 0, 1, 0) -2.7
-        (0, 1, 0, 1, 0) -2.7
+        (0, 0, 0) (0, 1) -2.7
+        (1, 0, 0) (1, 0) -2.7
+        (0, 1, 0) (1, 0) -2.7
+
