@@ -1,7 +1,7 @@
 .. _prim_bands:
 
-Bands and DOS of primitive cell
-===============================
+Band structure and DOS
+======================
 
 In this tutorial we show how to calculate the band structure and density of states (DOS) of a primitive cell
 using monolayer graphene as the example. The script can be found at ``examples/prim_cell/band_dos/graphene.py``.

@@ -1,5 +1,5 @@
-Response functions of primitive cell
-====================================
+Response functions
+==================
 
 In this tutorial, we show how to calculate the response functions of primitive cell, namely dynamic polarization,
 dielectric function and optical (AC) conductivity, using the :class:`.Lindhard` class. The corresonding script is
@@ -50,7 +50,9 @@ Dynamic polarization
 :func:`calc_dyn_pol_arbitrary` accepts arbitrary q-points as input, while :func:`calc_dyn_pol_regular` requires that
 the q-points should be on the k-grid defined by ``k_mesh``. This can be explained from the equation for polarization:
 
-:math:`\Pi(\textbf{q},\omega)=\frac{g_s}{(2\pi)^n}\int_{\mathrm{BZ}}\mathrm{d}^n\textbf{k}\sum_{l,l^\prime}\frac{n_\mathrm{F}(E_{\textbf{k}l})-n_\mathrm{F}(E_{\textbf{k}^{\prime}l^{\prime}})}{E_{\textbf{k}l}-E_{\textbf{k}^{\prime}l^{\prime}}+\hbar\omega+\mathrm{i}\eta^+}|\langle\textbf{k}^{\prime}l^{\prime}|\mathrm{e^{\mathrm{i}\textbf{q}\cdot\textbf{r}}|\textbf{k}l\rangle}|^2`
+.. math::
+
+    \Pi(\textbf{q},\omega)=\frac{g_s}{(2\pi)^n}\int_{\mathrm{BZ}}\mathrm{d}^n\textbf{k}\sum_{l,l^\prime}\frac{n_\mathrm{F}(E_{\textbf{k}l})-n_\mathrm{F}(E_{\textbf{k}^{\prime}l^{\prime}})}{E_{\textbf{k}l}-E_{\textbf{k}^{\prime}l^{\prime}}+\hbar\omega+\mathrm{i}\eta^+}|\langle\textbf{k}^{\prime}l^{\prime}|\mathrm{e^{\mathrm{i}\textbf{q}\cdot\textbf{r}}|\textbf{k}l\rangle}|^2
 
 where :math:`\textbf{k}^{\prime}  = \textbf{k} + \textbf{q}`. For any regular q-point on the k-grid, :math:`\textbf{k}^{\prime}`
 is still on the same k-grid. However, this may not be true for arbitrary q-points. So, :func:`calc_dyn_pol_arbitrary`
@@ -115,7 +117,9 @@ Dielectric function
 
 The dielectric function is determined from the dynamic polarization via:
 
-:math:`\epsilon(\textbf{q},\omega)=1-V(\textbf{q})\Pi(\textbf{q},\omega)`
+.. math::
+
+    \epsilon(\textbf{q},\omega)=1-V(\textbf{q})\Pi(\textbf{q},\omega)
 
 and implemented in the :func:`calc_epsilon` method. As a more realistic example, the dielectric function of
 :math:`|q|=4.76 nm^{-1}` and :math:`\theta = 30^\circ` can be evaluated as:
@@ -148,7 +152,9 @@ AC conductivity
 
 The AC conductivity is evaluated through the Kubo-Greewoord formula:
 
-:math:`\sigma_{\alpha\beta}(\omega)=\frac{\mathrm{i} e^2 \hbar}{N_k \Omega_c}\sum_{\textbf k}\sum_{n,m} \frac{f_{m\textbf{k}} - f_{n\textbf{k}}}{\epsilon_{m\textbf{k}} - \epsilon_{n\textbf{k}}} \frac{\langle\psi_{n\textbf k}|v_\alpha|\psi_{m\textbf k}\rangle \langle\psi_{m\textbf k}|v_\beta|\psi_{n\textbf k}\rangle}{\epsilon_{m\textbf{k}} - \epsilon_{n\textbf{k}}-(\hbar\omega+\mathrm i\eta^+)}`
+.. math::
+
+    \sigma_{\alpha\beta}(\omega)=\frac{\mathrm{i} e^2 \hbar}{N_k \Omega_c}\sum_{\textbf k}\sum_{n,m} \frac{f_{m\textbf{k}} - f_{n\textbf{k}}}{\epsilon_{m\textbf{k}} - \epsilon_{n\textbf{k}}} \frac{\langle\psi_{n\textbf k}|v_\alpha|\psi_{m\textbf k}\rangle \langle\psi_{m\textbf k}|v_\beta|\psi_{n\textbf k}\rangle}{\epsilon_{m\textbf{k}} - \epsilon_{n\textbf{k}}-(\hbar\omega+\mathrm i\eta^+)}
 
 and implemented in the :func:`calc_ac_cond` method. As AC conductivity is not q-dependet, no q-points are required as
 input. We demonstrate the usage of this method by calculating the AC conductivity of monolayer graphene by:

@@ -7,8 +7,11 @@ PrimitiveCell
     :caption: Contents
 
     Set up the primitive cell <model.rst>
-    Bands and DOS of primitive cell <bands.rst>
+    Band structure and DOS <bands.rst>
     Build complex primitive cells <model_complex.rst>
     Slater-Koster formulation <sk.rst>
     Spin-orbital coupling <soc.rst>
-    Response functions of primitive cell <lindhard.rst>
+    Interfaces <interfaces.rst>
+    Parameters fitting <param_fit.rst>
+    Response functions <lindhard.rst>
+    Z2 topological invariant <z2.rst>

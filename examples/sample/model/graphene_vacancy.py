@@ -30,9 +30,8 @@ def get_vacancies(super_cell: tb.SuperCell,
 
 
 def main():
-    # In this tutorial we will show how to build complex samples with vacancies
-    # and deformation. First we build a 3*3*1 graphene sample with two orbitals
-    # removed.
+    # In this tutorial we will show how to build complex samples with vacancies.
+    # First we build a 3*3*1 graphene sample with two orbitals removed.
     prim_cell = tb.make_graphene_diamond()
     vacancies = [(1, 1, 0, 0), (1, 1, 0, 1)]
     super_cell = tb.SuperCell(prim_cell, dim=(3, 3, 1),

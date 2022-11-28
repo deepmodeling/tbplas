@@ -6,7 +6,7 @@ Set up the sample
 In this tutorial we show how to build a sample using the Cython-based modeling tools. Cython tools
 are orders of magnitudes faster than their Python counterparts, and are designed for constructing
 large models with millions or billions of orbitals. We demonstrate the usages of these tools by
-reproducing the models in :ref:`prim_complex`.
+reproducing the models in :ref:`prim_complex`. The scripts can be found at ``examples/sample/model``.
 
 Construct graphene nano-ribbon
 ------------------------------
@@ -70,7 +70,7 @@ The output is shown in the left panel of the figure:
 
 .. figure:: images/model/graph_vac.png
     :align: center
-    :scale: 60%
+    :scale: 50%
 
     Graphene samples without and with vacancies and after trimming dangling terms. Cells are labeled
     with blue texts. Removed and dangling orbitals are indicated with blue and green circles, respectively.
