@@ -7,3 +7,5 @@ Advanced
     :caption: Contents
 
     Hetero-structure <hetero_model.rst>
+    Strain and external fields <strain_fields.rst>
+    Parallelization <parallel.rst>
