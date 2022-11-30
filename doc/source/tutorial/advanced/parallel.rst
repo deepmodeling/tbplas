@@ -62,7 +62,7 @@ multiple processes in one time. In the following sections, we assume the script 
 ``test_mpi.py``. A common head block of the script is given in :ref:`para_bands` and will not be
 explicitly repeated in subsequent sections.
 
-.. para_bands::
+.. _para_bands:
 
 Band structure and DOS
 ----------------------
