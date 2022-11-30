@@ -23,12 +23,12 @@ sys.path.insert(0, os.path.abspath('../../.'))
 
 project = 'TBPLaS'
 copyright = '2017-2022, the TBPLaS development team'
-author = 'Yunhai Li, Zhen Zhan, Yonggang Li and Shengjun Yuan'
+author = 'Yunhai Li, Zhen Zhan, Xueheng Kuang, Yonggang Li and Shengjun Yuan'
 
 # The short X.Y version
-version = '1.2'
+version = '1.3'
 # The full version, including alpha/beta/rc tags
-release = '1.2.0'
+release = '1.3.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -147,7 +147,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'TBPLaS.tex', 'TBPLaS Documentation',
-     'Yunhai Li, Zhen Zhan, Yonggang Li \\& Shengjun Yuan', 'manual'),
+     'Yunhai Li, Zhen Zhan, Xueheng Kuang, Yonggang Li \\& Shengjun Yuan', 'manual'),
 ]
 
 

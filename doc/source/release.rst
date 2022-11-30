@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+v1.3 | 2022-12-01
+-----------------
+
+.. rubric:: New features
+
+* Added :class:`.SK` class for setting hopping integrals with Slater-Koster formulation
+* Added :class:`.ParamFit` class for fitting on-site energies and hopping integrals
+* Added :class:`.SOC` class for adding intra-atom spin-orbital coupling
+* Added :func:`.make_graphene_sp` for making the 8-orbital model of graphene
+* :class:`.Config`, :class:`.Solver` and :class:`.Analyzer` now checks for undefined parameters
+* New algorithm for building the hopping terms of :class:`.SuperCell` (50 times faster)
+* :class:`.Visualizer` gets a new ``plot_phases`` method to plot the topological phases from Z2
+
+.. rubric:: Improvments
+
+* Redesigned :class:`.Z2` for calculating and analyzing the Z2 topological invariant
+* Updated the tutorials with a lot of new examples demonstrating the new features
+
 v1.2 | 2022-09-02
 -----------------
 
