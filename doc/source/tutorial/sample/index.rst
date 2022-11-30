@@ -9,4 +9,3 @@ Sample
     Set up the sample <model.rst>
     Bands and DOS <bands.rst>
     Properties from TBPM <tbpm.rst>
-    Wave function propagation <wfc_prop.rst>

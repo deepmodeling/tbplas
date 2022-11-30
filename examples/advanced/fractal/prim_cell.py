@@ -86,7 +86,7 @@ def bottom_up(prim_cell: tb.PrimitiveCell, start_width: int,
     vacancies = list(set(full_sites).difference(set(fractal)))
     vacancies = [(grid[0], grid[1]) for grid in vacancies]
 
-    # Create the sample
+    # Create the model.
     masked_id_pc = [i[0] * final_width + i[1] for i in vacancies]
     masked_id_pc = sorted(masked_id_pc)
     extended_cell.remove_orbitals(masked_id_pc)
