@@ -14,6 +14,7 @@ List of examples
   * fractal: construction of Sierpinski carpet
   * quasi_crystal: construction of quasi-crystal from twisted bilayer graphene
   * tbg: construction of twisted bilayer graphene
+  * strain_fields: propagation of wave function under strain and electric/magnetic field
 * interface:
   * lammps: construction of primitive cell from the output of LAMMPS
   * wannier90: construction of primitive cell from the output of Wannier90, for graphene, MoS2

@@ -4,7 +4,7 @@ Interfaces
 ==========
 
 In this tutorial, we shown how to use the interfaces to build the primitive cell from the output of
-Wannier90 and LAMMPS. The scripts can be found at ``examples/interfaces``. We begin with importing
+Wannier90 and LAMMPS. The scripts can be found at ``examples/interface``. We begin with importing
 the necessary packages:
 
 .. code-block:: python

@@ -17,10 +17,10 @@ vectors are updated from the orbital positions and hopping terms automatically, 
 explicit modification.
 
 As the example, we will investigate the propagation of wave function in a graphene sample. The
-script can be found at ``examples/sample/tbpm/wfc_prop.py``. We begin with defining the functions
-for adding strain and external fields, then calculate and plot the time-dependent wave function to
-check their effects on the propagation. The essential packages of this tutorial can be imported
-with:
+script can be found at ``examples/advanced/strain_fields.py``. We begin with defining the
+functions for adding strain and external fields, then calculate and plot the time-dependent wave
+function to check their effects on the propagation. The essential packages of this tutorial can be
+imported with:
 
 .. code-block:: python
 

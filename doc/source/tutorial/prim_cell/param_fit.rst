@@ -14,7 +14,7 @@ i.e.
 where :math:`\mathbf{x}` are the fitting parameters, :math:`\omega` are the fitting weights,
 :math:`\bar{E}` and :math:`E` are the reference and fitted band data from the original and reduced
 cells, :math:`i` and :math:`\mathbf{k}`` are band and :math:`\mathbf{k}`-point indices,
-respectively. The corresponding script can be found at ``examples/interfaces/wannier90/graphene/fit.py``.
+respectively. The corresponding script can be found at ``examples/interface/wannier90/graphene/fit.py``.
 We begin with importing the necessary packages:
 
 .. code-block:: python
