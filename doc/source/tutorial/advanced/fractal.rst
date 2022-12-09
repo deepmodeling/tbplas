@@ -189,4 +189,4 @@ The output is shown in the following figure:
     :align: center
     :scale: 50%
 
-    Sierpińnski carpet with :math:`S=2`, :math:`L=3` and :math:`I=3`.
+    Sierpiński carpet with :math:`S=2`, :math:`L=3` and :math:`I=3`.

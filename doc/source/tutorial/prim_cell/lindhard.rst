@@ -184,16 +184,16 @@ The result is shown in the left of the figure below, as well as the reference ta
 Notes on system dimension
 -------------------------
 
-Lindhard class deals with system dimension in two approaches. The first approach is to treat all systems as
+:class:`.Lindhard` class deals with system dimension in two approaches. The first approach is to treat all systems as
 3-dimensional. In this approach, supercell technique is required, with vacuum layers added on non-periodic
 directions. Also, the component(s) of ``kmesh_size`` should be set to 1 accordingly on that direction. The
 seond approach utilizes dimension-specific formula whenever possible. For now, only 2-dimensional case has
 been implemented. This approach requires that the system should be periodic in xOy plane, i.e. the non-periodic
-direction should be along 'c' axis.
+direction should be along :math:`c` axis.
 
 Regarding the accuracy of results, the first approach suffers from the issue that dynamic polarization and AC
 conductivity scale inversely proportional to the product of supercell lengths, i.e., :math:`|c|` in 2d case and
-:math:`|a|*|b|` in 1d case. This is caused by elementary volume in reciprocal space (:math:`d^{3}k`) in Lindhard
+:math:`|a|*|b|` in 1d case. This is caused by elementary volume in reciprocal space (:math:`\mathrm{d}^{3}k`) in Lindhard
 function. On the contrary, the second approach has no such issue. If the supercell lengths of non-periodic
 directions are set to 1 nm, then the first approach yields the same results as the second approach.
 

@@ -3,7 +3,7 @@
 Properties from TBPM
 ====================
 
-In this tutorial we demonstrate the usage of Tight-Binding Propagation Methods (TBPM) implemented
+In this tutorial, we demonstrate the usage of Tight-Binding Propagation Methods (TBPM) implemented
 in TBPLaS. TBPM can solve a lot of electronic and response properties of large tight-binding models
 in a much faster way than exact diagonalization. For the capabilities of TBPM, see :ref:`features`.
 All TBPM calculations begin with setting up a sample from the :class:`.Sample` class, followed by

@@ -1,7 +1,7 @@
 Bands and DOS
 =============
 
-In this tutorial we show how to calculate the band structure and density of states of a sample via
+In this tutorial, we show how to calculate the band structure and density of states of a sample via
 exact diagonalization. The :class:`.Sample` class shares the same APIs for obtaining these properties
 as :class:`.PrimitiveCell` class, so the procedure in :ref:`prim_bands` is directly applicable. The
 scripts can be found at ``examples/sample/band_dos``.

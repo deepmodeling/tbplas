@@ -3,7 +3,7 @@
 Set up the sample
 =================
 
-In this tutorial we show how to build a sample using the Cython-based modeling tools. Cython tools
+In this tutorial, we show how to build a sample using the Cython-based modeling tools. Cython tools
 are orders of magnitudes faster than their Python counterparts, and are designed for constructing
 large models with millions or billions of orbitals. We demonstrate the usages of these tools by
 reproducing the models in :ref:`prim_complex`. The scripts can be found at ``examples/sample/model``.
@@ -58,8 +58,6 @@ After demonstrating the basic usage of :class:`.SuperCell` and :class:`.Sample` 
 the graphene model with vacancies. We have a look at the model without vacancies first:
 
 .. code-block:: python
-
-    import tbplas as tb
 
     prim_cell = tb.make_graphene_diamond()
     sc = tb.SuperCell(prim_cell, dim=(3, 3, 1), pbc=(True, True, False))

@@ -163,8 +163,8 @@ Workaround for undefined symbol error
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You may run into errors complaining about ``undefined symbol: GOMP_parallel`` when testing your build and
-installation. In that case, find the location of ``libgomp.so``, for instance, ``/usr/lib64``. Add it to
-``library_dirs`` of ``build_ext`` section and re-compile TBPLaS. This issue will be solved.
+installation if you use GCC. In that case, find the location of ``libgomp.so``, for instance, ``/usr/lib64``.
+Add it to ``library_dirs`` of ``build_ext`` section and re-compile TBPLaS. This issue will be solved.
 
 .. code-block:: cfg
     :emphasize-lines: 0
@@ -284,7 +284,7 @@ to add this command to your ``~/.bashrc`` to make it permanently effective.
 Testing
 -------
 
-There are some testing scripts under tests directory of source code. You can test your compilation and installation
-by invoking these scripts, e.g., ``python test_core.py``. Some output will be printed to the screen and some figures
-will be saved to disk. If everything goes well, a notice will be raised saying all the tests have been passed by the
-end of each script.
+There are some testing scripts under the ``tests`` directory of source code. You can test your compilation and
+installation by invoking these scripts, e.g., ``python test_core.py``. Some output will be printed to the screen and
+some figures will be saved to disk. If everything goes well, a notice will be raised saying all the tests have been
+passed by the end of each script.

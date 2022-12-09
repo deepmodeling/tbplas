@@ -3,7 +3,7 @@
 Build complex primitive cells
 =============================
 
-In this tutorial we demonstrate how to construct complex primitive cells using the python-based modeling
+In this tutorial, we demonstrate how to construct complex primitive cells using the python-based modeling
 tools. The scripts are located at ``examples/prim_cell/model/graphene_rect.py`` and
 ``examples/prim_cell/model/graphene_nr.py``. TBPLaS offers two sets of modeling tools: Python-based and
 Cython-based. Python-based tools are designed for models of moderate size, and all work at the primitive
@@ -21,11 +21,11 @@ cell level. Here are the summary of the Python-based tools:
 
 :func:`.reshape_prim_cell` reshapes the primitive cell to new lattice vectors. :func:`.extend_prim_cell`
 replicates the primitive cell along :math:`a`, :math:`b`, and :math:`c`` directions. :func:`apply_pbc`
-is a method of the :class:`PrimitiveCell` class, and makes a periodic primitive cell non-periodic by
+is a method of the :class:`.PrimitiveCell` class, and makes a periodic primitive cell non-periodic by
 removing hopping terms to neighbouring cells along given directions. We will show the usage of these
 functions by constructing graphene nano-ribbon with armchair and zigzag edges from the primitive cell.
 
-:func:`remove_orbitals` and :func:`remove_hopping` are also methods of the :class:`PrimitiveCell` class, and
+:func:`remove_orbitals` and :func:`remove_hopping` are also methods of the :class:`.PrimitiveCell` class, and
 remove an orbital or hopping term from the primitive cell, respectively. Dangling orbitals and hopping terms
 may remain in the cell after the removal, and can be trimmed with the :func:`trim` method. We will show the
 usage of these functions by constructing a large graphene cell with vacancies.
@@ -87,7 +87,7 @@ It is clear that:
 * :math:`a_2\prime = -a_1 + 2a_2`
 * :math:`a_3\prime = a_3`
 
-The last relation is explicitly shown in the figure, but required by TBPLaS since all primitive cells are implemented
+The last relation is not explicitly shown in the figure, but required by TBPLaS since all primitive cells are implemented
 as three-dimensional internally. From the relation we can construct the rectangular cell as:
 
 .. code-block:: python
@@ -230,7 +230,7 @@ terms with the :func:`trim` method:
     cell.trim()
     cell.plot(with_conj=False)
 
-Note that :func:`trim` does not return a new primitive cell, but modifies the original cell in-place. The
+Note that :func:`trim` does not return a new primitive cell, but modifies the original cell `in-place`. The
 output is shown in the right panel. The dangling orbital and hopping term are removed after calling the function.
 
 .. rubric:: Remove hopping terms

@@ -17,6 +17,7 @@ The main features of TBPLaS include:
         * Built-in support for Slater-Koster formulation and spin-orbital coupling
         * Shipped with materials database (Graphene, phosphorene, antimonene, TMDC)
         * Interfaces to Wannier90 and LAMMPS
+        * Tools for fitting on-site energies and hopping integrals
     * Fields and strains
         * Homogeneous magnetic field via Peierls substitution
         * User-defined electric field

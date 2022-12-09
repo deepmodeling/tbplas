@@ -3,7 +3,7 @@
 Band structure and DOS
 ======================
 
-In this tutorial we show how to calculate the band structure and density of states (DOS) of a primitive cell
+In this tutorial, we show how to calculate the band structure and density of states (DOS) of a primitive cell
 using monolayer graphene as the example. The script can be found at ``examples/prim_cell/band_dos/graphene.py``.
 First of all, we need to import all necessary packages:
 
@@ -13,8 +13,8 @@ First of all, we need to import all necessary packages:
     import matplotlib.pyplot as plt
     import tbplas as tb
 
-Of course, we can reuse the model built in previous tutorial. But this time we will import it from the materials
-repository for convenientce:
+Of course, we can reuse the model built in :ref:`prim_cell`. But this time we will import it from the materials
+repository for convenience:
 
 .. code-block:: python
 
