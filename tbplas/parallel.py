@@ -14,6 +14,10 @@ Classes
 import os
 
 import numpy as np
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 from .utils import split_list, split_range, get_datetime
 
@@ -24,8 +28,6 @@ class MPIEnv:
 
     Attributes
     ----------
-    mpi: module
-        MPI module of mpi4py package
     comm: instance of 'mpi4py.MPI.Intracomm' class
         default global mpi communicator
     rank: integer
@@ -44,16 +46,18 @@ class MPIEnv:
             whether to enable parallelization using MPI
         :param echo_details: boolean
             whether to report parallelization details
+        :raises ImportError: if mpi is enabled but MPI4PY is not properly
+            installed
         """
         # Initialize MPI variables
         if enable_mpi:
-            from mpi4py import MPI
-            self.mpi = MPI
-            self.comm = MPI.COMM_WORLD
-            self.rank = self.comm.Get_rank()
-            self.size = self.comm.Get_size()
+            if MPI is not None:
+                self.comm = MPI.COMM_WORLD
+                self.rank = self.comm.Get_rank()
+                self.size = self.comm.Get_size()
+            else:
+                raise ImportError("MPI4PY cannot be imported")
         else:
-            self.mpi = None
             self.comm = None
             self.rank = 0
             self.size = 1
@@ -141,7 +145,7 @@ class MPIEnv:
                                 order=self.__get_array_order(data_local))
             else:
                 data = None
-            self.comm.Reduce(data_local, data, op=self.mpi.SUM, root=0)
+            self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
         else:
             data = data_local
         return data
@@ -158,7 +162,7 @@ class MPIEnv:
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
                             order=self.__get_array_order(data_local))
-            self.comm.Allreduce(data_local, data, op=self.mpi.SUM)
+            self.comm.Allreduce(data_local, data, op=MPI.SUM)
         else:
             data = data_local
         return data
@@ -178,7 +182,7 @@ class MPIEnv:
                                 order=self.__get_array_order(data_local))
             else:
                 data = None
-            self.comm.Reduce(data_local, data, op=self.mpi.SUM, root=0)
+            self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
             if self.is_master:
                 data /= self.size
         else:
@@ -197,7 +201,7 @@ class MPIEnv:
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
                             order=self.__get_array_order(data_local))
-            self.comm.Allreduce(data_local, data, op=self.mpi.SUM)
+            self.comm.Allreduce(data_local, data, op=MPI.SUM)
             data /= self.size
         else:
             data = data_local
