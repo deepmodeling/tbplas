@@ -310,6 +310,57 @@ cdef long _id_pc2sc_vac(int [::1] dim, int num_orb_pc, int [::1] id_pc,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+cdef long _id_pc2sc_vac2(int [::1] dim, int num_orb_pc, int [::1] id_pc, 
+                         long [::1] vac_id_sc):
+    """Another version of pc2sc_vac based on bi-section method."""
+    cdef long id_sc, offset
+    cdef int num_vac
+    cdef int i0, i1, im
+    cdef long x0, x1, xm
+
+    # Get id_sc without considering vacancies.
+    id_sc = _id_pc2sc(dim, num_orb_pc, id_pc)
+
+    # Initialize variables
+    num_vac = vac_id_sc.shape[0]
+    i0, i1 = 0, num_vac - 1
+    x0, x1 = vac_id_sc[i0], vac_id_sc[i1]
+
+    # Check for end points
+    if id_sc < x0:
+        offset = 0
+    elif id_sc == x0:
+        offset = -1
+    elif id_sc == x1:
+        offset = -1
+    elif id_sc > x1:
+        offset = num_vac
+    else:
+        # Bi-section algorithm for remaining parts
+        offset = i0 + 1
+        while i1 - i0 > 1:
+            im = i0 + (i1 - i0) // 2
+            xm = vac_id_sc[im]
+            if xm < id_sc:
+                i0 = im
+            elif xm > id_sc:
+                i1 = im
+            else:
+                offset = -1
+                break
+        if offset != -1:
+            offset = i0 + 1
+
+    # Apply the offset
+    if offset == -1:
+        id_sc = -1
+    else:
+        id_sc -= offset
+    return id_sc
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def id_pc2sc(int [::1] dim, int num_orb_pc, int [::1] id_pc,
              long [::1] vac_id_sc):
     """
