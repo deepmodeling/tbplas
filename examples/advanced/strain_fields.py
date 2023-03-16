@@ -180,13 +180,13 @@ def main():
     with_efield = False
     with_mfield = False
     mfield_gauge = 0
-    mfiend_intensity = 50
+    mfield_intensity = 50
 
     # Initial wave function
     init_wfc = "gaussian"
     wfc_center = np.array([x_max * 0.5, y_max * 0.5])
     wfc_extent = (1.0, 0.0)
-    wfc_kpt = np.array([g_x, 0, 0])
+    wfc_kpt = np.array([g_x, g_y, 0])
 
     # Output
     plot_sample = False
@@ -208,7 +208,7 @@ def main():
     if with_efield:
         add_efield(sample, center=deform_center)
     if with_mfield:
-        sample.set_magnetic_field(mfiend_intensity, gauge=mfield_gauge)
+        sample.set_magnetic_field(mfield_intensity, gauge=mfield_gauge)
 
     # Initialize wave function
     if init_wfc == "pw":
@@ -226,6 +226,7 @@ def main():
     config = tb.Config()
     config.generic['nr_time_steps'] = 128
     time_log = np.array([0, 16, 32, 64, 128])
+    # time_log = np.array([_ for _ in range(128)])
     sample.rescale_ham()
     solver = tb.Solver(sample, config)
     psi_t = solver.calc_psi_t(psi0, time_log)

@@ -68,7 +68,7 @@ class Solver(MPIEnv):
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
     output['hall_mu'] : string
-        mu_{mn} required output file.
+        mu_{mn} output file.
         Default value: f"sim_data/{timestamp}.hall_mu".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
@@ -560,7 +560,7 @@ class Solver(MPIEnv):
         self.__save_data(ldos, self.output["ldos_haydock"])
         return energies, ldos
 
-    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray,
+    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray, dt_scale=1.0,
                    save_data=False):
         """
         Calculate propagation of wave function from given initial state.
@@ -575,6 +575,8 @@ class Solver(MPIEnv):
             steps on which time the time-dependent wave function will be logged
             For example, t=0 stands for the initial wave function, while t=1
             indicates the wave function AFTER the 1st propagation.
+        :param dt_scale: float
+            scale factor for the time step with respect to the default value
         :param save_data: boolean
             whether to save time-dependent wave function
         :return: psi_t: (num_time, num_orb_sample) complex128 array
@@ -596,7 +598,7 @@ class Solver(MPIEnv):
                 raise ValueError(f"time {it} out of range")
 
         # Get quantities for propagation
-        time_step = self.__get_time_step()
+        time_step = self.__get_time_step() * dt_scale
         bessel_series = self.__get_bessel_series(time_step)
         ham_csr = self.sample.build_ham_csr()
         self.__echo_time_step_fs(time_step)
