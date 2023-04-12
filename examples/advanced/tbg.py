@@ -8,6 +8,7 @@ References:
 """
 
 import math
+from typing import Tuple
 
 import numpy as np
 from numpy.linalg import norm
@@ -115,13 +116,15 @@ def extend_hop(prim_cell: tb.PrimitiveCell, max_distance: float = 0.75) -> None:
         prim_cell.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
 
-def main():
-    # In this tutorial we show how to build twisted bilayer graphene. Firstly, we need
-    # to define the functions for evaluating twisting angle and coordinates of lattice
-    # vectors. See the references for more details.
+def make_layers(i: int = 1, shift: float = 0.3349) -> Tuple[tb.PrimitiveCell, tb.PrimitiveCell]:
+    """
+    Prepare the layers for assembling the hetero-structure.
 
+    :param i: integer controlling the twisting angle
+    :param shift: interlayer distance in nm
+    :return: fixed and twisted layers of the hetero-structure
+    """
     # Evaluate twisting angle.
-    i = 5
     angle = calc_twist_angle(i)
 
     # To build a twist bilayer graphene we build the twisted primitive cells for
@@ -133,7 +136,7 @@ def main():
     # the twisting angle and shifted towards +z by 0.3349 nanometers, which is
     # done by calling the function 'spiral_prim_cell'.
     prim_cell_twisted = tb.make_graphene_diamond()
-    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=0.3349)
+    tb.spiral_prim_cell(prim_cell_twisted, angle=angle, shift=shift)
 
     # Evaluate coordinates of lattice vectors of hetero-structure.
     # The reference papers give the fractional coordinates in basis of 'fixed'
@@ -146,6 +149,19 @@ def main():
     # hetero-structure. This is done by calling 'make_hetero_layer'.
     layer_fixed = tb.make_hetero_layer(prim_cell_fixed, hetero_lattice)
     layer_twisted = tb.make_hetero_layer(prim_cell_twisted, hetero_lattice)
+
+    # Align the layers for better appearance though it is not essential.
+    angle = -math.atan(hetero_lattice[0, 1] / hetero_lattice[0, 0])
+    tb.spiral_prim_cell(layer_fixed, angle=angle)
+    tb.spiral_prim_cell(layer_twisted, angle=angle)
+    return layer_fixed, layer_twisted
+
+
+def make_tbg_pc():
+    """Set up tbg at PrimitiveCell level."""
+
+    # Prepare the layers
+    layer_fixed, layer_twisted = make_layers(i=5)
 
     # From now, we have two approaches to build the hetero-structure.
     # The first one is to merge the layers and then extend the hopping terms of
@@ -179,13 +195,38 @@ def main():
         merged_cell = tb.merge_prim_cell(layer_fixed, layer_twisted, inter_hop)
 
     # Visualize Moire's pattern
-    angle = -math.atan(hetero_lattice[0, 1] / hetero_lattice[0, 0])
-    tb.spiral_prim_cell(merged_cell, angle=angle)
     sample = tb.Sample(tb.SuperCell(merged_cell, dim=(4, 4, 1),
                                     pbc=(True, True, False)))
     sample.plot(with_orbitals=False, hop_as_arrows=False,
                 hop_eng_cutoff=0.3)
 
 
+def make_tbg_sample():
+    """Set up tbg at Sample level."""
+
+    # Prepare the layers
+    layer_fixed, layer_twisted = make_layers(i=5)
+
+    # Make supercells
+    sc_fixed = tb.SuperCell(layer_fixed, dim=(4, 4, 1),
+                            pbc=(True, True, False))
+    sc_twisted = tb.SuperCell(layer_twisted, dim=(4, 4, 1),
+                              pbc=(True, True, False))
+
+    # Build interlayer hopping terms
+    inter_hop = tb.SCInterHopping(sc_fixed, sc_twisted)
+    neighbors = tb.find_neighbors(sc_fixed, sc_twisted, a_max=1, b_max=1,
+                                  max_distance=0.75)
+    for term in neighbors:
+        i, j = term.pair
+        inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
+
+    # Create the sample
+    sample = tb.Sample(sc_fixed, sc_twisted, inter_hop)
+    sample.plot(with_orbitals=False, hop_as_arrows=False,
+                hop_eng_cutoff=0.3, sc_colors=['r', 'b'], hop_colors=['g'])
+
+
 if __name__ == "__main__":
-    main()
+    make_tbg_pc()
+    make_tbg_sample()
