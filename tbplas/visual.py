@@ -11,7 +11,7 @@ Classes
         class for visualizing data
 """
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -199,43 +199,32 @@ class Visualizer(MPIEnv):
             plt.tight_layout()
             self.__output(fig_name, fig_dpi)
 
-    def plot_wfc(self, sample: Sample, wfc: np.ndarray, scatter=True,
-                 site_size=5, num_grid=(200, 200), cmap="viridis",
-                 with_colorbar=False, fig_name=None, fig_dpi=300):
+    def plot_scalar(self, x: np.ndarray, y: np.ndarray, z: np.ndarray,
+                    scatter: bool = False, site_size: int = 5,
+                    num_grid: Tuple[int, int] = (200, 200),
+                    cmap: str = "viridis", with_colorbar: bool = False,
+                    fig_name: str = None, fig_dpi: int = 300):
         """
-        Plot wave function in real space.
+        Plot 2d scalar field z = f(x, y).
 
-        :param sample: instance of 'Sample' class
-            sample under study
-        :param wfc: (num_orb_sample,) float64 array
-            projection of wave function on all the sites
-        :param scatter: boolean
-            whether to plot the wave function as scatter
-        :param site_size: float
-            site size
-        :param num_grid: (num_grid_x, num_grid_y)
-            number of grid-points for interpolation along x and y directions
-            when plotting the wave function
-        :param cmap: string
-            color map for plotting the wave function
-        :param with_colorbar: boolean
-            whether to add colorbar to figure
-        :param fig_name: string
-            image file name
-        :param fig_dpi: float
-            dpi of output figure
+        :param x: x-component of Cartesian coordinates of data points
+        :param y: y-component of Cartesian coordinates of data points
+        :param z: z-value of data points
+        :param scatter:  whether to plot the wave function as scatter
+        :param site_size: site size for scatter plot
+        :param num_grid: number of grid-points for interpolation along x and y
+            directions when plotting the wave function
+        :param cmap: color map for plotting the wave function
+        :param with_colorbar: whether to add colorbar to figure
+        :param fig_name: image file name
+        :param fig_dpi: dpi of output figure
         :return: None
         """
         if self.is_master:
-            # Get site locations
-            sample.init_orb_pos()
-            x = np.array(sample.orb_pos[:, 0])
-            y = np.array(sample.orb_pos[:, 1])
-
             # Plot data
             fig, ax = plt.subplots()
             if scatter:
-                img = ax.scatter(x, y, c=wfc, s=site_size, cmap=cmap)
+                img = ax.scatter(x, y, c=z, s=site_size, cmap=cmap)
             else:
                 x_min, x_max = np.min(x), np.max(x)
                 y_min, y_max = np.min(y), np.max(y)
@@ -243,8 +232,8 @@ class Visualizer(MPIEnv):
                 y_fi = np.linspace(y_min, y_max, num_grid[1])
                 x_grid, y_grid = np.meshgrid(x_fi, y_fi)
                 xy_fi = np.c_[x_grid.ravel(), y_grid.ravel()]
-                z_fi = griddata((x, y), wfc, xy_fi,
-                                method="cubic").reshape(num_grid)
+                z_fi = griddata((x, y), z, xy_fi, method="cubic")
+                z_fi = z_fi.reshape(num_grid)
                 img = ax.imshow(z_fi, cmap=cmap, interpolation="none",
                                 origin="lower",
                                 extent=(x_min, x_max, y_min, y_max))
@@ -258,3 +247,46 @@ class Visualizer(MPIEnv):
 
             # Output figure
             self.__output(fig_name, fig_dpi)
+
+    def plot_vector(self, x: np.ndarray, y: np.ndarray,
+                    u: np.ndarray, v: np.ndarray,
+                    fig_name: str = None, fig_dpi: int = 300, **kwargs):
+        """
+        Plot 2d vector field [u(x, y), v(x, y)].
+
+        :param x: x coordinates of arrow locations
+        :param y: y coordinates of arrow locations
+        :param u: x component of arrow directions
+        :param v: y component of arrow directions
+        :param fig_name: image file name
+        :param fig_dpi: dpi of output figure
+        :param kwargs: keyword arguments for quiver function
+        :return: None
+        """
+        if self.is_master:
+            fig, ax = plt.subplots()
+            c = np.linalg.norm(u.real + 1j * v.real)
+            ax.quiver(x, y, u, v, c, **kwargs)
+            plt.axis('equal')
+            plt.axis('off')
+            plt.tight_layout()
+            plt.autoscale()
+            self.__output(fig_name, fig_dpi)
+
+    def plot_wfc(self, sample: Sample, wfc: np.ndarray, **kwargs):
+        """
+        Plot wave function in real space.
+
+        :param sample: sample under study
+        :param wfc: (num_orb_sample,) float64 array, projection of
+            wave function on all the sites
+        :param kwargs: keyword arguments for plot_z
+        :return: None
+        """
+        # Get site locations
+        sample.init_orb_pos()
+        x = np.array(sample.orb_pos[:, 0])
+        y = np.array(sample.orb_pos[:, 1])
+
+        # Plot wfc
+        self.plot_scalar(x, y, wfc, **kwargs)
