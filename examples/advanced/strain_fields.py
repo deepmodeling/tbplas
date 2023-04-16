@@ -5,7 +5,7 @@ electric/magnetic field.
 """
 
 import math
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 from numpy.linalg import norm
@@ -13,23 +13,26 @@ from numpy.linalg import norm
 import tbplas as tb
 
 
-def make_deform(center: np.ndarray, sigma: float = 0.5,
-                extent: tuple = (1.0, 1.0),
-                scale: tuple = (0.5, 0.5)) -> Callable:
+def make_deform(center: np.ndarray,
+                sigma: Tuple[float, float] = (0.5, 0.5),
+                extent: Tuple[float, float] = (1.0, 1.0),
+                scale: Tuple[float, float] = (0.5, 0.5)) -> Callable:
     """
-    Generate deformation function as orb_pos_modifier.
+    Generate Gaussian-shaped deformation function as orb_pos_modifier.
 
-    :param center: Cartesian coordinate of deformation center in nm
-    :param sigma: broadening parameter
-    :param extent: extent of deformation along xOy and z directions
-    :param scale: scaling factor for deformation along xOy and z directions
+    :param center: Cartesian coordinate of the Gaussian center in nm
+    :param sigma: width of Gaussian along x and y directions in nm
+    :param extent: factors controlling Gaussian extent along x and y directions
+    :param scale: scaling factors for deformation along xOy and z directions
     :return: deformation function
     """
     def _deform(orb_pos):
         x, y, z = orb_pos[:, 0], orb_pos[:, 1], orb_pos[:, 2]
-        dx = (x - center[0]) * extent[0]
-        dy = (y - center[1]) * extent[1]
-        amp = np.exp(-(dx**2 + dy**2) / (2 * sigma**2))
+        dx = (x - center.item(0)) * extent[0]
+        dy = (y - center.item(1)) * extent[1]
+        amp = np.exp(- dx ** 2 / (2 * sigma[0] ** 2)
+                     - dy ** 2 / (2 * sigma[1] ** 2))
+        amp /= (2 * math.pi * np.prod(sigma))
         x += dx * amp * scale[0]
         y += dy * amp * scale[0]
         z += amp * scale[1]
@@ -75,46 +78,56 @@ def update_hop(sample: tb.Sample) -> None:
         sample.hop_v[i] = calc_hop(rij)
 
 
-def add_efield(sample: tb.Sample, center: np.ndarray, sigma: float = 0.5,
-               extent: tuple = (1.0, 1.0), v_pot: float = 1.0) -> None:
+def gaussian(sample: tb.Sample,
+             center: np.ndarray,
+             sigma: Tuple[float, float] = (0.5, 0.5),
+             extent: Tuple[float, float] = (1.0, 1.0)) -> np.ndarray:
     """
-    Add electric field to sample.
+    Generate normalized Gaussian distribution based on the orbital positions
+    of the sample.
 
-    :param sample: sample to add the field
-    :param center: Cartesian coordinate of the center in nm
-    :param sigma: broadening parameter
-    :param extent: extent of electric field along xOy and z directions
-    :param v_pot: electric field intensity in eV
-    :return: None.
+    :param sample: sample for which the distribution will be generated
+    :param center: Cartesian coordinate of the Gaussian center in nm
+    :param sigma: width of Gaussian along x and y directions in nm
+    :param extent: factors controlling Gaussian extent along x and y directions
+    :return: the Gaussian distribution
     """
     sample.init_orb_pos()
-    sample.init_orb_eng()
     orb_pos = sample.orb_pos
-    orb_eng = sample.orb_eng
+    sigma = np.array(sigma)
+    y = np.zeros(orb_pos.shape[0], dtype=np.complex128)
     for i, pos in enumerate(orb_pos):
-        dx = (pos.item(0) - center[0]) * extent[0]
-        dy = (pos.item(1) - center[1]) * extent[1]
-        orb_eng[i] += v_pot * math.exp(-(dx**2 + dy**2) / (2 * sigma**2))
+        dx = (pos.item(0) - center.item(0)) * extent[0]
+        dy = (pos.item(1) - center.item(1)) * extent[1]
+        y[i] = math.exp(- dx ** 2 / (2 * sigma[0] ** 2)
+                        - dy ** 2 / (2 * sigma[1] ** 2))
+    y /= (2 * math.pi * np.prod(sigma))
+    return y
 
 
-def init_wfc_gaussian(sample: tb.Sample, center: np.ndarray, sigma: float = 0.5,
-                      extent: tuple = (1.0, 1.0)) -> np.ndarray:
+def add_efield(sample: tb.Sample, v_pot: float = 1.0, **kwargs) -> None:
+    """
+    Add Gaussian-shaped electric field to the sample.
+
+    :param sample: sample to add the field
+    :param v_pot: electric field intensity in eV
+    :param kwargs: arguments for 'gaussian'
+    :return: None.
+    """
+    sample.init_orb_eng()
+    orb_eng = sample.orb_eng
+    orb_eng += v_pot * gaussian(sample, **kwargs).real
+
+
+def init_wfc_gaussian(sample: tb.Sample, **kwargs) -> np.ndarray:
     """
     Generate Gaussian wave packet as initial wave function.
 
     :param sample: sample for which the wave function shall be generated
-    :param center: Cartesian coordinate of the wave packet center in nm
-    :param sigma: broadening parameter
-    :param extent: extent of wave packet along xOy and z directions
+    :param kwargs: arguments for 'gaussian'
     :return: initial wave function
     """
-    sample.init_orb_pos()
-    orb_pos = sample.orb_pos
-    wfc = np.zeros(orb_pos.shape[0], dtype=np.complex128)
-    for i, pos in enumerate(orb_pos):
-        dx = (pos.item(0) - center[0]) * extent[0]
-        dy = (pos.item(1) - center[1]) * extent[1]
-        wfc[i] = math.exp(-(dx**2 + dy**2) / (2 * sigma**2))
+    wfc = gaussian(sample, **kwargs)
     wfc /= np.linalg.norm(wfc)
     return wfc
 
