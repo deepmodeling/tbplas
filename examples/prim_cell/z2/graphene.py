@@ -82,21 +82,22 @@ def make_hop_dict(t: float, lamb_so: float, lamb_r: float) -> tb.HopDict:
     return hop_dict
 
 
-def main():
+def make_cell(is_qsh: bool = True) -> tb.PrimitiveCell:
+    """
+    Set up the primitive cell of graphene with Rashba and Kane-Mele SOC.
+
+    :param is_qsh: whether is the model is in quantum spin Hall phase
+    :return: the primitive cell of graphene
+    """
     # Parameters
     lat = 1.
     t = -1.
     lamb_so = 0.06 * t
     lamb_r = 0.05 * t
-    is_qsh = True
     if is_qsh:
         lamb_nu = 0.1 * t  # QSH phase
     else:
         lamb_nu = 0.4 * t  # normal insulating phase
-
-    # Whether to reorder the phases for improving continuity and smoothness
-    # CAUTION: this operation may fail!
-    reorder_phases = False
 
     # Lattice
     vectors = np.array([[0.5 * lat * sqrt(3), -0.5 * lat, 0.],
@@ -113,6 +114,16 @@ def main():
     # Add hopping terms
     hop_dict = make_hop_dict(t, lamb_so, lamb_r)
     prim_cell.add_hopping_dict(hop_dict)
+    return prim_cell
+
+
+def main():
+    # Whether to reorder the phases for improving continuity and smoothness
+    # CAUTION: this operation may fail!
+    reorder_phases = False
+
+    # Set up primitive cell
+    prim_cell = make_cell(is_qsh=True)
 
     # Plot model
     prim_cell.plot(hop_as_arrows=False)
