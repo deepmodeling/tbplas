@@ -19,12 +19,12 @@ except ImportError:
     print('Error: numpy not found. Installation failed.')
     exit()
 
-# Generate f2py interface
+# Generate the interface
 f90_dir = 'tbplas/fortran'
 os.system(f'f2py -h {f90_dir}/f2py.pyf -m f2py --overwrite-signature '
           f'{f90_dir}/tbpm.f90 {f90_dir}/analysis.f90 {f90_dir}/lindhard.f90')
 
-# NOTE: DO NOT change the ordering of f90 files. Otherwise the
+# NOTE: DO NOT change the ordering of f90 files. Otherwise, the
 # dependencies will be violated the compilation will fail.
 f90_files = ['const.f90', 'math.F90', 'csr.F90', 'fft.F90', 'random.f90',
              'propagation.f90', 'kpm.f90', 'funcs.f90',
