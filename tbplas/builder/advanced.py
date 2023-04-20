@@ -1,42 +1,7 @@
-"""
-Functions and classes for constructing samples.
-
-Functions
----------
-    extend_prim_cell: user function
-        extend primitive cell along a, b, and c directions
-        reserved for compatibility with old version of TBPlaS
-    reshape_prim_cell: user function
-        reshape primitive cell to given lattice vectors and origin
-    spiral_prim_cell: user function
-        rotate and shift primitive cell with respect to z-axis
-    make_hetero_layer: user function
-        make one layer in the hetero-structure by reshaping primitive cell to
-        given lattice vectors
-    merge_prim_cell: user function
-        merge primitive cells and inter-hopping dictionaries to build a large
-        primitive cell
-    find_neighbors: user function
-        searching for neighbours between the (0, 0, 0) cell of pc_bra and nearby
-        cells of pc_ket up to given cutoff distance.
-
-Classes
--------
-    PCInterHopping: user class
-        container for holding hopping terms between different primitive cells in
-        hetero-structure
-    SK: user class
-        for evaluating hopping integrals using Slater-Koster formula
-    AtomicOrbital: developer clas
-        for evaluating matrix elements of l_dot_s
-    SOC: user class
-        for evaluating spin-orbital coupling terms
-    ParamFit: user class
-        for fitting on-site energies and hopping terms to reference band data
-"""
+"""Functions and classes for advanced modeling."""
 
 import math
-from typing import Union, List, Tuple, Dict
+from typing import Union, List, Tuple, Dict, Literal
 from collections import namedtuple
 from copy import deepcopy
 from abc import ABC, abstractmethod
@@ -53,16 +18,19 @@ from .primitive import PrimitiveCell
 from .super import SuperCell
 
 
-def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
+__all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
+           "make_hetero_layer", "PCInterHopping", "merge_prim_cell",
+           "find_neighbors", "SK", "SOC", "ParamFit"]
+
+
+def extend_prim_cell(prim_cell: PrimitiveCell,
+                     dim: Tuple[int, ...] = (1, 1, 1)) -> PrimitiveCell:
     """
     Extend primitive cell along a, b and c directions.
 
-    :param prim_cell: instance of 'PrimitiveCell'
-        primitive cell from which the extended cell is constructed
-    :param dim: (na, nb, nc)
-        dimension of the extended cell along 3 directions
-    :return: extend_cell: instance of 'PrimitiveCell'
-        extended cell created from primitive cell
+    :param prim_cell: primitive cell from which the extended cell is constructed
+    :param dim: dimension of the extended cell along 3 directions
+    :return: extended cell created from primitive cell
     :raises CoordLenError: if len(dim) != 2 or 3
     :raises ValueError: if dimension along any direction is smaller than 1
     """
@@ -88,14 +56,14 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
     for i_a in range(dim[0]):
         for i_b in range(dim[1]):
             for i_c in range(dim[2]):
-                for i_o, orbital in enumerate(prim_cell.orbital_list):
+                for i_o, orbital in enumerate(prim_cell.orbitals):
                     id_pc = (i_a, i_b, i_c, i_o)
                     orb_id_pc.append(id_pc)
                     orb_id_sc[id_pc] = id_sc
                     id_sc += 1
-                    pos_ext = [(orbital.position[0] + i_a) / dim[0],
+                    pos_ext = ((orbital.position[0] + i_a) / dim[0],
                                (orbital.position[1] + i_b) / dim[1],
-                               (orbital.position[2] + i_c) / dim[2]]
+                               (orbital.position[2] + i_c) / dim[2])
                     extend_cell.add_orbital(pos_ext, orbital.energy,
                                             orbital.label)
 
@@ -104,10 +72,9 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
         return ji % ni, ji // ni
 
     # Add hopping terms
-    pc_hop_dict = prim_cell.hopping_dict.dict
     for id_sc_i in range(extend_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
-        for rn, hop_rn in pc_hop_dict.items():
+        for rn, hop_rn in prim_cell.hoppings.items():
             for pair, energy in hop_rn.items():
                 if id_pc_i[3] == pair[0]:
                     ja, na = _wrap_pbc(id_pc_i[0] + rn[0], dim[0])
@@ -118,36 +85,31 @@ def extend_prim_cell(prim_cell: PrimitiveCell, dim=(1, 1, 1)):
                     rn = (na, nb, nc)
                     extend_cell.add_hopping(rn, id_sc_i, id_sc_j, energy)
 
-    # NOTE: if you modify orbital_list and hopping_dict of extend_cell manually,
-    # then sync_array should be called with force_sync=True. Or alternatively,
-    # update the timestamps of orb_list and hop_dict.
     extend_cell.sync_array()
     return extend_cell
 
 
-def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
+def reshape_prim_cell(prim_cell: PrimitiveCell,
+                      lat_frac: np.ndarray,
                       origin: np.ndarray = np.zeros(3),
-                      delta=0.01, pos_tol=1e-5):
+                      delta: float = 0.01,
+                      pos_tol: float = 1e-5) -> PrimitiveCell:
     """
     Reshape primitive cell to given lattice vectors and origin.
 
-    :param prim_cell: instance of 'PrimitiveCell' class
-        primitive cell from which the reshaped cell is constructed
+    :param prim_cell: primitive cell from which the reshaped cell is constructed
     :param lat_frac: (3, 3) float64 array
         FRACTIONAL coordinates of lattice vectors of reshaped cell in basis
         vectors of primitive cell
     :param origin: (3,) float64 array
         FRACTIONAL coordinates of origin of reshaped cell in basis vectors
         of reshaped cell
-    :param delta: float64
-        small parameter to add to origin such that orbitals fall on cell
-        borders will not be clipped
+    :param delta: small parameter to add to origin such that orbitals fall on
+        cell borders will not be clipped
         This parameter will be subtracted from orbital positions of reshaped
         cell. So the origin is still correct.
-    :param pos_tol: float64
-        tolerance on positions for identifying equivalent orbitals
-    :return: res_cell: instance of 'PrimitiveCell' class
-        reshaped cell
+    :param pos_tol: tolerance on positions for identifying equivalent orbitals
+    :return: reshaped cell
     :raises LatVecError: if shape of lat_frac.shape is not (3, 3)
     :raises ValueError: if length of origin is not 3
     """
@@ -204,8 +166,8 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
                         orb_id_sc[id_pc] = id_sc
                         id_sc += 1
                         res_cell.add_orbital(res_pos,
-                                             prim_cell.orb_eng.item(i_o),
-                                             prim_cell.orbital_list[i_o].label)
+                                             prim_cell.orbitals[i_o].energy,
+                                             prim_cell.orbitals[i_o].label)
 
     # Add hopping terms
     res_cell.sync_array(force_sync=True)
@@ -236,28 +198,26 @@ def reshape_prim_cell(prim_cell: PrimitiveCell, lat_frac: np.ndarray,
     for i_o, pos in enumerate(res_cell.orb_pos):
         res_cell.set_orbital(i_o, position=tuple(pos))
 
-    # NOTE: if you modify orbital_list and hopping_dict of res_cell manually,
-    # then sync_array should be called with force_sync=True. Or alternatively,
-    # update the timestamps of orb_list and hop_dict.
     res_cell.sync_array()
     return res_cell
 
 
-def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0,
-                     center=np.zeros(3), shift=0.0):
+def spiral_prim_cell(prim_cell: PrimitiveCell,
+                     angle: float = 0.0,
+                     center: np.ndarray = np.zeros(3),
+                     shift: float = 0.0) -> None:
     """
     Rotate and shift primitive cell with respect to z-axis.
 
-    :param prim_cell: instance of 'PrimitiveCell' class
-        primitive cell to twist
-    :param angle: float
-        twisting angle in RADIANs, NOT degrees
+    NOTE: this function returns nothing. But the incoming primitive cell
+    will be modified in-place.
+
+    :param prim_cell: primitive cell to twist
+    :param angle: twisting angle in RADIANs, NOT degrees
     :param center: (3,) float64 array
         Cartesian coordinates of the rotation center in NANOMETER
-    :param shift: float
-        distance of shift in NANOMETER
+    :param shift: distance of shift in NANOMETER
     :return: None
-        Incoming primitive cell is modified.
     """
     prim_cell.sync_array()
 
@@ -283,20 +243,18 @@ def spiral_prim_cell(prim_cell: PrimitiveCell, angle=0.0,
     prim_cell.sync_array()
 
 
-def make_hetero_layer(prim_cell: PrimitiveCell, hetero_lattice: np.ndarray,
-                      **kwargs):
+def make_hetero_layer(prim_cell: PrimitiveCell,
+                      hetero_lattice: np.ndarray,
+                      **kwargs) -> PrimitiveCell:
     """
     Make one layer in the hetero-structure by reshaping primitive cell to
     given lattice vectors.
 
-    :param prim_cell: instance of 'PrimitiveCell' class
-        primitive cell of the layer
+    :param prim_cell: primitive cell of the layer
     :param hetero_lattice: (3, 3) float64 array
         Cartesian coordinates of hetero-structure lattice vectors in NANOMETER
-    :param kwargs: dictionary
-        keyword arguments for 'reshape_prim_cell'
-    :return: hetero_layer: instance of 'PrimitiveCell' class
-        layer in the hetero-structure
+    :param kwargs: arguments for 'reshape_prim_cell'
+    :return: layer in the hetero-structure
     """
     hetero_lattice_frac = cart2frac(prim_cell.lat_vec, hetero_lattice)
     hetero_layer = reshape_prim_cell(prim_cell, hetero_lattice_frac, **kwargs)
@@ -310,9 +268,9 @@ class PCInterHopping(InterHopping):
 
     Attributes
     ----------
-    pc_bra: instance of 'PrimitiveCell' class
+    _pc_bra: 'PrimitiveCell' instance
         the 'bra' primitive cell from which the hopping terms exist
-    pc_ket: instance of 'PrimitiveCell' class
+    _pc_ket: 'PrimitiveCell' instance
         the 'ket' primitive cell from which the hopping terms exist
 
     NOTES
@@ -321,27 +279,34 @@ class PCInterHopping(InterHopping):
     pc_ket. The counterparts can be restored via the conjugate relation:
         <pc_bra, R0, i|H|pc_ket, Rn, j> = <pc_ket, R0, j|H|pc_bra, -Rn, i>*
     """
-    def __init__(self, pc_bra: PrimitiveCell, pc_ket: PrimitiveCell):
+    def __init__(self, pc_bra: PrimitiveCell, pc_ket: PrimitiveCell) -> None:
         """
-        :param pc_bra: instance of 'PrimitiveCell' class
-            the 'bra' primitive cell from which the hopping terms exist
-        :param pc_ket: instance of 'PrimitiveCell' class
-            the 'ket' primitive cell from which the hopping terms exist
+        :param pc_bra: 'bra' primitive cell from which the hopping terms exist
+        :param pc_ket: 'ket' primitive cell from which the hopping terms exist
         """
         super().__init__()
-        self.pc_bra = pc_bra
-        self.pc_ket = pc_ket
+        self._pc_bra = pc_bra
+        self._pc_ket = pc_ket
+
+    @property
+    def pc_bra(self) -> PrimitiveCell:
+        """Interface for the '_pc_bra' attribute."""
+        return self._pc_bra
+
+    @property
+    def pc_ket(self) -> PrimitiveCell:
+        """Interface for the '_pc_ket' attribute."""
+        return self._pc_ket
 
 
-def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
+def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCell:
     """
     Merge primitive cells and inter-hopping dictionaries to build a large
     primitive cell.
 
-    :param args: list of 'PrimitiveCell' or 'PCInterHopping' instances
-        primitive cells and inter-hopping terms within the large primitive cell
-    :return: merged_cell: instance of 'PrimitiveCell'
-        merged primitive cell
+    :param args: primitive cells and inter-hopping terms within the large
+        primitive cell
+    :return: merged primitive cell
     :raises ValueError: if no arg is given, or any arg is not instance of
         PrimitiveCell or PCInterHopping, or any inter_hop_dict involves primitive
         cells not included in args, or lattice vectors of primitive cells do not
@@ -398,15 +363,14 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
 
     # Add orbitals
     for pc in pc_list:
-        for orb in pc.orbital_list:
+        for orb in pc.orbitals:
             merged_cell.add_orbital(position=orb.position, energy=orb.energy,
                                     label=orb.label)
 
     # Add intra-hopping terms
     for i_pc, pc in enumerate(pc_list):
         offset = ind_start[i_pc]
-        hop_dict = pc.hopping_dict.dict
-        for rn, hop_rn in hop_dict.items():
+        for rn, hop_rn in pc.hoppings.items():
             for pair, energy in hop_rn.items():
                 orb_i = pair[0] + offset
                 orb_j = pair[1] + offset
@@ -424,16 +388,15 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]):
                 merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
                                         energy=energy)
 
-    # NOTE: if you modify orbital_list and hopping_dict of merged_cell manually,
-    # then sync_array should be called with force_sync=True. Or alternatively,
-    # update the timestamps of orb_list and hop_dict.
     merged_cell.sync_array()
     return merged_cell
 
 
 def find_neighbors(cell_bra: Union[PrimitiveCell, SuperCell],
                    cell_ket: Union[PrimitiveCell, SuperCell] = None,
-                   a_max: int = 0, b_max: int = 0, c_max: int = 0,
+                   a_max: int = 0,
+                   b_max: int = 0,
+                   c_max: int = 0,
                    max_distance: float = 1.0) -> List[namedtuple]:
     """
     Find neighbours between the (0, 0, 0) cell of model_bra and nearby cells of
@@ -443,6 +406,10 @@ def find_neighbors(cell_bra: Union[PrimitiveCell, SuperCell],
 
     The searching range of nearby cells is:
     [-a_max, a_max] * [-b_max, b_max] * [-c_max, c_max].
+
+    The named tuples have four attributes: rn for cell index, pair for orbital
+    indices, rij for Cartesian coordinates of displacement vector in nm and
+    distance for the norm of rij.
 
     :param cell_bra: the 'bra' primitive cell or supercell
     :param cell_ket: the 'ket' primitive cell or supercell
@@ -526,6 +493,7 @@ class SK:
         Check the sanity of labels of p orbitals.
 
         :param labels: labels to check
+        :return: None
         :raises ValueError: if any label is not in self.p_labels
         """
         for label in labels:
@@ -537,6 +505,7 @@ class SK:
         Check the sanity of labels of d orbitals.
 
         :param labels: labels to check
+        :return: None
         :raises ValueError: if any label is not in self.d_labels
         """
         for label in labels:
@@ -544,7 +513,8 @@ class SK:
                 raise ValueError(f"Illegal label: {label}")
 
     @staticmethod
-    def _perm_vector(vector: np.ndarray, x_new: str) -> np.ndarray:
+    def _perm_vector(vector: np.ndarray,
+                     x_new: Literal["x", "y", "z"]) -> np.ndarray:
         """
         Permute a given vector according to the new x_axis.
 
@@ -563,7 +533,7 @@ class SK:
             raise ValueError(f"Illegal x_new {x_new}")
 
     @staticmethod
-    def _remap_label(label: str, x_new: str) -> str:
+    def _remap_label(label: str, x_new: Literal["x", "y", "z"]) -> str:
         """
         Remap orbital label after permutation.
 
@@ -614,7 +584,8 @@ class SK:
         """
         return v_sss
 
-    def sp(self, r: np.ndarray, label_p: str = "px",
+    def sp(self, r: np.ndarray,
+           label_p: Literal["px", "py", "pz"] = "px",
            v_sps: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <s,0|H|p,r>.
@@ -635,7 +606,8 @@ class SK:
             t = n * v_sps
         return t
 
-    def sd(self, r: np.ndarray, label_d: str = "dxy",
+    def sd(self, r: np.ndarray,
+           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
            v_sds: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <s,0|H|d,r>.
@@ -670,8 +642,11 @@ class SK:
             raise ValueError(f"Undefined label pair s {label_d}")
         return t
 
-    def pp(self, r: np.ndarray, label_i: str = "px", label_j: str = "px",
-           v_pps: complex = 0.0, v_ppp: complex = 0.0) -> complex:
+    def pp(self, r: np.ndarray,
+           label_i: Literal["px", "py", "pz"] = "px",
+           label_j: Literal["px", "py", "pz"] = "px",
+           v_pps: complex = 0.0,
+           v_ppp: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <p_i,0|H|p_j,r>.
 
@@ -706,8 +681,11 @@ class SK:
             t = l * n * (v_pps - v_ppp)
         return t
 
-    def pd(self, r: np.ndarray, label_p: str = "px", label_d: str = "dxy",
-           v_pds: complex = 0.0, v_pdp: complex = 0.0) -> complex:
+    def pd(self, r: np.ndarray,
+           label_p: Literal["px", "py", "pz"] = "px",
+           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           v_pds: complex = 0.0,
+           v_pdp: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <p,0|H|d,r>.
 
@@ -766,8 +744,12 @@ class SK:
                 raise ValueError(f"Undefined label pair {label_p} {label_d}")
         return t
 
-    def dd(self, r: np.ndarray, label_i: str = "dxy", label_j: str = "dxy",
-           v_dds: complex = 0.0, v_ddp: complex = 0.0, v_ddd: complex = 0) -> complex:
+    def dd(self, r: np.ndarray,
+           label_i: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_j: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           v_dds: complex = 0.0,
+           v_ddp: complex = 0.0,
+           v_ddd: complex = 0) -> complex:
         """
         Evaluate the hopping integral <d_i,0|H|d_j,r>.
 
@@ -889,7 +871,8 @@ class SK:
             t = factor * (t1 * v_dds + t2 * v_ddp + t3 * v_ddd)
         return t
 
-    def ps(self, r: np.ndarray, label_p: str = "px",
+    def ps(self, r: np.ndarray,
+           label_p: Literal["px", "py", "pz"] = "px",
            v_sps: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <p,0|H|s,r>.
@@ -902,7 +885,8 @@ class SK:
         """
         return self.sp(r=-r, label_p=label_p, v_sps=v_sps).conjugate()
 
-    def ds(self, r: np.ndarray, label_d: str = "dxy",
+    def ds(self, r: np.ndarray,
+           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
            v_sds: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <d,0|H|s,r>.
@@ -915,8 +899,11 @@ class SK:
         """
         return self.sd(r=-r, label_d=label_d, v_sds=v_sds).conjugate()
 
-    def dp(self, r: np.ndarray, label_p: str = "px", label_d: str = "dxy",
-           v_pds: complex = 0.0, v_pdp: complex = 0.0) -> complex:
+    def dp(self, r: np.ndarray,
+           label_p: Literal["px", "py", "pz"] = "px",
+           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           v_pds: complex = 0.0,
+           v_pdp: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <d,0|H|p,r>.
 
@@ -932,7 +919,9 @@ class SK:
         return self.pd(r=-r, label_p=label_p, label_d=label_d, v_pds=v_pds,
                        v_pdp=v_pdp).conjugate()
 
-    def eval(self, r: np.ndarray, label_i: str = "s", label_j: str = "s",
+    def eval(self, r: np.ndarray,
+             label_i: Literal["s", "px", "py", "pz", "dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "s",
+             label_j: Literal["s", "px", "py", "pz", "dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "s",
              v_sss: complex = 0.0, v_sps: complex = 0.0, v_sds: complex = 0.0,
              v_pps: complex = 0.0, v_ppp: complex = 0.0,
              v_pds: complex = 0.0, v_pdp: complex = 0.0,
@@ -1093,7 +1082,7 @@ class AtomicOrbital:
         """
         Evaluate the inner product <self|ket>.
 
-        :param AtomicOrbital ket: ket vector with which to evaluate the product
+        :param ket: the ket vector
         :return: the inner product
         """
         product = 0.0
@@ -1105,6 +1094,7 @@ class AtomicOrbital:
         """
         Evaluate the matrix element <self|l+|ket>.
 
+        :param ket: the ket vector
         :return: matrix element in h_bar
         """
         ket_copy = deepcopy(ket)
@@ -1115,6 +1105,7 @@ class AtomicOrbital:
         """
         Evaluate the matrix element <self|l-|ket>.
 
+        :param ket: the ket vector
         :return: matrix element in h_bar
         """
         ket_copy = deepcopy(ket)
@@ -1125,6 +1116,7 @@ class AtomicOrbital:
         """
         Evaluate the matrix element <self|lz|ket>.
 
+        :param ket: the ket vector
         :return: matrix element in h_bar
         """
         ket_copy = deepcopy(ket)
@@ -1214,7 +1206,7 @@ class SOC:
                     if abs(product) > 0.0:
                         print("\t", direction, product)
 
-    def print_orbital_table(self, operator: str = "lz") -> None:
+    def print_orbital_table(self, operator: Literal["lz", "l+", "l-"] = "lz") -> None:
         """
         Print the matrix elements of l_dot_s between orbital basis functions.
 
@@ -1239,8 +1231,10 @@ class SOC:
                     print(f"{label_bra:8s} {label_ket:8s} {prod.real:16.9f}"
                           f" {prod.imag:16.9f}")
 
-    def eval(self, label_i: str = "s", spin_i: str = "up",
-             label_j: str = "s", spin_j: str = "down") -> complex:
+    def eval(self, label_i: Literal["s", "p", "d"] = "s",
+             spin_i: Literal["up", "down"] = "up",
+             label_j: Literal["s", "p", "d"] = "s",
+             spin_j: Literal["up", "down"] = "down") -> complex:
         """
         Evaluate the matrix element <i,s_i|l*s|j,s_j>.
 

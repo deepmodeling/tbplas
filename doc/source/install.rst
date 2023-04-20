@@ -43,7 +43,7 @@ may still work, although not recommended.
 Python
 ^^^^^^
 
-TBPLaS requires Python 3.8 or newer. Python 2 is not supported.
+TBPLaS requires Python 3.6 or newer. Python 2 is not supported.
 
 In addition to the Python interpreter, development headers are also required. The actual package name of
 development headers may vary among Linux distributions, e.g., ``python3-devel`` on rpm-based distributions
