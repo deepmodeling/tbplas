@@ -1,28 +1,22 @@
-"""
-Utilities for constructing phosphorene samples.
-
-Functions
----------
-    make_black_phosphorus: user function
-        make black phosphorus primitive cell
-"""
+"""Utilities for constructing phosphorene primitive cells."""
 
 import numpy as np
 
 from ..builder import PrimitiveCell, cart2frac, NM
 
 
-def make_black_phosphorus(c=1.0):
+__all__ = ["make_black_phosphorus"]
+
+
+def make_black_phosphorus(c: float = 1.0):
     """
     Make black phosphorus primitive cell.
 
     Reference:
     https://journals.aps.org/prb/pdf/10.1103/PhysRevB.92.085419
 
-    :param c: float
-        length of c-axis in NANOMETER
-    :return: cell: instance of 'PrimitiveCell' class
-        black phosphorus primitive cell
+    :param c: length of c-axis in NANOMETER
+    :return: black phosphorus primitive cell
     """
     # Geometric constants
     # Lengths are in nm and angles are in degree.

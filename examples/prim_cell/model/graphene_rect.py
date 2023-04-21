@@ -18,18 +18,18 @@ vectors = tb.gen_lattice_vectors(sqrt3 * cc_bond, 3 * cc_bond)
 
 # Create cell and add orbitals
 rect_cell = tb.PrimitiveCell(vectors)
-rect_cell.add_orbital([0, 0])
-rect_cell.add_orbital([0, 2 / 3.])
-rect_cell.add_orbital([1 / 2., 1 / 6.])
-rect_cell.add_orbital([1 / 2., 1 / 2.])
+rect_cell.add_orbital((0, 0))
+rect_cell.add_orbital((0, 2 / 3.))
+rect_cell.add_orbital((1 / 2., 1 / 6.))
+rect_cell.add_orbital((1 / 2., 1 / 2.))
 
 # Add hopping terms
-rect_cell.add_hopping([0, 0], 0, 2, -2.7)
-rect_cell.add_hopping([0, 0], 2, 3, -2.7)
-rect_cell.add_hopping([0, 0], 3, 1, -2.7)
-rect_cell.add_hopping([0, 1], 1, 0, -2.7)
-rect_cell.add_hopping([1, 0], 3, 1, -2.7)
-rect_cell.add_hopping([1, 0], 2, 0, -2.7)
+rect_cell.add_hopping((0, 0), 0, 2, -2.7)
+rect_cell.add_hopping((0, 0), 2, 3, -2.7)
+rect_cell.add_hopping((0, 0), 3, 1, -2.7)
+rect_cell.add_hopping((0, 1), 1, 0, -2.7)
+rect_cell.add_hopping((1, 0), 3, 1, -2.7)
+rect_cell.add_hopping((1, 0), 2, 0, -2.7)
 
 # Again we can view the cell by calling 'plot'.
 rect_cell.plot()

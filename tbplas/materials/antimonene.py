@@ -1,32 +1,27 @@
-"""
-Utilities for constructing antimonene samples.
-
-Functions
----------
-    make_antimonene: user function
-        make antimonene primitive cell
-"""
+"""Utilities for constructing antimonene primitive cells."""
 
 import numpy as np
 
 from ..builder import PrimitiveCell, cart2frac, HopDict, NM
 
 
-def make_antimonene(with_soc=True, soc_lambda=0.34, c=1.0):
+__all__ = ["make_antimonene"]
+
+
+def make_antimonene(with_soc: bool = True,
+                    soc_lambda: float = 0.34,
+                    c: float = 1.0) -> PrimitiveCell:
     """
     Make antimonene primitive cell.
 
     Reference:
     https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.081407
 
-    :param with_soc: boolean
-        whether to include spin-orbital coupling in constructing the model
-    :param soc_lambda: float
-        strength of spin-orbital coupling
-    :param c: float
-        length of lattice vector along c direction in NANOMETER
-    :return: cell: instance of 'PrimitiveCell' class
-        antimonene primitive cell
+    :param with_soc: whether to include spin-orbital coupling in
+        constructing the model
+    :param soc_lambda: strength of spin-orbital coupling
+    :param c: length of lattice vector along c direction in NANOMETER
+    :return: antimonene primitive cell
     """
     # Geometric constants
     a = 0.411975806

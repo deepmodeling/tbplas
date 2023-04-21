@@ -1,23 +1,9 @@
 """
-Functions and classes for converting tight-binding models from other packages.
-
-Functions
---------
-    read_lat_vec: developer function
-        read lattice vectors from seed_name.win
-    read_orb_pos: developer function
-        read orbital positions from seed_name_centres.xyz
-    read_hop: developer function
-        read hopping terms from seed_name_hr.dat
-    read_wsvec: developer function
-        read correction terms from seed_name_wsvec.dat
-    apply_wsvec: developer function
-        correct hopping terms using data in from read_wsvec
-    wan2pc: user function
-        create primitive cell from output of Wannier90
+Functions and classes for converting tight-binding models from Wannier90.
 """
 
 import os
+from typing import List, Tuple
 
 import numpy as np
 
@@ -27,13 +13,15 @@ from .. import core
 from ..primitive import PrimitiveCell
 
 
-def read_lat_vec(seed_name="wannier90"):
+__all__ = ["wan2pc"]
+
+
+def read_lat_vec(seed_name: str = "wannier90") -> np.ndarray:
     """
     Read lattice vectors from seed_name.win.
 
-    :param seed_name: string
-        seed_name of Wannier90 output files
-    :return: lat_vec: (3, 3) float64 array
+    :param seed_name: seed_name of Wannier90 output files
+    :return: (3, 3) float64 array
         lattice vectors in Angstrom
     :raises ValueError: if units are not "Ang" or "Bohr"
     """
@@ -69,13 +57,12 @@ def read_lat_vec(seed_name="wannier90"):
     return lat_vec
 
 
-def read_orb_pos(seed_name="wannier90"):
+def read_orb_pos(seed_name: str = "wannier90") -> np.ndarray:
     """
     Read orbital positions from seed_name_centres.xyz.
 
-    :param seed_name: string
-        seed_name of Wannier90 output files
-    :return: orb_pos: (num_wan, 3) float64 array
+    :param seed_name: seed_name of Wannier90 output files
+    :return: (num_wan, 3) float64 array
         Cartesian coordinates of orbitals in Angstrom
     """
     # Reference: https://en.wikipedia.org/wiki/XYZ_file_format
@@ -90,16 +77,14 @@ def read_orb_pos(seed_name="wannier90"):
     return orb_coord
 
 
-def read_hop(seed_name="wannier90"):
+def read_hop(seed_name: str = "wannier90") -> Tuple[List[Tuple[int, ...]], List[complex]]:
     """
     Read hopping terms from seed_name_hr.dat.
 
-    :param seed_name: string
-        seed_name of Wannier90 output files
-    :return: hop_ind: list of (ra, rb, rc, orb_i, orb_j)
-        hopping indices
-    :return: hop_eng: list of complex numbers
-        hopping energies in eV
+    :param seed_name: seed_name of Wannier90 output files
+    :return: (hop_ind, hop_eng)
+        hop_ind: hopping indices
+        hop_eng: hopping energies in eV
     """
     with open(f"{seed_name}_hr.dat", "r") as hr_file:
         hr_content = hr_file.readlines()
@@ -116,14 +101,12 @@ def read_hop(seed_name="wannier90"):
     return hop_ind, hop_eng
 
 
-def read_wsvec(seed_name="wannier90"):
+def read_wsvec(seed_name: str = "wannier90") -> dict:
     """
     Read correction terms from seed_name_wsvec.dat.
 
-    :param seed_name: string
-        seed_name of Wannier90 output files
-    :return: wsvec: dictionary
-        correction terms to vector R
+    :param seed_name: seed_name of Wannier90 output files
+    :return: correction terms to vector R
         Keys should be (ra, rb, rc, orb_i, orb_j).
         Values should be (delta_ra, delta_rb, delta_rc).
     """
@@ -149,18 +132,16 @@ def read_wsvec(seed_name="wannier90"):
     return wsvec
 
 
-def apply_wsvec(wsvec, hop_ind, hop_eng):
+def apply_wsvec(wsvec: dict,
+                hop_ind: List[Tuple[int, ...]],
+                hop_eng: List[complex]) -> None:
     """
-    Correct hopping terms using data from read_wsvec
+    Correct hopping terms using data from read_wsvec.
 
-    :param wsvec: dictionary
-        correction terms to vector R
-    :param hop_ind: list of (ra, rb, rc, orb_i, orb_j)
-        hopping indices
-    :param hop_eng: list of complex numbers
-        hopping energies in eV
+    :param wsvec: correction terms to vector R
+    :param hop_ind: hopping indices
+    :param hop_eng: hopping energies in eV
     :return: None
-        hop_ind and hop_eng are modified.
     """
     for ind_0 in wsvec.keys():
         # Back up and reset original hopping term
@@ -181,19 +162,18 @@ def apply_wsvec(wsvec, hop_ind, hop_eng):
                 hop_eng.append(eng_bak / num_vec)
 
 
-def wan2pc(seed_name="wannier90", correct_hop=False, hop_eng_cutoff=1.0e-5):
+def wan2pc(seed_name: str = "wannier90",
+           correct_hop: bool = False,
+           hop_eng_cutoff: float = 1.0e-5) -> PrimitiveCell:
     """
     Create primitive cell from output of Wannier90.
 
-    :param seed_name: string
-        seed_name of Wannier90 output files
-    :param correct_hop: boolean
-        whether to correct hopping terms using data in seed_name_wsvec.dat
-    :param hop_eng_cutoff: float
-        energy cutoff for hopping terms in eV
+    :param seed_name: seed_name of Wannier90 output files
+    :param correct_hop: whether to correct hopping terms using data in
+        seed_name_wsvec.dat
+    :param hop_eng_cutoff: energy cutoff for hopping terms in eV
         Hopping terms with energy below this threshold will be dropped.
-    :return: prim_cell: instance of 'PrimitiveCell' class
-        primitive cell created from Wannier90 output files
+    :return: primitive cell created from Wannier90 output files
     :raise ValueError: if unit of lattice vectors is not "Ang" or "Bohr"
     :raise FileNotFoundError: if seed_name_wsvec.dat is not found
     """
@@ -230,8 +210,5 @@ def wan2pc(seed_name="wannier90", correct_hop=False, hop_eng_cutoff=1.0e-5):
         ind, orb_i, orb_j = hop[:3], hop.item(3), hop.item(4)
         prim_cell.add_hopping(tuple(ind), orb_i, orb_j, hop_eng.item(i_h))
 
-    # NOTE: if you modify orbital_list and hopping_dict of prim_cell manually,
-    # then sync_array should be called with force_sync=True. Or alternatively,
-    # update the timestamps of orb_list and hop_dict.
     prim_cell.sync_array()
     return prim_cell

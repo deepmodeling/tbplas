@@ -1,11 +1,4 @@
-"""
-Module for calculating magnetic properties.
-
-classes
--------
-    SpinTexture: user class
-        Spin texture calculator
-"""
+"""Module for calculating magnetic properties."""
 
 from typing import Tuple
 
@@ -17,13 +10,16 @@ from .builder import PrimitiveCell, frac2cart
 from .builder import core
 
 
+__all__ = ["SpinTexture"]
+
+
 class SpinTexture:
     """
     Spin texture calculator.
 
     Attributes
     ----------
-    _cell: instance of 'PrimitiveCell' class
+    _cell: 'PrimitiveCell' instance
         primitive cell for which properties will be evaluated
     _k_grid: (num_kpt, 3) float64 array
         FRACTIONAL coordinates of k-points
@@ -32,8 +28,9 @@ class SpinTexture:
     _states: (num_kpt, num_orb) complex128 array
         cache of wave functions
     """
-    def __init__(self, cell: PrimitiveCell, k_grid: np.ndarray,
-                 spin_major: bool = True):
+    def __init__(self, cell: PrimitiveCell,
+                 k_grid: np.ndarray,
+                 spin_major: bool = True) -> None:
         """
         :param cell: primitive cell for which properties will be evaluated
         :param k_grid: FRACTIONAL coordinates of k-points
@@ -76,9 +73,12 @@ class SpinTexture:
         If the orbitals are sorted in neither spin nor orbital major,
         derive a new class from SpinTexture and overwrite this method.
 
-        :param state: (num_orb,) complex128 array, wave function at given
-            k-point and band
-        :return: spin-up and spin-down components of the wave function
+        :param state: (num_orb,) complex128 array
+            wave function at given k-point and band
+        :return: (u, d)
+            u: (num_orb//2,) complex128 array
+            d: (num_orb//2,) complex128 array
+            spin-up and spin-down components of the wave function
         """
         num_orb = self._cell.num_orb // 2
         if self._spin_major:
@@ -92,7 +92,8 @@ class SpinTexture:
         Calculate the expectation of Pauli matrix.
 
         :param component: which Pauli matrix to evaluate
-        :return: expectation of Pauli matrix
+        :return: (num_kpt, num_orb) float64 array
+            expectation of Pauli matrix
         """
         # Get eigenstates
         if self._states is None:
@@ -121,7 +122,7 @@ class SpinTexture:
         return self._k_grid
 
     @k_grid.setter
-    def k_grid(self, k_grid: np.ndarray):
+    def k_grid(self, k_grid: np.ndarray) -> None:
         """Set FRACTIONAL coordinates of k-grid."""
         self._k_grid = k_grid
 

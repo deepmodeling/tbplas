@@ -1,15 +1,4 @@
-"""
-Module for evaluating response properties from Lindhard function.
-
-Functions
----------
-    None.
-
-Classes
--------
-    Lindhard: user class
-        Lindhard function calculator
-"""
+"""Module for evaluating response properties from Lindhard function."""
 
 from typing import Tuple
 import math
@@ -24,13 +13,16 @@ from .fortran import f2py
 from .parallel import MPIEnv
 
 
+__all__ = ["Lindhard"]
+
+
 class Lindhard(MPIEnv):
     """
     Lindhard function calculator.
 
     Attributes
     ----------
-    cell: instance of 'PrimitiveCell' class
+    cell: 'PrimitiveCell' instance
         primitive cell for which properties will be evaluated
     omegas: (num_omega,) float64 array
         energy grid in eV
@@ -128,34 +120,31 @@ class Lindhard(MPIEnv):
     to 1 nm will NOT produce the same result as the second approach.
     """
     def __init__(self, cell: PrimitiveCell,
-                 energy_max: float, energy_step: int,
+                 energy_max: float,
+                 energy_step: int,
                  kmesh_size: Tuple[int, int, int],
-                 mu=0.0, temperature=300.0, g_s=1, back_epsilon=1.0,
-                 dimension=3, delta=0.005, enable_mpi=False) -> None:
+                 mu: float = 0.0,
+                 temperature: float = 300.0,
+                 g_s: int = 1,
+                 back_epsilon: float = 1.0,
+                 dimension: int = 3,
+                 delta: float = 0.005,
+                 enable_mpi: bool = False) -> None:
         """
-        :param cell: instance of 'PrimitiveCell' class
+        :param cell: 'PrimitiveCell' instance
             primitive cell for which properties will be evaluated
-        :param energy_max: float
-            upper bound of energy grid for evaluating response properties
-        :param energy_step: integer
-            resolution of energy grid
-        :param kmesh_size: (nk_a, nk_b, nk_c)
-            dimension of mesh grid in 1st Brillouin zone
-        :param mu: float
-            chemical potential of the cell in eV
-        :param temperature: float
-            temperature in Kelvin
-        :param g_s: int
-            spin degeneracy
-        :param back_epsilon: float
-            relative background dielectric constant
-        :param dimension: int
-            dimension of the system
-        :param delta: float
-            broadening parameter in eV
-        :param enable_mpi: boolean
-            whether to enable parallelization over k-points and frequencies
-            using mpi
+        :param energy_max: upper bound of energy grid for evaluating response
+            properties
+        :param energy_step: resolution of energy grid
+        :param kmesh_size: dimension of mesh grid in 1st Brillouin zone
+        :param mu: chemical potential of the cell in eV
+        :param temperature: temperature in Kelvin
+        :param g_s: spin degeneracy
+        :param back_epsilon: relative background dielectric constant
+        :param dimension: dimension of the system
+        :param delta: broadening parameter in eV
+        :param enable_mpi: whether to enable parallelization over k-points and
+            frequencies using mpi
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=True)
@@ -179,13 +168,13 @@ class Lindhard(MPIEnv):
         self.delta = delta
 
     @staticmethod
-    def wrap_frac(k_points: np.ndarray):
+    def wrap_frac(k_points: np.ndarray) -> np.ndarray:
         """
         Wrap fractional coordinates of k-points back into 1st Brillouin zone.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
-        :return: k_wrap: (num_kpt, 3) float64 array
+        :return: (num_kpt, 3) float64 array
             wrapped FRACTIONAL coordinates of k-points
         """
         if not isinstance(k_points, np.ndarray):
@@ -201,13 +190,13 @@ class Lindhard(MPIEnv):
                 k_wrap[i_k, i_dim] = k
         return k_wrap
 
-    def wrap_grid(self, k_points: np.ndarray):
+    def wrap_grid(self, k_points: np.ndarray) -> np.ndarray:
         """
         Wrap grid coordinates of k-points back into 1st Brillouin zone.
 
         :param k_points: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :return: k_wrap: (num_kpt, 3) int64 array
+        :return: (num_kpt, 3) int64 array
             wrapped GRID coordinates of k-points
         """
         if not isinstance(k_points, np.ndarray):
@@ -219,16 +208,16 @@ class Lindhard(MPIEnv):
                 k_wrap[i_k, i_dim] = k % self.kmesh_size.item(i_dim)
         return k_wrap
 
-    def frac2cart(self, frac_coord: np.ndarray, unit=NM):
+    def frac2cart(self, frac_coord: np.ndarray, unit: float = NM) -> np.ndarray:
         """
         Convert FRACTIONAL coordinates of k-points to CARTESIAN coordinates
         in 1/unit.
 
         :param frac_coord: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
-        :param unit: float
-            scaling factor from unit to NANOMETER, e.g. unit=0.1 for ANGSTROM
-        :return: cart_coord: (num_kpt, 3) float64 array
+        :param unit: scaling factor from unit to NANOMETER,
+            e.g. unit=0.1 for ANGSTROM
+        :return: (num_kpt, 3) float64 array
             CARTESIAN coordinates of k-points in 1/unit
         """
         if not isinstance(frac_coord, np.ndarray):
@@ -238,16 +227,16 @@ class Lindhard(MPIEnv):
         cart_coord = cart_coord_nm * unit
         return cart_coord
 
-    def cart2frac(self, cart_coord: np.ndarray, unit=NM):
+    def cart2frac(self, cart_coord: np.ndarray, unit: float = NM) -> np.ndarray:
         """
         Convert CARTESIAN coordinates of k-points in 1/unit to FRACTIONAL
         coordinates.
 
         :param cart_coord: (num_kpt, 3) float64 array
             CARTESIAN coordinates in 1/unit
-        :param unit: float
-            scaling factor from unit to NANOMETER, e.g. unit=0.1 for ANGSTROM
-        :return: frac_coord: (num_kpt, 3) float64 array
+        :param unit: scaling factor from unit to NANOMETER,
+            e.g. unit=0.1 for ANGSTROM
+        :return: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
         """
         if not isinstance(cart_coord, np.ndarray):
@@ -257,13 +246,13 @@ class Lindhard(MPIEnv):
         frac_coord = cart2frac(recip_lat_vec, cart_coord_nm)
         return frac_coord
 
-    def grid2frac(self, grid_coord: np.ndarray):
+    def grid2frac(self, grid_coord: np.ndarray) -> np.ndarray:
         """
         Convert GRID coordinates of k-points to FRACTIONAL coordinates.
 
         :param grid_coord: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :return: frac_coord: (num_kpt, 3) float64 array
+        :return: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
         """
         if not isinstance(grid_coord, np.ndarray):
@@ -273,16 +262,16 @@ class Lindhard(MPIEnv):
             frac_coord[:, i_dim] /= self.kmesh_size.item(i_dim)
         return frac_coord
 
-    def grid2cart(self, grid_coord: np.ndarray, unit=NM):
+    def grid2cart(self, grid_coord: np.ndarray, unit: float = NM) -> np.ndarray:
         """
         Convert GRID coordinates of k-points to CARTESIAN coordinates in
         1/unit.
 
         :param grid_coord: (num_kpt, 3) int64 array
             GRID coordinates of k-points
-        :param unit: float
-            scaling factor from unit to NANOMETER, e.g. unit=0.1 for ANGSTROM
-        :return: cart_coord: (num_kpt, 3) float64 array
+        :param unit: scaling factor from unit to NANOMETER,
+            e.g. unit=0.1 for ANGSTROM
+        :return: (num_kpt, 3) float64 array
             CARTESIAN coordinates of k-points in 1/unit
         """
         if not isinstance(grid_coord, np.ndarray):
@@ -291,7 +280,7 @@ class Lindhard(MPIEnv):
         cart_coord = self.frac2cart(frac_coord, unit=unit)
         return cart_coord
 
-    def _dist_job(self, n_max):
+    def _dist_job(self, n_max: int) -> Tuple[int, int]:
         """
         Distribute k-points and frequencies over processes.
 
@@ -300,27 +289,27 @@ class Lindhard(MPIEnv):
         in mind when using them in Cython/FORTRAN source code.
 
         :param n_max: number of k-points or frequencies
-        :return: i_min, i_max: lower and upper bounds assigned to this process
+        :return: lower and upper bounds assigned to this process
         """
         i_index = self.dist_range(n_max)
         i_min, i_max = min(i_index), max(i_index)
         return i_min, i_max
 
-    def _get_eigen_states(self, k_points: np.ndarray, convention=1,
-                          all_reduce=True):
+    def _get_eigen_states(self, k_points: np.ndarray,
+                          convention: int = 1,
+                          all_reduce: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate eigenstates and eigenvalues for given k-points.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of k-points
-        :param convention: integer
-            convention to construct Hamiltonian
-        :param all_reduce: boolean
-            whether to call MPI_Allreduce to synchronize the wave functions on
-            each process
-        :return: bands: (num_kpt, num_orb) float64 array
+        :param convention: convention to construct Hamiltonian
+        :param all_reduce: whether to call MPI_Allreduce to synchronize the wave
+            functions on each process
+        :return: (bands, states)
+            bands: (num_kpt, num_orb) float64 array
             eigenvalues of states on k-points in eV
-        :return: states: (num_kpt, num_orb, num_orb) complex128 array
+            states: (num_kpt, num_orb, num_orb) complex128 array
             eigenstates on k-points
         :raises ValueError: if convention is neither 1 nor 2
         """
@@ -356,13 +345,12 @@ class Lindhard(MPIEnv):
             states = self.all_reduce(states)
         return bands, states
 
-    def _get_dnk(self):
+    def _get_dnk(self) -> float:
         """
         Get elementary area/volume in reciprocal space depending on system
         dimension.
 
-        :return: dnk: float
-            elementary area/volume in 1/nm**2 or 1/nm**3
+        :return: dnk: elementary area/volume in 1/nm**2 or 1/nm**3
         """
         g_vec = gen_reciprocal_vectors(self.cell.lat_vec)
         for i_dim in range(3):
@@ -373,28 +361,28 @@ class Lindhard(MPIEnv):
             dnk = get_lattice_volume(g_vec)
         return dnk
 
-    def _get_dyn_pol_factor(self):
+    def _get_dyn_pol_factor(self) -> float:
         """
         Get prefactor for dynamic polarizability.
 
-        :return: dyn_pol_factor: float
-            prefactor for dynamic polarizability
+        :return: prefactor for dynamic polarizability
         """
         dnk = self._get_dnk()
         dyn_pol_factor = self.g_s * dnk / (2 * math.pi)**self.dimension
         return dyn_pol_factor
 
-    def calc_dyn_pol_regular(self, q_points: np.ndarray, use_fortran=True):
+    def calc_dyn_pol_regular(self, q_points: np.ndarray,
+                             use_fortran: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate dynamic polarizability for regular q-points on k-mesh.
 
         :param q_points: (num_qpt, 3) int64 array
             GRID coordinates of q-points
-        :param use_fortran: boolean
-            choose between FORTRAN and Cython backends
-        :return: omegas: (num_omega,) float64 array
+        :param use_fortran: choose between FORTRAN and Cython backends
+        :return: (omegas, dyn_pol)
+            omegas: (num_omega,) float64 array
             energies in eV
-        :return: dyn_pol: (num_qpt, num_omega) complex128 array
+            dyn_pol: (num_qpt, num_omega) complex128 array
             dynamic polarizability in 1/(eV*nm**2) or 1/(eV*nm**3)
         """
         # Prepare q-points and orbital positions
@@ -469,17 +457,18 @@ class Lindhard(MPIEnv):
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
 
-    def calc_dyn_pol_arbitrary(self, q_points: np.ndarray, use_fortran=True):
+    def calc_dyn_pol_arbitrary(self, q_points: np.ndarray,
+                               use_fortran: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate dynamic polarizability for arbitrary q-points.
 
         :param q_points: (num_qpt, 3) float64 array
             CARTESIAN coordinates of q-points in 1/NM
-        :param use_fortran: boolean
-            choose between FORTRAN and Cython backends
-        :return: omegas: (num_omega,) float64 array
+        :param use_fortran: choose between FORTRAN and Cython backends
+        :return: (omegas, dyn_pol)
+            omegas: (num_omega,) float64 array
             energies in eV
-        :return: dyn_pol: (num_qpt, num_omega) complex128 array
+            dyn_pol: (num_qpt, num_omega) complex128 array
             dynamic polarizability in 1/(eV*nm**2) or 1/(eV*nm**3)
         """
         # Prepare q-points and orbital positions
@@ -558,14 +547,13 @@ class Lindhard(MPIEnv):
             dyn_pol = dyn_pol.T
         return self.omegas, dyn_pol
 
-    def _get_vq(self, q_point: np.ndarray):
+    def _get_vq(self, q_point: np.ndarray) -> float:
         """
         Get Coulomb interaction in momentum space for given q-point.
 
         :param q_point: (3,) float64 array
             CARTESIAN coordinate of q-point in 1/NM
-        :return: vq: float
-            Coulomb interaction in momentum space in eV
+        :return: Coulomb interaction in momentum space in eV
         """
         factor = 1 / (EPSILON0 * self.back_epsilon)
         q_norm = np.linalg.norm(q_point)
@@ -575,7 +563,8 @@ class Lindhard(MPIEnv):
             vq = factor * 4 * math.pi / q_norm**2
         return vq
 
-    def calc_epsilon(self, q_points: np.ndarray, dyn_pol: np.ndarray):
+    def calc_epsilon(self, q_points: np.ndarray,
+                     dyn_pol: np.ndarray) -> np.ndarray:
         """
         Calculate dielectric function for given q-points from dynamic
         polarization.
@@ -584,7 +573,7 @@ class Lindhard(MPIEnv):
             CARTESIAN coordinates of q-points in 1/NM
         :param dyn_pol: (num_qpt, num_omega) complex128 array
             dynamic polarization from calc_dyn_pol_*
-        :return: epsilon: (num_qpt, num_omega) complex128 array
+        :return: (num_qpt, num_omega) complex128 array
             relative dielectric function
         """
         if not isinstance(q_points, np.ndarray):
@@ -597,29 +586,27 @@ class Lindhard(MPIEnv):
             epsilon[i_q] = 1.0 - vq * dyn_pol[i_q]
         return epsilon
 
-    def calc_ac_cond(self, component="xx", use_fortran=True):
+    def calc_ac_cond(self, component: str = "xx",
+                     use_fortran: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate AC conductivity using Kubo-Greenwood formula.
 
         Reference: section 12.2 of Wannier90 user guide.
         NOTE: there is not such g_s factor in the reference.
 
-        :param component: string
-            which component of conductivity to evaluate
+        :param component: which component of conductivity to evaluate
             should be in "xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy" and "zz"
-        :param use_fortran: boolean
-            choose between FORTRAN and Cython backends
-        :return: omegas: (num_omega,) float64 array
+        :param use_fortran: choose between FORTRAN and Cython backends
+        :return: (omegas, ac_cond)
+            omegas: (num_omega,) float64 array
             energies in eV
-        :return: ac_cond: (num_omega,) complex128 array
+            ac_cond: (num_omega,) complex128 array
             AC conductivity in e**2/(h_bar*nm) in 3d case and e**2/h_bar
             in 2d case
         :raises ValueError: if component is illegal
         """
         # Aliases for variables
         kmesh = self.grid2cart(self.kmesh_grid, unit=NM)
-        lat_vec = self.cell.lat_vec
-        orb_pos = self.cell.orb_pos_nm
         hop_eng = self.cell.hop_eng
         if component not in [a+b for a in "xyz" for b in "xyz"]:
             raise ValueError(f"Illegal component {component}")
@@ -635,12 +622,7 @@ class Lindhard(MPIEnv):
 
         # Build hopping indices and distances
         hop_ind = self.cell.hop_ind[:, 3:5].copy()
-        num_hop = self.cell.hop_ind.shape[0]
-        hop_dr = np.zeros((num_hop, 3), dtype=np.float64)
-        for i_h, ind in enumerate(self.cell.hop_ind):
-            rn = np.matmul(ind[0:3], lat_vec)
-            orb_i, orb_j = ind.item(3), ind.item(4)
-            hop_dr[i_h] = orb_pos[orb_j] + rn - orb_pos[orb_i]
+        hop_dr = self.cell.hop_dr_nm
 
         # Get eigenvalues and eigenstates
         # It is important not to synchronize the wave functions on each process.

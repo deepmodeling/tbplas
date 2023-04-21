@@ -1,10 +1,4 @@
-"""
-Module for evaluating Z2 topological invariant.
-
-Classes
--------
-    Z2: user class for evaluating Z2
-"""
+"""Module for evaluating Z2 topological invariant."""
 
 from typing import Tuple, Union
 from math import pi
@@ -16,6 +10,9 @@ from .builder import core, PrimitiveCell
 from .parallel import MPIEnv
 
 
+__all__ = ["Z2"]
+
+
 class Z2(MPIEnv):
     """
     Class for evaluating the Z2 topological invariant.
@@ -25,7 +22,7 @@ class Z2(MPIEnv):
 
     Attributes
     ----------
-    cell: instance of 'PrimitiveCell' class
+    cell: 'PrimitiveCell' instance
         primitive cell under investigation
     num_occ: int
         number of occupied bands of the primitive cell
@@ -36,7 +33,8 @@ class Z2(MPIEnv):
     f_mat: (num_occ, num_occ) complex128 array
         F matrix for (ka_i, ka_i+1)
     """
-    def __init__(self, cell: PrimitiveCell, num_occ: int,
+    def __init__(self, cell: PrimitiveCell,
+                 num_occ: int,
                  enable_mpi=False) -> None:
         """
         :param cell: primitive cell under investigation
@@ -103,7 +101,7 @@ class Z2(MPIEnv):
             eigenvectors at ka_i
         :param vec1: (num_orb, num_orb) complex128 array
             eigenvectors at kb_i+1
-        :return: None. self.f_mat is modified.
+        :return: None.
         """
         self.f_mat *= 0.0
         for i in range(self.num_occ):
@@ -156,9 +154,9 @@ class Z2(MPIEnv):
             FRACTIONAL coordinate of the loop along c-axis
         :return: (kb_array, phases)
             kb_array: (num_kb,) float64 array
-                FRACTIONAL coordinates of the loop along b-axis
+            FRACTIONAL coordinates of the loop along b-axis
             phases: (num_kpt, num_occ) float64 array
-                phases of WF centers
+            phases of WF centers
         """
         # Allocate working arrays
         if ka_array is None:
@@ -206,7 +204,8 @@ class Z2(MPIEnv):
         phases = self.all_reduce(phases)
         return kb_array, phases
 
-    def reorder_phases(self, phases: np.ndarray, threshold: float = 0.1,
+    def reorder_phases(self, phases: np.ndarray,
+                       threshold: float = 0.1,
                        smooth: bool = True) -> np.ndarray:
         """
         Reorder the phases to improve continuity and smoothness.

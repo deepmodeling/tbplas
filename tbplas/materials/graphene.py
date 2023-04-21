@@ -1,15 +1,4 @@
-"""
-Utilities for constructing graphene samples.
-
-Functions
----------
-    make_graphene_diamond: user function
-        make graphene primitive cell in diamond shape
-    make_graphene_rect: user function
-        make graphene primitive cell in rectangular shape
-    make_graphene_sp: user function
-        make graphene primitive cell with 8-bands
-"""
+"""Utilities for constructing graphene primitive cells."""
 
 import math
 
@@ -19,41 +8,39 @@ from ..builder import (gen_lattice_vectors, PrimitiveCell, reshape_prim_cell,
                        find_neighbors, SK, NM)
 
 
-def make_graphene_diamond(c=1.0, t=-2.7):
+__all__ = ["make_graphene_rect", "make_graphene_diamond", "make_graphene_sp"]
+
+
+def make_graphene_diamond(c: float = 1.0, t: complex = -2.7) -> PrimitiveCell:
     """
     Make graphene primitive cell in diamond shape.
 
-    :param c: float
-        length of c-axis in NANOMETER
-    :param t: float
-        hopping integral in eV
-    :return: cell: instance of 'PrimitiveCell' class
-        graphene primitive cell
+    :param c: length of c-axis in NANOMETER
+    :param t: hopping integral in eV
+    :return: graphene primitive cell
     """
     vectors = gen_lattice_vectors(a=0.246, b=0.246, c=c, gamma=60)
     cell = PrimitiveCell(vectors, unit=NM)
-    cell.add_orbital([0.0, 0.0], label="C_pz")
-    cell.add_orbital([1/3., 1/3.], label="C_pz")
-    cell.add_hopping([0, 0], 0, 1, t)
-    cell.add_hopping([1, 0], 1, 0, t)
-    cell.add_hopping([0, 1], 1, 0, t)
+    cell.add_orbital((0.0, 0.0), label="C_pz")
+    cell.add_orbital((1/3., 1/3.), label="C_pz")
+    cell.add_hopping((0, 0), 0, 1, t)
+    cell.add_hopping((1, 0), 1, 0, t)
+    cell.add_hopping((0, 1), 1, 0, t)
     return cell
 
 
-def make_graphene_rect(from_scratch=True, c=1.0, t=-2.7):
+def make_graphene_rect(from_scratch: bool = True,
+                       c: float = 1.0,
+                       t: complex = -2.7) -> PrimitiveCell:
     """
     Make graphene primitive cell in rectangular shape.
 
-    :param c: float
-        length of c-axis in NANOMETER
-    :param from_scratch: boolean
-        method to build the primitive cell
+    :param c: length of c-axis in NANOMETER
+    :param from_scratch: method to build the primitive cell
         If true, build the cell from scratch.
         Otherwise, build it by reshaping a primitive cell.
-    :param t: float
-        hopping integral in eV
-    :return: cell: instance of 'PrimitiveCell' class
-        graphene primitive cell
+    :param t: hopping integral in eV
+    :return: graphene primitive cell
     """
     if from_scratch:
         # Calculate lattice vectors
@@ -70,12 +57,12 @@ def make_graphene_rect(from_scratch=True, c=1.0, t=-2.7):
         cell.add_orbital((1/2., 1/2.), label="C_pz")
 
         # Add hopping terms
-        cell.add_hopping([0, 0], 0, 2, t)
-        cell.add_hopping([0, 0], 2, 3, t)
-        cell.add_hopping([0, 0], 3, 1, t)
-        cell.add_hopping([0, 1], 1, 0, t)
-        cell.add_hopping([1, 0], 3, 1, t)
-        cell.add_hopping([1, 0], 2, 0, t)
+        cell.add_hopping((0, 0), 0, 2, t)
+        cell.add_hopping((0, 0), 2, 3, t)
+        cell.add_hopping((0, 0), 3, 1, t)
+        cell.add_hopping((0, 1), 1, 0, t)
+        cell.add_hopping((1, 0), 3, 1, t)
+        cell.add_hopping((1, 0), 2, 0, t)
     else:
         cell = make_graphene_diamond(t=t)
         lat_frac = np.array([[1, 0, 0], [-1, 2, 0], [0, 0, 1]])
@@ -83,17 +70,15 @@ def make_graphene_rect(from_scratch=True, c=1.0, t=-2.7):
     return cell
 
 
-def make_graphene_sp(c=1.0):
+def make_graphene_sp(c: float = 1.0) -> PrimitiveCell:
     """
     Make graphene primitive cell in rectangular shape.
 
     Reference:
     https://journals.aps.org/prb/abstract/10.1103/PhysRevB.82.245412
 
-    :param c: float
-        length of c-axis in NANOMETER
-    :return: cell: instance of 'PrimitiveCell' class
-        graphene primitive cell
+    :param c: length of c-axis in NANOMETER
+    :return: graphene primitive cell
     """
     # Lattice vectors and orbital info.
     vectors = gen_lattice_vectors(a=0.246, b=0.246, c=c, gamma=60)

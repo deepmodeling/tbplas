@@ -1,7 +1,7 @@
 """Functions and classes for advanced modeling."""
 
 import math
-from typing import Union, List, Tuple, Dict, Literal
+from typing import Union, List, Tuple, Dict
 from collections import namedtuple
 from copy import deepcopy
 from abc import ABC, abstractmethod
@@ -513,8 +513,7 @@ class SK:
                 raise ValueError(f"Illegal label: {label}")
 
     @staticmethod
-    def _perm_vector(vector: np.ndarray,
-                     x_new: Literal["x", "y", "z"]) -> np.ndarray:
+    def _perm_vector(vector: np.ndarray, x_new: str) -> np.ndarray:
         """
         Permute a given vector according to the new x_axis.
 
@@ -533,7 +532,7 @@ class SK:
             raise ValueError(f"Illegal x_new {x_new}")
 
     @staticmethod
-    def _remap_label(label: str, x_new: Literal["x", "y", "z"]) -> str:
+    def _remap_label(label: str, x_new: str) -> str:
         """
         Remap orbital label after permutation.
 
@@ -585,7 +584,7 @@ class SK:
         return v_sss
 
     def sp(self, r: np.ndarray,
-           label_p: Literal["px", "py", "pz"] = "px",
+           label_p: str = "px",
            v_sps: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <s,0|H|p,r>.
@@ -607,7 +606,7 @@ class SK:
         return t
 
     def sd(self, r: np.ndarray,
-           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_d: str = "dxy",
            v_sds: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <s,0|H|d,r>.
@@ -643,8 +642,8 @@ class SK:
         return t
 
     def pp(self, r: np.ndarray,
-           label_i: Literal["px", "py", "pz"] = "px",
-           label_j: Literal["px", "py", "pz"] = "px",
+           label_i: str = "px",
+           label_j: str = "px",
            v_pps: complex = 0.0,
            v_ppp: complex = 0.0) -> complex:
         """
@@ -682,8 +681,8 @@ class SK:
         return t
 
     def pd(self, r: np.ndarray,
-           label_p: Literal["px", "py", "pz"] = "px",
-           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_p: str = "px",
+           label_d: str = "dxy",
            v_pds: complex = 0.0,
            v_pdp: complex = 0.0) -> complex:
         """
@@ -745,8 +744,8 @@ class SK:
         return t
 
     def dd(self, r: np.ndarray,
-           label_i: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
-           label_j: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_i: str = "dxy",
+           label_j: str = "dxy",
            v_dds: complex = 0.0,
            v_ddp: complex = 0.0,
            v_ddd: complex = 0) -> complex:
@@ -872,7 +871,7 @@ class SK:
         return t
 
     def ps(self, r: np.ndarray,
-           label_p: Literal["px", "py", "pz"] = "px",
+           label_p: str = "px",
            v_sps: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <p,0|H|s,r>.
@@ -886,7 +885,7 @@ class SK:
         return self.sp(r=-r, label_p=label_p, v_sps=v_sps).conjugate()
 
     def ds(self, r: np.ndarray,
-           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_d: str = "dxy",
            v_sds: complex = 0.0) -> complex:
         """
         Evaluate the hopping integral <d,0|H|s,r>.
@@ -900,8 +899,8 @@ class SK:
         return self.sd(r=-r, label_d=label_d, v_sds=v_sds).conjugate()
 
     def dp(self, r: np.ndarray,
-           label_p: Literal["px", "py", "pz"] = "px",
-           label_d: Literal["dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "dxy",
+           label_p: str = "px",
+           label_d: str = "dxy",
            v_pds: complex = 0.0,
            v_pdp: complex = 0.0) -> complex:
         """
@@ -920,8 +919,8 @@ class SK:
                        v_pdp=v_pdp).conjugate()
 
     def eval(self, r: np.ndarray,
-             label_i: Literal["s", "px", "py", "pz", "dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "s",
-             label_j: Literal["s", "px", "py", "pz", "dxy", "dyz", "dzx", "dx2-y2", "dz2"] = "s",
+             label_i: str = "s",
+             label_j: str = "s",
              v_sss: complex = 0.0, v_sps: complex = 0.0, v_sds: complex = 0.0,
              v_pps: complex = 0.0, v_ppp: complex = 0.0,
              v_pds: complex = 0.0, v_pdp: complex = 0.0,
@@ -1206,7 +1205,7 @@ class SOC:
                     if abs(product) > 0.0:
                         print("\t", direction, product)
 
-    def print_orbital_table(self, operator: Literal["lz", "l+", "l-"] = "lz") -> None:
+    def print_orbital_table(self, operator: str = "lz") -> None:
         """
         Print the matrix elements of l_dot_s between orbital basis functions.
 
@@ -1231,10 +1230,10 @@ class SOC:
                     print(f"{label_bra:8s} {label_ket:8s} {prod.real:16.9f}"
                           f" {prod.imag:16.9f}")
 
-    def eval(self, label_i: Literal["s", "p", "d"] = "s",
-             spin_i: Literal["up", "down"] = "up",
-             label_j: Literal["s", "p", "d"] = "s",
-             spin_j: Literal["up", "down"] = "down") -> complex:
+    def eval(self, label_i: str = "s",
+             spin_i: str = "up",
+             label_j: str = "s",
+             spin_j: str = "down") -> complex:
         """
         Evaluate the matrix element <i,s_i|l*s|j,s_j>.
 

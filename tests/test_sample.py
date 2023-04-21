@@ -17,11 +17,11 @@ from tbplas.utils import TestHelper
 def make_cell():
     vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
     cell = PrimitiveCell(vectors)
-    cell.add_orbital([0.0, 0.0], 0.0)
-    cell.add_orbital([1. / 3, 1. / 3], 0.0)
-    cell.add_hopping([0, 0], 0, 1, -2.7)
-    cell.add_hopping([1, 0], 1, 0, -2.7)
-    cell.add_hopping([0, 1], 1, 0, -2.7)
+    cell.add_orbital((0.0, 0.0), 0.0)
+    cell.add_orbital((1. / 3, 1. / 3), 0.0)
+    cell.add_hopping((0, 0), 0, 1, -2.7)
+    cell.add_hopping((1, 0), 1, 0, -2.7)
+    cell.add_hopping((0, 1), 1, 0, -2.7)
     return cell
 
 
@@ -89,8 +89,8 @@ class TestSample(unittest.TestCase):
         """
         pc1 = make_cell()
         pc2 = make_cell()
-        pc2.set_orbital(orb_i=0, position=[1./3, 1./3, 0.0])
-        pc2.set_orbital(orb_i=1, position=[2./3, 2./3, 0.0])
+        pc2.set_orbital(orb_i=0, position=(1./3, 1./3, 0.0))
+        pc2.set_orbital(orb_i=1, position=(2./3, 2./3, 0.0))
         sc1 = SuperCell(pc1, dim=(3, 3, 1), pbc=(True, True, False))
         sc2 = SuperCell(pc2, dim=(3, 3, 1), pbc=(True, True, False))
         th = TestHelper(self)
@@ -136,8 +136,8 @@ class TestSample(unittest.TestCase):
         """
         pc1 = make_cell()
         pc2 = make_cell()
-        pc2.set_orbital(orb_i=0, position=[1./3, 1./3, 0.0])
-        pc2.set_orbital(orb_i=1, position=[2./3, 2./3, 0.0])
+        pc2.set_orbital(orb_i=0, position=(1./3, 1./3, 0.0))
+        pc2.set_orbital(orb_i=1, position=(2./3, 2./3, 0.0))
         sc1 = SuperCell(pc1, dim=(3, 3, 1), pbc=(True, True, False))
         sc2 = SuperCell(pc2, dim=(3, 3, 1), pbc=(True, True, False))
         th = TestHelper(self)
@@ -544,8 +544,8 @@ class TestSample(unittest.TestCase):
         print("3x3 Graphene supercell with 2 layers")
         pc1 = make_cell()
         pc2 = make_cell()
-        pc2.set_orbital(orb_i=0, position=[1./3, 1./3, 0.0])
-        pc2.set_orbital(orb_i=1, position=[2./3, 2./3, 0.0])
+        pc2.set_orbital(orb_i=0, position=(1./3, 1./3, 0.0))
+        pc2.set_orbital(orb_i=1, position=(2./3, 2./3, 0.0))
         sc1 = SuperCell(pc1, dim=(3, 3, 1), pbc=(True, True, False))
         sc2 = SuperCell(pc2, dim=(3, 3, 1), pbc=(True, True, False))
         inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)

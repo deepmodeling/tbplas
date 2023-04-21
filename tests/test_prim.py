@@ -15,11 +15,11 @@ from tbplas.utils import TestHelper
 def make_cell():
     vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
     cell = PrimitiveCell(vectors)
-    cell.add_orbital([0.0, 0.0], 0.0, label="C_pz")
-    cell.add_orbital([1. / 3, 1. / 3], 0.0, label="C_pz")
-    cell.add_hopping([0, 0], 0, 1, -2.7)
-    cell.add_hopping([1, 0], 1, 0, -2.7)
-    cell.add_hopping([0, 1], 1, 0, -2.7)
+    cell.add_orbital((0.0, 0.0), 0.0, label="C_pz")
+    cell.add_orbital((1. / 3, 1. / 3), 0.0, label="C_pz")
+    cell.add_hopping((0, 0), 0, 1, -2.7)
+    cell.add_hopping((1, 0), 1, 0, -2.7)
+    cell.add_hopping((0, 1), 1, 0, -2.7)
     return cell
 
 
@@ -64,7 +64,7 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.lock()
         with self.assertRaises(exc.PCLockError) as cm:
-            cell.add_orbital([1.2, 0.5], 0.1)
+            cell.add_orbital((1.2, 0.5), 0.1)
         self.assertRegex(str(cm.exception),
                          r"trying to modify a locked primitive cell")
 
@@ -88,7 +88,7 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.lock()
         with self.assertRaises(exc.PCLockError) as cm:
-            cell.add_hopping([-1, 0], 0, 0, 2.5)
+            cell.add_hopping((-1, 0), 0, 0, 2.5)
         self.assertRegex(str(cm.exception),
                          r"trying to modify a locked primitive cell")
 
@@ -96,7 +96,7 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.lock()
         with self.assertRaises(exc.PCLockError) as cm:
-            cell.remove_hopping([0, 0], 0, 1)
+            cell.remove_hopping((0, 0), 0, 1)
         self.assertRegex(str(cm.exception),
                          r"trying to modify a locked primitive cell")
 
@@ -115,7 +115,7 @@ class TestPrimitive(unittest.TestCase):
         cell.unlock()
 
         def _test():
-            cell.add_orbital([1.2, 0.5], 0.1)
+            cell.add_orbital((1.2, 0.5), 0.1)
         th.test_no_raise(_test, exc.PCLockError)
 
         # set_orbital
@@ -142,7 +142,7 @@ class TestPrimitive(unittest.TestCase):
         cell.unlock()
 
         def _test():
-            cell.add_hopping([-1, 0], 0, 0, 2.5)
+            cell.add_hopping((-1, 0), 0, 0, 2.5)
         th.test_no_raise(_test, exc.PCLockError)
 
         # remove_hopping
@@ -151,7 +151,7 @@ class TestPrimitive(unittest.TestCase):
         cell.unlock()
 
         def _test():
-            cell.remove_hopping([0, 0], 0, 1)
+            cell.remove_hopping((0, 0), 0, 1)
         th.test_no_raise(_test, exc.PCLockError)
 
     def test03_add_orbital(self):
@@ -163,13 +163,13 @@ class TestPrimitive(unittest.TestCase):
         # Test if feeding an illegal position raises the right exception
         cell = make_cell()
         with self.assertRaises(exc.OrbPositionLenError) as cm:
-            cell.add_orbital([1.0], energy=1.0)
+            cell.add_orbital((1.0,), energy=1.0)
         self.assertRegex(str(cm.exception),
                          r"length of orbital position .+ not in \(2, 3\)")
 
         # Test the normal case
         cell = make_cell()
-        orbitals = cell.orbital_list
+        orbitals = cell.orbitals
         self.assertEqual(cell.num_orb, 2)
         self.assertAlmostEqual(np.linalg.norm(orbitals[0].position), 0.0)
         self.assertAlmostEqual(np.linalg.norm(orbitals[1].position),
@@ -183,8 +183,8 @@ class TestPrimitive(unittest.TestCase):
         th = TestHelper(self)
         vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         cell_ref = PrimitiveCell(vectors)
-        cell_ref.add_orbital([1. / 3, 1. / 3], 0.0, label="C_pz")
-        cell_ref.add_orbital([2. / 3, 2. / 3], 0.0, label="C_pz")
+        cell_ref.add_orbital((1. / 3, 1. / 3), 0.0, label="C_pz")
+        cell_ref.add_orbital((2. / 3, 2. / 3), 0.0, label="C_pz")
         cell_ref.sync_array()
         orb_pos_ref = frac2cart(cell_ref.lat_vec, cell_ref.orb_pos)
 
@@ -212,38 +212,38 @@ class TestPrimitive(unittest.TestCase):
         # Test error handling for illegal position
         cell = make_cell()
         with self.assertRaises(exc.OrbPositionLenError) as cm:
-            cell.set_orbital(-1, position=[1.5])
+            cell.set_orbital(-1, position=(1.5,))
         self.assertRegex(str(cm.exception),
                          r"length of orbital position .+ not in \(2, 3\)")
 
         # Test setting both position and energy
         cell = make_cell()
-        cell.set_orbital(-1, position=[1.5, 0.0], energy=4.2)
+        cell.set_orbital(-1, position=(1.5, 0.0), energy=4.2)
         self.assertEqual(cell.num_orb, 2)
-        self.assertAlmostEqual(cell.orbital_list[-1].energy, 4.2)
-        self.assertAlmostEqual(np.linalg.norm(cell.orbital_list[-1].position),
+        self.assertAlmostEqual(cell.orbitals[-1].energy, 4.2)
+        self.assertAlmostEqual(np.linalg.norm(cell.orbitals[-1].position),
                                1.5)
 
         # Test setting position
         cell = make_cell()
-        cell.set_orbital(-1, position=[1.5, 0.0])
+        cell.set_orbital(-1, position=(1.5, 0.0))
         self.assertEqual(cell.num_orb, 2)
-        self.assertAlmostEqual(cell.orbital_list[-1].energy, 0.0)
-        self.assertAlmostEqual(np.linalg.norm(cell.orbital_list[-1].position),
+        self.assertAlmostEqual(cell.orbitals[-1].energy, 0.0)
+        self.assertAlmostEqual(np.linalg.norm(cell.orbitals[-1].position),
                                1.5)
 
         # Test setting energy
         cell = make_cell()
         cell.set_orbital(-1, energy=4.2)
         self.assertEqual(cell.num_orb, 2)
-        self.assertAlmostEqual(cell.orbital_list[-1].energy, 4.2)
-        self.assertAlmostEqual(np.linalg.norm(cell.orbital_list[-1].position),
+        self.assertAlmostEqual(cell.orbitals[-1].energy, 4.2)
+        self.assertAlmostEqual(np.linalg.norm(cell.orbitals[-1].position),
                                4.714045207910317e-1)
 
         # Test setting label
         cell = make_cell()
         cell.set_orbital(-1, label="C_pz_2")
-        self.assertEqual(cell.orbital_list[-1].label, "C_pz_2")
+        self.assertEqual(cell.orbitals[-1].label, "C_pz_2")
 
         # Test setting orbital with Cartesian coordinates
         th = TestHelper(self)
@@ -278,7 +278,7 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         orbital = cell.get_orbital(-1)
         self.assertAlmostEqual(orbital.energy, 0.0)
-        self.assertAlmostEqual(np.linalg.norm(cell.orbital_list[-1].position),
+        self.assertAlmostEqual(np.linalg.norm(cell.orbitals[-1].position),
                                4.714045207910317e-1)
 
     def test05_remove_orbital(self):
@@ -297,44 +297,44 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.remove_orbital(0)
         self.assertEqual(cell.num_orb, 1)
-        self.assertEqual(cell.hopping_dict.num_hop, 0)
+        self.assertEqual(cell.num_hop, 0)
 
         # removing orbital #1
         cell = make_cell()
         cell.remove_orbital(1)
         self.assertEqual(cell.num_orb, 1)
-        self.assertEqual(cell.hopping_dict.num_hop, 0)
+        self.assertEqual(cell.num_hop, 0)
 
         # adding orbital #2
         cell = make_cell()
-        cell.add_orbital([0.5, 0.5], energy=-0.1)
-        cell.add_hopping([0, 0], 0, 2, -1.5)
-        cell.add_hopping([0, 0], 1, 2, -1.9)
+        cell.add_orbital((0.5, 0.5), energy=-0.1)
+        cell.add_hopping((0, 0), 0, 2, -1.5)
+        cell.add_hopping((0, 0), 1, 2, -1.9)
 
         # removing orbital #0
         cell.remove_orbital(0)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 1)
+        self.assertEqual(cell.num_hop, 1)
         self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -1.9)
 
         # removing orbital #1
         cell = make_cell()
-        cell.add_orbital([0.5, 0.5], energy=-0.1)
-        cell.add_hopping([0, 0], 0, 2, -1.5)
-        cell.add_hopping([0, 0], 1, 2, -1.9)
+        cell.add_orbital((0.5, 0.5), energy=-0.1)
+        cell.add_hopping((0, 0), 0, 2, -1.5)
+        cell.add_hopping((0, 0), 1, 2, -1.9)
         cell.remove_orbital(1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 1)
+        self.assertEqual(cell.num_hop, 1)
         self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -1.5)
 
         # removing orbital #2
         cell = make_cell()
-        cell.add_orbital([0.5, 0.5], energy=-0.1)
-        cell.add_hopping([0, 0], 0, 2, -1.5)
-        cell.add_hopping([0, 0], 1, 2, -1.9)
+        cell.add_orbital((0.5, 0.5), energy=-0.1)
+        cell.add_hopping((0, 0), 0, 2, -1.5)
+        cell.add_hopping((0, 0), 1, 2, -1.9)
         cell.remove_orbital(2)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertEqual(cell.num_hop, 3)
         self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.7)
 
     def test06_add_hopping(self):
@@ -358,26 +358,26 @@ class TestPrimitive(unittest.TestCase):
         # The normal case
         th = TestHelper(self)
         cell = make_cell()
-        hop_ind, hop_eng = cell.hopping_dict.to_array()
-        self.assertEqual(cell.hopping_dict.num_hop, 3)
-        th.test_equal_array(hop_ind[0], (0, 0, 0, 0, 1))
-        th.test_equal_array(hop_ind[1], (1, 0, 0, 1, 0))
-        th.test_equal_array(hop_ind[2], (0, 1, 0, 1, 0))
-        self.assertAlmostEqual(hop_eng[0], -2.7)
-        self.assertAlmostEqual(hop_eng[1], -2.7)
-        self.assertAlmostEqual(hop_eng[2], -2.7)
+        cell.sync_array()
+        self.assertEqual(cell.num_hop, 3)
+        th.test_equal_array(cell.hop_ind[0], (0, 0, 0, 0, 1))
+        th.test_equal_array(cell.hop_ind[1], (1, 0, 0, 1, 0))
+        th.test_equal_array(cell.hop_ind[2], (0, 1, 0, 1, 0))
+        self.assertAlmostEqual(cell.hop_eng[0], -2.7)
+        self.assertAlmostEqual(cell.hop_eng[1], -2.7)
+        self.assertAlmostEqual(cell.hop_eng[2], -2.7)
 
         # Updating an existing hopping term
         cell = make_cell()
         cell.add_hopping(rn=(0, 0), orb_i=0, orb_j=1, energy=-2.8)
-        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertEqual(cell.num_hop, 3)
         self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.8)
 
         # Updating an existing conjugate hopping term
         cell = make_cell()
         cell.add_hopping(rn=(-1, 0), orb_i=0, orb_j=1, energy=-2.7)
         cell.add_hopping(rn=(0, 0), orb_i=1, orb_j=0, energy=-2.8)
-        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertEqual(cell.num_hop, 3)
         self.assertAlmostEqual(cell.get_hopping((-1, 0, 0), 0, 1), -2.7)
         self.assertAlmostEqual(cell.get_hopping((0, 0, 0), 0, 1), -2.8)
 
@@ -390,11 +390,11 @@ class TestPrimitive(unittest.TestCase):
         # Error handling
         cell = make_cell()
         with self.assertRaises(exc.PCHopNotFoundError) as cm:
-            cell.get_hopping([-2, 0], 0, 1)
+            cell.get_hopping((-2, 0), 0, 1)
         self.assertRegex(str(cm.exception), r"hopping term .+ not found")
 
         # The normal case
-        energy = cell.get_hopping([0, 0], 0, 1)
+        energy = cell.get_hopping((0, 0), 0, 1)
         self.assertAlmostEqual(energy, -2.7)
 
     def test07_remove_hopping(self):
@@ -406,23 +406,23 @@ class TestPrimitive(unittest.TestCase):
         # Error handling
         cell = make_cell()
         with self.assertRaises(exc.PCHopNotFoundError) as cm:
-            cell.remove_hopping([-2, 0], 0, 1)
+            cell.remove_hopping((-2, 0), 0, 1)
         self.assertRegex(str(cm.exception), r"hopping term .+ not found")
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 3)
+        self.assertEqual(cell.num_hop, 3)
 
         # The normal case
         cell = make_cell()
-        cell.remove_hopping([0, 0], 0, 1)
+        cell.remove_hopping((0, 0), 0, 1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 2)
+        self.assertEqual(cell.num_hop, 2)
 
         # Remove conjugate part
         cell = make_cell()
-        cell.remove_hopping([-1, 0], 0, 1)
-        cell.remove_hopping([0, -1], 0, 1)
+        cell.remove_hopping((-1, 0), 0, 1)
+        cell.remove_hopping((0, -1), 0, 1)
         self.assertEqual(cell.num_orb, 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 1)
+        self.assertEqual(cell.num_hop, 1)
 
     def test08_sync_array(self):
         """
@@ -524,8 +524,8 @@ class TestPrimitive(unittest.TestCase):
         self.assertEqual(cell.hop_eng, None)
         # 7th call, expected: updating none
         th.test_stdout(_test, update_none)
-        self.assertEqual(len(cell.orbital_list), 2)
-        self.assertEqual(cell.hopping_dict.num_hop, 0)
+        self.assertEqual(cell.num_orb, 2)
+        self.assertEqual(cell.num_hop, 0)
         self.assertEqual(cell.hop_ind, None)
         self.assertEqual(cell.hop_eng, None)
         # 8th call, expected: updating both
@@ -618,7 +618,7 @@ class TestPrimitive(unittest.TestCase):
         plt.show()
 
         # Orbital labels
-        self.assertSetEqual(set([orb.label for orb in extend_cell.orbital_list]),
+        self.assertSetEqual(set([orb.label for orb in extend_cell.orbitals]),
                             {"C_pz"})
 
     def test13_reshape_prim_cell(self):
@@ -637,12 +637,12 @@ class TestPrimitive(unittest.TestCase):
         cell.add_orbital((0, 2./3))
         cell.add_orbital((1./2, 1./6))
         cell.add_orbital((1./2, 1./2))
-        cell.add_hopping([0, 0], 0, 2, -2.7)
-        cell.add_hopping([0, 0], 2, 3, -2.7)
-        cell.add_hopping([0, 0], 3, 1, -2.7)
-        cell.add_hopping([0, 1], 1, 0, -2.7)
-        cell.add_hopping([1, 0], 3, 1, -2.7)
-        cell.add_hopping([1, 0], 2, 0, -2.7)
+        cell.add_hopping((0, 0), 0, 2, -2.7)
+        cell.add_hopping((0, 0), 2, 3, -2.7)
+        cell.add_hopping((0, 0), 3, 1, -2.7)
+        cell.add_hopping((0, 1), 1, 0, -2.7)
+        cell.add_hopping((1, 0), 3, 1, -2.7)
+        cell.add_hopping((1, 0), 2, 0, -2.7)
         cell.plot()
 
         print("\nTest rectangular cell:")
@@ -653,7 +653,7 @@ class TestPrimitive(unittest.TestCase):
         cell.plot()
 
         # Check orbital labels
-        self.assertSetEqual(set([orb.label for orb in cell.orbital_list]), {"C_pz"})
+        self.assertSetEqual(set([orb.label for orb in cell.orbitals]), {"C_pz"})
 
     def test14_hop_dict(self):
         """
@@ -750,15 +750,15 @@ class TestPrimitive(unittest.TestCase):
         hop_dict.set_mat([1, 0], hop_mat_10)
         hop_dict.set_mat([0, 1], hop_mat_01)
         cell.add_hopping_dict(hop_dict)
-        self.assertEqual(cell.get_hopping([0, 0], 0, 1), -2.5)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 0), 1.2)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 1), 1.1)
-        self.assertEqual(cell.get_hopping([1, 0], 0, 1), -2.6)
-        self.assertEqual(cell.get_hopping([1, 0], 1, 0), -2.3)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 0), 1.6)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 1), 1.2)
-        self.assertEqual(cell.get_hopping([0, 1], 0, 1), -2.8)
-        self.assertEqual(cell.get_hopping([0, 1], 1, 0), -2.7)
+        self.assertEqual(cell.get_hopping((0, 0), 0, 1), -2.5)
+        self.assertEqual(cell.get_hopping((1, 0), 0, 0), 1.2)
+        self.assertEqual(cell.get_hopping((1, 0), 1, 1), 1.1)
+        self.assertEqual(cell.get_hopping((1, 0), 0, 1), -2.6)
+        self.assertEqual(cell.get_hopping((1, 0), 1, 0), -2.3)
+        self.assertEqual(cell.get_hopping((0, 1), 0, 0), 1.6)
+        self.assertEqual(cell.get_hopping((0, 1), 1, 1), 1.2)
+        self.assertEqual(cell.get_hopping((0, 1), 0, 1), -2.8)
+        self.assertEqual(cell.get_hopping((0, 1), 1, 0), -2.7)
 
     def test16_apply_pbc(self):
         """

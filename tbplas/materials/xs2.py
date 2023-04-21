@@ -1,21 +1,21 @@
 """
-Utilities for constructing TMDC samples.
+Utilities for constructing TMDC primitive cells.
 
 Reference:
 https://journals.aps.org/prb/abstract/10.1103/PhysRevB.92.205108
 
 NOTE: We use unsymmetrical orbitals in constructing the model.
-
-Functions
----------
-    make_tmdc: user function
-        make TMDC primitive cell
 """
+
 import math
+from typing import Tuple, List
 
 import numpy as np
 
 from ..builder import PrimitiveCell, HopDict, cart2frac, NM
+
+
+__all__ = ["make_tmdc"]
 
 
 _STRUCT_CONSTS = {
@@ -64,18 +64,18 @@ _HOP_CONSTS = {
              -0.0676, -0.1608, -0.2618, -0.2424)}
 
 
-def _gen_lattice(material="MoS2", c=1.0):
+def _gen_lattice(material: str = "MoS2",
+                 c: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate coordinates of lattice vectors and orbitals.
 
-    :param material: string
-        chemical label of material
+    :param material: chemical label of material
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
-    :param c: float
-        length of c-axis in NANOMETER
-    :return: vectors: (3, 3) float64 array
+    :param c: length of c-axis in NANOMETER
+    :return: (vectors, orbital_coordinates)
+        vectors: (3, 3) float64 array
         Cartesian coordinates of lattice vectors in NM
-    :return: orbital_coordinates: (11, 3) float64 array
+        orbital_coordinates: (11, 3) float64 array
         Cartesian coordinates of orbitals in NM
     :raises NotImplementedError: if material has not been implemented
     """
@@ -101,17 +101,15 @@ def _gen_lattice(material="MoS2", c=1.0):
     return vectors, orbital_coords
 
 
-def _gen_hop_dict(material="MoS2"):
+def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
     """
     Generate hopping dictionary and on-site energies.
 
-    :param material: string
-        chemical label of material
+    :param material: chemical label of material
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
-    :return: hop_dict: instance of 'HopDict' class
-        TMDC hopping dictionary
-    :return: on_site: list of floats
-        on-site energies of orbitals
+    :return: (hop_dict, on_site)
+        hop_dict: TMDC hopping dictionary
+        on_site: on-site energies of orbitals
     :raises NotImplementedError: if material has not been implemented
     """
     # Mathematical constants
@@ -367,15 +365,13 @@ def _gen_hop_dict(material="MoS2"):
     return hop_dict, on_site
 
 
-def _gen_orb_labels(material="MoS2"):
+def _gen_orb_labels(material: str = "MoS2") -> List[str]:
     """
     Generate orbital labels.
 
-    :param material: string
-        chemical label of material
+    :param material: chemical label of material
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
-    :return: orb_labels: list of strings
-        orbital labels
+    :return: orbital labels
     :raises NotImplementedError: if material has not been implemented
     """
     d_orbitals = ("dz2", "dxy", "dx2-y2", "dxz", "dyz")
@@ -399,15 +395,13 @@ def _gen_orb_labels(material="MoS2"):
     return orb_labels
 
 
-def make_tmdc(material="MoS2"):
+def make_tmdc(material: str = "MoS2") -> PrimitiveCell:
     """
     Make TMDC primitive cell.
 
-    :param material: string
-        chemical label of material
+    :param material: chemical label of material
         Should be in ("MoS2", "MoSe2", "WS2", "WSe2")
-    :return: cell: instance of 'PrimitiveCell' class
-        TMDC primitive cell
+    :return: TMDC primitive cell
     :raises NotImplementedError: if material has not been implemented
     """
     vectors, orbital_coords = _gen_lattice(material)

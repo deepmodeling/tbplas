@@ -51,17 +51,17 @@ class TestMaterials(unittest.TestCase):
         # Test orbital labels
         prim_cell = tb.make_graphene_diamond()
         label_ref = ["C_pz" for _ in range(2)]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
         prim_cell = tb.make_graphene_rect(from_scratch=True)
         label_ref = ["C_pz" for _ in range(4)]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
         prim_cell = tb.make_graphene_rect(from_scratch=False)
         label_ref = ["C_pz" for _ in range(4)]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
     def test01_black_phosphorus(self):
@@ -99,7 +99,7 @@ class TestMaterials(unittest.TestCase):
 
         # Test orbital labels
         label_ref = ["P_pz" for _ in range(4)]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
     def test02_antimonene(self):
@@ -132,13 +132,13 @@ class TestMaterials(unittest.TestCase):
         # Test labels
         prim_cell = tb.make_antimonene(with_soc=False)
         label_ref = ["p11", "p12", "p13", "p21", "p22", "p23"]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
         prim_cell = tb.make_antimonene(with_soc=True)
         label_ref = ["p11+", "p12+", "p13+", "p11-", "p12-", "p13-",
                      "p21+", "p22+", "p23+", "p21-", "p22-", "p23-"]
-        label_test = [orb.label for orb in prim_cell.orbital_list]
+        label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
     def test03_tmdc(self):
@@ -171,7 +171,7 @@ class TestMaterials(unittest.TestCase):
         for material in ("MoS2", "MoSe2", "WS2", "WSe2"):
             label_ref = _gen_orb_labels(material)
             prim_cell = tb.make_tmdc(material)
-            label_test = [orb.label for orb in prim_cell.orbital_list]
+            label_test = [orb.label for orb in prim_cell.orbitals]
             self.assertListEqual(label_ref, label_test)
 
 

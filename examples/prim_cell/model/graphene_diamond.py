@@ -16,19 +16,19 @@ print(vectors)
 # between a1 and a2 being 60 degrees, the fractional coordinates are (1/3, 1/3, 0)
 # and (2/3, 2/3, 0).
 cell = tb.PrimitiveCell(vectors, unit=tb.ANG)
-cell.add_orbital([1./3, 1./3], 0.0)
-cell.add_orbital([2./3, 2./3], 0.0)
+cell.add_orbital((1./3, 1./3), 0.0)
+cell.add_orbital((2./3, 2./3), 0.0)
 
 # # Alternatively, we can add the orbitals using cartesian coordinates.
-# cell.add_orbital_cart([1.23, 0.71014083], energy=0.0, unit=tb.ANG)
-# cell.add_orbital_cart([2.46, 1.42028166], energy=0.0, unit=tb.ANG)
+# cell.add_orbital_cart((1.23, 0.71014083), energy=0.0, unit=tb.ANG)
+# cell.add_orbital_cart((2.46, 1.42028166), energy=0.0, unit=tb.ANG)
 # print(cell.orb_pos_ang)
 
 # Then we add hopping terms. Conjugate relation <i,0|H|j,R> = <j,0|H|i,-R>* are
 # handled automatically. So we need to add only half of all the hopping terms.
-cell.add_hopping([0, 0], 0, 1, -2.7)
-cell.add_hopping([1, 0], 1, 0, -2.7)
-cell.add_hopping([0, 1], 1, 0, -2.7)
+cell.add_hopping((0, 0), 0, 1, -2.7)
+cell.add_hopping((1, 0), 1, 0, -2.7)
+cell.add_hopping((0, 1), 1, 0, -2.7)
 
 # Now we can view the primitive cell just created.
 cell.plot()

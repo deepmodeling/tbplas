@@ -8,11 +8,11 @@ def make_cell(a, t):
     lat = a * np.sqrt(3)
     vectors = tb.gen_lattice_vectors(a=lat, b=lat, c=1.0, gamma=60)
     cell = tb.PrimitiveCell(vectors, unit=tb.NM)
-    cell.add_orbital([0.0, 0.0], label="C_pz")
-    cell.add_orbital([1 / 3., 1 / 3.], label="C_pz")
-    cell.add_hopping([0, 0], 0, 1, t)
-    cell.add_hopping([1, 0], 1, 0, t)
-    cell.add_hopping([0, 1], 1, 0, t)
+    cell.add_orbital((0.0, 0.0), label="C_pz")
+    cell.add_orbital((1 / 3., 1 / 3.), label="C_pz")
+    cell.add_hopping((0, 0), 0, 1, t)
+    cell.add_hopping((1, 0), 1, 0, t)
+    cell.add_hopping((0, 1), 1, 0, t)
     return cell
 
 

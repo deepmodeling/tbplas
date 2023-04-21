@@ -17,11 +17,11 @@ import tbplas as tb
 t = 3.0
 vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
 cell = tb.PrimitiveCell(vectors, unit=tb.NM)
-cell.add_orbital([0.0, 0.0], label="C_pz")
-cell.add_orbital([1 / 3., 1 / 3.], label="C_pz")
-cell.add_hopping([0, 0], 0, 1, t)
-cell.add_hopping([1, 0], 1, 0, t)
-cell.add_hopping([0, 1], 1, 0, t)
+cell.add_orbital((0.0, 0.0), label="C_pz")
+cell.add_orbital((1 / 3., 1 / 3.), label="C_pz")
+cell.add_hopping((0, 0), 0, 1, t)
+cell.add_hopping((1, 0), 1, 0, t)
+cell.add_hopping((0, 1), 1, 0, t)
 
 # Create a Lindhard object
 lind = tb.Lindhard(cell=cell, energy_max=10, energy_step=1000,
