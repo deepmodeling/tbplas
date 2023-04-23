@@ -1,17 +1,7 @@
-"""
-Functions and classes for running TBPlaS in parallel mode via MPI.
-
-Functions
----------
-    None
-
-Classes
--------
-    MPIEnv: developer class
-        wrapper over MPI4PY APIs
-"""
+"""Functions and classes for the parallel environment."""
 
 import os
+from typing import Tuple, List, Any
 
 import numpy as np
 try:
@@ -22,32 +12,33 @@ except ImportError:
 from .utils import split_list, split_range, get_datetime
 
 
+__all__ = ["MPIEnv"]
+
+
 class MPIEnv:
     """
     Wrapper over MPI4PY APIs.
 
     Attributes
     ----------
-    comm: instance of 'mpi4py.MPI.Intracomm' class
+    comm: 'mpi4py.MPI.Intracomm' class
         default global mpi communicator
     rank: integer
         id of this process in mpi communicator
     size: integer
         number of processes in mpi communicator
     """
-    def __init__(self, enable_mpi=True, echo_details=False) -> None:
+    def __init__(self, enable_mpi: bool = True,
+                 echo_details: bool = False) -> None:
         """
         This class has two usages: as a developer class for parallel jobs
         or as a user class for detecting the master process. For the latter
         purpose, the default value of enable_mpi should be True while
         echo_details should be False. DO NOT change them.
 
-        :param enable_mpi: boolean
-            whether to enable parallelization using MPI
-        :param echo_details: boolean
-            whether to report parallelization details
-        :raises ImportError: if mpi is enabled but MPI4PY is not properly
-            installed
+        :param enable_mpi: whether to enable parallelization using MPI
+        :param echo_details: whether to report parallelization details
+        :return: None
         """
         # Initialize MPI variables
         if enable_mpi:
@@ -77,17 +68,17 @@ class MPIEnv:
             self.print()
 
     @property
-    def mpi_enabled(self):
+    def mpi_enabled(self) -> bool:
         """Determine whether MPI is enabled."""
         return self.comm is not None
 
     @property
-    def is_master(self):
+    def is_master(self) -> bool:
         """Determine whether this is the master process."""
         return self.rank == 0
 
     @staticmethod
-    def __get_array_order(array: np.ndarray):
+    def __get_array_order(array: np.ndarray) -> str:
         """
         Get data order of array.
 
@@ -96,8 +87,8 @@ class MPIEnv:
         in column-major order. Otherwise, it will be in row-major order.
         If mistaken, no errors will be raised, but the results will be weired.
 
-        :param array: numpy array
-        :return: string, should be either "C" or "F"
+        :param array: incoming numpy array
+        :return: whether the array is in C or Fortran order
         :raise ValueError: if array is neither C nor FORTRAN contiguous
         """
         if array.flags.c_contiguous:
@@ -108,36 +99,45 @@ class MPIEnv:
             raise ValueError("Array is neither C nor FORTRAN contiguous")
         return order
 
-    def dist_list(self, raw_list, algorithm="range"):
+    def dist_list(self, raw_list: List[Any],
+                  algorithm: str = "range") -> List[Any]:
         """
         Distribute a list over processes.
 
-        :param raw_list: list
-            raw list to distribute
-        :param algorithm: string
-            distribution algorithm, should be either "remainder" or "range"
-        :return: list: sublist assigned to this process
+        :param raw_list: raw list to distribute
+        :param algorithm: distribution algorithm, should be either "remainder"
+            or "range"
+        :return: sublist assigned to this process
         """
         return split_list(raw_list, self.size, algorithm)[self.rank]
 
-    def dist_range(self, n_max):
+    def dist_range(self, n_max: int) -> range:
         """
         Distribute range(n_max) over processes.
 
-        :param n_max: int
-            upper bound of range
-        :return: range: range assigned to this process
+        :param n_max: upper bound of the range
+        :return: subrange assigned to this process
         """
         return split_range(n_max, num_group=self.size)[self.rank]
 
-    def reduce(self, data_local):
+    def dist_bound(self, n_max: int) -> Tuple[int, int]:
+        """
+        Same as dist_range, but returns the lower and upper bounds.
+        Both of the bounds are close, i.e. [i_min, i_max].
+
+        :param n_max: upper bound of range
+        :return: lower and upper bounds of subrange assigned to this process
+        """
+        i_index = self.dist_range(n_max)
+        i_min, i_max = min(i_index), max(i_index)
+        return i_min, i_max
+
+    def reduce(self, data_local: np.ndarray) -> np.ndarray:
         """
         Reduce local data to master process.
 
-        :param data_local: numpy array
-            local results on each process
-        :return: data: numpy array
-            summed data from data_local
+        :param data_local: local results on each process
+        :return: summed data from data_local
         """
         if self.mpi_enabled:
             if self.is_master:
@@ -150,14 +150,12 @@ class MPIEnv:
             data = data_local
         return data
 
-    def all_reduce(self, data_local):
+    def all_reduce(self, data_local: np.ndarray) -> np.ndarray:
         """
         Reduce local data and broadcast to all processes.
 
-        :param data_local: numpy array
-            local results on each process
-        :return: data: numpy array
-            summed data from data_local
+        :param data_local: local results on each process
+        :return: summed data from data_local
         """
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
@@ -167,14 +165,12 @@ class MPIEnv:
             data = data_local
         return data
 
-    def average(self, data_local):
+    def average(self, data_local: np.ndarray) -> np.ndarray:
         """
         Average results over random samples and store results to master process.
 
-        :param data_local: numpy array
-            local results on each process
-        :return: data: numpy array
-            averaged data from data_local
+        :param data_local: local results on each process
+        :return: averaged data from data_local
         """
         if self.mpi_enabled:
             if self.is_master:
@@ -189,14 +185,12 @@ class MPIEnv:
             data = data_local
         return data
 
-    def all_average(self, data_local):
+    def all_average(self, data_local: np.ndarray) -> np.ndarray:
         """
         Average results over random samples broadcast to all process.
 
-        :param data_local: numpy array
-            local results on each process
-        :return: data: numpy array
-            averaged data from data_local
+        :param data_local: local results on each process
+        :return: averaged data from data_local
         """
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
@@ -207,39 +201,40 @@ class MPIEnv:
             data = data_local
         return data
 
-    def bcast(self, data_local):
+    def bcast(self, data_local: np.ndarray) -> None:
         """
         Broadcast data from master to other processes.
 
-        :param data_local: numpy array
-            local results on each process
-        :return: None.
-            Local data are synchronized to master process.
+        :param data_local: local results on each process
+        :return: None
         """
         if self.mpi_enabled:
             self.comm.Bcast(data_local, root=0)
 
-    def barrier(self):
+    def barrier(self) -> None:
         """Wrapper for self.comm.Barrier."""
         if self.mpi_enabled:
             self.comm.Barrier()
 
-    def print(self, text=""):
+    def print(self, text: str = "") -> None:
         """
         Print text on master process.
 
         NOTE: flush=True is essential for some MPI implementations,
         e.g. MPICH3.
+
+        :param text: text to print
+        :return: None
         """
         if self.is_master:
             print(text, flush=True)
 
-    def log(self, event="", fmt="%x %X"):
+    def log(self, event: str = "", fmt: str = "%x %X") -> None:
         """
         Log the date and time of event.
 
-        :param event: string, notice of the event
-        :param fmt: string, date and time format
+        :param event: notice of the event
+        :param fmt: date and time format
         :return: None.
         """
         if self.is_master:

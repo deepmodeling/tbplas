@@ -230,6 +230,17 @@ class TestHelper:
         else:
             self.tester.assertAlmostEqual(diff, 0.0)
 
+    def test_no_equal_array(self, array1, array2):
+        """
+        Checks if two arrays are not equal to each other.
+
+        :param array1: numpy array, left operand of comparison
+        :param array2: numpy array, right operand of comparison
+        :return: None.
+        """
+        diff = np.sum(np.abs(array1 - array2)).item(0)
+        self.tester.assertNotEqual(diff, 0)
+
     def test_raise(self, func, exception, message=None):
         """
         Tests if expected exception is raised during an operation.

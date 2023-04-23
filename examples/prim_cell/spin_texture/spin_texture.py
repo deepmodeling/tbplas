@@ -6,7 +6,6 @@ Example for calculating spin texture for bismuth and graphene.
 import tbplas as tb
 
 import bismuth as bi
-import graphene as graph
 
 
 def test(cell: tb.PrimitiveCell, ib: int = 0, spin_major: bool = True) -> None:
@@ -22,7 +21,7 @@ def test(cell: tb.PrimitiveCell, ib: int = 0, spin_major: bool = True) -> None:
     # Evaluate spin_texture
     k_grid = 2 * tb.gen_kmesh((48, 48, 1)) - 1
     spin_texture.k_grid = k_grid
-    spin_texture.calc_states()
+    spin_texture.update_states()
     k_cart = spin_texture.k_cart
     sx = spin_texture.eval("x")
     sy = spin_texture.eval("y")
@@ -33,7 +32,7 @@ def test(cell: tb.PrimitiveCell, ib: int = 0, spin_major: bool = True) -> None:
 def main():
     cell = bi.add_soc(bi.make_cell())
     test(cell, ib=7)
-    cell = graph.make_cell(is_qsh=True)
+    cell = tb.make_graphene_soc(is_qsh=True)
     test(cell, ib=2, spin_major=False)
 
 

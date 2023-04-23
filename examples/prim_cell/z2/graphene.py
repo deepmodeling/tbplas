@@ -3,118 +3,12 @@
 Example for reproducing the Z2 invariant of monolayer graphene in the reference:
 https://journals.aps.org/prb/abstract/10.1103/PhysRevB.84.075119
 """
-from math import sqrt, pi
+from math import pi
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas as tb
-
-
-def make_hop_dict(t: float, lamb_so: float, lamb_r: float) -> tb.HopDict:
-    """
-    Prepare the hopping terms.
-
-    NOTE: This example is adapted from a legacy code and uses the 'HopDict'
-    class for holding the hopping terms for compatibility reasons. It is not
-    recommended to use this class any longer.
-
-    :param t: common hopping parameter
-    :param lamb_so: Kane-Mele spin-orbital coupling intensity
-    :param lamb_r: Rashba spin-orbital coupling intensity
-    :return: hopping terms
-    """
-    def _hop_1st(vec):
-        a = vec[1] + 1j * vec[0]
-        ac = vec[1] - 1j * vec[0]
-        return np.array([[t, 1j * a * lamb_r], [1j * ac * lamb_r, t]])
-
-    def _hop_2nd(vec0, vec1):
-        b = 2. / sqrt(3.) * np.cross(vec0, vec1)
-        return np.array([[1j * b[2] * lamb_so, 0.], [0., -1j * b[2] * lamb_so]])
-
-    # Carbon-carbon vectors
-    ac_vec = np.array([[1., 0., 0.],
-                       [-0.5, np.sqrt(3.) / 2., 0.],
-                       [-0.5, -np.sqrt(3.) / 2., 0.]])
-    bc_vec = np.array([[-1., 0., 0.],
-                       [0.5, -np.sqrt(3.) / 2., 0.],
-                       [0.5, np.sqrt(3.) / 2., 0.]])
-
-    # Initialize hop_dict
-    hop_dict = tb.HopDict(4)
-
-    # 1st nearest neighbours
-    # (0, 0, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[0])
-    hop_dict.set_mat((0, 0, 0), hop_mat)
-
-    # (-1, 0, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[1])
-    hop_dict.set_mat((-1, 0, 0), hop_mat)
-
-    # (0, -1, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[2])
-    hop_dict.set_mat((0, -1, 0), hop_mat)
-
-    # 2nd nearest neighbours
-    # (0, 1, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[2])
-    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[2], ac_vec[0])
-    hop_dict.set_mat((0, 1, 0), hop_mat)
-
-    # (1, 0, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[1])
-    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[0])
-    hop_dict.set_mat((1, 0, 0), hop_mat)
-
-    # (1, -1, 0) cell
-    hop_mat = np.zeros((4, 4), dtype=complex)
-    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[2], bc_vec[1])
-    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[2])
-    hop_dict.set_mat((1, -1, 0), hop_mat)
-
-    return hop_dict
-
-
-def make_cell(is_qsh: bool = True) -> tb.PrimitiveCell:
-    """
-    Set up the primitive cell of graphene with Rashba and Kane-Mele SOC.
-
-    :param is_qsh: whether is the model is in quantum spin Hall phase
-    :return: the primitive cell of graphene
-    """
-    # Parameters
-    lat = 1.
-    t = -1.
-    lamb_so = 0.06 * t
-    lamb_r = 0.05 * t
-    if is_qsh:
-        lamb_nu = 0.1 * t  # QSH phase
-    else:
-        lamb_nu = 0.4 * t  # normal insulating phase
-
-    # Lattice
-    vectors = np.array([[0.5 * lat * sqrt(3), -0.5 * lat, 0.],
-                        [0.5 * lat * sqrt(3), 0.5 * lat, 0.],
-                        [0, 0, 1]])
-    prim_cell = tb.PrimitiveCell(vectors)
-
-    # Add orbitals
-    prim_cell.add_orbital([0, 0], lamb_nu)
-    prim_cell.add_orbital([0, 0], lamb_nu)
-    prim_cell.add_orbital([1./3, 1./3], -lamb_nu)
-    prim_cell.add_orbital([1./3, 1./3], -lamb_nu)
-
-    # Add hopping terms
-    hop_dict = make_hop_dict(t, lamb_so, lamb_r)
-    prim_cell.add_hopping_dict(hop_dict)
-    return prim_cell
 
 
 def main():
@@ -123,7 +17,7 @@ def main():
     reorder_phases = False
 
     # Set up primitive cell
-    prim_cell = make_cell(is_qsh=True)
+    prim_cell = tb.make_graphene_soc(is_qsh=True)
 
     # Plot model
     prim_cell.plot(hop_as_arrows=False)

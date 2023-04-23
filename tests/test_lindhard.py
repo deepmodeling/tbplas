@@ -127,7 +127,7 @@ class TestLindhard(unittest.TestCase):
                 ham_k *= 0.0
                 core.set_ham(cell.orb_pos, cell.orb_eng,
                              cell.hop_ind, cell.hop_eng,
-                             k_point, ham_k)
+                             1, k_point, ham_k)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_k)
                 bands[i_k] = eigenvalues
                 states[i_k] = eigenstates.T
@@ -140,8 +140,8 @@ class TestLindhard(unittest.TestCase):
                                kmesh_size=kmesh_size)
         k_grid_frac = lindhard.grid2frac(lindhard.kmesh_grid)
         bands_ref, states_ref = _calc_bands(prim_cell, k_grid_frac)
-        bands_test, states_test = lindhard._get_eigen_states(k_grid_frac,
-                                                             convention=1)
+        bands_test, states_test = lindhard.calc_states(k_grid_frac,
+                                                       convention=1)
         th.test_equal_array(bands_ref, bands_test)
         th.test_equal_array(states_ref, states_test)
 
@@ -197,8 +197,8 @@ class TestLindhard(unittest.TestCase):
         kq_frac = lindhard.grid2frac(kq_grid)
 
         # Get energies and wave functions
-        bands_k, states_k = lindhard._get_eigen_states(k_frac, convention=2)
-        band_kq, states_kq = lindhard._get_eigen_states(kq_frac, convention=2)
+        bands_k, states_k = lindhard.calc_states(k_frac, convention=2)
+        band_kq, states_kq = lindhard.calc_states(kq_frac, convention=2)
 
         # Compare results
         kq_map = core.build_kq_map(lindhard.kmesh_size, lindhard.kmesh_grid,

@@ -1,6 +1,7 @@
 """Initialization of TBPlaS package."""
 from .builder import *
 from .materials import *
+from .diagonal import *
 from .lindhard import *
 from .z2 import *
 from .magnetic import *

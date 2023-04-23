@@ -1,20 +1,19 @@
 """Functions and classes for manipulating the primitive cell."""
 
 from typing import List, Tuple, Dict
+import math
 
 import numpy as np
-import scipy.linalg.lapack as lapack
+from scipy.sparse import dia_matrix, dok_matrix, csr_matrix
 import matplotlib.pyplot as plt
 
 from . import constants as consts
 from . import lattice as lat
-from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import (check_coord, Orbital, Lockable, IntraHopping,
-                   HopDict, gaussian, lorentzian)
+from .base import check_coord, Orbital, Lockable, IntraHopping, HopDict
 from .utils import ModelViewer
-from ..parallel import MPIEnv
+from ..diagonal import DiagSolver
 
 
 __all__ = ["PrimitiveCell"]
@@ -472,7 +471,7 @@ class PrimitiveCell(Lockable):
         """
         # Count the number of hopping terms of each orbital
         hop_count = np.zeros(self.num_orb, dtype=np.int32)
-        for rn, hop_rn in self._hopping_dict.dict.items():
+        for rn, hop_rn in self.hoppings.items():
             for pair, energy in hop_rn.items():
                 hop_count[pair[0]] += 1
                 hop_count[pair[1]] += 1
@@ -713,78 +712,102 @@ class PrimitiveCell(Lockable):
             pos_fmt = "%10.5f%10.5f%10.5f" % (pos[0], pos[1], pos[2])
             print(pos_fmt, orbital.energy)
         print("Hopping terms:")
-        for rn, hop_rn in self._hopping_dict.dict.items():
+        for rn, hop_rn in self.hoppings.items():
             for pair, energy in hop_rn.items():
                 print(" ", rn, pair, energy)
 
-    def calc_bands(self, k_path: np.ndarray,
+    def set_ham_dense(self, k_point: np.ndarray,
+                      ham_dense: np.ndarray,
+                      convention: int = 1) -> None:
+        """
+        Set up dense Hamiltonian for given k-point.
+
+        This is the interface to be called by external exact solvers. The
+        callers are responsible to call the 'sync_array' method.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :param ham_dense: (num_orb, num_orb) complex128 array
+            incoming Hamiltonian
+        :param convention: convention for setting up the Hamiltonian
+        :return: None
+        :raises ValueError: if convention not in (1, 2)
+        """
+        if convention not in (1, 2):
+            raise ValueError(f"Illegal convention {convention}")
+        ham_dense *= 0.0
+        core.set_ham(self.orb_pos, self.orb_eng, self.hop_ind, self.hop_eng,
+                     convention, k_point, ham_dense)
+
+    def set_ham_csr(self, k_point: np.ndarray, convention: int = 1) -> csr_matrix:
+        """
+        Set up sparse Hamiltonian in csr format for given k-point.
+
+        This is the interface to be called by external exact solvers. The
+        callers are responsible to call the 'sync_array' method.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :param convention: convention for setting up the Hamiltonian
+        :return: sparse Hamiltonian
+        :raises ValueError: if convention not in (1, 2)
+        """
+        if convention not in (1, 2):
+            raise ValueError(f"Illegal convention {convention}")
+
+        # Diagonal terms
+        ham_shape = (self.num_orb, self.num_orb)
+        ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
+
+        # Off-diagonal terms
+        ham_half = dok_matrix(ham_shape, dtype=np.complex128)
+        for rn, hop_rn in self.hoppings.items():
+            for pair, energy in hop_rn.items():
+                ii, jj = pair
+                if convention == 1:
+                    dr = self.orb_pos[jj] - self.orb_pos[ii] + rn
+                else:
+                    dr = rn
+                phase = 2 * math.pi * np.dot(k_point, dr).item()
+                factor = math.cos(phase) + 1j * math.sin(phase)
+                ham_half[ii, jj] += factor * energy
+
+        # Sum up the terms
+        ham_dok = ham_dia + ham_half + ham_half.getH()
+        ham_csr = ham_dok.tocsr()
+        return ham_csr
+
+    def calc_bands(self, k_points: np.ndarray,
                    enable_mpi: bool = False,
-                   echo_details: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+                   **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate band structure along given k_path.
 
-        :param k_path: (num_kpt, 3) float64 array
-            FRACTIONAL coordinates of k-points along given path
+        :param k_points: (num_kpt, 3) float64 array
+            FRACTIONAL coordinates of the k-points
         :param enable_mpi: whether to enable parallelization over k-points
             using mpi
-        :param echo_details: whether to output parallelization details,
-            intended for muting verbose output when fitting on-site energies
-            and hopping terms
+        :param kwargs: arguments for 'calc_bands' of 'DiagSolver' class
         :return: (k_len, bands)
             k_len: (num_kpt,) float64 array in 1/NM
             length of k-path in reciprocal space, for plotting band structure
             bands: (num_kpt, num_orb) float64 array
             Energies corresponding to k-points in eV
         """
-        # Initialize working arrays.
-        self.sync_array()
-        num_k_points = k_path.shape[0]
-        bands = np.zeros((num_k_points, self.num_orb), dtype=np.float64)
-        ham_k = np.zeros((self.num_orb, self.num_orb), dtype=np.complex128)
-
-        # Get length of k-path in reciprocal space
-        k_len = kpt.gen_kdist(self.lat_vec, k_path)
-
-        # Distribute k-points over processes
-        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=echo_details)
-        k_index = mpi_env.dist_range(num_k_points)
-
-        # Loop over k-points to evaluate the energies
-        for i_k in k_index:
-            k_point = k_path[i_k]
-            ham_k *= 0.0
-            core.set_ham(self.orb_pos, self.orb_eng,
-                         self.hop_ind, self.hop_eng,
-                         k_point, ham_k)
-            eigenvalues, eigenstates, info = lapack.zheev(ham_k)
-            idx = eigenvalues.argsort()[::-1]
-            eigenvalues = eigenvalues[idx]
-            bands[i_k, :] = eigenvalues[:]
-
-        # Collect data
-        bands = mpi_env.all_reduce(bands)
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        k_len, bands = diag_solver.calc_bands(k_points, **kwargs)[:2]
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray,
-                 e_min: float = None,
-                 e_max: float = None,
-                 e_step: float = 0.05,
-                 sigma: float = 0.05,
-                 basis: str = "Gaussian",
-                 g_s: int = 1,
-                 enable_mpi: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+                 enable_mpi: bool = False,
+                 **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate density of states for given energy range and step.
 
         :param k_points: (num_kpt, 3) float64 array
-            FRACTIONAL coordinates of k-points
-        :param e_min: lower bound of the energy range in eV
-        :param e_max: upper hound of the energy range in eV
-        :param e_step: energy step in eV
-        :param sigma: broadening parameter in eV
-        :param basis: basis function to approximate the Delta function
-        :param g_s: spin degeneracy
+            FRACTIONAL coordinates of the k-points
         :param enable_mpi: whether to enable parallelization over k-points using mpi
+        :param kwargs: arguments for 'calc_dos' of 'DiagSolver' class
         :return: (energies, dos)
             energies: (num_grid,) float64 array
             energy grid corresponding to e_min, e_max and e_step
@@ -792,43 +815,8 @@ class PrimitiveCell(Lockable):
             density of states in states/eV
         :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
-        # Get the band energies
-        k_len, bands = self.calc_bands(k_points, enable_mpi=enable_mpi)
-
-        # Create energy grid
-        if e_min is None:
-            e_min = np.min(bands)
-        if e_max is None:
-            e_max = np.max(bands)
-        num_grid = int((e_max - e_min) / e_step)
-        energies = np.linspace(e_min, e_max, num_grid+1)
-
-        # Evaluate DOS by collecting contributions from all energies
-        dos = np.zeros(energies.shape, dtype=np.float64)
-        if basis == "Gaussian":
-            basis_func = gaussian
-        elif basis == "Lorentzian":
-            basis_func = lorentzian
-        else:
-            raise exc.BasisError(basis)
-
-        # Distribute k-points over processes
-        num_kpt = bands.shape[0]
-        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-        k_index = mpi_env.dist_range(num_kpt)
-
-        # Collect contributions
-        for i_k in k_index:
-            for i_b, eng_i in enumerate(bands[i_k]):
-                dos += basis_func(energies, eng_i, sigma)
-        dos = mpi_env.all_reduce(dos)
-
-        # Re-normalize dos
-        # For each energy in bands, we use a normalized Gaussian or Lorentzian
-        # basis function to approximate the Delta function. Totally, there are
-        # bands.size basis functions. So we divide dos by this number.
-        dos /= bands.size
-        dos *= g_s
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        energies, dos = diag_solver.calc_dos(k_points, **kwargs)
         return energies, dos
 
     @property

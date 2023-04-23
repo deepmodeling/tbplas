@@ -821,6 +821,30 @@ class TestPrimitive(unittest.TestCase):
         orb_pos_test = cell.orb_pos_ang
         th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)
 
+    def test18_set_ham(self):
+        """
+        Test 'set_ham_dense' and 'set_ham_csr' methods.
+
+        :return: None
+        """
+        th = TestHelper(self)
+        cell = make_cell()
+        cell.sync_array()
+
+        # Check if convention I and convention II produce different results
+        ham1 = np.zeros((cell.num_orb, cell.num_orb), dtype=np.complex128)
+        ham2 = np.zeros((cell.num_orb, cell.num_orb), dtype=np.complex128)
+        kpt = np.array([0.35, 0.50, 0.0])
+        cell.set_ham_dense(kpt, ham1, convention=1)
+        cell.set_ham_dense(kpt, ham2, convention=2)
+        th.test_no_equal_array(ham1, ham2)
+
+        # Check if set_ham_dense agrees with set_ham_csr
+        ham1_csr = cell.set_ham_csr(kpt, convention=1)
+        ham2_csr = cell.set_ham_csr(kpt, convention=2)
+        th.test_equal_array(ham1, ham1_csr, almost=True)
+        th.test_equal_array(ham2, ham2_csr, almost=True)
+
 
 if __name__ == "__main__":
     unittest.main()

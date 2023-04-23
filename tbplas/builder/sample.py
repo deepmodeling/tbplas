@@ -14,22 +14,19 @@ Classes
         interface class to FORTRAN backend
 """
 
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
-import scipy.linalg.lapack as lapack
 from scipy.sparse import dia_matrix, csr_matrix
-from scipy.sparse.linalg import eigsh
 import matplotlib.pyplot as plt
 
 from . import lattice as lat
-from . import kpoints as kpt
 from . import exceptions as exc
 from . import core
-from .base import gaussian, lorentzian, Lockable, InterHopping
+from .base import Lockable, InterHopping
 from .super import SuperCell
 from .utils import ModelViewer
-from ..parallel import MPIEnv
+from ..diagonal import DiagSolver
 
 
 class SCInterHopping(Lockable, InterHopping):
@@ -667,217 +664,112 @@ class Sample:
             plt.show()
         plt.close()
 
-    def calc_bands(self, k_path, solver="lapack", num_bands=None,
-                   orbital_indices=None, enable_mpi=False):
+    def set_ham_dense(self, k_point: np.ndarray,
+                      ham_dense: np.ndarray,
+                      convention: int = 1) -> None:
+        """
+        Set up Hamiltonian for given k-point.
+
+        This is the interface to be called by external exact solvers. The
+        callers are responsible to call the 'init_*' method.
+
+        :param k_point: (3,) float64 array
+            Fractional coordinate of the k-point
+        :param ham_dense: (num_orb, num_orb) complex128 array
+            incoming Hamiltonian
+        :param convention: convention for setting up the Hamiltonian
+        :return: None
+        :raises ValueError: if convention != 1
+        """
+        if convention not in (1,):
+            raise ValueError(f"Illegal convention {convention}")
+
+        # Convert k-point to Cartesian Coordinates
+        sc0 = self.sc_list[0]
+        sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
+        k_point = np.matmul(k_point, sc_recip_vec)
+
+        # Set up the Hamiltonian
+        ham_dense *= 0.0
+        hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
+        core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
+        core.fill_ham(self.orb_eng, self.hop_i, self.hop_j, hop_k, ham_dense)
+
+    def set_ham_csr(self, k_point: np.ndarray, convention: int = 1) -> csr_matrix:
+        """
+        Set up sparse Hamiltonian in csr format for given k-point.
+
+        This is the interface to be called by external exact solvers. The
+        callers are responsible to call the 'init_*' method.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :param convention: convention for setting up the Hamiltonian
+        :return: sparse Hamiltonian
+        :raises ValueError: if convention != 1
+        """
+        if convention not in (1,):
+            raise ValueError(f"Illegal convention {convention}")
+
+        # Convert k-point to Cartesian Coordinates
+        sc0 = self.sc_list[0]
+        sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
+        k_point = np.matmul(k_point, sc_recip_vec)
+
+        # Diagonal terms
+        ham_shape = (self.num_orb_tot, self.num_orb_tot)
+        ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
+
+        # Off-diagonal terms
+        hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
+        core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
+        ham_half = csr_matrix((hop_k, (self.hop_i, self.hop_j)),
+                              shape=ham_shape)
+
+        # Sum up the terms
+        ham_csr = ham_dia + ham_half + ham_half.getH()
+        return ham_csr
+
+    def calc_bands(self, k_points: np.ndarray,
+                   enable_mpi: bool = False,
+                   **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate band structure along given k_path.
 
-        :param k_path: (num_kpt, 3) float64 array
-            FRACTIONAL coordinates of k-points along given path
-        :param solver: string
-            mathematical library to obtain the eigen spectrum
-            should be either "lapack" or "arpack"
-        :param num_bands: integer
-            number of bands to calculate, ignored for lapack solver
-            For arpack solver, the lowest num_bands bands will be calculated.
-            If not given, default value is to calculate the lowest 60% of all
-            bands.
-        :param orbital_indices: List[int] or "all"
-            orbital indices to evaluate weights
-        :param enable_mpi: boolean
-            whether to enable parallelization over k-points using mpi
-        :return: k_len: (num_kpt,) float64 array
-            length of k-path in 1/nm in reciprocal space
-            x-data for plotting band structure
-        :return: bands: (num_kpt, num_orb_sc) float64 array
-            energies corresponding to k-points in eV
-        :return: weights: (num_kpt, num_orb_sc) float64 array
-            contribution of selected orbitals to the eigenstates
-            effective only when orbital_indices is not none
-        :raises SolverError: if solver is neither lapack nor arpack
-        :raises InterHopVoidError: if any inter-hopping set is empty
-        :raises ValueError: if duplicate terms have been detected in any
-            inter-hopping
+        :param k_points: (num_kpt, 3) float64 array
+            FRACTIONAL coordinates of the k-points
+        :param enable_mpi: whether to enable parallelization over k-points
+            using mpi
+        :param kwargs: arguments for 'calc_bands' of 'DiagSolver' class
+        :return: (k_len, bands)
+            k_len: (num_kpt,) float64 array in 1/NM
+            length of k-path in reciprocal space, for plotting band structure
+            bands: (num_kpt, num_orb) float64 array
+            Energies corresponding to k-points in eV
         """
-        self.init_orb_pos()
-        self.init_orb_eng()
-        self.init_hop()
-        self.init_dr()
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        k_len, bands = diag_solver.calc_bands(k_points, **kwargs)[:2]
+        return k_len, bands
 
-        # Initialize working arrays.
-        num_k_points = len(k_path)
-        num_orbitals = sum(self._get_num_orb())
-        ham_shape = (num_orbitals, num_orbitals)
-        if solver == "lapack":
-            num_bands = num_orbitals
-        elif solver == "arpack":
-            if num_bands is None:
-                num_bands = int(num_orbitals * 0.6)
-        else:
-            raise exc.SolverError(solver)
-        bands = np.zeros((num_k_points, num_bands), dtype=np.float64)
-        if orbital_indices is not None:
-            weights = np.zeros((num_k_points, num_bands), dtype=np.float64)
-        else:
-            weights = None
-        hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
-
-        # Get length of k-path in reciprocal space
-        sc0 = self.sc_list[0]
-        k_len = kpt.gen_kdist(sc0.sc_lat_vec, k_path)
-
-        # Convert k_path to Cartesian Coordinates
-        sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
-        k_path = lat.frac2cart(sc_recip_vec, k_path)
-
-        # Distribute k-points over processes
-        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=True)
-        k_index = mpi_env.dist_range(num_k_points)
-
-        # Function for collecting weights
-        def _eval_weights(states):
-            if orbital_indices is not None:
-                if orbital_indices == "all":
-                    weights[i_k] += 1.0
-                else:
-                    states = states.T
-                    states = states[idx]
-                    for i_b in range(num_bands):
-                        for i_o in orbital_indices:
-                            weights[i_k, i_b] += abs(states[i_b, i_o])**2
-
-        # Loop over k-points to evaluate the band structure
-        if solver == "lapack":
-            ham_dense = np.zeros(ham_shape, dtype=np.complex128)
-            for i_k in k_index:
-                k_point = k_path[i_k]
-
-                # Update hop_k
-                core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
-
-                # Fill dense Hamiltonian
-                ham_dense *= 0.0
-                core.fill_ham(self.orb_eng, self.hop_i, self.hop_j, hop_k,
-                              ham_dense)
-
-                # Evaluate eigenvalues and eigenstates.
-                eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
-                idx = eigenvalues.argsort()[::-1]
-                eigenvalues = eigenvalues[idx]
-                bands[i_k, :] = eigenvalues
-                _eval_weights(eigenstates)
-        elif solver == "arpack":
-            ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
-            for i_k in k_index:
-                k_point = k_path[i_k]
-
-                # Update hop_k
-                core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
-
-                # Create Hamiltonian
-                ham_half = csr_matrix((hop_k, (self.hop_i, self.hop_j)),
-                                      shape=ham_shape)
-                ham_csr = ham_dia + ham_half + ham_half.getH()
-
-                # Evaluate eigenvalues and eigenstates.
-                eigenvalues, eigenstates = eigsh(ham_csr, num_bands, which="LA")
-                idx = eigenvalues.argsort()[::-1]
-                eigenvalues = eigenvalues[idx]
-                bands[i_k, :] = eigenvalues
-                _eval_weights(eigenstates)
-        else:
-            raise exc.SolverError(solver)
-
-        # Collect data
-        bands = mpi_env.all_reduce(bands)
-        if orbital_indices is not None:
-            weights = mpi_env.all_reduce(weights)
-
-        # Return
-        if orbital_indices is None:
-            return k_len, bands
-        else:
-            return k_len, bands, weights
-
-    def calc_dos(self, k_points, e_min=None, e_max=None, e_step=0.05,
-                 sigma=0.05, basis="Gaussian", g_s=1, orbital_indices=None,
-                 enable_mpi=False, **kwargs):
+    def calc_dos(self, k_points: np.ndarray,
+                 enable_mpi: bool = False,
+                 **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate density of states for given energy range and step.
-    
+
         :param k_points: (num_kpt, 3) float64 array
-            FRACTIONAL coordinates of k-points
-        :param e_min: float
-            lower bound of the energy range in eV
-        :param e_max: float
-            upper hound of the energy range in eV
-        :param e_step: float
-            energy step in eV
-        :param sigma: float
-            broadening parameter in eV
-        :param basis: string
-            basis function to approximate the Delta function
-            should be either "Gaussian" or "Lorentzian"
-        :param g_s: int
-            spin degeneracy
-        :param orbital_indices: List[int] or "all"
-            orbital indices to evaluate LDOS
-        :param enable_mpi: boolean
-            whether to enable parallelization over k-points using mpi
-        :param kwargs: dictionary
-            arguments for method 'calc_bands'
-        :return: energies: (num_grid,) float64 array
+            FRACTIONAL coordinates of the k-points
+        :param enable_mpi: whether to enable parallelization over k-points using mpi
+        :param kwargs: arguments for 'calc_dos' of 'DiagSolver' class
+        :return: (energies, dos)
+            energies: (num_grid,) float64 array
             energy grid corresponding to e_min, e_max and e_step
-        :return: dos: (num_grid,) float64 array
+            dos: (num_grid,) float64 array
             density of states in states/eV
-        :raises BasisError: if basis is neither Gaussian or Lorentzian
-        :raises SolverError: if solver is neither lapack nor arpack
-        :raises InterHopVoidError: if any inter-hopping set is empty
-        :raises ValueError: if duplicate terms have been detected in any
-            inter-hopping
+        :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
-        # Get the band energies
-        if orbital_indices is None:
-            orbital_indices = "all"
-        k_len, bands, weights = \
-            self.calc_bands(k_points, orbital_indices=orbital_indices,
-                            enable_mpi=enable_mpi, **kwargs)
-    
-        # Create energy grid
-        if e_min is None:
-            e_min = np.min(bands)
-        if e_max is None:
-            e_max = np.max(bands)
-        num_grid = int((e_max - e_min) / e_step)
-        energies = np.linspace(e_min, e_max, num_grid+1)
-
-        # Evaluate DOS by collecting contributions from all energies
-        dos = np.zeros(energies.shape, dtype=np.float64)
-        if basis == "Gaussian":
-            basis_func = gaussian
-        elif basis == "Lorentzian":
-            basis_func = lorentzian
-        else:
-            raise exc.BasisError(basis)
-
-        # Distribute k-points over processes
-        num_kpt = bands.shape[0]
-        mpi_env = MPIEnv(enable_mpi=enable_mpi, echo_details=False)
-        k_index = mpi_env.dist_range(num_kpt)
-
-        # Collect contributions
-        for i_k in k_index:
-            for i_b, eng_i in enumerate(bands[i_k]):
-                dos += basis_func(energies, eng_i, sigma) * \
-                    weights.item(i_k, i_b)
-        dos = mpi_env.all_reduce(dos)
-    
-        # Re-normalize dos
-        # For each energy in bands, we use a normalized Gaussian or Lorentzian
-        # basis function to approximate the Delta function. Totally, there are
-        # bands.size basis functions. So we divide dos by this number.
-        dos /= bands.size
-        dos *= g_s
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        energies, dos = diag_solver.calc_dos(k_points, **kwargs)
         return energies, dos
 
     @property

@@ -6,14 +6,14 @@ from math import pi
 import numpy as np
 import scipy.linalg.lapack as spla
 
-from .builder import core, PrimitiveCell
-from .parallel import MPIEnv
+from .builder import PrimitiveCell
+from .diagonal import DiagSolver
 
 
 __all__ = ["Z2"]
 
 
-class Z2(MPIEnv):
+class Z2(DiagSolver):
     """
     Class for evaluating the Z2 topological invariant.
 
@@ -22,8 +22,6 @@ class Z2(MPIEnv):
 
     Attributes
     ----------
-    cell: 'PrimitiveCell' instance
-        primitive cell under investigation
     num_occ: int
         number of occupied bands of the primitive cell
     h_mat: (num_orb, num_orb) complex128 array
@@ -44,15 +42,10 @@ class Z2(MPIEnv):
             primitive cell
         """
         # Initialize parallel environment
-        super().__init__(enable_mpi=enable_mpi, echo_details=True)
-
-        # Set and lock cell
-        self.cell = cell
-        self.cell.lock()
-        self.cell.sync_array()
+        super().__init__(cell, enable_mpi=enable_mpi)
 
         # Check and set num_occ
-        num_orb = self.cell.num_orb
+        num_orb = self.num_orb
         if num_occ not in range(1, num_orb+1):
             raise ValueError(f"num_occ {num_occ} should be in [1, {num_orb}]")
         # if num_occ % 2 != 0:
@@ -74,9 +67,7 @@ class Z2(MPIEnv):
             eigenstates of the given k-point
         """
         self.h_mat *= 0.0
-        core.set_ham(self.cell.orb_pos, self.cell.orb_eng,
-                     self.cell.hop_ind, self.cell.hop_eng,
-                     kpt, self.h_mat)
+        self.model.set_ham_dense(kpt, self.h_mat)
         eigenvalues, eigenstates, info = spla.zheev(self.h_mat)
         idx = eigenvalues.argsort()
         return eigenstates[:, idx]

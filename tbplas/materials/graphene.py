@@ -5,10 +5,11 @@ import math
 import numpy as np
 
 from ..builder import (gen_lattice_vectors, PrimitiveCell, reshape_prim_cell,
-                       find_neighbors, SK, NM)
+                       find_neighbors, SK, NM, HopDict)
 
 
-__all__ = ["make_graphene_rect", "make_graphene_diamond", "make_graphene_sp"]
+__all__ = ["make_graphene_rect", "make_graphene_diamond", "make_graphene_sp",
+           "make_graphene_soc"]
 
 
 def make_graphene_diamond(c: float = 1.0, t: complex = -2.7) -> PrimitiveCell:
@@ -118,3 +119,99 @@ def make_graphene_sp(c: float = 1.0) -> PrimitiveCell:
         # Add hopping term
         cell.add_hopping(term.rn, i, j, hop)
     return cell
+
+
+def make_graphene_soc(is_qsh: bool = True) -> PrimitiveCell:
+    """
+    Set up the primitive cell of graphene with Rashba and Kane-Mele SOC.
+
+    NOTE: This piece of code is adapted from a legacy program and uses the
+    'HopDict' class for holding the hopping terms for compatibility reasons.
+    It is not recommended to use this class any longer.
+
+    :param is_qsh: whether is the model is in quantum spin Hall phase
+    :return: the primitive cell of graphene
+    """
+    # Parameters
+    lat = 1.
+    t = -1.
+    lamb_so = 0.06 * t
+    lamb_r = 0.05 * t
+    if is_qsh:
+        lamb_nu = 0.1 * t  # QSH phase
+    else:
+        lamb_nu = 0.4 * t  # normal insulating phase
+
+    # Lattice
+    vectors = np.array([[0.5 * lat * math.sqrt(3), -0.5 * lat, 0.],
+                        [0.5 * lat * math.sqrt(3), 0.5 * lat, 0.],
+                        [0, 0, 1]])
+    prim_cell = PrimitiveCell(vectors)
+
+    # Add orbitals
+    prim_cell.add_orbital((0, 0), lamb_nu)
+    prim_cell.add_orbital((0, 0), lamb_nu)
+    prim_cell.add_orbital((1./3, 1./3), -lamb_nu)
+    prim_cell.add_orbital((1./3, 1./3), -lamb_nu)
+
+    # Add hopping terms
+    def _hop_1st(vec):
+        a = vec[1] + 1j * vec[0]
+        ac = vec[1] - 1j * vec[0]
+        return np.array([[t, 1j * a * lamb_r],
+                         [1j * ac * lamb_r, t]])
+
+    def _hop_2nd(vec0, vec1):
+        b = 2. / math.sqrt(3.) * np.cross(vec0, vec1)
+        return np.array([[1j * b[2] * lamb_so, 0.],
+                         [0., -1j * b[2] * lamb_so]])
+
+    # Carbon-carbon vectors
+    ac_vec = np.array([[1., 0., 0.],
+                       [-0.5, np.sqrt(3.) / 2., 0.],
+                       [-0.5, -np.sqrt(3.) / 2., 0.]])
+    bc_vec = np.array([[-1., 0., 0.],
+                       [0.5, -np.sqrt(3.) / 2., 0.],
+                       [0.5, np.sqrt(3.) / 2., 0.]])
+
+    # Initialize hop_dict
+    hop_dict = HopDict(4)
+
+    # 1st nearest neighbours
+    # (0, 0, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[0])
+    hop_dict.set_mat((0, 0, 0), hop_mat)
+
+    # (-1, 0, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[1])
+    hop_dict.set_mat((-1, 0, 0), hop_mat)
+
+    # (0, -1, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 2:4] = _hop_1st(ac_vec[2])
+    hop_dict.set_mat((0, -1, 0), hop_mat)
+
+    # 2nd nearest neighbours
+    # (0, 1, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[2])
+    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[2], ac_vec[0])
+    hop_dict.set_mat((0, 1, 0), hop_mat)
+
+    # (1, 0, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[1])
+    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[0])
+    hop_dict.set_mat((1, 0, 0), hop_mat)
+
+    # (1, -1, 0) cell
+    hop_mat = np.zeros((4, 4), dtype=complex)
+    hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[2], bc_vec[1])
+    hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[2])
+    hop_dict.set_mat((1, -1, 0), hop_mat)
+
+    # Apply hopping terms
+    prim_cell.add_hopping_dict(hop_dict)
+    return prim_cell

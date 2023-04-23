@@ -660,6 +660,28 @@ class TestSample(unittest.TestCase):
         plt.plot(energies, dos)
         plt.show()
 
+    def test15_set_ham(self):
+        """
+        Test 'set_ham_dense' and 'set_ham_csr' methods.
+
+        :return: None
+        """
+        th = TestHelper(self)
+        sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
+        sample = Sample(sc)
+        sample.init_orb_pos()
+        sample.init_orb_eng()
+        sample.init_hop()
+        sample.init_dr()
+
+        # Check if set_ham_dense agrees with set_ham_csr
+        num_orb = sample.num_orb_tot
+        ham1 = np.zeros((num_orb, num_orb), dtype=np.complex128)
+        kpt = np.array([0.35, 0.50, 0.0])
+        sample.set_ham_dense(kpt, ham1, convention=1)
+        ham1_csr = sample.set_ham_csr(kpt, convention=1)
+        th.test_equal_array(ham1, ham1_csr, almost=True)
+
 
 if __name__ == "__main__":
     unittest.main()
