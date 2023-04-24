@@ -9,7 +9,7 @@ PKG_INFO = {
     'version': '1.0',
     'description': 'Tight-binding Package for Large-scale Simulation',
 }
-full_packages = ['tbplas', 'tbplas.adapter', 'tbplas.builder',
+full_packages = ['tbplas', 'tbplas.adapter', 'tbplas.base', 'tbplas.builder',
                  'tbplas.diagonal',  'tbplas.fortran', 'tbplas.materials',
                  'tbplas.tbpm']
 c_packages = ['tbplas.builder', 'tbplas.diagonal']
