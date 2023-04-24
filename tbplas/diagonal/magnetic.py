@@ -1,11 +1,11 @@
 """Module for calculating magnetic properties."""
 
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 
-from .builder import PrimitiveCell, frac2cart
-from .diagonal import DiagSolver
+from ..base import frac2cart
+from .base import DiagSolver
 
 
 __all__ = ["SpinTexture"]
@@ -24,7 +24,7 @@ class SpinTexture(DiagSolver):
     states: (num_kpt, num_orb) complex128 array
         cache of wave functions
     """
-    def __init__(self, cell: PrimitiveCell,
+    def __init__(self, cell: Any,
                  k_grid: np.ndarray,
                  spin_major: bool = True,
                  enable_mpi: bool = False) -> None:

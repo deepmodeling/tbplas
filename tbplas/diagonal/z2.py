@@ -1,13 +1,12 @@
 """Module for evaluating Z2 topological invariant."""
 
-from typing import Tuple, Union
+from typing import Tuple, Union, Any
 from math import pi
 
 import numpy as np
 import scipy.linalg.lapack as spla
 
-from .builder import PrimitiveCell
-from .diagonal import DiagSolver
+from .base import DiagSolver
 
 
 __all__ = ["Z2"]
@@ -31,7 +30,7 @@ class Z2(DiagSolver):
     f_mat: (num_occ, num_occ) complex128 array
         F matrix for (ka_i, ka_i+1)
     """
-    def __init__(self, cell: PrimitiveCell,
+    def __init__(self, cell: Any,
                  num_occ: int,
                  enable_mpi=False) -> None:
         """

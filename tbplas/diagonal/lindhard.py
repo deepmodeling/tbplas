@@ -1,15 +1,15 @@
 """Module for evaluating response properties from Lindhard function."""
 
-from typing import Tuple
+from typing import Tuple, Any
 import math
 
 import numpy as np
 
-from .builder import (PrimitiveCell, gen_reciprocal_vectors, get_lattice_volume,
-                      frac2cart, cart2frac, NM, KB, EPSILON0)
-from .builder import core
-from .fortran import f2py
-from .diagonal import DiagSolver
+from ..base import (gen_reciprocal_vectors, get_lattice_volume,
+                    frac2cart, cart2frac, NM, KB, EPSILON0)
+from ..fortran import f2py
+from . import core
+from .base import DiagSolver
 
 
 __all__ = ["Lindhard"]
@@ -119,7 +119,7 @@ class Lindhard(DiagSolver):
     the influence of system dimension is q-dependent. Setting supercell lengths
     to 1 nm will NOT produce the same result as the second approach.
     """
-    def __init__(self, cell: PrimitiveCell,
+    def __init__(self, cell: Any,
                  energy_max: float,
                  energy_step: int,
                  kmesh_size: Tuple[int, int, int],
@@ -131,8 +131,7 @@ class Lindhard(DiagSolver):
                  delta: float = 0.005,
                  enable_mpi: bool = False) -> None:
         """
-        :param cell: 'PrimitiveCell' instance
-            primitive cell for which properties will be evaluated
+        :param cell: primitive cell for which properties will be evaluated
         :param energy_max: upper bound of energy grid for evaluating response
             properties
         :param energy_step: resolution of energy grid

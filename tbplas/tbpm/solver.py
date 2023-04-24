@@ -1,15 +1,4 @@
-"""
-Functions and classes for TBPM calculation.
-
-Functions
----------
-    None
-
-Classes
--------
-    Solver: user class
-        wrapper class over FORTRAN TBPM subroutines
-"""
+"""Functions and classes for TBPM calculation."""
 
 import time
 import os
@@ -19,11 +8,14 @@ import math
 import numpy as np
 import scipy.special as spec
 
-from .builder import Sample
-from .builder.constants import H_BAR_EV
+from ..base import H_BAR_EV
+from ..builder import Sample
+from ..fortran import f2py
+from ..parallel import MPIEnv
 from .config import Config
-from .fortran import f2py
-from .parallel import MPIEnv
+
+
+__all__ = ["Solver"]
 
 
 class Solver(MPIEnv):

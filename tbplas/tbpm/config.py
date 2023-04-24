@@ -1,20 +1,11 @@
-"""
-Functions and classes for managing the parameters of TBPM calculation.
-
-Functions
----------
-    read_config: user function
-        read configuration from file
-
-Classes
--------
-    Config: user class
-        abstraction for representing TBPM parameters
-"""
+"""Functions and classes for managing the parameters of TBPM calculation."""
 
 import pickle
 
-from .builder import KB
+from ..base import KB
+
+
+__all__ = ["Config", "read_config"]
 
 
 class Config:

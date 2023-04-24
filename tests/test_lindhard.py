@@ -7,7 +7,7 @@ import scipy.linalg.lapack as lapack
 import matplotlib.pyplot as plt
 
 import tbplas as tb
-import tbplas.builder.core as core
+import tbplas.diagonal.core as core
 from tbplas.utils import TestHelper
 
 

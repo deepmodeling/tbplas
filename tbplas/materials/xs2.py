@@ -12,7 +12,8 @@ from typing import Tuple, List
 
 import numpy as np
 
-from ..builder import PrimitiveCell, HopDict, cart2frac, NM
+from ..base import cart2frac, NM
+from ..builder import PrimitiveCell, HopDict
 
 
 __all__ = ["make_tmdc"]

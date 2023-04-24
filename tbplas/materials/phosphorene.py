@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from ..builder import PrimitiveCell, cart2frac, NM
+from ..base import cart2frac, NM
+from ..builder import PrimitiveCell
 
 
 __all__ = ["make_black_phosphorus"]

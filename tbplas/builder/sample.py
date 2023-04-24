@@ -20,13 +20,16 @@ import numpy as np
 from scipy.sparse import dia_matrix, csr_matrix
 import matplotlib.pyplot as plt
 
-from . import lattice as lat
+from ..base import lattice as lat
 from . import exceptions as exc
 from . import core
 from .base import Lockable, InterHopping
 from .super import SuperCell
 from .utils import ModelViewer
 from ..diagonal import DiagSolver
+
+
+__all__ = ["SCInterHopping", "Sample"]
 
 
 class SCInterHopping(Lockable, InterHopping):
@@ -766,7 +769,6 @@ class Sample:
             energy grid corresponding to e_min, e_max and e_step
             dos: (num_grid,) float64 array
             density of states in states/eV
-        :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
         diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
         energies, dos = diag_solver.calc_dos(k_points, **kwargs)

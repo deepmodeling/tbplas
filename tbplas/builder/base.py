@@ -1,32 +1,4 @@
-"""
-Base functions and classes used through the builder package
-
-Functions
----------
-    check_coord: developer function
-        check and auto-complete cell index, orbital coordinate,
-        super-cell dimension and periodic condition
-    invert_rn: developer function
-        check if the cell index should be inverted
-
-Classes
--------
-    Orbital: developer class
-        abstraction for orbitals in TB model
-    Lockable: developer class
-        base class for all lockable classes
-    Hopping: developer class
-        base class for hopping term container
-    IntraHopping: developer class
-        for holding hopping terms in a primitive cell or modifications
-        to a supercell
-    InterHopping: developer class
-        base class for container classes holding hopping terms between
-        two models
-    HopDict: user class
-        container for holding hopping terms of a primitive cell
-        reserved for compatibility with old version of TBPlaS
-"""
+"""Base functions and classes used through the builder package."""
 
 from collections import namedtuple
 from abc import ABC, abstractmethod

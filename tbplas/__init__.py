@@ -1,12 +1,10 @@
 """Initialization of TBPlaS package."""
+from .adapter import *
+from .base import *
 from .builder import *
-from .materials import *
 from .diagonal import *
-from .lindhard import *
-from .z2 import *
-from .magnetic import *
-from .analysis import window_exp, window_exp_ten, window_hanning, Analyzer
-from .config import read_config, Config
-from .solver import Solver
+from .materials import *
+from .tbpm import *
+from .parallel import *
 from .utils import Timer, get_datetime
 from .visual import Visualizer

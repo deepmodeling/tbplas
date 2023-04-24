@@ -1,34 +1,4 @@
-"""
-Helper classes and functions used among the code.
-
-Classes
--------
-    Timer: user and developer class
-        time counter for tracking time usage of function calls
-    ProgressBar: developer class
-        textual progress bar for reporting progress of a long task
-    TestHelper: developer class
-        helper class simplifying unit tests
-
-Functions
----------
-    gen_seeds: developer function
-        generate seeds for random number generator by picking up bits from
-        os.urandom
-    split_list: developer function
-        split list into different groups for distributing tasks among MPI
-        processes
-    print_banner_line: developer function
-        print a banner like '#--------------- FOO ---------------#' to stdout
-    print_banner_block: developer function
-        print a banner like
-        #----------------------------------#
-        #               FOO                #
-        #----------------------------------#
-        to stdout
-    get_datetime: user function
-        get current date and time
-"""
+"""Helper classes and functions used among the code."""
 
 import time
 import datetime

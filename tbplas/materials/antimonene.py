@@ -2,7 +2,8 @@
 
 import numpy as np
 
-from ..builder import PrimitiveCell, cart2frac, HopDict, NM
+from ..base import cart2frac, NM
+from ..builder import PrimitiveCell,HopDict
 
 
 __all__ = ["make_antimonene"]

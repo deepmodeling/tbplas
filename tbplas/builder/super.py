@@ -18,9 +18,9 @@ from typing import Callable
 import numpy as np
 import matplotlib.pyplot as plt
 
+from ..base import lattice as lat
 from . import exceptions as exc
 from . import core
-from . import lattice as lat
 from .base import check_coord, Lockable, IntraHopping
 from .primitive import PrimitiveCell
 from .utils import ModelViewer

@@ -1,15 +1,4 @@
-"""
-Utilities for visualizing results from exact diagonalizing or TBPM.
-
-Functions
----------
-    None
-
-Classes
--------
-    Visualizer: user class
-        class for visualizing data
-"""
+"""Utilities for visualizing results from exact diagonalizing or TBPM."""
 
 from typing import List, Tuple
 
@@ -19,6 +8,9 @@ from scipy.interpolate import griddata
 
 from .builder import Sample
 from .parallel import MPIEnv
+
+
+__all__ = ["Visualizer"]
 
 
 class Visualizer(MPIEnv):

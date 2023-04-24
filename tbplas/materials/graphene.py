@@ -4,8 +4,9 @@ import math
 
 import numpy as np
 
-from ..builder import (gen_lattice_vectors, PrimitiveCell, reshape_prim_cell,
-                       find_neighbors, SK, NM, HopDict)
+from ..base import gen_lattice_vectors, NM
+from ..builder import (PrimitiveCell, reshape_prim_cell, find_neighbors, SK,
+                       HopDict)
 
 
 __all__ = ["make_graphene_rect", "make_graphene_diamond", "make_graphene_sp",

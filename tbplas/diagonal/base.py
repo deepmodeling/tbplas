@@ -8,10 +8,10 @@ import numpy as np
 import scipy.linalg.lapack as lapack
 from scipy.sparse.linalg import eigsh
 
-from .builder import exceptions as exc
-from .builder import lattice as lat
-from .builder import kpoints as kpt
-from .parallel import MPIEnv
+
+from ..base import lattice as lat
+from ..base import kpoints as kpt
+from ..parallel import MPIEnv
 
 
 __all__ = ["DiagSolver"]
@@ -166,7 +166,7 @@ class DiagSolver(MPIEnv):
         :param num_bands: number of bands for arpack solver
         :param kwargs: arguments for the arpack solver
         :return: k_len, band structure and projection packed in named tuple
-        :raises SolverError: if solver is neither lapack nor arpack
+        :raises ValueError: if solver is neither lapack nor arpack
         """
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]
@@ -177,7 +177,7 @@ class DiagSolver(MPIEnv):
             if num_bands is None:
                 num_bands = int(num_orb * 0.6)
         else:
-            raise exc.SolverError(solver)
+            raise ValueError(f"Illegal solver {solver}")
 
         # Initialize working arrays
         bands = np.zeros((num_kpt, num_bands), dtype=np.float64)
@@ -248,7 +248,8 @@ class DiagSolver(MPIEnv):
             energy grid corresponding to e_min, e_max and e_step
             dos: (num_grid,) float64 array
             density of states in states/eV
-        :raises BasisError: if basis is neither Gaussian nor Lorentzian
+        :raises ValueError: if basis is neither Gaussian nor Lorentzian,
+            or the solver is neither lapack nor arpack
         """
         # Get the band energies and projection
         k_len, bands, proj = self.calc_bands(k_points, **kwargs)
@@ -268,7 +269,7 @@ class DiagSolver(MPIEnv):
         elif basis == "Lorentzian":
             basis_func = lorentzian
         else:
-            raise exc.BasisError(basis)
+            raise ValueError(f"Illegal basis function {basis}")
 
         # Distribute k-points over processes
         num_kpt = bands.shape[0]

@@ -9,7 +9,11 @@ PKG_INFO = {
     'version': '1.0',
     'description': 'Tight-binding Package for Large-scale Simulation',
 }
-
+full_packages = ['tbplas', 'tbplas.adapter', 'tbplas.builder',
+                 'tbplas.diagonal',  'tbplas.fortran', 'tbplas.materials',
+                 'tbplas.tbpm']
+c_packages = ['tbplas.builder', 'tbplas.diagonal']
+f_packages = set(full_packages).difference(c_packages)
 
 # FORTRAN extension
 try:
@@ -43,7 +47,7 @@ setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
-    packages=['tbplas', 'tbplas.fortran', 'tbplas.materials'],
+    packages=f_packages,
     ext_modules=f_extensions,
 )
 
@@ -71,18 +75,18 @@ if cc == 'intelem':
     os.environ['CC'] = 'icc'
     os.environ['LDSHARED'] = 'icc -shared'
 
+ext_names = ['tbplas.builder.core', 'tbplas.diagonal.core']
 c_extensions = [
-    Extension(
-        name='tbplas.builder.core',
-        sources=['tbplas/builder/core.pyx'],
-        include_dirs=[np.get_include()],
-    )
+    Extension(name=name,
+              sources=[f"{name.replace('.', '/')}.pyx"],
+              include_dirs=[np.get_include()])
+    for name in ext_names
 ]
 
 setup(
     name=PKG_INFO['name'],
     version=PKG_INFO['version'],
     description=PKG_INFO['description'],
-    packages=['tbplas.builder', 'tbplas.builder.adapter'],
+    packages=c_packages,
     ext_modules=cythonize(c_extensions),
 )

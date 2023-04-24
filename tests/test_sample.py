@@ -632,9 +632,9 @@ class TestSample(unittest.TestCase):
         sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
         sample = Sample(sc)
 
-        with self.assertRaises(exc.SolverError) as cm:
+        with self.assertRaises(ValueError) as cm:
             sample.calc_bands(k_path, solver="abc")
-        self.assertRegex(str(cm.exception), r"illegal solver abc")
+        self.assertRegex(str(cm.exception), r"Illegal solver abc")
 
         k_len, bands = sample.calc_bands(k_path)
         num_bands = bands.shape[1]
@@ -652,9 +652,9 @@ class TestSample(unittest.TestCase):
         sc = SuperCell(make_cell(), dim=(5, 5, 1), pbc=(True, True, False))
         sample = Sample(sc)
 
-        with self.assertRaises(exc.BasisError) as cm:
+        with self.assertRaises(ValueError) as cm:
             sample.calc_dos(k_points, basis="abc")
-        self.assertRegex(str(cm.exception), r"illegal basis function abc")
+        self.assertRegex(str(cm.exception), r"Illegal basis function abc")
 
         energies, dos = sample.calc_dos(k_points)
         plt.plot(energies, dos)

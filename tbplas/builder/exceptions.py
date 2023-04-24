@@ -1,4 +1,4 @@
-"""Exception classes used through the code."""
+"""Exception classes used through the builder package."""
 
 
 class CoordLenError(Exception):
@@ -39,7 +39,7 @@ class LatVecError(Exception):
 
 
 class LockError(Exception):
-    """Base class for all exceptions of modifying a locked object."""
+    """Base class for all exceptions when modifying a locked object."""
     def __init__(self):
         super().__init__()
         self.object_name = "object"
@@ -215,26 +215,6 @@ class IDSCIndexError(IDSCError):
 class VacIDSCIndexError(IDSCIndexError):
     """IDSCIndexError for vacancy."""
     pass
-
-
-class SolverError(Exception):
-    """Exception for illegal eigen spectrum solver."""
-    def __init__(self, solver):
-        super().__init__()
-        self.solver = solver
-
-    def __str__(self):
-        return f"illegal solver {self.solver}"
-
-
-class BasisError(Exception):
-    """Exception for illegal basis function for evaluating DOS."""
-    def __init__(self, basis):
-        super().__init__()
-        self.basis = basis
-
-    def __str__(self):
-        return f"illegal basis function {self.basis}"
 
 
 class OrbSetLockError(LockError):

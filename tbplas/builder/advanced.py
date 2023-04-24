@@ -10,9 +10,9 @@ import numpy as np
 from scipy.spatial import KDTree
 from scipy.optimize import leastsq
 
-from . import constants as consts
+from ..base import cart2frac, rotate_coord
+from ..base import constants as consts
 from . import exceptions as exc
-from .lattice import cart2frac, rotate_coord
 from .base import check_coord, InterHopping
 from .primitive import PrimitiveCell
 from .super import SuperCell

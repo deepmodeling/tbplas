@@ -1,20 +1,4 @@
-"""
-Functions and classes for analyzing correlation functions.
-
-Functions
-----------
-    window_hanning: user function
-        Hanning window
-    window_exp: user function
-        Exponential window
-    window_exp_ten: user function
-        Window function given by exponential of 10
-
-Classes
--------
-    Analyzer: user class
-        wrapper over analyzing tools
-"""
+"""Functions and classes for analyzing correlation functions."""
 
 from math import cos, sin, exp, pi
 
@@ -22,10 +6,14 @@ import numpy as np
 from scipy.signal import hilbert
 from scipy.integrate import trapz
 
-from .builder import Sample, EPSILON0
+from ..base import EPSILON0
+from ..builder import Sample
+from ..fortran import f2py
+from ..parallel import MPIEnv
 from .config import Config
-from .fortran import f2py
-from .parallel import MPIEnv
+
+
+__all__ = ["window_hanning", "window_exp", "window_exp_ten", "Analyzer"]
 
 
 def window_hanning(i, tnr):

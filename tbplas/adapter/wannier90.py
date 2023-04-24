@@ -7,10 +7,9 @@ from typing import List, Tuple
 
 import numpy as np
 
-from ..constants import BOHR2ANG
-from ..lattice import cart2frac
-from .. import core
-from ..primitive import PrimitiveCell
+from ..base import BOHR2ANG, cart2frac
+from ..builder import PrimitiveCell
+from ..builder import core
 
 
 __all__ = ["wan2pc"]

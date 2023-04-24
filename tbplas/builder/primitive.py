@@ -7,8 +7,8 @@ import numpy as np
 from scipy.sparse import dia_matrix, dok_matrix, csr_matrix
 import matplotlib.pyplot as plt
 
-from . import constants as consts
-from . import lattice as lat
+from ..base import constants as consts
+from ..base import lattice as lat
 from . import exceptions as exc
 from . import core
 from .base import check_coord, Orbital, Lockable, IntraHopping, HopDict
@@ -813,7 +813,6 @@ class PrimitiveCell(Lockable):
             energy grid corresponding to e_min, e_max and e_step
             dos: (num_grid,) float64 array
             density of states in states/eV
-        :raises BasisError: if basis is neither Gaussian nor Lorentzian
         """
         diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
         energies, dos = diag_solver.calc_dos(k_points, **kwargs)
