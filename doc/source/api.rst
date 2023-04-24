@@ -13,8 +13,10 @@ API Reference
     SK
     SOC
     ParamFit
+    DiagSolver
     Lindhard
     Z2
+    SpinTexture
     gen_lattice_vectors
     gen_lattice_vectors2
     cart2frac
@@ -33,6 +35,7 @@ API Reference
     make_graphene_diamond
     make_graphene_rect
     make_graphene_sp
+    make_graphene_soc
     make_black_phosphorus
     make_tmdc
     wan2pc

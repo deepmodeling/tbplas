@@ -240,9 +240,34 @@ directory.
 Installing into default path
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Installing TBPLaS into the default path is as easy as ``python setup.py install``. After installation you can invoke
-Python and try ``import tbplas``. If no error occurs, then your installation is successful. If there are errors on
-undefined symbol, check the workaround in previous section.
+Installing TBPLaS into the default path is as easy as ``python setup.py install``. After installation, go to some other
+directory and invoke Python, e.g., ``cd tests && python``. Since TBPLaS uses relative imports for package management,
+staying in the source code directory when invoking Python will cause errors like this:
+
+.. code-block:: shell
+
+    yhli@n02:~/proj/tbplas> python
+    Python 3.6.15 (default, Sep 23 2021, 15:41:43) [GCC] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import tbplas
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/home/yhli/proj/tbplas/tbplas/__init__.py", line 2, in <module>
+        from .adapter import *
+      File "/home/yhli/proj/tbplas/tbplas/adapter/__init__.py", line 2, in <module>
+        from .wannier90 import *
+      File "/home/yhli/proj/tbplas/tbplas/adapter/wannier90.py", line 11, in <module>
+        from ..builder import PrimitiveCell
+      File "/home/yhli/proj/tbplas/tbplas/builder/__init__.py", line 2, in <module>
+        from .advanced import *
+      File "/home/yhli/proj/tbplas/tbplas/builder/advanced.py", line 17, in <module>
+        from .primitive import PrimitiveCell
+      File "/home/yhli/proj/tbplas/tbplas/builder/primitive.py", line 13, in <module>
+        from . import core
+    ImportError: cannot import name 'core'
+
+So it is mandatory to go to another directory. After Python has been invoked, try ``import tbplas``. If no error occurs,
+then your installation is successful. If there are errors on undefined symbol, check the workaround in previous section.
 
 Installing into user-specified path
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
