@@ -1,13 +1,12 @@
 """Functions for lattice operations."""
 
 from math import sin, cos, sqrt, pi
-from typing import Tuple
 
 import numpy as np
 
 
-__all__ = ["gen_lattice_vectors", "gen_lattice_vectors2",
-           "gen_reciprocal_vectors", "frac2cart", "cart2frac", "rotate_coord",
+__all__ = ["gen_lattice_vectors", "gen_reciprocal_vectors",
+           "frac2cart", "cart2frac", "rotate_coord",
            "get_lattice_area", "get_lattice_volume"]
 
 
@@ -48,37 +47,6 @@ def gen_lattice_vectors(a: float = 1.0,
         for j in range(3):
             if abs(lattice_vectors[i, j]) < 1.0e-15:
                 lattice_vectors[i, j] = 0.0
-    return lattice_vectors
-
-
-def gen_lattice_vectors2(a1: Tuple[float, ...],
-                         a2: Tuple[float, ...],
-                         a3: Tuple[float, ...] = None) -> np.ndarray:
-    """
-    Generate lattice vectors from given a1, a2 and a3.
-
-    :param a1: Cartesian coordinates of lattice vector a1
-    :param a2: Cartesian coordinates of lattice vector a2
-    :param a3: Cartesian coordinates of lattice vector a3
-    :return: (3, 3) float64 array
-        Cartesian coordinates of lattice vectors in the same unit as
-        a1, a2 and a3
-    """
-    assert len(a1) in (2, 3)
-    a1 = tuple(a1)
-    if len(a1) == 2:
-        a1 += (0.0,)
-    assert len(a2) in (2, 3)
-    a2 = tuple(a2)
-    if len(a2) == 2:
-        a2 += (0.0,)
-    if a3 is None:
-        a3 = [0.0, 0.0, 1.0]
-    assert len(a3) == 3
-    lattice_vectors = np.zeros((3, 3))
-    lattice_vectors[0] = a1
-    lattice_vectors[1] = a2
-    lattice_vectors[2] = a3
     return lattice_vectors
 
 
@@ -199,15 +167,15 @@ def rotate_coord(coord: np.ndarray,
     return coord_rot
 
 
-def get_lattice_area(lattice_vectors: np.ndarray, direction="c") -> float:
+def get_lattice_area(lattice_vectors: np.ndarray,
+                     direction: str = "c") -> float:
     """
     Calculate the area along given direction.
 
     :param lattice_vectors: (3, 3) float64 array
         Cartesian coordinates of lattice vectors
-    :param direction: string
-        direction along which the area is evaluated
-        should be in ("a", "b", "c")
+    :param direction: direction along which the area is evaluated, should be in
+        ("a", "b", "c")
     :return: area along given direction in squared unit of lattice vectors
     :raises ValueError: if direction is not in ("a", "b", "c")
     """

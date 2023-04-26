@@ -8,10 +8,9 @@ import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, SuperCell,
-                    SCInterHopping, Sample, Timer)
+                    SCInterHopping, Sample, Timer, TestHelper)
 import tbplas.builder.exceptions as exc
 import tbplas.builder.core as core
-from tbplas.utils import TestHelper
 
 
 def make_cell():
@@ -120,9 +119,9 @@ class TestSample(unittest.TestCase):
         inter_hop.add_hopping(rn=(0, 0, 0), energy=-0.7,
                               orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
                               orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
-        hop_i_ref = [0, 15, 12]
-        hop_j_ref = [11, 10, 5]
-        hop_v_ref = [-1.2, 1.5, -0.7]
+        hop_i_ref = np.array([0, 15, 12])
+        hop_j_ref = np.array([11, 10, 5])
+        hop_v_ref = np.array([-1.2, 1.5, -0.7])
         hop_i, hop_j, hop_v = inter_hop.get_hop()
         th.test_equal_array(hop_i, hop_i_ref)
         th.test_equal_array(hop_j, hop_j_ref)
@@ -168,7 +167,7 @@ class TestSample(unittest.TestCase):
         for i in range(hop_i.shape[0]):
             dr_ref.append(orb_pos2[hop_j.item(i)] - orb_pos1[hop_i.item(i)])
         dr = inter_hop.get_dr()
-        th.test_equal_array(dr, dr_ref)
+        th.test_equal_array(dr, np.array(dr_ref))
 
     def test03_init(self):
         """
@@ -530,8 +529,8 @@ class TestSample(unittest.TestCase):
 
         print("3x3 Graphene supercell with open bc and intra hopping")
         sc = SuperCell(make_cell(), dim=(3, 3, 1), pbc=(True, True, False))
-        id_pc_bra = [(0, 0, 0, 1), (0, 2, 0, 0)]
-        id_pc_ket = [(1, 2, 0, 0), (2, 0, 0, 1)]
+        id_pc_bra = np.array([(0, 0, 0, 1), (0, 2, 0, 0)], )
+        id_pc_ket = np.array([(1, 2, 0, 0), (2, 0, 0, 1)])
         id_sc_bra = sc.orb_id_pc2sc_array(id_pc_bra)
         id_sc_ket = sc.orb_id_pc2sc_array(id_pc_ket)
         sc.add_hopping(rn=(0, 0, 0), orb_i=id_sc_bra[0], orb_j=id_sc_ket[0],
@@ -680,7 +679,7 @@ class TestSample(unittest.TestCase):
         kpt = np.array([0.35, 0.50, 0.0])
         sample.set_ham_dense(kpt, ham1, convention=1)
         ham1_csr = sample.set_ham_csr(kpt, convention=1)
-        th.test_equal_array(ham1, ham1_csr, almost=True)
+        th.test_equal_array(ham1, ham1_csr.todense(), almost=True)
 
 
 if __name__ == "__main__":

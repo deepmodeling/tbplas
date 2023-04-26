@@ -1,6 +1,6 @@
 """Functions for k-points operations."""
 
-from typing import Tuple
+from typing import Tuple, List, Union
 
 import numpy as np
 
@@ -11,7 +11,7 @@ __all__ = ["gen_kpath", "gen_kdist", "gen_kmesh"]
 
 
 def gen_kpath(hs_kpoints: np.ndarray,
-              num_interp: Tuple[int, ...]) -> Tuple[np.ndarray, np.ndarray]:
+              num_interp: Union[Tuple[int, ...], List[int]]) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate path in the reciprocal space connecting highly symmetric k-points.
 

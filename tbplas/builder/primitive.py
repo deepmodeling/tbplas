@@ -11,7 +11,8 @@ from ..base import constants as consts
 from ..base import lattice as lat
 from . import exceptions as exc
 from . import core
-from .base import check_coord, Orbital, Lockable, IntraHopping, HopDict
+from .base import (check_rn, check_pos, Orbital, Lockable, IntraHopping,
+                   HopDict, pair_type, rn_type, rn3_type, pos_type, pos3_type)
 from .utils import ModelViewer
 from ..diagonal import DiagSolver
 
@@ -34,7 +35,7 @@ class PrimitiveCell(Lockable):
         container of hopping terms in the primitive cell
         Only half of the hopping terms are stored. Conjugate terms are added
         automatically when constructing the Hamiltonian.
-    _hash_dict: dictionary
+    _hash_dict: Dict[str, int]
         hashes of attributes to be used by 'sync_array' to update the arrays
     orb_pos: (num_orb, 3) float64 array
         FRACTIONAL positions of all orbitals
@@ -118,7 +119,7 @@ class PrimitiveCell(Lockable):
         return status
 
     @staticmethod
-    def _check_position(position: Tuple[float, ...]) -> Tuple[float, float, float]:
+    def _check_position(position: pos_type) -> pos3_type:
         """
         Check and complete orbital position.
 
@@ -126,7 +127,7 @@ class PrimitiveCell(Lockable):
         :return position: completed orbital position
         :raises OrbPositionLenError: if len(position) is not 2 or 3
         """
-        position, legal = check_coord(position)
+        position, legal = check_pos(position)
         if not legal:
             raise exc.OrbPositionLenError(position)
         return position
@@ -140,7 +141,7 @@ class PrimitiveCell(Lockable):
         if self.is_locked:
             raise exc.PCLockError()
 
-    def add_orbital(self, position: Tuple[float, ...],
+    def add_orbital(self, position: pos_type,
                     energy: float = 0.0,
                     label: str = "X",
                     sync_array: bool = False,
@@ -167,7 +168,7 @@ class PrimitiveCell(Lockable):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def add_orbital_cart(self, position: Tuple[float, ...],
+    def add_orbital_cart(self, position: pos_type,
                          unit: float = consts.ANG,
                          **kwargs) -> None:
         """
@@ -185,7 +186,7 @@ class PrimitiveCell(Lockable):
         self.add_orbital(position_frac, **kwargs)
 
     def set_orbital(self, orb_i: int,
-                    position: Tuple[float, ...] = None,
+                    position: pos_type = None,
                     energy: float = None,
                     label: str = None,
                     sync_array: bool = False,
@@ -229,7 +230,7 @@ class PrimitiveCell(Lockable):
             self.sync_array(**kwargs)
 
     def set_orbital_cart(self, orb_i: int,
-                         position: Tuple[float, ...] = None,
+                         position: pos_type = None,
                          unit: float = consts.ANG,
                          **kwargs) -> None:
         """
@@ -316,9 +317,9 @@ class PrimitiveCell(Lockable):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def _check_hop_index(self, rn: Tuple[int, ...],
+    def _check_hop_index(self, rn: rn_type,
                          orb_i: int,
-                         orb_j: int) -> Tuple[Tuple[int, int, int], int, int]:
+                         orb_j: int) -> Tuple[rn3_type, int, int]:
         """
         Check cell index and orbital pair of hopping term.
 
@@ -330,7 +331,7 @@ class PrimitiveCell(Lockable):
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        rn, legal = check_coord(rn)
+        rn, legal = check_rn(rn)
         if not legal:
             raise exc.CellIndexLenError(rn)
         num_orbitals = self.num_orb
@@ -342,7 +343,7 @@ class PrimitiveCell(Lockable):
             raise exc.PCHopDiagonalError(rn, orb_i)
         return rn, orb_i, orb_j
 
-    def add_hopping(self, rn: Tuple[int, ...],
+    def add_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
                     energy: complex,
@@ -409,7 +410,7 @@ class PrimitiveCell(Lockable):
         if sync_array:
             self.sync_array(**kwargs)
 
-    def get_hopping(self, rn: Tuple[int, ...],
+    def get_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int) -> complex:
         """
@@ -432,7 +433,7 @@ class PrimitiveCell(Lockable):
         else:
             raise exc.PCHopNotFoundError(rn + (orb_i, orb_j))
 
-    def remove_hopping(self, rn: Tuple[int, ...],
+    def remove_hopping(self, rn: rn_type,
                        orb_i: int,
                        orb_j: int,
                        sync_array: bool = False,
@@ -739,7 +740,8 @@ class PrimitiveCell(Lockable):
         core.set_ham(self.orb_pos, self.orb_eng, self.hop_ind, self.hop_eng,
                      convention, k_point, ham_dense)
 
-    def set_ham_csr(self, k_point: np.ndarray, convention: int = 1) -> csr_matrix:
+    def set_ham_csr(self, k_point: np.ndarray,
+                    convention: int = 1) -> csr_matrix:
         """
         Set up sparse Hamiltonian in csr format for given k-point.
 
@@ -779,6 +781,7 @@ class PrimitiveCell(Lockable):
 
     def calc_bands(self, k_points: np.ndarray,
                    enable_mpi: bool = False,
+                   echo_details: bool = True,
                    **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate band structure along given k_path.
@@ -787,6 +790,7 @@ class PrimitiveCell(Lockable):
             FRACTIONAL coordinates of the k-points
         :param enable_mpi: whether to enable parallelization over k-points
             using mpi
+        :param echo_details: whether to output parallelization details
         :param kwargs: arguments for 'calc_bands' of 'DiagSolver' class
         :return: (k_len, bands)
             k_len: (num_kpt,) float64 array in 1/NM
@@ -794,19 +798,23 @@ class PrimitiveCell(Lockable):
             bands: (num_kpt, num_orb) float64 array
             Energies corresponding to k-points in eV
         """
-        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi,
+                                 echo_details=echo_details)
         k_len, bands = diag_solver.calc_bands(k_points, **kwargs)[:2]
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray,
                  enable_mpi: bool = False,
+                 echo_details: bool = True,
                  **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate density of states for given energy range and step.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of the k-points
-        :param enable_mpi: whether to enable parallelization over k-points using mpi
+        :param enable_mpi: whether to enable parallelization over k-points
+            using mpi
+        :param echo_details: whether to output parallelization details
         :param kwargs: arguments for 'calc_dos' of 'DiagSolver' class
         :return: (energies, dos)
             energies: (num_grid,) float64 array
@@ -814,7 +822,8 @@ class PrimitiveCell(Lockable):
             dos: (num_grid,) float64 array
             density of states in states/eV
         """
-        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi,
+                                 echo_details=echo_details)
         energies, dos = diag_solver.calc_dos(k_points, **kwargs)
         return energies, dos
 
@@ -828,7 +837,7 @@ class PrimitiveCell(Lockable):
         return self._orbital_list
 
     @property
-    def hoppings(self) -> Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]:
+    def hoppings(self) -> Dict[rn3_type, Dict[pair_type, complex]]:
         """
         Interface for the hopping terms.
 

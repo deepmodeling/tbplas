@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, HopDict, extend_prim_cell,
-                    reshape_prim_cell, ANG, NM, Visualizer, frac2cart)
+                    reshape_prim_cell, ANG, NM, Visualizer, frac2cart,
+                    TestHelper)
 import tbplas.builder.exceptions as exc
-from tbplas.utils import TestHelper
 
 
 def make_cell():
@@ -264,7 +264,7 @@ class TestPrimitive(unittest.TestCase):
 
     def test04_get_orbital(self):
         """
-        Test if get_orbital works as expected.
+        Test get_orbital.
 
         :return: None
         """
@@ -360,9 +360,9 @@ class TestPrimitive(unittest.TestCase):
         cell = make_cell()
         cell.sync_array()
         self.assertEqual(cell.num_hop, 3)
-        th.test_equal_array(cell.hop_ind[0], (0, 0, 0, 0, 1))
-        th.test_equal_array(cell.hop_ind[1], (1, 0, 0, 1, 0))
-        th.test_equal_array(cell.hop_ind[2], (0, 1, 0, 1, 0))
+        th.test_equal_array(cell.hop_ind[0], np.array([0, 0, 0, 0, 1]))
+        th.test_equal_array(cell.hop_ind[1], np.array([1, 0, 0, 1, 0]))
+        th.test_equal_array(cell.hop_ind[2], np.array([0, 1, 0, 1, 0]))
         self.assertAlmostEqual(cell.hop_eng[0], -2.7)
         self.assertAlmostEqual(cell.hop_eng[1], -2.7)
         self.assertAlmostEqual(cell.hop_eng[2], -2.7)
@@ -383,7 +383,7 @@ class TestPrimitive(unittest.TestCase):
 
     def test06_get_hopping(self):
         """
-        Test if get_hopping works as expected.
+        Test get_hopping.
 
         :return:
         """
@@ -746,9 +746,9 @@ class TestPrimitive(unittest.TestCase):
         hop_mat_00 = np.array([[0.0, -2.5], [-2.5, 0.0]])
         hop_mat_10 = np.array([[1.2, -2.6], [-2.3, 1.1]])
         hop_mat_01 = np.array([[1.6, -2.8], [-2.7, 1.2]])
-        hop_dict.set_mat([0, 0], hop_mat_00)
-        hop_dict.set_mat([1, 0], hop_mat_10)
-        hop_dict.set_mat([0, 1], hop_mat_01)
+        hop_dict.set_mat((0, 0), hop_mat_00)
+        hop_dict.set_mat((1, 0), hop_mat_10)
+        hop_dict.set_mat((0, 1), hop_mat_01)
         cell.add_hopping_dict(hop_dict)
         self.assertEqual(cell.get_hopping((0, 0), 0, 1), -2.5)
         self.assertEqual(cell.get_hopping((1, 0), 0, 0), 1.2)
@@ -842,8 +842,8 @@ class TestPrimitive(unittest.TestCase):
         # Check if set_ham_dense agrees with set_ham_csr
         ham1_csr = cell.set_ham_csr(kpt, convention=1)
         ham2_csr = cell.set_ham_csr(kpt, convention=2)
-        th.test_equal_array(ham1, ham1_csr, almost=True)
-        th.test_equal_array(ham2, ham2_csr, almost=True)
+        th.test_equal_array(ham1, ham1_csr.todense(), almost=True)
+        th.test_equal_array(ham2, ham2_csr.todense(), almost=True)
 
 
 if __name__ == "__main__":

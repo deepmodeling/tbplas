@@ -14,22 +14,22 @@ class Config:
 
     Attributes
     ----------
-    generic['Bessel_max'] : int
+    generic['Bessel_max']: int
         Maximum number of Bessel functions. Default value: 100
-    generic['Bessel_precision'] : float
+    generic['Bessel_precision']: float
         Bessel function precision cut-off. Default value: 1.0e-14
-    generic['beta'] : float
+    generic['beta']: float
         Value for 1/kBT in 1/eV. Default value: 1 / (kB * 300).
-    generic['mu'] : float
+    generic['mu']: float
         Chemical potential in eV. Default value: 0.
-    generic['correct_spin'] : bool
+    generic['correct_spin']: bool
         If True, results are corrected for spin-degeneracy.
         Default value: False.
-    generic['nr_ran_samples'] : int
+    generic['nr_ran_samples']: int
         Number of random initial wave functions. Default value: 1
-    generic['nr_time_steps'] : int
+    generic['nr_time_steps']: int
         Number of time steps. Default value: 1024
-    generic['seed'] : int
+    generic['seed']: int
         Seed for random wave function generation. Default value: 1337.
     generic['wfn_check_steps']: int
         Check the wave function for divergence after each number of steps.
@@ -38,50 +38,50 @@ class Config:
         Threshold for checking divergence of wave function. If the difference
         of norm is larger than this value, errors will be raised.
         Default value: 1.0e-9
-    generic['Fermi_cheb_precision'] : float
+    generic['Fermi_cheb_precision']: float
         Precision cut-off of Fermi-Dirac distribution.
         Default value: 1.0e-12
-    generic['nr_Fermi_fft_steps'] : int
+    generic['nr_Fermi_fft_steps']: int
         Maximum number of Fermi-Dirac distribution FFT steps,
         must be power of two. Default value: 2**15
-    LDOS['site_indices'] : List[int]
+    LDOS['site_indices']: List[int]
         Site indices for LDOS calculation. Default value: [0].
         There is no limit for the number of sites for TBPM.
         However, the Haydock recursion method accepts only one site.
-    LDOS['wf_weights'] : List[float]
+    LDOS['wf_weights']: List[float]
         Wave function weights for LDOS calculation. Default value: [1.0].
         It seems that this parameter is no longer in use.
-    LDOS['delta'] : float
+    LDOS['delta']: float
         Parameter of infinitesimal in eV. Default value: 0.01.
-    LDOS['recursion_depth'] : int
+    LDOS['recursion_depth']: int
         Recursion depth of Haydock method. Default value: 2000
-    dyn_pol['background_dielectric_constant'] : float
+    dyn_pol['background_dielectric_constant']: float
         Relative background dielectric constant. Default value: 1.0.
-    dyn_pol['coulomb_constant'] : float
+    dyn_pol['coulomb_constant']: float
         Scaling factor for Coulomb potential. Default value: 1.0
-    dyn_pol['q_points'] : (n_q_points, 3) list of floats
+    dyn_pol['q_points']: List[Tuple[float, float, float]]
         Cartesian coordinates of q-points in 1/nm.
         Default value: [[1., 0., 0.]].
-    DC_conductivity['energy_limits'] : 2-tuple of floats
+    DC_conductivity['energy_limits']: Tuple[float, float]
         Minimum and maximum of energy window for DC conductivity in eV.
         Default value: [-0.5, 0.5].
-    dckb['energies'] : list of floats
+    dckb['energies']: List[float]
         List of chemical potentials to calculate Hall conductivity in eV.
         Default value: [-0.2, 0.2] with energy step of 0.01 eV
-    dckb['n_kernel'] : int
+    dckb['n_kernel']: int
         Number of kernels in Kernel Polynomial Method(KPM). Default value: 2048
-    dckb['direction'] : int
+    dckb['direction']: int
         1 gives XX, 2 gives XY conductivity. Default value: 1
-    dckb['ne_integral'] : int
+    dckb['ne_integral']: int
         Number of integral steps. Default value: 2048
-    quasi_eigenstates['energies'] : list of floats
+    quasi_eigenstates['energies']: List[float]
         List of energies of quasi-eigenstates in eV.
         Default value: [-0.1, 0., 0.1].
-    _legal_params: dict of sets
+    _legal_params: Dict[str, set]
         names of legal parameters, reserved for checking purposes.
         DO NOT CHANGE IT!
     """
-    def __init__(self):
+    def __init__(self) -> None:
         # generic standard values
         self.generic = {'Bessel_max': 250,
                         'Bessel_precision': 1.0e-14,
@@ -127,16 +127,15 @@ class Config:
             'dckb': set(self.dckb.keys())
         }
 
-    def set_temperature(self, temperature=300):
+    def set_temperature(self, temperature: float = 300.0) -> None:
         """
         Set temperature.
 
-        :param temperature: float
-            temperature in Kelvin
+        :param temperature: temperature in Kelvin
         """
         self.generic['beta'] = 1.0 / (KB * temperature)
 
-    def check_params(self):
+    def check_params(self) -> None:
         """
         Check the sanity of parameters.
 
@@ -157,14 +156,12 @@ class Config:
         _check(self.dckb, 'dckb')
 
 
-def read_config(filename):
+def read_config(filename: str) -> Config:
     """
     Read configuration from a .pkl file.
 
-    :param filename: string
-            file name of the .pkl file
-    :return: config: instance of 'Config' class
-        config object read from file
+    :param filename: file name of the .pkl file
+    :return: config object read from file
     """
     with open(filename, 'rb') as f:
         config_dict = pickle.load(f)

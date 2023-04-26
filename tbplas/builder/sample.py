@@ -1,20 +1,6 @@
-"""
-Functions and classes for sample.
+"""Functions and classes for sample."""
 
-Functions
----------
-    None.
-
-Classes
--------
-    SCInterHopping: user class
-        container class for hopping terms between different supercells within
-        the sample.
-    Sample: user class
-        interface class to FORTRAN backend
-"""
-
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 
 import numpy as np
 from scipy.sparse import dia_matrix, csr_matrix
@@ -23,7 +9,7 @@ import matplotlib.pyplot as plt
 from ..base import lattice as lat
 from . import exceptions as exc
 from . import core
-from .base import Lockable, InterHopping
+from .base import Lockable, InterHopping, rn_type
 from .super import SuperCell
 from .utils import ModelViewer
 from ..diagonal import DiagSolver
@@ -39,9 +25,9 @@ class SCInterHopping(Lockable, InterHopping):
 
     Attributes
     ----------
-    sc_bra: instance of 'SuperCell' class
+    sc_bra: 'SuperCell' instance
         the 'bra' supercell from which the hopping terms exist
-    sc_ket: instance of 'SuperCell' class
+    sc_ket: 'SuperCell' instance
         the 'ket' supercell to which the hopping terms exist
 
     NOTES
@@ -57,48 +43,50 @@ class SCInterHopping(Lockable, InterHopping):
     'ket' supercell. The counterparts are restored via the conjugate relation:
         <bra, R0, i|H|ket, Rn, j> = <ket, R0, j|H|bra, -Rn, i>*
     """
-    def __init__(self, sc_bra: SuperCell, sc_ket: SuperCell):
+    def __init__(self, sc_bra: SuperCell, sc_ket: SuperCell) -> None:
         """
-        :param sc_bra: instance of 'SuperCell' class
-            the 'bra' supercell from which the hopping terms exist
-        :param sc_ket: instance of 'SuperCell' class
-            the 'ket' supercell to which the hopping terms exist
+        :param sc_bra: the 'bra' supercell from which the hopping terms exist
+        :param sc_ket: the 'ket' supercell to which the hopping terms exist
         """
         Lockable.__init__(self)
         InterHopping.__init__(self)
         self.sc_bra = sc_bra
         self.sc_ket = sc_ket
 
-    def check_lock(self):
+    def check_lock(self) -> None:
         """Check lock state of this instance."""
         if self.is_locked:
             raise exc.InterHopLockError()
 
-    def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
+    def add_hopping(self, rn: rn_type,
+                    orb_i: int,
+                    orb_j: int,
+                    energy: complex) -> None:
         """
         Add a new hopping term or update existing term.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
-        :param complex energy: hopping energy
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
+        :param energy: hopping energy
         :return: None
         :raises InterHopLockError: is the object is locked
         """
         self.check_lock()
         super().add_hopping(rn, orb_i, orb_j, energy)
 
-    def get_hop(self, check_dup=False):
+    def get_hop(self, check_dup: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get hopping indices and energies.
 
-        :param check_dup: boolean
-            whether to check for duplicate hopping terms in the results
-        :return: hop_i: (num_hop,) int64 array
+        :param check_dup: whether to check for duplicate hopping terms in the
+            results
+        :return: (hop_i, hop_j, hop_v)
+            hop_i: (num_hop,) int64 array
             row indices of hopping terms
-        :return: hop_j: (num_hop,) int64 array
+            hop_j: (num_hop,) int64 array
             column indices of hopping terms
-        :return: hop_v: (num_hop,) complex128 array
+            hop_v: (num_hop,) complex128 array
             energies of hopping terms in accordance with hop_i and hop_j in eV
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
@@ -118,7 +106,7 @@ class SCInterHopping(Lockable, InterHopping):
                     raise ValueError(f"Duplicate terms detected {ii} {jj}")
         return hop_i, hop_j, hop_v
 
-    def get_dr(self):
+    def get_dr(self) -> np.ndarray:
         """
         Get hopping distances.
 
@@ -128,7 +116,7 @@ class SCInterHopping(Lockable, InterHopping):
         for adding magnetic field, calculating band structure and many
         properties involving dx and dy.
 
-        :return: dr: (num_hop, 3) float64 array
+        :return: (num_hop, 3) float64 array
             distances of hopping terms in accordance with hop_i and hop_j in nm
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
@@ -142,31 +130,23 @@ class SCInterHopping(Lockable, InterHopping):
                                  self.sc_ket.sc_lat_vec)
         return dr
 
-    def plot(self, axes: plt.Axes, hop_as_arrows=True, hop_eng_cutoff=1e-5,
-             hop_color="r", view="ab"):
+    def plot(self, axes: plt.Axes,
+             hop_as_arrows: bool = True,
+             hop_eng_cutoff: float = 1e-5,
+             hop_color: str = "r",
+             view: str = "ab") -> None:
         """
         Plot hopping terms to axes.
 
-        :param axes: instance of matplotlib 'Axes' class
-            axes on which the figure will be plotted
-        :param hop_as_arrows: boolean
-            whether to plot hopping terms as arrows
-        :param hop_eng_cutoff: float
-            cutoff for showing hopping terms.
-            Hopping terms with absolute energy below this value will not be
-            shown in the plot.
-        :param hop_color: string
-            color of hopping terms
-        :param view: string
-            kind of view point
-            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
-        :return: None.
+        :param axes: axes on which the figure will be plotted
+        :param hop_as_arrows: whether to plot hopping terms as arrows
+        :param hop_eng_cutoff: cutoff for showing hopping terms.
+        :param hop_color: color of hopping terms
+        :param view: kind of view point, should be in 'ab', 'bc', 'ca', 'ba',
+            'cb', 'ac'
+        :return: None
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
-        :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            self.indices is out of range
-        :raises IDPCVacError: if bra or ket in self.indices corresponds
-            to a vacancy
         :raises ValueError: if view is illegal
         """
         viewer = ModelViewer(axes, self.sc_bra.pc_lat_vec, view)
@@ -197,9 +177,9 @@ class Sample:
 
     Attributes
     ----------
-    sc_list: list of 'SuperCell' instances
+    sc_list: List[SuperCell]
         list of supercells within the sample
-    hop_list: list of 'IntraHopping' instances
+    hop_list: List[SCInterHopping]
         list of inter-hopping sets between supercells within the sample
     orb_eng: (num_orb_sc,) float64 array
         on-site energies of orbitals in the supercell in eV
@@ -224,10 +204,9 @@ class Sample:
     are still the ones before wrapping. This is essential for adding magnetic
     field, calculating band structure and many properties involving dx and dy.
     """
-    def __init__(self, *args: Union[SuperCell, SCInterHopping]):
+    def __init__(self, *args: Union[SuperCell, SCInterHopping]) -> None:
         """
-        :param args: list of 'SuperCell' or 'IntraHopping' instances
-            supercells and inter-hopping sets within this sample
+        :param args: supercells and inter-hopping sets within this sample
         :returns: None
         :raises SampleVoidError: if len(args) == 0
         :raises SampleCompError: if any argument in args is not instance of
@@ -268,75 +247,66 @@ class Sample:
         self.dr = None
         self.rescale = 1.0
 
-    def _get_num_orb(self):
+    def _get_num_orb(self) -> List[int]:
         """
         Get numbers of orbitals in each supercell.
 
-        :return: num_orb: list of integers
-            numbers of orbitals in each supercell
+        :return: numbers of orbitals in each supercell
         """
         num_orb = [sc.num_orb_sc for sc in self.sc_list]
         return num_orb
 
-    def _get_ind_start(self):
+    def _get_ind_start(self) -> List[int]:
         """
         Get starting indices of orbitals for each supercell for assembling
         hopping terms and distances.
 
-        :return: ind_start: list of integers
-            starting indices of orbitals for each supercell
+        :return: starting indices of orbitals for each supercell
         """
         num_orb = self._get_num_orb()
         ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
         return ind_start
 
-    def init_orb_eng(self, force_init=False):
+    def init_orb_eng(self, force_init: bool = False) -> None:
         """
         Initialize self.orb_eng on demand.
 
         If self.orb_eng is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
-        :param force_init: boolean
-            whether to force initializing the array from scratch even if it
-            has already been initialized
+        :param force_init: whether to force initializing the array from scratch
+            even if it has already been initialized
         :returns: None
-            self.orb_eng is modified.
         """
         if force_init or self.orb_eng is None:
             orb_eng = [sc.get_orb_eng() for sc in self.sc_list]
             self.orb_eng = np.concatenate(orb_eng)
 
-    def init_orb_pos(self, force_init=False):
+    def init_orb_pos(self, force_init: bool = False) -> None:
         """
         Initialize self.orb_pos on demand.
 
         If self.orb_pos is None, build it from scratch. Otherwise, build it
         only when force_init is True.
 
-        :param force_init: boolean
-            whether to force initializing the array from scratch even if it
-            has already been initialized
+        :param force_init: whether to force initializing the array from scratch
+            even if it has already been initialized
         :returns: None
-            self.orb_pos is modified.
         """
         if force_init or self.orb_pos is None:
             orb_pos = [sc.get_orb_pos() for sc in self.sc_list]
             self.orb_pos = np.concatenate(orb_pos)
 
-    def init_hop(self, force_init=False):
+    def init_hop(self, force_init: bool = False) -> None:
         """
-        Initialize self.hop_i, self.hop_j, self.hop_v and reset self.rescale
-        on demand.
+        Initialize hop_i, hop_j, hop_v and reset rescale on demand.
 
         If the arrays are None, build them from scratch. Otherwise, build them
         only when force_init is True.
 
-        :param force_init: boolean
-            whether to force initializing the arrays from scratch even if they
-            have already been initialized
+        :param force_init: whether to force initializing the arrays from scratch
+         even if they have already been initialized
         :return: None
-            self.hop_i, self.hop_j, self.hop_j and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -371,18 +341,16 @@ class Sample:
             # Reset scaling factor
             self.rescale = 1.0
 
-    def init_dr(self, force_init=False):
+    def init_dr(self, force_init: bool = False) -> None:
         """
         Initialize self.dr on demand.
 
         If self.dr is None, build it from scratch. Otherwise, build it only when
         force_init is True.
 
-        :param force_init: boolean
-            whether to force initializing the array from scratch even if it
-            has already been initialized
+        :param force_init: whether to force initializing the array from scratch
+            even if it has already been initialized
         :returns: None
-            self.dr is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -395,12 +363,11 @@ class Sample:
                 dr_tot.append(hop.get_dr())
             self.dr = np.concatenate(dr_tot)
 
-    def reset_array(self):
+    def reset_array(self) -> None:
         """
         Reset all modifications to self._orb_*, self._hop_* and self.dr.
 
         :return: None
-            self._orb_*, self._hop_* and self.dr are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -414,22 +381,22 @@ class Sample:
         if self.dr is not None:
             self.init_dr(force_init=True)
 
-    def rescale_ham(self, factor=None):
+    def rescale_ham(self, factor: float = None) -> None:
         """
         Rescale orbital energies and hopping terms.
 
         Reserved for compatibility with old version of TBPlaS.
 
-        :param factor: float
-            rescaling factor
-            All orbital energies and hopping terms will be divided by this
-            factor w.r.t. their original values in primitive cell. So only
-            the last call to this method will take effect.
-            Choose it such that the absolute value of the largest eigenvalue
-            is smaller than 1 after rescaling. If no value is chosen,
-            a reasonable value will be estimated from the Hamiltonian.
+        All orbital energies and hopping terms will be divided by the factor
+        w.r.t. their original values in primitive cell. So only the last call
+        to this method will take effect.
+
+        Choose the factor such that the absolute value of the largest eigenvalue
+        is smaller than 1 after rescaling. If no value is chosen, a reasonable
+        value will be estimated from the Hamiltonian.
+
+        :param factor: rescaling factor
         :returns: None
-            self.orb_eng, self.hop_v and self.rescale are modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -443,7 +410,7 @@ class Sample:
         self.hop_v /= (factor / self.rescale)
         self.rescale = factor
 
-    def set_magnetic_field(self, intensity, gauge=0):
+    def set_magnetic_field(self, intensity: float, gauge: int = 0) -> None:
         """
         Apply magnetic field perpendicular to xOy-plane to -z direction via
         Peierls substitution.
@@ -482,13 +449,10 @@ class Sample:
         [1] https://journals.aps.org/prb/pdf/10.1103/PhysRevB.51.4940
         [2] https://journals.jps.jp/doi/full/10.7566/JPSJ.85.074709
 
-        :param intensity: float
-            magnetic B field in Tesla
-        :param gauge: int
-            gauge of vector potential which produces magnetic field to -z
+        :param intensity: magnetic B field in Tesla
+        :param gauge: gauge of vector potential of the magnetic field to -z
             0 for (By, 0, 0), 1 for (0, -Bx, 0), 2 for (0.5By, -0.5Bx, 0)
         :return: None
-            self.hop_v is modified.
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -502,12 +466,11 @@ class Sample:
         core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
                            self.orb_pos, intensity, gauge)
 
-    def build_ham_csr(self):
+    def build_ham_csr(self) -> csr_matrix:
         """
         Build sparse Hamiltonian for DOS and LDOS calculations using TBPM.
 
-        :return: ham_scr
-            sparse Hamiltonian matrix in CSR format
+        :return: sparse Hamiltonian matrix in CSR format
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -522,16 +485,16 @@ class Sample:
         ham_csr = ham_dia + ham_half + ham_half.getH()
         return ham_csr
 
-    def build_dxy_csr(self):
+    def build_dxy_csr(self) -> Tuple[csr_matrix, csr_matrix]:
         """
         Build sparse dx and dy matrices in CSR format for TESTING purposes.
 
         NOTE: As zero elements are removed automatically when creating sparse
-        matrices using scipy.sparse, Hamiltonian and dx/dy may have different
-        indices and indptr. So, DO NOT use this method to generate dx and dy
-        for TBPM calculations. Use the 'build_ham_dxy' method instead.
+        matrices using scipy, Hamiltonian and dx/dy may have different indices
+        and indptr. So, DO NOT use this method to generate dx and dy for TBPM
+        calculations. Use the 'build_ham_dxy' method instead.
 
-        :return: dx_csr, dy_csr
+        :return: (dx_csr, dy_csr)
             sparse dx and dy matrices in CSR format
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
@@ -547,7 +510,9 @@ class Sample:
         dy_csr = dy_csr - dy_csr.getH()
         return dx_csr, dy_csr
 
-    def build_ham_dxy(self, orb_eng_cutoff=1.0e-5, algo="fast", sort_col=False):
+    def build_ham_dxy(self, orb_eng_cutoff: float = 1.0e-5,
+                      algo: str = "fast",
+                      sort_col: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Build the arrays for conductivity calculations using TBPM.
 
@@ -557,23 +522,21 @@ class Sample:
         robust, but uses more memory and twice slower than "fast". In short, use
         "fast" for production runs and "safe" for testing purposes.
 
-        :param orb_eng_cutoff: float
-            cutoff for orbital energies in eV
+        :param orb_eng_cutoff: cutoff for orbital energies in eV
             Orbital energies below this value will be dropped when constructing
             sparse Hamiltonian.
-        :param algo: string, should be "fast" or "safe"
-            specifies which core function to call to generate the arrays
+        :param algo: specifies which core function to call to generate the arrays
             Use "fast" for production runs and "safe" for testing purposes.
-        :param sort_col: boolean
-            whether to sort column indices and data of CSR matrices after
-            creation, for TESTING purposes
+        :param sort_col: whether to sort column indices and data of CSR matrices
+            after creation, for TESTING purposes
             Sorting the columns will take much time, yet does not boost TBPM
             calculations. DO NOT enable this option for production runs.
-        :return: indptr, int64 array
-        :return: indices, int64 array
-        :return: hop, complex128 array
-        :return: dx, float64 array
-        :return: dy, float64 array
+        :return: (indptr, indices, hop, dx, dy)
+            indptr: int64 array
+            indices: int64 array
+            hop: complex128 array
+            dx: float64 array
+            dy: float64 array
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
@@ -594,42 +557,37 @@ class Sample:
             core.sort_col_csr(indptr, indices, hop, dx, dy)
         return indptr, indices, hop, dx, dy
 
-    def plot(self, fig_name=None, fig_size=None, fig_dpi=300,
-             with_orbitals=True, with_cells=True,
-             hop_as_arrows=True, hop_eng_cutoff=1e-5,
-             sc_colors=None, hop_colors=None, view="ab"):
+    def plot(self, fig_name: str = None,
+             fig_size: str = None,
+             fig_dpi: int = 300,
+             with_orbitals: bool = True,
+             with_cells: bool = True,
+             hop_as_arrows: bool = True,
+             hop_eng_cutoff: float = 1e-5,
+             sc_colors: List[str] = None,
+             hop_colors: List[str] = None,
+             view: str = "ab") -> None:
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
         If figure name is give, save the figure to file. Otherwise, show it on
         the screen.
 
-        :param fig_name: string
-            file name to which the figure will be saved
-        :param fig_size: (width, height)
-            size of the figure
-        :param fig_dpi: integer
-            resolution of the figure file
-        :param with_orbitals: boolean
-            whether to plot orbitals as filled circles
-        :param with_cells: boolean
-            whether to plot borders of primitive cells
-        :param hop_as_arrows: boolean
-            whether to plot hopping terms as arrows
+        :param fig_name: file name to which the figure will be saved
+        :param fig_size: size of the figure
+        :param fig_dpi: resolution of the figure file
+        :param with_orbitals: whether to plot orbitals as filled circles
+        :param with_cells: whether to plot borders of primitive cells
+        :param hop_as_arrows: whether to plot hopping terms as arrows
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
-        :param hop_eng_cutoff: float
-            cutoff for showing hopping terms.
-            Hopping terms with absolute energy below this value will not be
-            shown in the plot.
-        :param sc_colors: List[str]
-            colors for the hopping terms of each supercell
-        :param hop_colors: List[str]
-            colors for the hopping terms each inter-hopping container
-        :param view: string
-            kind of view point
-            should be in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac')
+        :param hop_eng_cutoff: cutoff for showing hopping terms
+        :param sc_colors: colors for the hopping terms of each supercell
+        :param hop_colors: colors for the hopping terms each inter-hopping
+            container
+        :param view: kind of view point,  should be in 'ab', 'bc', 'ca', 'ba',
+            'cb', 'ac'
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
@@ -698,7 +656,8 @@ class Sample:
         core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
         core.fill_ham(self.orb_eng, self.hop_i, self.hop_j, hop_k, ham_dense)
 
-    def set_ham_csr(self, k_point: np.ndarray, convention: int = 1) -> csr_matrix:
+    def set_ham_csr(self, k_point: np.ndarray,
+                    convention: int = 1) -> csr_matrix:
         """
         Set up sparse Hamiltonian in csr format for given k-point.
 
@@ -735,6 +694,7 @@ class Sample:
 
     def calc_bands(self, k_points: np.ndarray,
                    enable_mpi: bool = False,
+                   echo_details: bool = True,
                    **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate band structure along given k_path.
@@ -743,6 +703,7 @@ class Sample:
             FRACTIONAL coordinates of the k-points
         :param enable_mpi: whether to enable parallelization over k-points
             using mpi
+        :param echo_details: whether to output parallelization details
         :param kwargs: arguments for 'calc_bands' of 'DiagSolver' class
         :return: (k_len, bands)
             k_len: (num_kpt,) float64 array in 1/NM
@@ -750,19 +711,23 @@ class Sample:
             bands: (num_kpt, num_orb) float64 array
             Energies corresponding to k-points in eV
         """
-        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi,
+                                 echo_details=echo_details)
         k_len, bands = diag_solver.calc_bands(k_points, **kwargs)[:2]
         return k_len, bands
 
     def calc_dos(self, k_points: np.ndarray,
                  enable_mpi: bool = False,
+                 echo_details: bool = True,
                  **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate density of states for given energy range and step.
 
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of the k-points
-        :param enable_mpi: whether to enable parallelization over k-points using mpi
+        :param enable_mpi: whether to enable parallelization over k-points
+            using mpi
+        :param echo_details: whether to output parallelization details
         :param kwargs: arguments for 'calc_dos' of 'DiagSolver' class
         :return: (energies, dos)
             energies: (num_grid,) float64 array
@@ -770,74 +735,72 @@ class Sample:
             dos: (num_grid,) float64 array
             density of states in states/eV
         """
-        diag_solver = DiagSolver(self, enable_mpi=enable_mpi)
+        diag_solver = DiagSolver(self, enable_mpi=enable_mpi,
+                                 echo_details=echo_details)
         energies, dos = diag_solver.calc_dos(k_points, **kwargs)
         return energies, dos
 
     @property
-    def num_orb_tot(self):
+    def num_orb_tot(self) -> int:
         """
         Get the total number of orbitals of the sample.
 
-        :return: num_orb_tot: int
-            total number of orbitals
+        :return: total number of orbitals
         """
         return sum(self._get_num_orb())
 
     @property
-    def energy_range(self):
+    def energy_range(self) -> float:
         """
         Get energy range to consider in calculations.
 
         Reserved for compatibility with old version of TBPlaS.
 
-        :returns: en_range : float
-            All eigenvalues are between (-en_range / 2, en_range / 2) in eV.
+        All eigenvalues are between (-en_range / 2, en_range / 2) in eV.
+
+        :returns: the energy range
         """
         en_range = 2.0 * self.rescale
         return en_range
 
     @property
-    def area_unit_cell(self):
+    def area_unit_cell(self) -> float:
         """
         Get the area formed by a1 and a2 of the primitive cell.
 
         Reserved for compatibility with old version of TBPlaS.
 
-        :return: area, float
-            area formed by a1 and a2 in NM^2
+        :return: area formed by a1 and a2 in NM^2
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.get_lattice_area()
 
     @property
-    def volume_unit_cell(self):
+    def volume_unit_cell(self) -> float:
         """
         Get the volume of primitive cell.
 
         Reserved for compatibility with old version of TBPlaS.
 
-        :return: volume: float
-            volume of primitive cell in NM^3
+        :return: volume of primitive cell in NM^3
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.get_lattice_volume()
 
     @property
-    def extended(self):
+    def extended(self) -> float:
         """
         Get the number of extended times of primitive cell.
 
         Reserved for compatibility with old version of TBPlaS.
 
-        :return: extended: integer
-            number of extended times of primitive cells
+        :return: number of extended times of primitive cells
         """
         sc0 = self.sc_list[0]
         return sc0.prim_cell.extended
 
     @property
-    def nr_orbitals(self):
+    def nr_orbitals(self) -> int:
         """
         Get the number of orbitals of primitive cell.
 
@@ -847,4 +810,4 @@ class Sample:
             number of orbitals in the primitive cell.
         """
         sc0 = self.sc_list[0]
-        return sc0.prim_cell.num_orb
+        return sc0.num_orb_pc

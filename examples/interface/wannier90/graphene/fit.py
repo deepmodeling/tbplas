@@ -85,7 +85,7 @@ class MyFit(tb.ParamFit):
         :return: band structure on self.k_points
         """
         cell = tb.wan2pc("graphene")
-        k_len, bands = cell.calc_bands(self.k_points)
+        k_len, bands = cell.calc_bands(self.k_points, echo_details=False)
         return bands
 
     def calc_bands_fit(self, sk_params: np.ndarray) -> np.ndarray:

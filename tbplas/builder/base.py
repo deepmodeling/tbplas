@@ -2,47 +2,84 @@
 
 from collections import namedtuple
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple, Union, Dict
 
 import numpy as np
 
 from . import exceptions as exc
 
 
-def check_coord(coord: tuple, complete_item=0):
-    """
-    Check and auto-complete cell index, orbital coordinate, etc.
+# Shortcuts for typing
+rn2_type = Tuple[int, int]
+rn3_type = Tuple[int, int, int]
+rn_type = Union[rn2_type, rn3_type]
+pos2_type = Tuple[float, float]
+pos3_type = Tuple[float, float, float]
+pos_type = Union[pos2_type, pos3_type]
+pbc2_type = Tuple[bool, bool]
+pbc3_type = Tuple[bool, bool, bool]
+pbc_type = Union[pbc2_type, pbc3_type]
+pair_type = Tuple[int, int]
+id_pc_type = Tuple[int, int, int, int]
 
-    :param coord: tuple with 2 integers or floats
-        incoming coordinate to check
-    :param complete_item: integer or float
-        item to be appended to coord if its length is 2
-    :return: coord: tuple with 3 integers or floats
-        corrected and auto-completed coordinate
-    :return: legal: boolean
-        True if length of incoming coord is 2 or 3, otherwise False.
+
+def check_rn(coord: rn_type,
+             complete_item: int = 0) -> Tuple[rn3_type, bool]:
+    """
+    Check and auto-complete cell index.
+
+    :param coord: incoming cell index
+    :param complete_item: item to be appended to rn if its length is 2
+    :return: (rn, legal)
+        rn: corrected and auto-completed coordinate
+        legal: True if length of incoming coord is 2 or 3, otherwise False.
     """
     coord, legal = tuple(coord), True
     len_coord = len(coord)
     if len_coord == 3:
         pass
     elif len_coord == 2:
-        if isinstance(coord[0], int):
-            coord += (int(complete_item),)
-        else:
-            coord += (float(complete_item),)
+        coord += (int(complete_item),)
     else:
         legal = False
     return coord, legal
 
 
-def invert_rn(rn: tuple, i=0):
+def check_pos(coord: pos_type,
+              complete_item: float = 0.0) -> Tuple[pos3_type, bool]:
+    """Same as check_rn, but for atomic positions."""
+    coord, legal = tuple(coord), True
+    len_coord = len(coord)
+    if len_coord == 3:
+        pass
+    elif len_coord == 2:
+        coord += (float(complete_item),)
+    else:
+        legal = False
+    return coord, legal
+
+
+def check_pbc(coord: pbc_type,
+              complete_item: bool = False) -> Tuple[pbc3_type, bool]:
+    """Same as check_rn, but for periodic boundary conditions."""
+    coord, legal = tuple(coord), True
+    len_coord = len(coord)
+    if len_coord == 3:
+        pass
+    elif len_coord == 2:
+        coord += (bool(complete_item),)
+    else:
+        legal = False
+    return coord, legal
+
+
+def invert_rn(rn: Tuple[int, int, int], i: int = 0) -> bool:
     """
     Check if the cell index should be inverted.
 
-    :param tuple rn: (r_a, r_b, r_c), cell index
-    :param int i: component index
-    :return: bool, True if to invert
+    :param rn: (r_a, r_b, r_c), cell index
+    :param i: component index
+    :return: whether to invert the cell index
     """
     if rn[i] > 0:
         return False
@@ -64,22 +101,22 @@ class Lockable(ABC):
 
     Attributes
     ----------
-    is_locked: boolean
+    is_locked: bool
         whether the object is locked
     """
     def __init__(self) -> None:
         self.is_locked = False
 
-    def lock(self):
+    def lock(self) -> None:
         """
-        Lock the object. Modifications are not allowed then unless
-        the 'unlock' method is called.
+        Lock the object. Modifications are not allowed then unless the 'unlock'
+        method is called.
 
         :return: None
         """
         self.is_locked = True
 
-    def unlock(self):
+    def unlock(self) -> None:
         """
         Unlock the object. Modifications are allowed then.
 
@@ -88,7 +125,7 @@ class Lockable(ABC):
         self.is_locked = False
 
     @abstractmethod
-    def check_lock(self):
+    def check_lock(self) -> None:
         """Check the lock state of the object."""
         pass
 
@@ -99,23 +136,25 @@ class Hopping(ABC):
 
     Attributes
     ----------
-    dict: dictionary containing the hopping terms
+    dict: Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]
         Keys are cell indices (rn), while values are also dictionaries.
         Keys of value dictionary are orbital pairs, while values are hopping
         energies.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.dict = {}
 
-    def __hash__(self):
-        """Return hash value of this instance."""
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
         hop_list = self.to_list()
         return hash(tuple(hop_list))
 
     @staticmethod
     @abstractmethod
-    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+    def _norm_keys(rn: rn_type,
+                   orb_i: int,
+                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
         Normalize cell index and orbital pair into permitted keys of self.dict.
 
@@ -126,9 +165,9 @@ class Hopping(ABC):
         legal since the class is exposed to the user. The status conj should
         always be False for InterHopping.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
         :return: (rn, pair, conj)
             where rn is the normalized cell index,
             pair is the normalized orbital pair,
@@ -136,17 +175,20 @@ class Hopping(ABC):
         """
         pass
 
-    def add_hopping(self, rn: tuple, orb_i: int, orb_j: int, energy: complex):
+    def add_hopping(self, rn: rn_type,
+                    orb_i: int,
+                    orb_j: int,
+                    energy: complex) -> None:
         """
         Add a new hopping term or update existing term.
 
         NOTE: For IntraHopping, conjugate terms are reduced by normalizing their
         cell indices and orbital pairs. For InterHopping this is not needed.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
-        :param complex energy: hopping energy
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
+        :param energy: hopping energy
         :return: None
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
@@ -158,13 +200,15 @@ class Hopping(ABC):
             hop_rn = self.dict[rn] = dict()
         hop_rn[pair] = energy
 
-    def get_hopping(self, rn: tuple, orb_i: int, orb_j: int):
+    def get_hopping(self, rn: rn_type,
+                    orb_i: int,
+                    orb_j: int) -> Tuple[complex, bool]:
         """
         Get an existing hopping term.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
         :return: (energy, status)
             where energy is the hopping energy and status is the flag whether
             the term has been found
@@ -180,17 +224,18 @@ class Hopping(ABC):
             energy = energy.conjugate()
         return energy, status
 
-    def remove_hopping(self, rn: tuple, orb_i: int, orb_j: int, clean=False):
+    def remove_hopping(self, rn: rn_type,
+                       orb_i: int,
+                       orb_j: int,
+                       clean: bool = False) -> bool:
         """
         Remove an existing hopping term.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
-        :param clean: boolean
-            whether to call 'clean' to remove empty cell indices
-        :return: status
-            where the hopping term is removed, False if not found
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
+        :param clean: whether to call 'clean' to remove empty cell indices
+        :return: where the hopping term is removed, False if not found
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
@@ -202,7 +247,7 @@ class Hopping(ABC):
             self.clean()
         return status
 
-    def get_rn(self):
+    def get_rn(self) -> List[rn3_type]:
         """
         Get the list of cell indices.
 
@@ -210,13 +255,12 @@ class Hopping(ABC):
         """
         return list(self.dict.keys())
 
-    def remove_rn(self, rn: tuple):
+    def remove_rn(self, rn: rn_type) -> bool:
         """
         Remove all the hopping terms of given cell index.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :return: status
-            where the hopping terms are removed, False if not found
+        :param rn: (r_a, r_b, r_c), cell index
+        :return: where the hopping terms are removed, False if not found
         """
         rn, pair, conj = self._norm_keys(rn, 0, 0)
         try:
@@ -226,27 +270,25 @@ class Hopping(ABC):
             status = False
         return status
 
-    def remove_orbital(self, orb_i: int, clean=False):
+    def remove_orbital(self, orb_i: int, clean: bool = False) -> None:
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
-        :param int orb_i: orbital index to remove
-        :param clean: boolean
-            whether to call 'clean' to remove empty cell indices
-        :return: None.
+        :param orb_i: orbital index to remove
+        :param clean: whether to call 'clean' to remove empty cell indices
+        :return: None
         :raises LockError: if the object is locked
         """
         self.remove_orbitals([orb_i], clean=clean)
 
-    def remove_orbitals(self, indices: List[int], clean=True):
+    def remove_orbitals(self, indices: Union[List[int], np.ndarray],
+                        clean: bool = True) -> None:
         """
         Remove the hopping terms corresponding to a list of orbitals and update
         remaining hopping terms.
 
-        :param indices: List[int]
-            indices of orbitals to remove
-        :param clean: boolean
-            whether to call 'clean' to remove empty cell indices
+        :param indices: indices of orbitals to remove
+        :param clean: whether to call 'clean' to remove empty cell indices
         :return: None
         """
         indices = sorted(indices)
@@ -278,48 +320,46 @@ class Hopping(ABC):
         if clean:
             self.clean()
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Remove empty cell indices.
 
-        :return: None. self.dict is modified.
+        :return: None
         """
         for rn in list(self.dict.keys()):
             if self.dict[rn] == {}:
                 self.dict.pop(rn)
 
-    def to_list(self):
+    def to_list(self) -> List[Tuple[int, int, int, int, int, complex]]:
         """
         Flatten all hopping terms into a list.
 
-        :return: hopping terms as a list
-        :rtype: list of (rb, rb, rc, orb_i, orb_j, energy)
+        :return: list of hopping terms (rb, rb, rc, orb_i, orb_j, energy)
         """
         self.clean()
-        hop_list = []
-        for rn, hop_rn in self.dict.items():
-            for pair, energy in hop_rn.items():
-                hop_list.append(rn + pair + (energy,))
+        hop_list = [rn + pair + (energy,)
+                    for rn, hop_rn in self.dict.items()
+                    for pair, energy in hop_rn.items()]
         return hop_list
 
-    def to_array(self, use_int64=False):
+    def to_array(self, use_int64: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
         Convert hopping terms to array of 'hop_ind' and 'hop_eng',
         for constructing attributes of 'PrimitiveCell' or 'Sample'.
 
-        :param use_int64: boolean
-            whether to use 64-bit integer for hop_ind, should be
+        :param use_int64: whether to use 64-bit integer for hop_ind, should be
             enabled for the 'Sample' class
         :return: (hop_ind, hop_eng)
-            hop_ind: (num_hop, 5) int32 array, hopping indices
+            hop_ind: (num_hop, 5) int32/int64 array, hopping indices
             hop_eng: (num_hop,) complex128 array, hopping energies
         """
         self.clean()
-        hop_ind, hop_eng = [], []
-        for rn, hop_rn in self.dict.items():
-            for pair, energy in hop_rn.items():
-                hop_ind.append(rn + pair)
-                hop_eng.append(energy)
+        hop_ind = [rn + pair
+                   for rn, hop_rn in self.dict.items()
+                   for pair, energy in hop_rn.items()]
+        hop_eng = [energy
+                   for rn, hop_rn in self.dict.items()
+                   for pair, energy in hop_rn.items()]
         if use_int64:
             hop_ind = np.array(hop_ind, dtype=np.int64)
         else:
@@ -327,16 +367,13 @@ class Hopping(ABC):
         hop_eng = np.array(hop_eng, dtype=np.complex128)
         return hop_ind, hop_eng
 
-    def count_pair(self, orb_i, orb_j):
+    def count_pair(self, orb_i: int, orb_j: int) -> int:
         """
         Count the hopping terms with given orbital index.
 
-        :param orb_i: int
-            orbital index of bra
-        :param orb_j: int
-            orbital index of ket
-        :return: count: int
-            number of hopping terms with given orbital index
+        :param orb_i: orbital index of bra
+        :param orb_j: orbital index of ket
+        :return: number of hopping terms with given orbital index
         """
         self.clean()
         count = 0
@@ -347,8 +384,12 @@ class Hopping(ABC):
         return count
 
     @property
-    def num_hop(self):
-        """Count the number of hopping terms."""
+    def num_hop(self) -> int:
+        """
+        Count the number of hopping terms.
+
+        :return: number of hopping terms
+        """
         self.clean()
         num_hop = 0
         for rn, hop_rn in self.dict.items():
@@ -365,17 +406,19 @@ class IntraHopping(Hopping):
     'SuperCell' classes. It is assumed that the caller will take care of all the
     parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     @staticmethod
-    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+    def _norm_keys(rn: rn_type,
+                   orb_i: int,
+                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
         Normalize cell index and orbital pair into permitted keys of self.dict.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
         :return: (rn, pair, conj)
             where rn is the normalized cell index,
             pair is the normalized orbital pair,
@@ -400,24 +443,26 @@ class InterHopping(Hopping):
     """
     Base class for container classes holding hopping terms between two models.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     @staticmethod
-    def _norm_keys(rn: tuple, orb_i: int, orb_j: int):
+    def _norm_keys(rn: rn_type,
+                   orb_i: int,
+                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
         Normalize cell index and orbital pair into permitted keys of self.dict.
 
-        :param tuple rn: (r_a, r_b, r_c), cell index
-        :param int orb_i: orbital index or bra
-        :param int orb_j: orbital index of ket
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
         :return: (rn, pair, conj)
             where rn is the normalized cell index,
             pair is the normalized orbital pair,
             conj is the flag of whether to take the conjugate of hopping energy
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        rn, legal = check_coord(rn)
+        rn, legal = check_rn(rn)
         if not legal:
             raise exc.CellIndexLenError(rn)
         pair = (orb_i, orb_j)
@@ -437,55 +482,51 @@ class HopDict:
 
     Attributes
     ----------
-    dict: dictionary
+    dict: Dict[Tuple[int, int, int], np.ndarray]
         Keys should be cell indices and values should be complex matrices.
-    mat_shape: (num_orb, num_orb)
+    mat_shape: Tuple[int, int]
         shape of hopping matrices
     """
-    def __init__(self, num_orb):
+    def __init__(self, num_orb: int) -> None:
         """
         Initialize hop_dict object.
 
-        :param num_orb: integer
-            number of orbitals
+        :param num_orb: number of orbitals
         """
         self.dict = {}
         self.mat_shape = (num_orb, num_orb)
 
     @staticmethod
-    def _check_rn(rn):
+    def _check_rn(rn: rn_type) -> rn3_type:
         """
         Check and complete cell index.
 
-        :param rn: tuple of integers
-            cell index to check
-        :return rn: tuple of integers
-            checked cell index
+        :param rn: cell index to check
+        :return rn: checked cell index
         :raises CellIndexLenError: if len(rn) is not 2 or 3
         """
-        rn, legal = check_coord(rn)
+        rn, legal = check_rn(rn)
         if not legal:
             raise exc.CellIndexLenError(rn)
         return rn
 
-    def set_num_orb(self, num_orb):
+    def set_num_orb(self, num_orb: int) -> None:
         """
         Reset 'mat_shape' according to num_orb.
 
-        :param num_orb: integer
-            number of orbitals
+        :param num_orb: number of orbitals
         :return: None
         """
         self.mat_shape = (num_orb, num_orb)
 
-    def set_mat(self, rn, hop_mat: np.ndarray):
+    def set_mat(self, rn: rn_type, hop_mat: np.ndarray) -> None:
         """
         Add hopping matrix to dictionary or update an existing hopping matrix.
 
-        :param rn: (ra, rb, rc)
-            cell index of hopping matrix
+        :param rn: cell index of hopping matrix
         :param hop_mat: (num_orb, num_orb) complex128 array
             hopping matrix
+        :return: None
         :raises CellIndexLenError: if len(rn) != 2 or 3
         :raises ValueError: if hop_mat.shape does not match number of orbitals
         :raises PCHopDiagonalError: if on-site energies are included in hopping
@@ -509,27 +550,27 @@ class HopDict:
         # Set hopping matrix
         self.dict[rn] = hop_mat
 
-    def set_zero_mat(self, rn):
+    def set_zero_mat(self, rn: rn_type) -> None:
         """
         Add zero hopping matrix to dictionary.
 
-        :param rn: (ra, rb, rc)
-            cell index of hopping matrix
+        :param rn: cell index of hopping matrix
+        :return: None
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
         zero_mat = np.zeros(self.mat_shape, dtype=complex)
         self.set_mat(rn, zero_mat)
 
-    def set_element(self, rn, element, hop):
+    def set_element(self, rn: rn_type,
+                    element: pair_type,
+                    hop: complex) -> None:
         """
         Add single hopping to hopping matrix.
 
-        :param rn: (ra, rb, rc)
-            cell index of hopping matrix
-        :param element: (orb_i, orb_j)
-            element indices
-        :param hop: complex float
-            hopping value
+        :param rn: cell index of hopping matrix
+        :param element: element indices
+        :param hop: hopping energy
+        :return: None
         :raises CellIndexLenError: if len(rn) != 2 or 3
         :raises ValueError: if element indices are out of range
         :raises PCHopDiagonalError: if on-site energy is given as input
@@ -553,12 +594,11 @@ class HopDict:
             hop_mat = self.dict[rn] = np.zeros(self.mat_shape, dtype=complex)
         hop_mat[element[0], element[1]] = hop
 
-    def delete_mat(self, rn):
+    def delete_mat(self, rn: rn_type) -> None:
         """
         Delete hopping matrix from dictionary.
 
-        :param rn: (ra, rb, rc)
-            cell index of hopping matrix
+        :param rn: cell index of hopping matrix
         :returns: None
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """

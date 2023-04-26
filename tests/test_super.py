@@ -8,10 +8,9 @@ from scipy.sparse import coo_matrix
 import tbplas.builder.core as core
 
 from tbplas import (gen_lattice_vectors, extend_prim_cell,
-                    PrimitiveCell, SuperCell)
+                    PrimitiveCell, SuperCell, TestHelper)
 import tbplas.builder.exceptions as exc
 from tbplas.builder.super import OrbitalSet
-from tbplas.utils import TestHelper
 
 
 class TestSuper(unittest.TestCase):

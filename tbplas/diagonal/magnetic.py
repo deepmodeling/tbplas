@@ -27,14 +27,14 @@ class SpinTexture(DiagSolver):
     def __init__(self, cell: Any,
                  k_grid: np.ndarray,
                  spin_major: bool = True,
-                 enable_mpi: bool = False) -> None:
+                 **kwargs) -> None:
         """
         :param cell: primitive cell for which properties will be evaluated
         :param k_grid: FRACTIONAL coordinates of k-points
         :param spin_major: whether the orbitals are stored in spin-major order
-        :param enable_mpi: whether to enable MPI-based parallelization
+        :param kwargs: parallelization arguments for DiagSolver.__init__
         """
-        super().__init__(cell, enable_mpi=enable_mpi)
+        super().__init__(cell, **kwargs)
         self.k_grid = k_grid
         self.spin_major = spin_major
         self.states = None

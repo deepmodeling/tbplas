@@ -30,18 +30,16 @@ class Z2(DiagSolver):
     f_mat: (num_occ, num_occ) complex128 array
         F matrix for (ka_i, ka_i+1)
     """
-    def __init__(self, cell: Any,
-                 num_occ: int,
-                 enable_mpi=False) -> None:
+    def __init__(self, cell: Any, num_occ: int, **kwargs) -> None:
         """
         :param cell: primitive cell under investigation
         :param num_occ: number of occupied bands of the primitive cell
-        :param enable_mpi: whether to enable parallelization over k-points
+        :param kwargs: parallelization arguments for DiagSolver.__init__
         :raises ValueError: if num_occ is larger than num_orb of the
             primitive cell
         """
         # Initialize parallel environment
-        super().__init__(cell, enable_mpi=enable_mpi)
+        super().__init__(cell, **kwargs)
 
         # Check and set num_occ
         num_orb = self.num_orb

@@ -4,6 +4,7 @@ import time
 import os
 import pickle
 import math
+from typing import List, Tuple
 
 import numpy as np
 import scipy.special as spec
@@ -24,92 +25,90 @@ class Solver(MPIEnv):
 
     Attributes
     ----------
-    sample: instance of 'Sample' class
+    sample: 'Sample' instance
         sample for which TBPM calculations will be performed
-    config: instance of 'Config' class
+    config: 'Config' instance
         parameters controlling TBPM calculation
-    output['directory'] : string
+    output['directory']: str
         Output directory.
         Default value: "sim_data".
-    output['prefix'] : string
+    output['prefix']: str
         Prefix prepended to the output files.
         Default value: timestamp.
-    output['corr_AC'] : string
+    output['corr_AC']: str
         AC conductivity correlation output file.
         Default value: f"sim_data/{timestamp}.corr_AC".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['corr_DC'] : string
+    output['corr_DC']: str
         DC conductivity correlation output file.
         Default value: f"sim_data/{timestamp}.corr_DC".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['corr_DOS'] : string
+    output['corr_DOS']: str
         DOS correlation output file.
         Default value: f"sim_data/{timestamp}.corr_DOS".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['corr_LDOS'] : string
+    output['corr_LDOS']: str
         LDOS correlation output file.
         Default value: f"sim_data/{timestamp}.corr_LDOS".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['corr_dyn_pol'] : string
+    output['corr_dyn_pol']: str
         AC conductivity correlation output file.
         Default value: f"sim_data/{timestamp}.corr_dyn_pol".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['hall_mu'] : string
+    output['hall_mu']: str
         mu_{mn} output file.
         Default value: f"sim_data/{timestamp}.hall_mu".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['qe'] : string
+    output['qe']: str
         Quasi-eigenstates output file.
         Default value: f"sim_data/{timestamp}.qe".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['ldos_haydock'] : string
+    output['ldos_haydock']: str
         LDOS output file from Haydock method.
         Default value: f"sim_data/{timestamp}.ldos_haydock".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
-    output['psi_t'] : string
+    output['psi_t']: str
         Time-dependent wave function output file.
         Default value: f"sim_data/{timestamp}.psi_t".
         The actual output file will have a suffix of 'npy' or 'h5' depending on
         the output format.
     """
-    def __init__(self, sample: Sample, config: Config, enable_mpi=False,
-                 **kwargs):
+    def __init__(self, sample: Sample,
+                 config: Config,
+                 enable_mpi: bool = False,
+                 echo_details: bool = True,
+                 **kwargs) -> None:
         """
-        :param sample: instance of 'Sample' class
-            sample for which TBPM calculations will be performed
-        :param config: instance of 'Config' class
-            parameters controlling TBPM calculations
-        :param enable_mpi: boolean
-            whether to enable parallelism using MPI
-        :param kwargs: dictionary
-            arguments for method 'set_output'
+        :param sample: sample for which TBPM calculations will be performed
+        :param config: parameters controlling TBPM calculations
+        :param enable_mpi: whether to enable parallelism using MPI
+        :param echo_details: whether to output parallelization details
+        :param kwargs: arguments for 'set_output'
         :raises ValueError: if illegal parameters are detected in config
         """
-        super().__init__(enable_mpi=enable_mpi, echo_details=True)
+        super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
         self.sample = sample
         self.config = config
         self.config.check_params()
         self.output = dict()
         self.set_output(**kwargs)
 
-    def set_output(self, directory="sim_data", prefix=None):
+    def set_output(self, directory: str = "sim_data",
+                   prefix: str = None) -> None:
         """
         Setup directory and file names for output.
 
-        :param directory: string
-            directory for writing files
-        :param prefix: string
-             prefix prepended to output files
+        :param directory: directory for writing files
+        :param prefix: prefix prepended to output files
         :return: None
-            self.output is modified.
         """
         # Set directory and prefix
         self.output["directory"] = directory
@@ -142,12 +141,11 @@ class Solver(MPIEnv):
         # Force saving config
         self.save_config()
 
-    def save_config(self, filename="config.pkl"):
+    def save_config(self, filename: str = "config.pkl") -> None:
         """
         Save self.config to a .pkl file.
 
-        :param filename: string
-            file name of the .pkl file
+        :param filename: file name of the .pkl file
         :return: None
         """
         if self.is_master:
@@ -156,12 +154,11 @@ class Solver(MPIEnv):
             with open(pickle_name, 'wb') as f:
                 pickle.dump(self.config, f, pickle.HIGHEST_PROTOCOL)
 
-    def __dist_sample(self):
+    def __dist_sample(self) -> int:
         """
         Common interface to distribute samples among MPI processes.
 
-        :return: num_sample: integer
-            number of random samples assigned to this process
+        :return: number of random samples assigned to this process
             self.config.generic["nr_random_samples"] is updated.
         """
         num_sample_opt = self.config.generic["nr_random_samples"]
@@ -177,36 +174,31 @@ class Solver(MPIEnv):
             num_sample = num_sample_opt
         return num_sample
 
-    def __get_time_step(self):
+    def __get_time_step(self) -> float:
         """
         Get the time step for TBPM calculation via:
             time_step = 2 * pi / sample.energy_range
 
-        :return: time_step: float
-            time step in h_bar/eV
+        :return: time step in h_bar/eV
         """
         return 2 * math.pi / self.sample.energy_range
 
-    def __echo_time_step_fs(self, time_step):
+    def __echo_time_step_fs(self, time_step: float) -> None:
         """
         Convert time step from h_bar/eV to femto-second and report.
 
-        :param time_step: float
-            time step in h_bar/eV
+        :param time_step: time step in h_bar/eV
         :return: None.
-            Result are printed to stdout.
         """
         time_step_fs = time_step * H_BAR_EV * 1e15
         self.print("Time step for propagation: %7.3f fs\n" % time_step_fs)
 
-    def __get_bessel_series(self, time_step):
+    def __get_bessel_series(self, time_step: float) -> List[float]:
         """
         Get the values of Bessel functions up to given order.
 
-        :param time_step: float
-            time step
-        :return: bes: list of floats
-            values of Bessel functions
+        :param time_step: time step
+        :return: values of Bessel functions
         :raises ValueError: if self.config.generic["Bessel_max"] is too low
         """
         bessel_max = self.config.generic["Bessel_max"]
@@ -221,7 +213,7 @@ class Solver(MPIEnv):
             if np.abs(bes_val) > bessel_precision:
                 bessel_series.append(bes_val)
             else:
-                bes_val_up = spec.jv(i + 1, time_scaled)
+                bes_val_up = spec.jv(i + 1, time_scaled).item()
                 if np.abs(bes_val_up) > bessel_precision:
                     bessel_series.append(bes_val)
                 else:
@@ -233,29 +225,26 @@ class Solver(MPIEnv):
             raise ValueError("Bessel_max too low")
         return bessel_series
 
-    def __get_beta_mu_re(self):
+    def __get_beta_mu_re(self) -> Tuple[float, float]:
         """
         Get beta_re and mu_re for ac, dyn_pol and dc calculations.
 
-        :return: beta_re: float
-        :return: mu_re: float
+        :return: (beta_re, mu_re)
         """
         beta_re = self.config.generic['beta'] * self.sample.rescale
         mu_re = self.config.generic['mu'] / self.sample.rescale
         return beta_re, mu_re
 
-    def __save_data(self, data, file_name, output_format="numpy"):
+    def __save_data(self, data: np.ndarray,
+                    file_name: str,
+                    output_format: str = "numpy") -> None:
         """
         Save array data to file.
 
-        :param data: numpy array
-            data to save
-        :param file_name: string
-            name of file to which data will be saved WITHOUT suffix.
-            Suffix will be added automatically depending on the format.
-        :param output_format: string
-            format of output data
-            For now only numpy is supported.
+        :param data: data to save
+        :param file_name: name of file to which data will be saved WITHOUT suffix
+            The suffix will be added automatically depending on the format.
+        :param output_format: format of output data, for now only numpy is supported.
         :return: None
         :raises NotImplementedError: if output_format is not "numpy" or "npy"
         """
@@ -266,11 +255,11 @@ class Solver(MPIEnv):
         if self.is_master:
             np.save(f"{file_name}.{suffix}", data)
 
-    def calc_corr_dos(self):
+    def calc_corr_dos(self) -> np.ndarray:
         """
         Calculate correlation function of density of states (DOS).
 
-        :return: corr_dos: (nr_time_steps+1,) complex128 array
+        :return: (nr_time_steps+1,) complex128 array
             dimensionless DOS correlation function
         """
         # Get parameters
@@ -296,11 +285,11 @@ class Solver(MPIEnv):
         self.__save_data(corr_dos, self.output["corr_DOS"])
         return corr_dos
 
-    def calc_corr_ldos(self):
+    def calc_corr_ldos(self) -> np.ndarray:
         """
         Calculate correlation function of local density of states (DOS).
 
-        :return: corr_ldos: (nr_time_steps+1,) complex128 array
+        :return: (nr_time_steps+1,) complex128 array
             dimensionless LDOS correlation function
         """
         # Get parameters
@@ -327,11 +316,11 @@ class Solver(MPIEnv):
         self.__save_data(corr_ldos, self.output["corr_LDOS"])
         return corr_ldos
 
-    def calc_corr_ac_cond(self):
+    def calc_corr_ac_cond(self) -> np.ndarray:
         """
         Calculate correlation function of optical (AC) conductivity.
 
-        :return: corr_ac: (4, nr_time_steps) complex128 array
+        :return: (4, nr_time_steps) complex128 array
             AC correlation function in 4 directions:
             xx, xy, yx, yy, respectively
             Unit is e^2/h_bar^2 * (eV)^2 * nm^2.
@@ -364,12 +353,12 @@ class Solver(MPIEnv):
         self.__save_data(corr_ac, self.output["corr_AC"])
         return corr_ac
 
-    def calc_corr_dyn_pol(self):
+    def calc_corr_dyn_pol(self) -> np.ndarray:
         """
         Calculate correlation function of dynamical polarization.
 
-        :return: corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
-            domensionless Dynamical polarization correlation function.
+        :return: (n_q_points, nr_time_steps) float64 array
+            dimensionless Dynamical polarization correlation function.
         """
         # Get parameters
         time_step = 0.5 * self.__get_time_step()
@@ -403,13 +392,14 @@ class Solver(MPIEnv):
         self.__save_data(corr_dyn_pol, self.output["corr_dyn_pol"])
         return corr_dyn_pol
 
-    def calc_corr_dc_cond(self):
+    def calc_corr_dc_cond(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate correlation function of electronic (DC) conductivity.
 
-        :return: corr_dos: (nr_time_steps,) complex128 array
+        :return: (corr_dos, corr_dc)
+            corr_dos: (nr_time_steps,) complex128 array
             dimensionless DOS correlation function
-        :return: corr_dc: (2, n_energies, nr_time_steps) complex128 array
+            corr_dc: (2, n_energies, nr_time_steps) complex128 array
             DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
         """
         # Get parameters
@@ -452,7 +442,7 @@ class Solver(MPIEnv):
         self.__save_data(corr_dc, self.output["corr_DC"])
         return corr_dos, corr_dc
 
-    def calc_hall_mu(self):
+    def calc_hall_mu(self) -> np.ndarray:
         """
         Calculate mu_{mn} required for the evaluation of Hall conductivity
         using Kubo-Bastin formula.
@@ -460,10 +450,10 @@ class Solver(MPIEnv):
         Reference:
         https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.114.116602
 
-        :return: mu_mn: (n_kernel, n_kernel) complex128 array
+        :return: (n_kernel, n_kernel) complex128 array
             mu_{mn} in eqn. 4 in the reference paper, which will be utilized
             to evaluate Hall conductivity using Kubo-Bastin formula
-            n_kernel = self.config.dckb['n_kernel']
+            n_kernel = self.config.dckb["n_kernel"]
             Unit is nm^2/h_bar^2 * (eV)^2.
         """
         indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
@@ -481,13 +471,12 @@ class Solver(MPIEnv):
         self.__save_data(mu_mn, self.output['hall_mu'])
         return mu_mn
 
-    def calc_quasi_eigenstates(self, save_data=False):
+    def calc_quasi_eigenstates(self, save_data: bool = False) -> np.ndarray:
         """
         Calculate quasi-eigenstates.
 
-        :param save_data: boolean
-            whether to save quasi-eigenstates
-        :return: states: (n_energies, n_indptr-1) float64 array
+        :param save_data: whether to save quasi-eigenstates
+        :return: (n_energies, n_indptr-1) float64 array
             Quasi-eigenstates of the sample
             states[i, :] is a quasi-eigenstate at energy of
             config.quasi_eigenstates['energies'][i].
@@ -517,7 +506,7 @@ class Solver(MPIEnv):
             self.__save_data(states, self.output['qe'])
         return states
 
-    def calc_ldos_haydock(self):
+    def calc_ldos_haydock(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate local density of states (LDOS) using Haydock recursion method.
 
@@ -527,9 +516,10 @@ class Solver(MPIEnv):
 
         Ref: https://journals.jps.jp/doi/10.1143/JPSJ.80.054710
 
-        :return: energies: (2*nr_time_steps+1,) float64 array
+        :return: (energies, ldos)
+            energies: (2*nr_time_steps+1,) float64 array
             energies in eV
-        :return: ldos: (2*nr_time_steps+1,) float64 array
+            ldos: (2*nr_time_steps+1,) float64 array
             LDOS value to corresponding energies in 1/eV
         :raises RuntimeError: if more than 1 mpi process is used
         """
@@ -552,8 +542,11 @@ class Solver(MPIEnv):
         self.__save_data(ldos, self.output["ldos_haydock"])
         return energies, ldos
 
-    def calc_psi_t(self, psi_0: np.ndarray, time_log: np.ndarray, dt_scale=1.0,
-                   save_data=False):
+    def calc_psi_t(self,
+                   psi_0: np.ndarray,
+                   time_log: np.ndarray,
+                   dt_scale: float = 1.0,
+                   save_data: bool = False) -> np.ndarray:
         """
         Calculate propagation of wave function from given initial state.
 
@@ -567,11 +560,10 @@ class Solver(MPIEnv):
             steps on which time the time-dependent wave function will be logged
             For example, t=0 stands for the initial wave function, while t=1
             indicates the wave function AFTER the 1st propagation.
-        :param dt_scale: float
-            scale factor for the time step with respect to the default value
-        :param save_data: boolean
-            whether to save time-dependent wave function
-        :return: psi_t: (num_time, num_orb_sample) complex128 array
+        :param dt_scale: scale factor for the time step with respect to the
+            default value
+        :param save_data: whether to save time-dependent wave function
+        :return: (num_time, num_orb_sample) complex128 array
             time-dependent wave function according to time_log
         :raises RuntimeError: if more than 1 mpi process is used
         :raises ValueError: if any time in time_log not in [0, nr_time_steps].

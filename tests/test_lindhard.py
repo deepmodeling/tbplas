@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import tbplas as tb
 import tbplas.diagonal.core as core
-from tbplas.utils import TestHelper
+from tbplas import TestHelper
 
 
 class TestLindhard(unittest.TestCase):
@@ -108,42 +108,6 @@ class TestLindhard(unittest.TestCase):
         q_frac_ref = 1 / (2 * np.pi) * np.array([2.3*10, -1.5*8, 0.7*6])
         q_frac_test = lindhard.cart2frac(q_cart_ang, unit=tb.ANG)
         th.test_equal_array(q_frac_test, q_frac_ref, almost=True)
-
-    def test_get_eigenstates(self):
-        """
-        Test _get_eigenstates.
-
-        :return: None
-        """
-        def _calc_bands(cell, k_points):
-            cell.sync_array()
-            num_k_points = k_points.shape[0]
-            bands = np.zeros((num_k_points, cell.num_orb), dtype=np.float64)
-            states = np.zeros((num_k_points, cell.num_orb, cell.num_orb),
-                              dtype=np.complex128)
-            ham_k = np.zeros((cell.num_orb, cell.num_orb), dtype=np.complex128)
-
-            for i_k, k_point in enumerate(k_points):
-                ham_k *= 0.0
-                core.set_ham(cell.orb_pos, cell.orb_eng,
-                             cell.hop_ind, cell.hop_eng,
-                             1, k_point, ham_k)
-                eigenvalues, eigenstates, info = lapack.zheev(ham_k)
-                bands[i_k] = eigenvalues
-                states[i_k] = eigenstates.T
-            return bands, states
-
-        th = TestHelper(self)
-        prim_cell = tb.make_graphene_diamond()
-        kmesh_size = (6, 6, 2)
-        lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
-                               kmesh_size=kmesh_size)
-        k_grid_frac = lindhard.grid2frac(lindhard.kmesh_grid)
-        bands_ref, states_ref = _calc_bands(prim_cell, k_grid_frac)
-        bands_test, states_test = lindhard.calc_states(k_grid_frac,
-                                                       convention=1)
-        th.test_equal_array(bands_ref, bands_test)
-        th.test_equal_array(states_ref, states_test)
 
     def test_kq_map(self):
         """

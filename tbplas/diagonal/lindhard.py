@@ -129,7 +129,7 @@ class Lindhard(DiagSolver):
                  back_epsilon: float = 1.0,
                  dimension: int = 3,
                  delta: float = 0.005,
-                 enable_mpi: bool = False) -> None:
+                 **kwargs) -> None:
         """
         :param cell: primitive cell for which properties will be evaluated
         :param energy_max: upper bound of energy grid for evaluating response
@@ -142,11 +142,10 @@ class Lindhard(DiagSolver):
         :param back_epsilon: relative background dielectric constant
         :param dimension: dimension of the system
         :param delta: broadening parameter in eV
-        :param enable_mpi: whether to enable parallelization over k-points and
-            frequencies using mpi
+        :param kwargs: parallelization arguments for DiagSolver.__init__
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
-        super().__init__(cell, enable_mpi=enable_mpi)
+        super().__init__(cell, **kwargs)
         self.cell = self.model
         self.omegas = np.linspace(0, energy_max, energy_step+1)
         if len(kmesh_size) != 3:

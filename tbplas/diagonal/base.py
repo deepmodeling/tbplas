@@ -56,12 +56,15 @@ class DiagSolver(MPIEnv):
     model: 'PrimitiveCell' or 'Sample' instance
         model for which properties will be calculated
     """
-    def __init__(self, model: Any, enable_mpi: bool = False) -> None:
+    def __init__(self, model: Any,
+                 enable_mpi: bool = False,
+                 echo_details: bool = True) -> None:
         """
         :param model: primitive cell or sample under study
         :param enable_mpi: whether to enable MPI-based parallelization
+        :param echo_details: whether to output parallelization details
         """
-        super().__init__(enable_mpi=enable_mpi, echo_details=True)
+        super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
         self.model = model
         self.update_model()
 
@@ -312,7 +315,7 @@ class DiagSolver(MPIEnv):
             states: (num_kpt, num_bands, num_orb) complex128 array
             wave functions on the k-points, each ROW of states[i_k] is a wave
             function
-        :raises SolverError: if solver is neither lapack nor arpack
+        :raises ValueError: if solver is neither lapack nor arpack
         """
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]
@@ -323,7 +326,7 @@ class DiagSolver(MPIEnv):
             if num_bands is None:
                 num_bands = int(num_orb * 0.6)
         else:
-            raise exc.SolverError(solver)
+            raise ValueError(solver)
 
         # Initialize working arrays
         bands = np.zeros((num_kpt, num_bands), dtype=np.float64)

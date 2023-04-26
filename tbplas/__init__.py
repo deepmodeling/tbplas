@@ -6,5 +6,5 @@ from .diagonal import *
 from .materials import *
 from .tbpm import *
 from .parallel import *
-from .utils import Timer, get_datetime
-from .visual import Visualizer
+from .utils import *
+from .visual import *

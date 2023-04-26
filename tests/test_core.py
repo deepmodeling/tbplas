@@ -4,10 +4,9 @@ import unittest
 
 import numpy as np
 
-from tbplas import gen_lattice_vectors, PrimitiveCell, Timer
+from tbplas import gen_lattice_vectors, PrimitiveCell, Timer, TestHelper
 import tbplas.builder.core as core
 from tbplas.builder.super import OrbitalSet
-from tbplas.utils import TestHelper
 
 
 class TestCore(unittest.TestCase):

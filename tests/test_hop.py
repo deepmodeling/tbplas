@@ -4,9 +4,8 @@ import unittest
 
 import numpy as np
 
-from tbplas import Timer
+from tbplas import Timer, TestHelper
 from tbplas.builder.base import invert_rn, IntraHopping
-from tbplas.utils import TestHelper
 
 
 class TestHop(unittest.TestCase):

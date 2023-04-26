@@ -13,7 +13,7 @@ from scipy.optimize import leastsq
 from ..base import cart2frac, rotate_coord
 from ..base import constants as consts
 from . import exceptions as exc
-from .base import check_coord, InterHopping
+from .base import check_rn, InterHopping, rn_type
 from .primitive import PrimitiveCell
 from .super import SuperCell
 
@@ -24,7 +24,7 @@ __all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
 
 
 def extend_prim_cell(prim_cell: PrimitiveCell,
-                     dim: Tuple[int, ...] = (1, 1, 1)) -> PrimitiveCell:
+                     dim: rn_type = (1, 1, 1)) -> PrimitiveCell:
     """
     Extend primitive cell along a, b and c directions.
 
@@ -35,7 +35,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
     :raises ValueError: if dimension along any direction is smaller than 1
     """
     # Check the dimension of extended cell
-    dim, legal = check_coord(dim, complete_item=1)
+    dim, legal = check_rn(dim, complete_item=1)
     if not legal:
         raise exc.CoordLenError(dim)
     for i_dim in range(len(dim)):

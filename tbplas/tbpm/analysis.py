@@ -1,6 +1,7 @@
 """Functions and classes for analyzing correlation functions."""
 
 from math import cos, sin, exp, pi
+from typing import Callable, Tuple
 
 import numpy as np
 from scipy.signal import hilbert
@@ -16,44 +17,35 @@ from .config import Config
 __all__ = ["window_hanning", "window_exp", "window_exp_ten", "Analyzer"]
 
 
-def window_hanning(i, tnr):
+def window_hanning(i: int, tnr: int) -> float:
     """
     Hanning window function.
 
-    :param i: integer
-        summation index
-    :param tnr: integer
-        total length of summation
-    :return: float
-        Hanning window value
+    :param i: summation index
+    :param tnr: total length of summation
+    :return: Hanning window value
     """
     return 0.5 * (1 + cos(pi * i / tnr))
 
 
-def window_exp(i, tnr):
+def window_exp(i: int, tnr: int) -> float:
     """
     Exponential window function.
 
-    :param i: integer
-        summation index
-    :param tnr: integer
-        total length of summation
-    :return: float
-        exponential window value
+    :param i: summation index
+    :param tnr: total length of summation
+    :return: exponential window value
     """
     return exp(-2. * (i / tnr)**2)
 
 
-def window_exp_ten(i, tnr):
+def window_exp_ten(i: int, tnr: int) -> float:
     """
     Exponential window function with base 10.
 
-    :param i: integer
-        summation index
-    :param tnr: integer
-        total length of summation
-    :return: float
-        exponential window value
+    :param i: summation index
+    :param tnr: total length of summation
+    :return: exponential window value
     """
     power = -2 * (1. * i / tnr)**2
     return 10.**power
@@ -65,28 +57,28 @@ class Analyzer(MPIEnv):
 
     Attributes
     ----------
-    sample: instance of 'Sample' class
+    sample: 'Sample' instance
         sample for which TBPM calculations will be performed
-    config: instance of 'Config' class
+    config: 'Config' instance
         parameters controlling TBPM calculation
     dimension: int
         dimension of the system
     """
-    def __init__(self, sample: Sample, config: Config, dimension=3,
-                 enable_mpi=False):
+    def __init__(self, sample: Sample,
+                 config: Config,
+                 dimension: int = 3,
+                 enable_mpi: bool = False,
+                 echo_details: bool = False) -> None:
         """
-        :param sample: instance of 'Sample' class
-            sample for which TBPM calculations will be performed
-        :param config: instance of 'Config' class
-            parameters controlling TBPM calculations
-        :param dimension: int
-            dimension of the sample
-        :param enable_mpi: boolean
-            whether to enable parallelism using MPI
+        :param sample: sample for which TBPM calculations will be performed
+        :param config: parameters controlling TBPM calculations
+        :param dimension: dimension of the sample
+        :param enable_mpi: whether to enable parallelism using MPI
+        :param echo_details: whether to output parallelization details
         :raises ValueError: if dimension is neither 2 nor 3, or if illegal
             parameters are detected in config
         """
-        super().__init__(enable_mpi=enable_mpi, echo_details=False)
+        super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
         self.sample = sample
         self.config = config
         self.config.check_params()
@@ -94,7 +86,8 @@ class Analyzer(MPIEnv):
             raise ValueError(f"Unsupported dimension: {dimension}")
         self.dimension = dimension
 
-    def calc_dos(self, corr_dos, window=window_hanning):
+    def calc_dos(self, corr_dos: np.ndarray,
+                 window: Callable = window_hanning) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate DOS from correlation function.
 
@@ -107,11 +100,11 @@ class Analyzer(MPIEnv):
 
         :param corr_dos: (nr_time_steps+1,) complex128 array
             dimensionless DOS correlation function
-        :param window: function, optional
-            window function for integral
-        :return: energies: (2*nr_time_steps,) float64 array
+        :param window: window function for integral
+        :return: (energies, dos)
+            energies: (2*nr_time_steps,) float64 array
             energies in eV
-        :return: dos: (2*nr_time_steps,) float64 array
+            dos: (2*nr_time_steps,) float64 array
             DOS in 1/eV
         """
         # Get parameters
@@ -149,22 +142,24 @@ class Analyzer(MPIEnv):
         self.bcast(dos)
         return energies, dos
 
-    def calc_ldos(self, corr_ldos, window=window_hanning):
+    def calc_ldos(self, corr_ldos: np.ndarray,
+                  window: Callable = window_hanning) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate LDOS from correlation function.
 
         :param corr_ldos: (nr_time_steps+1,) complex128 array
             dimensionless LDOS correlation function
-        :param window: function, optional
-            window function for integral
-        :return: energies: (2*nr_time_steps,) float64 array
+        :param window: window function for integral
+        :return: (energies, ldos)
+            energies: (2*nr_time_steps,) float64 array
             energies in eV
-        :return: ldos: (2*nr_time_steps,) float64 array
+            ldos: (2*nr_time_steps,) float64 array
             LDOS in 1/eV
         """
         return self.calc_dos(corr_ldos, window)
 
-    def calc_ac_cond(self, corr_ac, window=window_exp):
+    def calc_ac_cond(self, corr_ac: np.ndarray,
+                     window: Callable = window_exp) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate optical (AC) conductivity from correlation function.
 
@@ -177,19 +172,19 @@ class Analyzer(MPIEnv):
         which is consistent with the results from Lindhard function.
 
         The reason for nr_orbitals in the prefactor is that every electron
-        contribute freely to the conductivity and we have to take the number
+        contribute freely to the conductivity, and we have to take the number
         of electrons into consideration. See eqn. 222-223 of the note for more
         details.
 
         :param corr_ac: (4, nr_time_steps) complex128 array
-            AC correlation function in in 4 directions:
+            AC correlation function in 4 directions:
             xx, xy, yx, yy, respectively
             Unit should be e^2/h_bar^2 * (eV)^2 * nm^2.
-        :param window: function, optional
-            window function for integral
-        :return: omegas: (nr_time_steps,) float64 array
+        :param window: window function for integral
+        :return: (omegas, ac_cond)
+            omegas: (nr_time_steps,) float64 array
             frequencies in eV
-        :return: ac_cond: (4, nr_time_steps) complex128 array
+            ac_cond: (4, nr_time_steps) complex128 array
             ac conductivity values corresponding to omegas for 4 directions
             (xx, xy, yx, yy, respectively)
             The unit is e^2/(h_bar*nm) in 3d case and e^2/h_bar in 2d case.
@@ -247,7 +242,8 @@ class Analyzer(MPIEnv):
         self.bcast(ac_cond)
         return omegas, ac_cond
 
-    def calc_dyn_pol(self, corr_dyn_pol, window=window_exp_ten):
+    def calc_dyn_pol(self, corr_dyn_pol: np.ndarray,
+                     window: Callable = window_exp_ten) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculate dynamical polarization from correlation function.
 
@@ -263,13 +259,13 @@ class Analyzer(MPIEnv):
 
         :param corr_dyn_pol: (n_q_points, nr_time_steps) float64 array
             dimensionless dynamical polarization correlation function
-        :param window: function, optional
-            window function for integral
-        :return: q_points: (n_q_points, 3) float64 array
+        :param window: window function for integral
+        :return: (q_points, omegas, dyn_pol)
+            q_points: (n_q_points, 3) float64 array
             Cartesian coordinates of q-points in 1/nm
-        :return: omegas: (nr_time_steps,) float64 array
+            omegas: (nr_time_steps,) float64 array
             frequencies in eV
-        :return: dyn_pol: (n_q_points, nr_time_steps) complex128 array
+            dyn_pol: (n_q_points, nr_time_steps) complex128 array
             dynamical polarization values corresponding to q-points and omegas
             The unit is 1/(eV*nm^2) or 1/(eV*nm^3) depending on the dimension.
         """
@@ -311,14 +307,13 @@ class Analyzer(MPIEnv):
         self.bcast(dyn_pol)
         return q_points, omegas, dyn_pol
 
-    def _get_vq(self, q_point: np.ndarray):
+    def _get_vq(self, q_point: np.ndarray) -> float:
         """
         Get Coulomb interaction in momentum space for given q-point.
 
         :param q_point: (3,) float64 array
             CARTESIAN coordinate of q-point in 1/NM
-        :return: vq: float
-            Coulomb interaction in momentum space in eV
+        :return: Coulomb interaction in momentum space in eV
         """
         factor = self.config.dyn_pol['coulomb_constant']
         back_epsilon = self.config.dyn_pol['background_dielectric_constant']
@@ -333,13 +328,13 @@ class Analyzer(MPIEnv):
                 vq = factor * 4 * pi / q_norm**2
         return vq
 
-    def calc_epsilon(self, dyn_pol):
+    def calc_epsilon(self, dyn_pol: np.ndarray) -> np.ndarray:
         """
         Calculate dielectric function from dynamical polarization.
 
         :param dyn_pol: (n_q_points, nr_time_steps) complex128 array
             dynamical polarization
-        :return: epsilon: (n_q_points, nr_time_steps) complex128 array
+        :return: (n_q_points, nr_time_steps) complex128 array
             dielectric function
         """
         # Get parameters
@@ -358,8 +353,10 @@ class Analyzer(MPIEnv):
         self.bcast(epsilon)
         return epsilon
 
-    def calc_dc_cond(self, corr_dos, corr_dc, window_dos=window_hanning,
-                     window_dc=window_exp):
+    def calc_dc_cond(self, corr_dos: np.ndarray,
+                     corr_dc: np.ndarray,
+                     window_dos: Callable = window_hanning,
+                     window_dc: Callable = window_exp) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate electronic (DC) conductivity at zero temperature from its
         correlation function.
@@ -377,7 +374,7 @@ class Analyzer(MPIEnv):
 
         NOTE: Here we need to call analyze_corr_dos to obtain DOS, which is
         intended to analyze the result of calc_corr_dos by design. As in
-        fortran/f2py.pyf, the results of calc_corr_dos and calc_corr_ldos
+        the fortran extension, the results of calc_corr_dos and calc_corr_ldos
         have the length of nr_time_steps+1, while that of calc_corr_dc has
         length of nr_time_steps. This is due to incomplete update of the
         source code. tbpm_dos and tbpm_ldos have been update, while other
@@ -388,13 +385,12 @@ class Analyzer(MPIEnv):
             dimensionless DOS correlation function
         :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
             DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
-        :param window_dos: function, optional
-            window function for DOS integral
-        :param window_dc: function, optional
-            window function for DC integral
-        :return: energies: (n_energies,) float64 array
+        :param window_dos: window function for DOS integral
+        :param window_dc: window function for DC integral
+        :return: (energies, dc)
+            energies: (n_energies,) float64 array
             energies in eV
-        :return: dc: (2, n_energies) float64 array
+            dc: (2, n_energies) float64 array
             dc conductivity values for xx and yy directions in the same unit
             as ac conductivity
         """
@@ -442,7 +438,8 @@ class Analyzer(MPIEnv):
         self.bcast(dc)
         return energies, dc
 
-    def calc_diff_coeff(self, corr_dc, window_dc=window_exp):
+    def calc_diff_coeff(self, corr_dc: np.ndarray,
+                        window_dc: Callable = window_exp) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate diffusion coefficient form DC correlation function.
 
@@ -456,11 +453,11 @@ class Analyzer(MPIEnv):
 
         :param corr_dc: (2, n_energies, nr_time_steps) complex128 array
             DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
-        :param window_dc: function, optional
-            window function for DC integral
-        :return time: (nr_time_steps,) float64 array
+        :param window_dc: window function for DC integral
+        :return: (time, diff_coeff)
+            time: (nr_time_steps,) float64 array
             time for diffusion coefficient in h_bar/eV
-        :return diff_coeff: (2, n_energies, nr_time_steps) complex128 array
+            diff_coeff: (2, n_energies, nr_time_steps) complex128 array
             diffusion coefficient in nm^2/(h_bar/eV)
         """
         # Get parameters
@@ -494,14 +491,15 @@ class Analyzer(MPIEnv):
         self.bcast(diff_coeff)
         return time, diff_coeff
 
-    def calc_hall_cond(self, mu_mn, unit="h_bar"):
+    def calc_hall_cond(self, mu_mn: np.ndarray,
+                       unit: str = "h_bar") -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate Hall conductivity according to Kubo-Bastin formula mu_mn.
 
         Reference:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.114.116602
 
-        The unif of hall_cond in 2d case from eqn. 1 of the reference follows:
+        The unit of hall_cond in 2d case from eqn. 1 of the reference follows:
         [hall_cond] = [h_bar*e^2/Omega] * [dE * Tr<...>]
                     = h_bar*e^2/nm^2 * 1/eV * nm^2/h_bar^2 * eV
                     = e^2/h_bar
@@ -516,14 +514,14 @@ class Analyzer(MPIEnv):
 
         :param mu_mn: (n_kernel, n_kernel) complex128 array
             output of solver.calc_hall_mu in nm^2/h_bar^2 * (eV)^2
-        :param unit: string
-            unit of Hall conductivity, set to 'h_bar' to use 'e^2/h_bar'
-            and 'h' to use 'e^2/h'
-        :return: energies: float64 array
+        :param unit: unit of Hall conductivity, set to 'h_bar' to use
+            'e^2/h_bar' and 'h' to use 'e^2/h'
+        :return: (energies, conductivity)
+            energies: float64 array
             chemical potentials specified in config.dckb['energies']
-        :return: conductivity: float64 array
+            conductivity: float64 array
             Hall conductivity according to energies
-        :raise ValueError: if unit is neither 'h_bar' or 'h'
+        :raise ValueError: if unit is neither 'h_bar' nor 'h'
         """
         if unit not in ("h_bar", "h"):
             raise ValueError(f"Illegal unit {unit}")
