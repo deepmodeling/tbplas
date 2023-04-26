@@ -18,7 +18,6 @@ API Reference
     Z2
     SpinTexture
     gen_lattice_vectors
-    gen_lattice_vectors2
     cart2frac
     frac2cart
     rotate_coord
