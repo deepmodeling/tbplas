@@ -1,6 +1,6 @@
 """Functions and classes for manipulating the primitive cell."""
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Hashable
 import math
 
 import numpy as np
@@ -143,7 +143,7 @@ class PrimitiveCell(Lockable):
 
     def add_orbital(self, position: pos_type,
                     energy: float = 0.0,
-                    label: str = "X",
+                    label: Hashable = "X",
                     sync_array: bool = False,
                     **kwargs) -> None:
         """
@@ -188,7 +188,7 @@ class PrimitiveCell(Lockable):
     def set_orbital(self, orb_i: int,
                     position: pos_type = None,
                     energy: float = None,
-                    label: str = None,
+                    label: Hashable = None,
                     sync_array: bool = False,
                     **kwargs) -> None:
         """
