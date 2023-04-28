@@ -96,218 +96,218 @@ def make_antimonene(with_soc: bool = True,
         hop_dict = HopDict(cell.num_orb)
 
     # 1st NEAREST NEIGHBOURS
-    hop_dict.set_element((0, -1, 0), (0, 3), t_01)
-    hop_dict.set_element((0, 0, 0), (1, 4), t_01)
-    hop_dict.set_element((-1, 0, 0), (2, 5), t_01)
-    hop_dict.set_element((0, 1, 0), (3, 0), t_01)
-    hop_dict.set_element((0, 0, 0), (4, 1), t_01)
-    hop_dict.set_element((1, 0, 0), (5, 2), t_01)
+    hop_dict[(0, -1, 0)][0, 3] = t_01
+    hop_dict[(0, 0, 0)][1, 4] = t_01
+    hop_dict[(-1, 0, 0)][2, 5] = t_01
+    hop_dict[(0, 1, 0)][3, 0] = t_01
+    hop_dict[(0, 0, 0)][4, 1] = t_01
+    hop_dict[(1, 0, 0)][5, 2] = t_01
 
-    hop_dict.set_element((0, 0, 0), (0, 3), t_02)
-    hop_dict.set_element((-1, 0, 0), (0, 3), t_02)
-    hop_dict.set_element((-1, 0, 0), (1, 4), t_02)
-    hop_dict.set_element((0, -1, 0), (1, 4), t_02)
-    hop_dict.set_element((0, -1, 0), (2, 5), t_02)
-    hop_dict.set_element((0, 0, 0), (2, 5), t_02)
-    hop_dict.set_element((0, 0, 0), (3, 0), t_02)
-    hop_dict.set_element((1, 0, 0), (3, 0), t_02)
-    hop_dict.set_element((1, 0, 0), (4, 1), t_02)
-    hop_dict.set_element((0, 1, 0), (4, 1), t_02)
-    hop_dict.set_element((0, 1, 0), (5, 2), t_02)
-    hop_dict.set_element((0, 0, 0), (5, 2), t_02)
+    hop_dict[(0, 0, 0)][0, 3] = t_02
+    hop_dict[(-1, 0, 0)][0, 3] = t_02
+    hop_dict[(-1, 0, 0)][1, 4] = t_02
+    hop_dict[(0, -1, 0)][1, 4] = t_02
+    hop_dict[(0, -1, 0)][2, 5] = t_02
+    hop_dict[(0, 0, 0)][2, 5] = t_02
+    hop_dict[(0, 0, 0)][3, 0] = t_02
+    hop_dict[(1, 0, 0)][3, 0] = t_02
+    hop_dict[(1, 0, 0)][4, 1] = t_02
+    hop_dict[(0, 1, 0)][4, 1] = t_02
+    hop_dict[(0, 1, 0)][5, 2] = t_02
+    hop_dict[(0, 0, 0)][5, 2] = t_02
 
-    hop_dict.set_element((0, 0, 0), (0, 4), t_07)
-    hop_dict.set_element((-1, 0, 0), (0, 5), t_07)
-    hop_dict.set_element((-1, 0, 0), (1, 5), t_07)
-    hop_dict.set_element((0, -1, 0), (1, 3), t_07)
-    hop_dict.set_element((0, -1, 0), (2, 3), t_07)
-    hop_dict.set_element((0, 0, 0), (2, 4), t_07)
-    hop_dict.set_element((0, 0, 0), (3, 1), t_07)
-    hop_dict.set_element((1, 0, 0), (3, 2), t_07)
-    hop_dict.set_element((1, 0, 0), (4, 2), t_07)
-    hop_dict.set_element((0, 1, 0), (4, 0), t_07)
-    hop_dict.set_element((0, 1, 0), (5, 0), t_07)
-    hop_dict.set_element((0, 0, 0), (5, 1), t_07)
+    hop_dict[(0, 0, 0)][0, 4] = t_07
+    hop_dict[(-1, 0, 0)][0, 5] = t_07
+    hop_dict[(-1, 0, 0)][1, 5] = t_07
+    hop_dict[(0, -1, 0)][1, 3] = t_07
+    hop_dict[(0, -1, 0)][2, 3] = t_07
+    hop_dict[(0, 0, 0)][2, 4] = t_07
+    hop_dict[(0, 0, 0)][3, 1] = t_07
+    hop_dict[(1, 0, 0)][3, 2] = t_07
+    hop_dict[(1, 0, 0)][4, 2] = t_07
+    hop_dict[(0, 1, 0)][4, 0] = t_07
+    hop_dict[(0, 1, 0)][5, 0] = t_07
+    hop_dict[(0, 0, 0)][5, 1] = t_07
 
     # 2nd NEAREST NEIGHBOURS
-    hop_dict.set_element((-1, 1, 0), (0, 0), t_03)
-    hop_dict.set_element((0, 1, 0), (0, 0), t_03)
-    hop_dict.set_element((1, -1, 0), (0, 0), t_03)
-    hop_dict.set_element((0, -1, 0), (0, 0), t_03)
-    hop_dict.set_element((0, -1, 0), (1, 1), t_03)
-    hop_dict.set_element((-1, 0, 0), (1, 1), t_03)
-    hop_dict.set_element((0, 1, 0), (1, 1), t_03)
-    hop_dict.set_element((1, 0, 0), (1, 1), t_03)
-    hop_dict.set_element((-1, 0, 0), (2, 2), t_03)
-    hop_dict.set_element((-1, 1, 0), (2, 2), t_03)
-    hop_dict.set_element((1, 0, 0), (2, 2), t_03)
-    hop_dict.set_element((1, -1, 0), (2, 2), t_03)
-    hop_dict.set_element((-1, 1, 0), (3, 3), t_03)
-    hop_dict.set_element((0, 1, 0), (3, 3), t_03)
-    hop_dict.set_element((1, -1, 0), (3, 3), t_03)
-    hop_dict.set_element((0, -1, 0), (3, 3), t_03)
-    hop_dict.set_element((0, -1, 0), (4, 4), t_03)
-    hop_dict.set_element((-1, 0, 0), (4, 4), t_03)
-    hop_dict.set_element((0, 1, 0), (4, 4), t_03)
-    hop_dict.set_element((1, 0, 0), (4, 4), t_03)
-    hop_dict.set_element((-1, 0, 0), (5, 5), t_03)
-    hop_dict.set_element((-1, 1, 0), (5, 5), t_03)
-    hop_dict.set_element((1, 0, 0), (5, 5), t_03)
-    hop_dict.set_element((1, -1, 0), (5, 5), t_03)
+    hop_dict[(-1, 1, 0)][0, 0] = t_03
+    hop_dict[(0, 1, 0)][0, 0] = t_03
+    hop_dict[(1, -1, 0)][0, 0] = t_03
+    hop_dict[(0, -1, 0)][0, 0] = t_03
+    hop_dict[(0, -1, 0)][1, 1] = t_03
+    hop_dict[(-1, 0, 0)][1, 1] = t_03
+    hop_dict[(0, 1, 0)][1, 1] = t_03
+    hop_dict[(1, 0, 0)][1, 1] = t_03
+    hop_dict[(-1, 0, 0)][2, 2] = t_03
+    hop_dict[(-1, 1, 0)][2, 2] = t_03
+    hop_dict[(1, 0, 0)][2, 2] = t_03
+    hop_dict[(1, -1, 0)][2, 2] = t_03
+    hop_dict[(-1, 1, 0)][3, 3] = t_03
+    hop_dict[(0, 1, 0)][3, 3] = t_03
+    hop_dict[(1, -1, 0)][3, 3] = t_03
+    hop_dict[(0, -1, 0)][3, 3] = t_03
+    hop_dict[(0, -1, 0)][4, 4] = t_03
+    hop_dict[(-1, 0, 0)][4, 4] = t_03
+    hop_dict[(0, 1, 0)][4, 4] = t_03
+    hop_dict[(1, 0, 0)][4, 4] = t_03
+    hop_dict[(-1, 0, 0)][5, 5] = t_03
+    hop_dict[(-1, 1, 0)][5, 5] = t_03
+    hop_dict[(1, 0, 0)][5, 5] = t_03
+    hop_dict[(1, -1, 0)][5, 5] = t_03
 
-    hop_dict.set_element((0, 1, 0), (0, 1), t_04)
-    hop_dict.set_element((-1, 1, 0), (0, 2), t_04)
-    hop_dict.set_element((-1, 0, 0), (1, 2), t_04)
-    hop_dict.set_element((0, -1, 0), (1, 0), t_04)
-    hop_dict.set_element((1, -1, 0), (2, 0), t_04)
-    hop_dict.set_element((1, 0, 0), (2, 1), t_04)
-    hop_dict.set_element((0, -1, 0), (3, 4), t_04)
-    hop_dict.set_element((1, -1, 0), (3, 5), t_04)
-    hop_dict.set_element((1, 0, 0), (4, 5), t_04)
-    hop_dict.set_element((0, 1, 0), (4, 3), t_04)
-    hop_dict.set_element((-1, 1, 0), (5, 3), t_04)
-    hop_dict.set_element((-1, 0, 0), (5, 4), t_04)
+    hop_dict[(0, 1, 0)][0, 1] = t_04
+    hop_dict[(-1, 1, 0)][0, 2] = t_04
+    hop_dict[(-1, 0, 0)][1, 2] = t_04
+    hop_dict[(0, -1, 0)][1, 0] = t_04
+    hop_dict[(1, -1, 0)][2, 0] = t_04
+    hop_dict[(1, 0, 0)][2, 1] = t_04
+    hop_dict[(0, -1, 0)][3, 4] = t_04
+    hop_dict[(1, -1, 0)][3, 5] = t_04
+    hop_dict[(1, 0, 0)][4, 5] = t_04
+    hop_dict[(0, 1, 0)][4, 3] = t_04
+    hop_dict[(-1, 1, 0)][5, 3] = t_04
+    hop_dict[(-1, 0, 0)][5, 4] = t_04
 
-    hop_dict.set_element((0, -1, 0), (0, 1), t_06)
-    hop_dict.set_element((1, -1, 0), (0, 2), t_06)
-    hop_dict.set_element((1, 0, 0), (1, 2), t_06)
-    hop_dict.set_element((0, 1, 0), (1, 0), t_06)
-    hop_dict.set_element((-1, 1, 0), (2, 0), t_06)
-    hop_dict.set_element((-1, 0, 0), (2, 1), t_06)
-    hop_dict.set_element((0, 1, 0), (3, 4), t_06)
-    hop_dict.set_element((-1, 1, 0), (3, 5), t_06)
-    hop_dict.set_element((-1, 0, 0), (4, 5), t_06)
-    hop_dict.set_element((0, -1, 0), (4, 3), t_06)
-    hop_dict.set_element((1, -1, 0), (5, 3), t_06)
-    hop_dict.set_element((1, 0, 0), (5, 4), t_06)
+    hop_dict[(0, -1, 0)][0, 1] = t_06
+    hop_dict[(1, -1, 0)][0, 2] = t_06
+    hop_dict[(1, 0, 0)][1, 2] = t_06
+    hop_dict[(0, 1, 0)][1, 0] = t_06
+    hop_dict[(-1, 1, 0)][2, 0] = t_06
+    hop_dict[(-1, 0, 0)][2, 1] = t_06
+    hop_dict[(0, 1, 0)][3, 4] = t_06
+    hop_dict[(-1, 1, 0)][3, 5] = t_06
+    hop_dict[(-1, 0, 0)][4, 5] = t_06
+    hop_dict[(0, -1, 0)][4, 3] = t_06
+    hop_dict[(1, -1, 0)][5, 3] = t_06
+    hop_dict[(1, 0, 0)][5, 4] = t_06
 
-    hop_dict.set_element((-1, 0, 0), (0, 0), t_11)
-    hop_dict.set_element((1, 0, 0), (0, 0), t_11)
-    hop_dict.set_element((-1, 1, 0), (1, 1), t_11)
-    hop_dict.set_element((1, -1, 0), (1, 1), t_11)
-    hop_dict.set_element((0, -1, 0), (2, 2), t_11)
-    hop_dict.set_element((0, 1, 0), (2, 2), t_11)
-    hop_dict.set_element((-1, 0, 0), (3, 3), t_11)
-    hop_dict.set_element((1, 0, 0), (3, 3), t_11)
-    hop_dict.set_element((-1, 1, 0), (4, 4), t_11)
-    hop_dict.set_element((1, -1, 0), (4, 4), t_11)
-    hop_dict.set_element((0, -1, 0), (5, 5), t_11)
-    hop_dict.set_element((0, 1, 0), (5, 5), t_11)
+    hop_dict[(-1, 0, 0)][0, 0] = t_11
+    hop_dict[(1, 0, 0)][0, 0] = t_11
+    hop_dict[(-1, 1, 0)][1, 1] = t_11
+    hop_dict[(1, -1, 0)][1, 1] = t_11
+    hop_dict[(0, -1, 0)][2, 2] = t_11
+    hop_dict[(0, 1, 0)][2, 2] = t_11
+    hop_dict[(-1, 0, 0)][3, 3] = t_11
+    hop_dict[(1, 0, 0)][3, 3] = t_11
+    hop_dict[(-1, 1, 0)][4, 4] = t_11
+    hop_dict[(1, -1, 0)][4, 4] = t_11
+    hop_dict[(0, -1, 0)][5, 5] = t_11
+    hop_dict[(0, 1, 0)][5, 5] = t_11
 
     # 3rd NEAREST NEIGHBOURS
     # ACROSS THE HEXAGON
-    hop_dict.set_element((-1, 1, 0), (0, 4), t_08)
-    hop_dict.set_element((-1, 1, 0), (0, 5), t_08)
-    hop_dict.set_element((-1, -1, 0), (1, 5), t_08)
-    hop_dict.set_element((-1, -1, 0), (1, 3), t_08)
-    hop_dict.set_element((1, -1, 0), (2, 3), t_08)
-    hop_dict.set_element((1, -1, 0), (2, 4), t_08)
-    hop_dict.set_element((1, -1, 0), (3, 1), t_08)
-    hop_dict.set_element((1, -1, 0), (3, 2), t_08)
-    hop_dict.set_element((1, 1, 0), (4, 2), t_08)
-    hop_dict.set_element((1, 1, 0), (4, 0), t_08)
-    hop_dict.set_element((-1, 1, 0), (5, 0), t_08)
-    hop_dict.set_element((-1, 1, 0), (5, 1), t_08)
+    hop_dict[(-1, 1, 0)][0, 4] = t_08
+    hop_dict[(-1, 1, 0)][0, 5] = t_08
+    hop_dict[(-1, -1, 0)][1, 5] = t_08
+    hop_dict[(-1, -1, 0)][1, 3] = t_08
+    hop_dict[(1, -1, 0)][2, 3] = t_08
+    hop_dict[(1, -1, 0)][2, 4] = t_08
+    hop_dict[(1, -1, 0)][3, 1] = t_08
+    hop_dict[(1, -1, 0)][3, 2] = t_08
+    hop_dict[(1, 1, 0)][4, 2] = t_08
+    hop_dict[(1, 1, 0)][4, 0] = t_08
+    hop_dict[(-1, 1, 0)][5, 0] = t_08
+    hop_dict[(-1, 1, 0)][5, 1] = t_08
 
-    hop_dict.set_element((1, -1, 0), (0, 4), t_12)
-    hop_dict.set_element((-1, -1, 0), (0, 5), t_12)
-    hop_dict.set_element((-1, 1, 0), (1, 5), t_12)
-    hop_dict.set_element((1, -1, 0), (1, 3), t_12)
-    hop_dict.set_element((-1, -1, 0), (2, 3), t_12)
-    hop_dict.set_element((-1, 1, 0), (2, 4), t_12)
-    hop_dict.set_element((-1, 1, 0), (3, 1), t_12)
-    hop_dict.set_element((1, 1, 0), (3, 2), t_12)
-    hop_dict.set_element((1, -1, 0), (4, 2), t_12)
-    hop_dict.set_element((-1, 1, 0), (4, 0), t_12)
-    hop_dict.set_element((1, 1, 0), (5, 0), t_12)
-    hop_dict.set_element((1, -1, 0), (5, 1), t_12)
+    hop_dict[(1, -1, 0)][0, 4] = t_12
+    hop_dict[(-1, -1, 0)][0, 5] = t_12
+    hop_dict[(-1, 1, 0)][1, 5] = t_12
+    hop_dict[(1, -1, 0)][1, 3] = t_12
+    hop_dict[(-1, -1, 0)][2, 3] = t_12
+    hop_dict[(-1, 1, 0)][2, 4] = t_12
+    hop_dict[(-1, 1, 0)][3, 1] = t_12
+    hop_dict[(1, 1, 0)][3, 2] = t_12
+    hop_dict[(1, -1, 0)][4, 2] = t_12
+    hop_dict[(-1, 1, 0)][4, 0] = t_12
+    hop_dict[(1, 1, 0)][5, 0] = t_12
+    hop_dict[(1, -1, 0)][5, 1] = t_12
 
     # 3rd NEAREST NEIGHBOURS
     # ACROSS THE ZIGZAG
-    hop_dict.set_element((1, -2, 0), (0, 3), t_05)
-    hop_dict.set_element((0, -2, 0), (0, 3), t_05)
-    hop_dict.set_element((0, 1, 0), (1, 4), t_05)
-    hop_dict.set_element((1, 0, 0), (1, 4), t_05)
-    hop_dict.set_element((-2, 1, 0), (2, 5), t_05)
-    hop_dict.set_element((-2, 0, 0), (2, 5), t_05)
-    hop_dict.set_element((-1, 2, 0), (3, 0), t_05)
-    hop_dict.set_element((0, 2, 0), (3, 0), t_05)
-    hop_dict.set_element((-1, 0, 0), (4, 1), t_05)
-    hop_dict.set_element((0, -1, 0), (4, 1), t_05)
-    hop_dict.set_element((2, -1, 0), (5, 2), t_05)
-    hop_dict.set_element((2, 0, 0), (5, 2), t_05)
+    hop_dict[(1, -2, 0)][0, 3] = t_05
+    hop_dict[(0, -2, 0)][0, 3] = t_05
+    hop_dict[(0, 1, 0)][1, 4] = t_05
+    hop_dict[(1, 0, 0)][1, 4] = t_05
+    hop_dict[(-2, 1, 0)][2, 5] = t_05
+    hop_dict[(-2, 0, 0)][2, 5] = t_05
+    hop_dict[(-1, 2, 0)][3, 0] = t_05
+    hop_dict[(0, 2, 0)][3, 0] = t_05
+    hop_dict[(-1, 0, 0)][4, 1] = t_05
+    hop_dict[(0, -1, 0)][4, 1] = t_05
+    hop_dict[(2, -1, 0)][5, 2] = t_05
+    hop_dict[(2, 0, 0)][5, 2] = t_05
 
-    hop_dict.set_element((-2, 1, 0), (0, 3), t_09)
-    hop_dict.set_element((0, 1, 0), (0, 3), t_09)
-    hop_dict.set_element((0, -2, 0), (1, 4), t_09)
-    hop_dict.set_element((-2, 0, 0), (1, 4), t_09)
-    hop_dict.set_element((1, 0, 0), (2, 5), t_09)
-    hop_dict.set_element((1, -2, 0), (2, 5), t_09)
-    hop_dict.set_element((2, -1, 0), (3, 0), t_09)
-    hop_dict.set_element((0, -1, 0), (3, 0), t_09)
-    hop_dict.set_element((0, 2, 0), (4, 1), t_09)
-    hop_dict.set_element((2, 0, 0), (4, 1), t_09)
-    hop_dict.set_element((-1, 2, 0), (5, 2), t_09)
-    hop_dict.set_element((-1, 0, 0), (5, 2), t_09)
+    hop_dict[(-2, 1, 0)][0, 3] = t_09
+    hop_dict[(0, 1, 0)][0, 3] = t_09
+    hop_dict[(0, -2, 0)][1, 4] = t_09
+    hop_dict[(-2, 0, 0)][1, 4] = t_09
+    hop_dict[(1, 0, 0)][2, 5] = t_09
+    hop_dict[(1, -2, 0)][2, 5] = t_09
+    hop_dict[(2, -1, 0)][3, 0] = t_09
+    hop_dict[(0, -1, 0)][3, 0] = t_09
+    hop_dict[(0, 2, 0)][4, 1] = t_09
+    hop_dict[(2, 0, 0)][4, 1] = t_09
+    hop_dict[(-1, 2, 0)][5, 2] = t_09
+    hop_dict[(-1, 0, 0)][5, 2] = t_09
 
-    hop_dict.set_element((0, 1, 0), (0, 4), t_10)
-    hop_dict.set_element((-2, 1, 0), (0, 5), t_10)
-    hop_dict.set_element((-2, 0, 0), (1, 5), t_10)
-    hop_dict.set_element((0, -2, 0), (1, 3), t_10)
-    hop_dict.set_element((1, -2, 0), (2, 3), t_10)
-    hop_dict.set_element((1, 0, 0), (2, 4), t_10)
-    hop_dict.set_element((0, -1, 0), (3, 1), t_10)
-    hop_dict.set_element((2, -1, 0), (3, 2), t_10)
-    hop_dict.set_element((2, 0, 0), (4, 2), t_10)
-    hop_dict.set_element((0, 2, 0), (4, 0), t_10)
-    hop_dict.set_element((-1, 2, 0), (5, 0), t_10)
-    hop_dict.set_element((-1, 0, 0), (5, 1), t_10)
+    hop_dict[(0, 1, 0)][0, 4] = t_10
+    hop_dict[(-2, 1, 0)][0, 5] = t_10
+    hop_dict[(-2, 0, 0)][1, 5] = t_10
+    hop_dict[(0, -2, 0)][1, 3] = t_10
+    hop_dict[(1, -2, 0)][2, 3] = t_10
+    hop_dict[(1, 0, 0)][2, 4] = t_10
+    hop_dict[(0, -1, 0)][3, 1] = t_10
+    hop_dict[(2, -1, 0)][3, 2] = t_10
+    hop_dict[(2, 0, 0)][4, 2] = t_10
+    hop_dict[(0, 2, 0)][4, 0] = t_10
+    hop_dict[(-1, 2, 0)][5, 0] = t_10
+    hop_dict[(-1, 0, 0)][5, 1] = t_10
 
-    hop_dict.set_element((1, 0, 0), (0, 3), t_13)
-    hop_dict.set_element((-2, 0, 0), (0, 3), t_13)
-    hop_dict.set_element((-2, 1, 0), (1, 4), t_13)
-    hop_dict.set_element((1, -2, 0), (1, 4), t_13)
-    hop_dict.set_element((0, -2, 0), (2, 5), t_13)
-    hop_dict.set_element((0, 1, 0), (2, 5), t_13)
-    hop_dict.set_element((-1, 0, 0), (3, 0), t_13)
-    hop_dict.set_element((2, 0, 0), (3, 0), t_13)
-    hop_dict.set_element((-1, 2, 0), (4, 1), t_13)
-    hop_dict.set_element((2, -1, 0), (4, 1), t_13)
-    hop_dict.set_element((0, 2, 0), (5, 2), t_13)
-    hop_dict.set_element((0, -1, 0), (5, 2), t_13)
+    hop_dict[(1, 0, 0)][0, 3] = t_13
+    hop_dict[(-2, 0, 0)][0, 3] = t_13
+    hop_dict[(-2, 1, 0)][1, 4] = t_13
+    hop_dict[(1, -2, 0)][1, 4] = t_13
+    hop_dict[(0, -2, 0)][2, 5] = t_13
+    hop_dict[(0, 1, 0)][2, 5] = t_13
+    hop_dict[(-1, 0, 0)][3, 0] = t_13
+    hop_dict[(2, 0, 0)][3, 0] = t_13
+    hop_dict[(-1, 2, 0)][4, 1] = t_13
+    hop_dict[(2, -1, 0)][4, 1] = t_13
+    hop_dict[(0, 2, 0)][5, 2] = t_13
+    hop_dict[(0, -1, 0)][5, 2] = t_13
 
     # 4th NEAREST NEIGHBOURS
     # ACROSS THE ZIGZAG
-    hop_dict.set_element((0, -2, 0), (0, 1), t_14)
-    hop_dict.set_element((2, -2, 0), (0, 2), t_14)
-    hop_dict.set_element((2, 0, 0), (1, 2), t_14)
-    hop_dict.set_element((0, 2, 0), (1, 0), t_14)
-    hop_dict.set_element((-2, 2, 0), (2, 0), t_14)
-    hop_dict.set_element((-2, 0, 0), (2, 1), t_14)
-    hop_dict.set_element((0, 2, 0), (3, 4), t_14)
-    hop_dict.set_element((-2, 2, 0), (3, 5), t_14)
-    hop_dict.set_element((-2, 0, 0), (4, 5), t_14)
-    hop_dict.set_element((0, -2, 0), (4, 3), t_14)
-    hop_dict.set_element((2, -2, 0), (5, 3), t_14)
-    hop_dict.set_element((2, 0, 0), (5, 4), t_14)
+    hop_dict[(0, -2, 0)][0, 1] = t_14
+    hop_dict[(2, -2, 0)][0, 2] = t_14
+    hop_dict[(2, 0, 0)][1, 2] = t_14
+    hop_dict[(0, 2, 0)][1, 0] = t_14
+    hop_dict[(-2, 2, 0)][2, 0] = t_14
+    hop_dict[(-2, 0, 0)][2, 1] = t_14
+    hop_dict[(0, 2, 0)][3, 4] = t_14
+    hop_dict[(-2, 2, 0)][3, 5] = t_14
+    hop_dict[(-2, 0, 0)][4, 5] = t_14
+    hop_dict[(0, -2, 0)][4, 3] = t_14
+    hop_dict[(2, -2, 0)][5, 3] = t_14
+    hop_dict[(2, 0, 0)][5, 4] = t_14
 
-    hop_dict.set_element((0, -2, 0), (1, 0), t_15)
-    hop_dict.set_element((2, -2, 0), (2, 0), t_15)
-    hop_dict.set_element((2, 0, 0), (2, 1), t_15)
-    hop_dict.set_element((0, 2, 0), (0, 1), t_15)
-    hop_dict.set_element((-2, 2, 0), (0, 2), t_15)
-    hop_dict.set_element((-2, 0, 0), (1, 2), t_15)
-    hop_dict.set_element((0, 2, 0), (4, 3), t_15)
-    hop_dict.set_element((-2, 2, 0), (5, 3), t_15)
-    hop_dict.set_element((-2, 0, 0), (5, 4), t_15)
-    hop_dict.set_element((0, -2, 0), (3, 4), t_15)
-    hop_dict.set_element((2, -2, 0), (3, 5), t_15)
-    hop_dict.set_element((2, 0, 0), (4, 5), t_15)
+    hop_dict[(0, -2, 0)][1, 0] = t_15
+    hop_dict[(2, -2, 0)][2, 0] = t_15
+    hop_dict[(2, 0, 0)][2, 1] = t_15
+    hop_dict[(0, 2, 0)][0, 1] = t_15
+    hop_dict[(-2, 2, 0)][0, 2] = t_15
+    hop_dict[(-2, 0, 0)][1, 2] = t_15
+    hop_dict[(0, 2, 0)][4, 3] = t_15
+    hop_dict[(-2, 2, 0)][5, 3] = t_15
+    hop_dict[(-2, 0, 0)][5, 4] = t_15
+    hop_dict[(0, -2, 0)][3, 4] = t_15
+    hop_dict[(2, -2, 0)][3, 5] = t_15
+    hop_dict[(2, 0, 0)][4, 5] = t_15
 
     # Deal with SOC
     if with_soc:
-        hop_dict.set_num_orb(cell.num_orb)
-        for rel_unit_cell, hop in hop_dict.dict.items():
+        hop_dict.num_orb = cell.num_orb
+        for rel_unit_cell, hop in hop_dict.hoppings.items():
             new_hop = np.zeros((12, 12), dtype="complex")
             hop00 = hop[0:3, 0:3]
             hop01 = hop[0:3, 3:6]
@@ -321,8 +321,8 @@ def make_antimonene(with_soc: bool = True,
             new_hop[9:12, 3:6] = hop10
             new_hop[6:9, 6:9] = hop11
             new_hop[9:12, 9:12] = hop11
-            hop_dict.set_mat(rel_unit_cell, new_hop)
-        hop_dict.dict[(0, 0, 0)] += np.kron(np.eye(2), soc_mat)
+            hop_dict[rel_unit_cell] = new_hop
+        hop_dict[(0, 0, 0)] += np.kron(np.eye(2), soc_mat)
 
     # Apply hop_dict
     cell.add_hopping_dict(hop_dict)

@@ -373,7 +373,6 @@ class PrimitiveCell(Lockable):
             self.sync_array(**kwargs)
 
     def add_hopping_dict(self, hop_dict: HopDict,
-                         hop_eng_cutoff: float = 1e-5,
                          sync_array: bool = True,
                          **kwargs) -> None:
         """
@@ -382,31 +381,20 @@ class PrimitiveCell(Lockable):
 
         Reserved for compatibility with old version of TBPLaS.
 
-        NOTE: the 'HopDict' class of old version of TBPLaS is poorly designed.
-        Some users prefer to use R and -R for distinguishing 1st nearest and 2nd
-        nearest hopping neighbours, e.g., in the example of calculating Z2 for
-        graphene, making it impossible to implement automatic conjugate
-        relationship handling. However, they may forget to set up the conjugate
-        term manually. This sick situation leads to the result that zero hopping
-        terms overwrites their conjugate counterparts by accident. That's why we
-        need to filter zero hopping terms with respect to hop_eng_cutoff.
-
         :param hop_dict: hopping dictionary
-        :param hop_eng_cutoff: energy cutoff for hopping terms in eV
-            Hopping terms with energy below this threshold will be dropped.
         :param sync_array: whether to call sync_array to update numpy arrays
             according to orbitals and hopping terms
         :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         """
-        for rn, hop_mat in hop_dict.dict.items():
-            for orb_i in range(hop_mat.shape[0]):
-                for orb_j in range(hop_mat.shape[1]):
-                    hop_eng = hop_mat.item(orb_i, orb_j)
-                    if abs(hop_eng) >= hop_eng_cutoff:
-                        self.add_hopping(rn, orb_i, orb_j, hop_eng,
-                                         sync_array=False)
+        hop_dict.to_spare()
+        for rn, hop_mat in hop_dict.hoppings.items():
+            for i in range(hop_mat.nnz):
+                orb_i = hop_mat.row.item(i)
+                orb_j = hop_mat.col.item(i)
+                hop_eng = hop_mat.data.item(i)
+                self.add_hopping(rn, orb_i, orb_j, hop_eng, sync_array=False)
         if sync_array:
             self.sync_array(**kwargs)
 

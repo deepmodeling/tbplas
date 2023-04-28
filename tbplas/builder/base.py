@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Union, Dict
 
 import numpy as np
+from scipy.sparse import coo_matrix
 
 from . import exceptions as exc
 
@@ -477,24 +478,25 @@ class HopDict:
     Reserved for compatibility with old version of TBPlaS.
 
     NOTE: DO NOT try to rewrite this class based on IntraHopping. This class
-    is intended for compatibility reasons and designed following a different
-    philosophy than IntraHopping.
+    is intended for compatibility reasons and follows a different philosophy
+    than IntraHopping.
 
     Attributes
     ----------
-    dict: Dict[Tuple[int, int, int], np.ndarray]
+    _hoppings: Dict[Tuple[int, int, int], Union[coo_matrix, np.ndarray]]
         Keys should be cell indices and values should be complex matrices.
-    mat_shape: Tuple[int, int]
+    _num_orb: int
+        number of orbitals
+    _mat_shape: Tuple[int, int]
         shape of hopping matrices
     """
     def __init__(self, num_orb: int) -> None:
         """
-        Initialize hop_dict object.
-
         :param num_orb: number of orbitals
         """
-        self.dict = {}
-        self.mat_shape = (num_orb, num_orb)
+        self._hoppings = dict()
+        self._num_orb = num_orb
+        self._mat_shape = (self._num_orb, self._num_orb)
 
     @staticmethod
     def _check_rn(rn: rn_type) -> rn3_type:
@@ -510,18 +512,24 @@ class HopDict:
             raise exc.CellIndexLenError(rn)
         return rn
 
-    def set_num_orb(self, num_orb: int) -> None:
+    def _check_diag(self) -> None:
         """
-        Reset 'mat_shape' according to num_orb.
+        Check for diagonal hopping terms (on-site energies).
 
-        :param num_orb: number of orbitals
         :return: None
+        :raises PCHopDiagonalError: if on-site energies are included in hopping
+            matrix
         """
-        self.mat_shape = (num_orb, num_orb)
+        rn = (0, 0, 0)
+        if rn in self._hoppings.keys():
+            hop_mat = self._hoppings[rn]
+            for i, energy in enumerate(np.abs(np.diag(hop_mat))):
+                if energy >= 1e-5:
+                    raise exc.PCHopDiagonalError(rn, i)
 
-    def set_mat(self, rn: rn_type, hop_mat: np.ndarray) -> None:
+    def __setitem__(self, rn: rn_type, hop_mat: np.ndarray) -> None:
         """
-        Add hopping matrix to dictionary or update an existing hopping matrix.
+        Add or update a hopping matrix according to cell index.
 
         :param rn: cell index of hopping matrix
         :param hop_mat: (num_orb, num_orb) complex128 array
@@ -536,74 +544,69 @@ class HopDict:
         rn = self._check_rn(rn)
 
         # Check matrix size
-        hop_mat = np.array(hop_mat)
-        if hop_mat.shape != self.mat_shape:
+        if not isinstance(hop_mat, np.ndarray):
+            hop_mat = np.array(hop_mat)
+        if hop_mat.shape != self._mat_shape:
             raise ValueError(f"Shape of hopping matrix {hop_mat.shape} does not "
-                             f"match {self.mat_shape}")
+                             f"match {self._mat_shape}")
+
+        # Set hopping matrix
+        # We copy the hopping matrix to avoid changing it accidentally.
+        self._hoppings[rn] = hop_mat.copy()
 
         # Check for diagonal terms
         if rn == (0, 0, 0):
-            for i in range(hop_mat.shape[0]):
-                if abs(hop_mat.item(i, i)) >= 1e-5:
-                    raise exc.PCHopDiagonalError(rn, i)
+            self._check_diag()
 
-        # Set hopping matrix
-        self.dict[rn] = hop_mat
-
-    def set_zero_mat(self, rn: rn_type) -> None:
+    def __getitem__(self, rn: rn_type) -> np.ndarray:
         """
-        Add zero hopping matrix to dictionary.
+        Get the hopping matrix according to cell index.
 
         :param rn: cell index of hopping matrix
+        :return: (num_orb, num_orb) complex128 array
+            hopping matrix of rn
         :return: None
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        zero_mat = np.zeros(self.mat_shape, dtype=complex)
-        self.set_mat(rn, zero_mat)
-
-    def set_element(self, rn: rn_type,
-                    element: pair_type,
-                    hop: complex) -> None:
-        """
-        Add single hopping to hopping matrix.
-
-        :param rn: cell index of hopping matrix
-        :param element: element indices
-        :param hop: hopping energy
-        :return: None
-        :raises CellIndexLenError: if len(rn) != 2 or 3
-        :raises ValueError: if element indices are out of range
-        :raises PCHopDiagonalError: if on-site energy is given as input
-        """
-        # Check cell index
         rn = self._check_rn(rn)
-
-        # Check element indices
-        if element[0] not in range(self.mat_shape[0]) or \
-                element[1] not in range(self.mat_shape[1]):
-            raise ValueError(f"Element {element} out of range {self.mat_shape}")
-
-        # Check for on-site energy
-        if rn == (0, 0, 0) and element[0] == element[1]:
-            raise exc.PCHopDiagonalError(rn, element[0])
-
-        # Set matrix element
         try:
-            hop_mat = self.dict[rn]
+            hop_mat = self._hoppings[rn]
         except KeyError:
-            hop_mat = self.dict[rn] = np.zeros(self.mat_shape, dtype=complex)
-        hop_mat[element[0], element[1]] = hop
+            hop_mat = self._hoppings[rn] = np.zeros(self._mat_shape,
+                                                    dtype=np.complex128)
+        return hop_mat
 
-    def delete_mat(self, rn: rn_type) -> None:
+    def to_spare(self) -> None:
         """
-        Delete hopping matrix from dictionary.
+        Convert hopping matrices from dense to sparse.
 
-        :param rn: cell index of hopping matrix
-        :returns: None
-        :raises CellIndexLenError: if len(rn) != 2 or 3
+        :return: None
+        :raises PCHopDiagonalError: if on-site energies are included in hopping
+            matrix
         """
-        # Check cell index
-        rn = self._check_rn(rn)
+        self._check_diag()
+        new_hoppings = dict()
+        for rn, hop_mat in self._hoppings.items():
+            new_hoppings[rn] = coo_matrix(hop_mat)
+        self._hoppings = new_hoppings
 
-        # Delete hopping matrix
-        self.dict.pop(rn, None)
+    @property
+    def num_orb(self) -> int:
+        """Interface for the 'num_orb' attribute."""
+        return self.num_orb
+
+    @num_orb.setter
+    def num_orb(self, num_orb) -> None:
+        """Interface for the 'num_orb' attribute."""
+        self._num_orb = num_orb
+        self._mat_shape = (self._num_orb, self._num_orb)
+
+    @property
+    def mat_shape(self) -> Tuple[int, int]:
+        """Interface for the 'mat_shape' attribute."""
+        return self._mat_shape
+
+    @property
+    def hoppings(self) -> Dict[rn3_type, Union[coo_matrix, np.ndarray]]:
+        """Interface for the 'hoppings' attribute."""
+        return self._hoppings

@@ -182,36 +182,36 @@ def make_graphene_soc(is_qsh: bool = True) -> PrimitiveCell:
     # (0, 0, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 2:4] = _hop_1st(ac_vec[0])
-    hop_dict.set_mat((0, 0, 0), hop_mat)
+    hop_dict[(0, 0, 0)] = hop_mat
 
     # (-1, 0, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 2:4] = _hop_1st(ac_vec[1])
-    hop_dict.set_mat((-1, 0, 0), hop_mat)
+    hop_dict[(-1, 0, 0)] = hop_mat
 
     # (0, -1, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 2:4] = _hop_1st(ac_vec[2])
-    hop_dict.set_mat((0, -1, 0), hop_mat)
+    hop_dict[(0, -1, 0)] = hop_mat
 
     # 2nd nearest neighbours
     # (0, 1, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[2])
     hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[2], ac_vec[0])
-    hop_dict.set_mat((0, 1, 0), hop_mat)
+    hop_dict[(0, 1, 0)] = hop_mat
 
     # (1, 0, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[0], bc_vec[1])
     hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[0])
-    hop_dict.set_mat((1, 0, 0), hop_mat)
+    hop_dict[(1, 0, 0)] = hop_mat
 
     # (1, -1, 0) cell
     hop_mat = np.zeros((4, 4), dtype=complex)
     hop_mat[0:2, 0:2] = _hop_2nd(ac_vec[2], bc_vec[1])
     hop_mat[2:4, 2:4] = _hop_2nd(bc_vec[1], ac_vec[2])
-    hop_dict.set_mat((1, -1, 0), hop_mat)
+    hop_dict[(1, -1, 0)] = hop_mat
 
     # Apply hopping terms
     prim_cell.add_hopping_dict(hop_dict)

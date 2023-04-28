@@ -230,7 +230,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
     for i in range(11):
         on_site.append(a_000[i, i])
         a_000[i, i] = 0.
-    hop_dict.set_mat((0, 0, 0), a_000)  # on-site energies will be set separately
+    hop_dict[(0, 0, 0)] = a_000  # on-site energies will be set separately
 
     # Set hopping matrix to (1, 0, 0) cell
     a_100 = np.array(np.zeros((11, 11)))
@@ -261,7 +261,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
                 a_100[i - 1, j - 1] = -hop_mat3[i - 1, j - 1]
                 a_100[j - 1, i - 1] = hop_mat2[i - 1, j - 1]
     a_100 = np.dot(np.dot(trans_mat, a_100), inverse_trans_mat)
-    hop_dict.set_mat((1, 0, 0), a_100)
+    hop_dict[(1, 0, 0)] = a_100
 
     # (0, 0, 0) -> (1, 1, 0)
     a_110 = np.array(np.zeros((11, 11)))
@@ -276,7 +276,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
             elif (j, i) == (11, 8):
                 a_110[i - 1, j - 1] = hop_mat6[j - 1, i - 1]
     a_110 = np.dot(np.dot(trans_mat, a_110), inverse_trans_mat)
-    hop_dict.set_mat((1, 1, 0), a_110)
+    hop_dict[(1, 1, 0)] = a_110
 
     # (0, 0, 0) -> (0, 1, 0)
     a_010 = np.array(np.zeros((11, 11)))
@@ -307,7 +307,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
                 a_010[i - 1, j - 1] = hop_mat3[i - 1, j - 1]
                 a_010[j - 1, i - 1] = -hop_mat2[i - 1, j - 1]
     a_010 = np.dot(np.dot(trans_mat, a_010), inverse_trans_mat)
-    hop_dict.set_mat((0, 1, 0), a_010)
+    hop_dict[(0, 1, 0)] = a_010
 
     # (0, 0, 0) -> (-1, 1, 0)
     a__110 = np.array(np.zeros((11, 11)))
@@ -362,7 +362,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
                 a__110[i - 1, j - 1] = hop_mat1[i - 1, j - 1]
                 a__110[j - 1, i - 1] = -hop_mat1[i - 1, j - 1]
     a__110 = np.dot(np.dot(trans_mat, a__110), inverse_trans_mat)
-    hop_dict.set_mat((-1, 1, 0), a__110)
+    hop_dict[(-1, 1, 0)] = a__110
     return hop_dict, on_site
 
 
