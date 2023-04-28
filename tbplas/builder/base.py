@@ -133,23 +133,22 @@ class Lockable(ABC):
 
 class Hopping(ABC):
     """
-    Base class for IntraHopping and InterHopping classes.
+    Base class for IntraHopping and InterHopping.
 
     Attributes
     ----------
-    dict: Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]
-        Keys are cell indices (rn), while values are also dictionaries.
+    _hoppings: Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]
+        Keys are cell indices (rn), while values are dictionaries.
         Keys of value dictionary are orbital pairs, while values are hopping
         energies.
     """
     def __init__(self) -> None:
         super().__init__()
-        self.dict = {}
+        self._hoppings = {}
 
     def __hash__(self) -> int:
         """Return the hash of this instance."""
-        hop_list = self.to_list()
-        return hash(tuple(hop_list))
+        return hash(tuple(self.to_list()))
 
     @staticmethod
     @abstractmethod
@@ -158,8 +157,6 @@ class Hopping(ABC):
                    orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
         Normalize cell index and orbital pair into permitted keys of self.dict.
-
-        NOTE: This function should be overridden in derived classes.
 
         For IntraHopping, it should check whether to take the conjugation and
         return the status in conj. For InterHopping, it should check if rn is
@@ -196,9 +193,9 @@ class Hopping(ABC):
         if conj:
             energy = energy.conjugate()
         try:
-            hop_rn = self.dict[rn]
+            hop_rn = self._hoppings[rn]
         except KeyError:
-            hop_rn = self.dict[rn] = dict()
+            hop_rn = self._hoppings[rn] = dict()
         hop_rn[pair] = energy
 
     def get_hopping(self, rn: rn_type,
@@ -216,7 +213,7 @@ class Hopping(ABC):
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
-            energy = self.dict[rn][pair]
+            energy = self._hoppings[rn][pair]
             status = True
         except KeyError:
             energy = None
@@ -228,68 +225,45 @@ class Hopping(ABC):
     def remove_hopping(self, rn: rn_type,
                        orb_i: int,
                        orb_j: int,
-                       clean: bool = False) -> bool:
+                       purge: bool = False) -> bool:
         """
         Remove an existing hopping term.
 
         :param rn: (r_a, r_b, r_c), cell index
         :param orb_i: orbital index or bra
         :param orb_j: orbital index of ket
-        :param clean: whether to call 'clean' to remove empty cell indices
+        :param purge: whether to call 'purge' to remove empty cell indices
         :return: where the hopping term is removed, False if not found
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
-            self.dict[rn].pop(pair)
+            self._hoppings[rn].pop(pair)
             status = True
         except KeyError:
             status = False
-        if clean:
-            self.clean()
+        if purge:
+            self.purge()
         return status
 
-    def get_rn(self) -> List[rn3_type]:
-        """
-        Get the list of cell indices.
-
-        :return: list of cell indices
-        """
-        return list(self.dict.keys())
-
-    def remove_rn(self, rn: rn_type) -> bool:
-        """
-        Remove all the hopping terms of given cell index.
-
-        :param rn: (r_a, r_b, r_c), cell index
-        :return: where the hopping terms are removed, False if not found
-        """
-        rn, pair, conj = self._norm_keys(rn, 0, 0)
-        try:
-            self.dict.pop(rn)
-            status = True
-        except KeyError:
-            status = False
-        return status
-
-    def remove_orbital(self, orb_i: int, clean: bool = False) -> None:
+    def remove_orbital(self, orb_i: int, purge: bool = False) -> None:
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param orb_i: orbital index to remove
-        :param clean: whether to call 'clean' to remove empty cell indices
+        :param purge: whether to call 'purge' to remove empty cell indices
         :return: None
         :raises LockError: if the object is locked
         """
-        self.remove_orbitals([orb_i], clean=clean)
+        self.remove_orbitals([orb_i], purge=purge)
 
     def remove_orbitals(self, indices: Union[List[int], np.ndarray],
-                        clean: bool = True) -> None:
+                        purge: bool = True) -> None:
         """
         Remove the hopping terms corresponding to a list of orbitals and update
         remaining hopping terms.
 
         :param indices: indices of orbitals to remove
-        :param clean: whether to call 'clean' to remove empty cell indices
+        :param purge: whether to call 'clean' to remove empty cell indices
         :return: None
         """
         indices = sorted(indices)
@@ -306,7 +280,7 @@ class Hopping(ABC):
                 idx_remap[orb_i] = result
             return result
 
-        for rn, hop_rn in self.dict.items():
+        for rn, hop_rn in self._hoppings.items():
             new_hop_rn = dict()
             for pair in hop_rn.keys():
                 ii, jj = pair
@@ -316,20 +290,35 @@ class Hopping(ABC):
                     ii = _remap(ii)
                     jj = _remap(jj)
                     new_hop_rn[(ii, jj)] = hop_rn[pair]
-            self.dict[rn] = new_hop_rn
+            self._hoppings[rn] = new_hop_rn
 
-        if clean:
-            self.clean()
+        if purge:
+            self.purge()
 
-    def clean(self) -> None:
+    def remove_rn(self, rn: rn_type) -> bool:
+        """
+        Remove all the hopping terms of given cell index.
+
+        :param rn: (r_a, r_b, r_c), cell index
+        :return: where the hopping terms are removed, False if not found
+        """
+        rn, pair, conj = self._norm_keys(rn, 0, 0)
+        try:
+            self._hoppings.pop(rn)
+            status = True
+        except KeyError:
+            status = False
+        return status
+
+    def purge(self) -> None:
         """
         Remove empty cell indices.
 
         :return: None
         """
-        for rn in list(self.dict.keys()):
-            if self.dict[rn] == {}:
-                self.dict.pop(rn)
+        for rn in list(self._hoppings.keys()):
+            if self._hoppings[rn] == {}:
+                self._hoppings.pop(rn)
 
     def to_list(self) -> List[Tuple[int, int, int, int, int, complex]]:
         """
@@ -337,9 +326,9 @@ class Hopping(ABC):
 
         :return: list of hopping terms (rb, rb, rc, orb_i, orb_j, energy)
         """
-        self.clean()
+        self.purge()
         hop_list = [rn + pair + (energy,)
-                    for rn, hop_rn in self.dict.items()
+                    for rn, hop_rn in self._hoppings.items()
                     for pair, energy in hop_rn.items()]
         return hop_list
 
@@ -349,17 +338,17 @@ class Hopping(ABC):
         for constructing attributes of 'PrimitiveCell' or 'Sample'.
 
         :param use_int64: whether to use 64-bit integer for hop_ind, should be
-            enabled for the 'Sample' class
+            enabled for 'SuperCell' and 'SCInterHopping' classes
         :return: (hop_ind, hop_eng)
             hop_ind: (num_hop, 5) int32/int64 array, hopping indices
             hop_eng: (num_hop,) complex128 array, hopping energies
         """
-        self.clean()
+        self.purge()
         hop_ind = [rn + pair
-                   for rn, hop_rn in self.dict.items()
+                   for rn, hop_rn in self._hoppings.items()
                    for pair, energy in hop_rn.items()]
         hop_eng = [energy
-                   for rn, hop_rn in self.dict.items()
+                   for rn, hop_rn in self._hoppings.items()
                    for pair, energy in hop_rn.items()]
         if use_int64:
             hop_ind = np.array(hop_ind, dtype=np.int64)
@@ -376,13 +365,27 @@ class Hopping(ABC):
         :param orb_j: orbital index of ket
         :return: number of hopping terms with given orbital index
         """
-        self.clean()
+        self.purge()
         count = 0
         pair = (orb_i, orb_j)
-        for rn, hop_rn in self.dict.items():
+        for rn, hop_rn in self._hoppings.items():
             if pair in hop_rn.keys():
                 count += 1
         return count
+
+    @property
+    def hoppings(self) -> Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]:
+        """Interface for the '_hoppings' attribute."""
+        return self._hoppings
+
+    @property
+    def cell_indices(self) -> List[rn3_type]:
+        """
+        Get the list of cell indices.
+
+        :return: list of cell indices
+        """
+        return list(self._hoppings.keys())
 
     @property
     def num_hop(self) -> int:
@@ -391,9 +394,9 @@ class Hopping(ABC):
 
         :return: number of hopping terms
         """
-        self.clean()
+        self.purge()
         num_hop = 0
-        for rn, hop_rn in self.dict.items():
+        for rn, hop_rn in self._hoppings.items():
             num_hop += len(hop_rn)
         return num_hop
 
@@ -498,35 +501,6 @@ class HopDict:
         self._num_orb = num_orb
         self._mat_shape = (self._num_orb, self._num_orb)
 
-    @staticmethod
-    def _check_rn(rn: rn_type) -> rn3_type:
-        """
-        Check and complete cell index.
-
-        :param rn: cell index to check
-        :return rn: checked cell index
-        :raises CellIndexLenError: if len(rn) is not 2 or 3
-        """
-        rn, legal = check_rn(rn)
-        if not legal:
-            raise exc.CellIndexLenError(rn)
-        return rn
-
-    def _check_diag(self) -> None:
-        """
-        Check for diagonal hopping terms (on-site energies).
-
-        :return: None
-        :raises PCHopDiagonalError: if on-site energies are included in hopping
-            matrix
-        """
-        rn = (0, 0, 0)
-        if rn in self._hoppings.keys():
-            hop_mat = self._hoppings[rn]
-            for i, energy in enumerate(np.abs(np.diag(hop_mat))):
-                if energy >= 1e-5:
-                    raise exc.PCHopDiagonalError(rn, i)
-
     def __setitem__(self, rn: rn_type, hop_mat: np.ndarray) -> None:
         """
         Add or update a hopping matrix according to cell index.
@@ -575,6 +549,35 @@ class HopDict:
             hop_mat = self._hoppings[rn] = np.zeros(self._mat_shape,
                                                     dtype=np.complex128)
         return hop_mat
+
+    @staticmethod
+    def _check_rn(rn: rn_type) -> rn3_type:
+        """
+        Check and complete cell index.
+
+        :param rn: cell index to check
+        :return rn: checked cell index
+        :raises CellIndexLenError: if len(rn) is not 2 or 3
+        """
+        rn, legal = check_rn(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
+        return rn
+
+    def _check_diag(self) -> None:
+        """
+        Check for diagonal hopping terms (on-site energies).
+
+        :return: None
+        :raises PCHopDiagonalError: if on-site energies are included in hopping
+            matrix
+        """
+        rn = (0, 0, 0)
+        if rn in self._hoppings.keys():
+            hop_mat = self._hoppings[rn]
+            for i, energy in enumerate(np.abs(np.diag(hop_mat))):
+                if energy >= 1e-5:
+                    raise exc.PCHopDiagonalError(rn, i)
 
     def to_spare(self) -> None:
         """

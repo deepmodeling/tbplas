@@ -381,7 +381,7 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
     for hop in hop_list:
         offset_bra = ind_start[pc_list.index(hop.pc_bra)]
         offset_ket = ind_start[pc_list.index(hop.pc_ket)]
-        for rn, hop_terms in hop.dict.items():
+        for rn, hop_terms in hop.hoppings.items():
             for orb_pair, energy in hop_terms.items():
                 orb_i = orb_pair[0] + offset_bra
                 orb_j = orb_pair[1] + offset_ket

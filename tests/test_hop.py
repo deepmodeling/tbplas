@@ -43,39 +43,39 @@ class TestHop(unittest.TestCase):
 
         # Add a normal term that does not need to invert.
         hop_dict.add_hopping(rn=(1, -1, 2), orb_i=1, orb_j=2, energy=1.2+1j)
-        self.assertEqual(hop_dict.dict[(1, -1, 2)][(1, 2)], 1.2+1j)
+        self.assertEqual(hop_dict.hoppings[(1, -1, 2)][(1, 2)], 1.2+1j)
         # Overwriting.
         hop_dict.add_hopping(rn=(1, -1, 2), orb_i=1, orb_j=2, energy=1.5+1j)
-        self.assertEqual(hop_dict.dict[(1, -1, 2)][(1, 2)], 1.5+1j)
+        self.assertEqual(hop_dict.hoppings[(1, -1, 2)][(1, 2)], 1.5+1j)
         hop_dict.add_hopping(rn=(-1, 1, -2), orb_i=2, orb_j=1, energy=1.5+2j)
-        self.assertEqual(hop_dict.dict[(1, -1, 2)][(1, 2)], 1.5-2j)
+        self.assertEqual(hop_dict.hoppings[(1, -1, 2)][(1, 2)], 1.5-2j)
 
         # Add a term that needs to invert.
         hop_dict.add_hopping(rn=(-1, -1, 2), orb_i=1, orb_j=2, energy=1.2+2j)
-        self.assertEqual(hop_dict.dict[(1, 1, -2)][(2, 1)], 1.2-2j)
+        self.assertEqual(hop_dict.hoppings[(1, 1, -2)][(2, 1)], 1.2-2j)
         # Overwriting.
         hop_dict.add_hopping(rn=(-1, -1, 2), orb_i=1, orb_j=2, energy=1.2+5j)
-        self.assertEqual(hop_dict.dict[(1, 1, -2)][(2, 1)], 1.2-5j)
+        self.assertEqual(hop_dict.hoppings[(1, 1, -2)][(2, 1)], 1.2-5j)
         hop_dict.add_hopping(rn=(1, 1, -2), orb_i=2, orb_j=1, energy=1.2+7j)
-        self.assertEqual(hop_dict.dict[(1, 1, -2)][(2, 1)], 1.2+7j)
+        self.assertEqual(hop_dict.hoppings[(1, 1, -2)][(2, 1)], 1.2+7j)
 
         # Add a normal term in (0, 0, 0) cell.
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=1, orb_j=2, energy=1.2+2j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 2)], 1.2+2j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 2)], 1.2+2j)
         # Overwriting.
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=1, orb_j=2, energy=1.2+3j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 2)], 1.2+3j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 2)], 1.2+3j)
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=2, orb_j=1, energy=1.2-5j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 2)], 1.2+5j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 2)], 1.2+5j)
 
         # Add a term in (0, 0, 0) cell that needs to invert.
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=3, orb_j=1, energy=1.2+2j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 3)], 1.2-2j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 3)], 1.2-2j)
         # Overwriting.
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=3, orb_j=1, energy=1.2+1j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 3)], 1.2-1j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 3)], 1.2-1j)
         hop_dict.add_hopping(rn=(0, 0, 0), orb_i=1, orb_j=3, energy=1.2+5j)
-        self.assertEqual(hop_dict.dict[(0, 0, 0)][(1, 3)], 1.2+5j)
+        self.assertEqual(hop_dict.hoppings[(0, 0, 0)][(1, 3)], 1.2+5j)
 
     def test_get_hopping(self):
         """Test if 'get_hopping' method of 'IntraHopping' works as expected."""

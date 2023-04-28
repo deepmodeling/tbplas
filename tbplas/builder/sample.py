@@ -25,9 +25,9 @@ class SCInterHopping(Lockable, InterHopping):
 
     Attributes
     ----------
-    sc_bra: 'SuperCell' instance
+    _sc_bra: 'SuperCell' instance
         the 'bra' supercell from which the hopping terms exist
-    sc_ket: 'SuperCell' instance
+    _sc_ket: 'SuperCell' instance
         the 'ket' supercell to which the hopping terms exist
 
     NOTES
@@ -50,8 +50,8 @@ class SCInterHopping(Lockable, InterHopping):
         """
         Lockable.__init__(self)
         InterHopping.__init__(self)
-        self.sc_bra = sc_bra
-        self.sc_ket = sc_ket
+        self._sc_bra = sc_bra
+        self._sc_ket = sc_ket
 
     def check_lock(self) -> None:
         """Check lock state of this instance."""
@@ -124,10 +124,10 @@ class SCInterHopping(Lockable, InterHopping):
         if self.num_hop == 0:
             raise exc.InterHopVoidError()
         hop_ind, hop_eng = self.to_array(use_int64=True)
-        pos_bra = self.sc_bra.get_orb_pos()
-        pos_ket = self.sc_ket.get_orb_pos()
+        pos_bra = self._sc_bra.get_orb_pos()
+        pos_ket = self._sc_ket.get_orb_pos()
         dr = core.build_inter_dr(hop_ind, pos_bra, pos_ket,
-                                 self.sc_ket.sc_lat_vec)
+                                 self._sc_ket.sc_lat_vec)
         return dr
 
     def plot(self, axes: plt.Axes,
@@ -149,10 +149,10 @@ class SCInterHopping(Lockable, InterHopping):
             instance
         :raises ValueError: if view is illegal
         """
-        viewer = ModelViewer(axes, self.sc_bra.pc_lat_vec, view)
+        viewer = ModelViewer(axes, self._sc_bra.pc_lat_vec, view)
 
         # Plot hopping terms
-        orb_pos_i = self.sc_bra.get_orb_pos()
+        orb_pos_i = self._sc_bra.get_orb_pos()
         # orb_pos_j = self.sc_ket.get_orb_pos()
         hop_i, hop_j, hop_v = self.get_hop()
         dr = self.get_dr()
@@ -169,6 +169,16 @@ class SCInterHopping(Lockable, InterHopping):
                     viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
             viewer.plot_line(color=hop_color)
+
+    @property
+    def sc_bra(self) -> SuperCell:
+        """Interface for the '_sc_bra' attribute."""
+        return self._sc_bra
+
+    @property
+    def sc_ket(self) -> SuperCell:
+        """Interface for the '_sc_ket' attribute."""
+        return self._sc_ket
 
 
 class Sample:

@@ -58,28 +58,28 @@ class TestHetero(unittest.TestCase):
 
         # Check initial state of inter_hop
         inter_hop = tb.PCInterHopping(pc_bra, pc_ket)
-        self.assertDictEqual(inter_hop.dict, {})
+        self.assertDictEqual(inter_hop.hoppings, {})
 
         # Add the 1st hopping term
         rn = (0, 0, 0)
         inter_hop.add_hopping(rn, 2, 3, 1.0)
-        self.assertTrue(rn in inter_hop.dict.keys())
-        self.assertTrue((2, 3) in inter_hop.dict[rn].keys())
+        self.assertTrue(rn in inter_hop.hoppings.keys())
+        self.assertTrue((2, 3) in inter_hop.hoppings[rn].keys())
 
         # Add a new term to existing (0, 0, 0) cell
         inter_hop.add_hopping(rn, 0, 1, 2.0)
-        self.assertTrue((0, 1) in inter_hop.dict[rn].keys())
+        self.assertTrue((0, 1) in inter_hop.hoppings[rn].keys())
 
         # Add a new term with new cell index
         rn = (2, 1, 0)
         inter_hop.add_hopping(rn, 2, 3, 1.5)
-        self.assertTrue(rn in inter_hop.dict.keys())
-        self.assertTrue((2, 3) in inter_hop.dict[rn].keys())
+        self.assertTrue(rn in inter_hop.hoppings.keys())
+        self.assertTrue((2, 3) in inter_hop.hoppings[rn].keys())
 
         # Overwrite existing hopping term
         rn = (0, 0, 0)
         inter_hop.add_hopping(rn, 0, 1, 2.5)
-        self.assertAlmostEqual(inter_hop.dict[rn][(0, 1)], 2.5)
+        self.assertAlmostEqual(inter_hop.hoppings[rn][(0, 1)], 2.5)
 
     def test_merge_prim_cell(self):
         """

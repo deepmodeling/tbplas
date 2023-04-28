@@ -487,7 +487,7 @@ class PrimitiveCell(Lockable):
             raise ValueError("Length of pbc is not 3")
 
         # Get the list of hopping terms to keep
-        for rn in self._hopping_dict.get_rn():
+        for rn in self._hopping_dict.cell_indices:
             to_keep = True
             for i_dim in range(3):
                 if not pbc[i_dim] and rn[i_dim] != 0:
@@ -831,7 +831,7 @@ class PrimitiveCell(Lockable):
 
         :return: hopping terms
         """
-        return self._hopping_dict.dict
+        return self._hopping_dict.hoppings
 
     @property
     def num_orb(self) -> int:
