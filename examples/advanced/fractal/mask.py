@@ -119,7 +119,6 @@ class Mask:
         :param width: total width of the primitive cell
         :return: None. The incoming primitive cell is modified.
         """
-        prim_cell.sync_array()
         masked_id_pc = []
         for box in self.boxes:
             if box.void:
@@ -130,4 +129,3 @@ class Mask:
         masked_id_pc = [i[0]*width + i[1] for i in masked_id_pc]
         prim_cell.unlock()
         prim_cell.remove_orbitals(masked_id_pc)
-        prim_cell.sync_array()

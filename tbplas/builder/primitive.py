@@ -39,13 +39,13 @@ class PrimitiveCell(Lockable):
         automatically when constructing the Hamiltonian.
     _hash_dict: Dict[str, int]
         hashes of attributes to be used by 'sync_array' to update the arrays
-    orb_pos: (num_orb, 3) float64 array
+    _orb_pos: (num_orb, 3) float64 array
         FRACTIONAL positions of all orbitals
-    orb_eng: (num_orb,) float64 array
+    _orb_eng: (num_orb,) float64 array
         on-site energies of all orbitals in eV
-    hop_ind: (num_hop, 5) int32 array
+    _hop_ind: (num_hop, 5) int32 array
         indices of all hopping terms
-    hop_eng: (num_hop,) complex128 array
+    _hop_eng: (num_hop,) complex128 array
         energies of all hopping terms in eV
     extended: float
         number of times the primitive cell has been extended
@@ -91,10 +91,10 @@ class PrimitiveCell(Lockable):
                            'hop': self._get_hash('hop')}
 
         # Setup arrays.
-        self.orb_pos = None
-        self.orb_eng = None
-        self.hop_ind = None
-        self.hop_eng = None
+        self._orb_pos = None
+        self._orb_eng = None
+        self._hop_ind = None
+        self._hop_eng = None
 
         # Setup misc. attributes.
         self.extended = 1.0
@@ -182,18 +182,13 @@ class PrimitiveCell(Lockable):
 
     def add_orbital(self, position: pos_type,
                     energy: float = 0.0,
-                    label: Hashable = "X",
-                    sync_array: bool = False,
-                    **kwargs) -> None:
+                    label: Hashable = "X") -> None:
         """
         Add a new orbital to the primitive cell.
 
         :param position: FRACTIONAL coordinate of the orbital
         :param energy: on-site energy of the orbital in eV
         :param label: orbital label
-        :param sync_array: whether to call 'sync_array' to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
@@ -204,8 +199,6 @@ class PrimitiveCell(Lockable):
 
         # Add the orbital
         self._orbital_list.append(Orbital(position, energy, label))
-        if sync_array:
-            self.sync_array(**kwargs)
 
     def add_orbital_cart(self, position: pos_type,
                          unit: float = consts.ANG,
@@ -227,9 +220,7 @@ class PrimitiveCell(Lockable):
     def set_orbital(self, orb_i: int,
                     position: pos_type = None,
                     energy: float = None,
-                    label: Hashable = None,
-                    sync_array: bool = False,
-                    **kwargs) -> None:
+                    label: Hashable = None) -> None:
         """
         Modify the position, energy and label of an existing orbital.
 
@@ -240,9 +231,6 @@ class PrimitiveCell(Lockable):
         :param position: new FRACTIONAL coordinate of the orbital
         :param energy: new on-site energy of the orbital in eV
         :param label: new orbital label
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
@@ -265,8 +253,6 @@ class PrimitiveCell(Lockable):
         if label is None:
             label = orbital.label
         self._orbital_list[orb_i] = Orbital(position, energy, label)
-        if sync_array:
-            self.sync_array(**kwargs)
 
     def set_orbital_cart(self, orb_i: int,
                          position: pos_type = None,
@@ -307,33 +293,23 @@ class PrimitiveCell(Lockable):
             raise exc.PCOrbIndexError(orb_i) from err
         return orbital
 
-    def remove_orbital(self, orb_i: int,
-                       sync_array: bool = False,
-                       **kwargs) -> None:
+    def remove_orbital(self, orb_i: int) -> None:
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param orb_i: index of the orbital to remove
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'remove_orbitals'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         """
-        self.remove_orbitals([orb_i], sync_array=sync_array, **kwargs)
+        self.remove_orbitals([orb_i])
 
-    def remove_orbitals(self, indices: List[int],
-                        sync_array: bool = True,
-                        **kwargs) -> None:
+    def remove_orbitals(self, indices: List[int]) -> None:
         """
         Remove given orbitals and associated hopping terms, then update
         remaining hopping terms.
 
         :param indices: indices of orbitals to remove
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
@@ -352,16 +328,10 @@ class PrimitiveCell(Lockable):
         # Delete associated hopping terms
         self._hopping_dict.remove_orbitals(indices)
 
-        # Update arrays
-        if sync_array:
-            self.sync_array(**kwargs)
-
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
-                    energy: complex,
-                    sync_array: bool = False,
-                    **kwargs) -> None:
+                    energy: complex) -> None:
         """
         Add a new hopping term to the primitive cell, or update an existing
         hopping term.
@@ -370,9 +340,6 @@ class PrimitiveCell(Lockable):
         :param orb_i: index of orbital i in <i,0|H|j,R>
         :param orb_j: index of orbital j in <i,0|H|j,R>
         :param energy: hopping integral in eV
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i or orb_j falls out of range
@@ -382,12 +349,8 @@ class PrimitiveCell(Lockable):
         self.check_lock()
         rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
         self._hopping_dict.add_hopping(rn, orb_i, orb_j, energy)
-        if sync_array:
-            self.sync_array(**kwargs)
 
-    def add_hopping_dict(self, hop_dict: HopDict,
-                         sync_array: bool = True,
-                         **kwargs) -> None:
+    def add_hopping_dict(self, hop_dict: HopDict) -> None:
         """
         Add a matrix of hopping terms to the primitive cell, or update existing
         hopping terms.
@@ -395,9 +358,6 @@ class PrimitiveCell(Lockable):
         Reserved for compatibility with old version of TBPLaS.
 
         :param hop_dict: hopping dictionary
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         """
@@ -407,9 +367,7 @@ class PrimitiveCell(Lockable):
                 orb_i = hop_mat.row.item(i)
                 orb_j = hop_mat.col.item(i)
                 hop_eng = hop_mat.data.item(i)
-                self.add_hopping(rn, orb_i, orb_j, hop_eng, sync_array=False)
-        if sync_array:
-            self.sync_array(**kwargs)
+                self.add_hopping(rn, orb_i, orb_j, hop_eng)
 
     def get_hopping(self, rn: rn_type,
                     orb_i: int,
@@ -436,18 +394,13 @@ class PrimitiveCell(Lockable):
 
     def remove_hopping(self, rn: rn_type,
                        orb_i: int,
-                       orb_j: int,
-                       sync_array: bool = False,
-                       **kwargs) -> None:
+                       orb_j: int) -> None:
         """
         Remove given hopping term.
 
         :param rn: cell index of the hopping term, i.e. R
         :param orb_i: index of orbital i in <i,0|H|j,R>
         :param orb_j: index of orbital j in <i,0|H|j,R>
-        :param sync_array: whether to call sync_array to update numpy arrays
-            according to orbitals and hopping terms
-        :param kwargs: arguments for method 'sync_array'
         :return: None
         :raises PCLockError: if the primitive cell is locked
         :raises PCHopNotFoundError: if rn + (orb_i, orb_j) or its conjugate
@@ -461,8 +414,6 @@ class PrimitiveCell(Lockable):
         status = self._hopping_dict.remove_hopping(rn, orb_i, orb_j)
         if not status:
             raise exc.PCHopNotFoundError(rn + (orb_i, orb_j))
-        if sync_array:
-            self.sync_array(**kwargs)
 
     def trim(self) -> None:
         """
@@ -483,7 +434,6 @@ class PrimitiveCell(Lockable):
 
         # Remove orbitals and hopping terms
         self.remove_orbitals(orb_id_trim)
-        self.sync_array()
 
     def apply_pbc(self, pbc: Tuple[bool, bool, bool] = (True, True, True)) -> None:
         """
@@ -508,7 +458,6 @@ class PrimitiveCell(Lockable):
                     break
             if not to_keep:
                 self._hopping_dict.remove_rn(rn)
-        self.sync_array()
 
     def reset_lattice(self, lat_vec: np.ndarray = None,
                       origin: np.ndarray = None,
@@ -548,7 +497,6 @@ class PrimitiveCell(Lockable):
 
         # Update orbital positions if needed
         if fix_orb and self.num_orb > 0:
-            self.sync_array()
             orb_pos = lat.cart2frac(lat_vec, self.orb_pos_nm, origin)
             for i, pos in enumerate(orb_pos):
                 orbital = self._orbital_list[i]
@@ -558,7 +506,6 @@ class PrimitiveCell(Lockable):
         # Finally update the attributes
         self._lat_vec = lat_vec
         self._origin = origin
-        self.sync_array()
 
     def sync_array(self, verbose: bool = False,
                    force_sync: bool = False) -> None:
@@ -578,14 +525,14 @@ class PrimitiveCell(Lockable):
                 print("INFO: updating pc orbital arrays")
             # If orbital_list is not [], update as usual.
             if len(self._orbital_list) != 0:
-                self.orb_pos = np.array(
+                self._orb_pos = np.array(
                     [orb.position for orb in self._orbital_list], dtype=np.float64)
-                self.orb_eng = np.array(
+                self._orb_eng = np.array(
                     [orb.energy for orb in self._orbital_list], dtype=np.float64)
             # Otherwise, restore to default settings as in __init__.
             else:
-                self.orb_pos = None
-                self.orb_eng = None
+                self._orb_pos = None
+                self._orb_eng = None
         else:
             if verbose:
                 print("INFO: no need to update pc orbital arrays")
@@ -598,12 +545,12 @@ class PrimitiveCell(Lockable):
             hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
             # if hop_eng is not [], update as usual.
             if len(hop_eng) != 0:
-                self.hop_ind = hop_ind
-                self.hop_eng = hop_eng
+                self._hop_ind = hop_ind
+                self._hop_eng = hop_eng
             # Otherwise, restore to default settings as in __init__.
             else:
-                self.hop_ind = None
-                self.hop_eng = None
+                self._hop_ind = None
+                self._hop_eng = None
         else:
             if verbose:
                 print("INFO: no need to update pc hopping arrays")
@@ -674,15 +621,15 @@ class PrimitiveCell(Lockable):
         if self.num_hop > 0:
             # Restore conjugate hopping terms
             if with_conj:
-                hop_ind_conj = np.zeros(self.hop_ind.shape, dtype=np.int32)
-                hop_ind_conj[:, :3] = -self.hop_ind[:, :3]
-                hop_ind_conj[:, 3] = self.hop_ind[:, 4]
-                hop_ind_conj[:, 4] = self.hop_ind[:, 3]
-                hop_ind_full = np.vstack((self.hop_ind, hop_ind_conj))
-                hop_eng_full = np.vstack((self.hop_eng, self.hop_eng))
+                hop_ind_conj = np.zeros(self._hop_ind.shape, dtype=np.int32)
+                hop_ind_conj[:, :3] = -self._hop_ind[:, :3]
+                hop_ind_conj[:, 3] = self._hop_ind[:, 4]
+                hop_ind_conj[:, 4] = self._hop_ind[:, 3]
+                hop_ind_full = np.vstack((self._hop_ind, hop_ind_conj))
+                hop_eng_full = np.vstack((self._hop_eng, self._hop_eng))
             else:
-                hop_ind_full = self.hop_ind
-                hop_eng_full = self.hop_eng
+                hop_ind_full = self._hop_ind
+                hop_eng_full = self._hop_eng
 
             # Determine the range of rn
             ra = hop_ind_full[:, 0]
@@ -706,7 +653,7 @@ class PrimitiveCell(Lockable):
                     for i_c in range(rc_min, rc_max+1):
                         center = np.matmul((i_a, i_b, i_c), self._lat_vec)
                         pos_rn = pos_r0 + center
-                        viewer.scatter(pos_rn, s=100, c=self.orb_eng)
+                        viewer.scatter(pos_rn, s=100, c=self._orb_eng)
 
         # Plot cells
         if with_cells:
@@ -792,7 +739,7 @@ class PrimitiveCell(Lockable):
         if convention not in (1, 2):
             raise ValueError(f"Illegal convention {convention}")
         ham_dense *= 0.0
-        core.set_ham(self.orb_pos, self.orb_eng, self.hop_ind, self.hop_eng,
+        core.set_ham(self._orb_pos, self._orb_eng, self._hop_ind, self._hop_eng,
                      convention, k_point, ham_dense)
 
     def set_ham_csr(self, k_point: np.ndarray,
@@ -814,7 +761,7 @@ class PrimitiveCell(Lockable):
 
         # Diagonal terms
         ham_shape = (self.num_orb, self.num_orb)
-        ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
+        ham_dia = dia_matrix((self._orb_eng, 0), shape=ham_shape)
 
         # Off-diagonal terms
         ham_half = dok_matrix(ham_shape, dtype=np.complex128)
@@ -822,7 +769,7 @@ class PrimitiveCell(Lockable):
             for pair, energy in hop_rn.items():
                 ii, jj = pair
                 if convention == 1:
-                    dr = self.orb_pos[jj] - self.orb_pos[ii] + rn
+                    dr = self._orb_pos[jj] - self._orb_pos[ii] + rn
                 else:
                     dr = rn
                 phase = 2 * math.pi * np.dot(k_point, dr).item()
@@ -939,6 +886,50 @@ class PrimitiveCell(Lockable):
         return self._hopping_dict.num_hop
 
     @property
+    def orb_pos(self) -> np.ndarray:
+        """
+        Interface for the '_orb_pos' attribute.
+
+        :return: (num_orb, 3) float64 array
+            fractional coordinates or orbitals
+        """
+        self.sync_array()
+        return self._orb_pos
+
+    @property
+    def orb_eng(self) -> np.ndarray:
+        """
+        Interface for the '_orb_eng' attribute.
+
+        :return: (num_orb,) float64 array
+            on-site energies in eV
+        """
+        self.sync_array()
+        return self._orb_eng
+
+    @property
+    def hop_ind(self) -> np.ndarray:
+        """
+        Interface for the '_hop_ind' attribute.
+
+        :return: (num_hop, 5) int32 array
+            hopping indices
+        """
+        self.sync_array()
+        return self._hop_ind
+
+    @property
+    def hop_eng(self) -> np.ndarray:
+        """
+        Interface for the '_hop_eng' attribute.
+
+        :return: (num_hop,) complex128 array
+            hopping energies
+        """
+        self.sync_array()
+        return self._hop_eng
+
+    @property
     def orb_pos_nm(self) -> np.ndarray:
         """
         Get the Cartesian coordinates of orbitals in NANOMETER.
@@ -947,7 +938,7 @@ class PrimitiveCell(Lockable):
             Cartesian coordinates of orbitals in NANOMETER
         """
         self.sync_array()
-        orb_pos_nm = lat.frac2cart(self._lat_vec, self.orb_pos, self._origin)
+        orb_pos_nm = lat.frac2cart(self._lat_vec, self._orb_pos, self._origin)
         return orb_pos_nm
 
     @property
@@ -971,9 +962,9 @@ class PrimitiveCell(Lockable):
         """
         self.sync_array()
         hop_dr = np.zeros((self.num_hop, 3), dtype=np.float64)
-        for i_h, ind in enumerate(self.hop_ind):
+        for i_h, ind in enumerate(self._hop_ind):
             orb_i, orb_j = ind.item(3), ind.item(4)
-            hop_dr[i_h] = self.orb_pos[orb_j] + ind[0:3] - self.orb_pos[orb_i]
+            hop_dr[i_h] = self._orb_pos[orb_j] + ind[0:3] - self._orb_pos[orb_i]
         return hop_dr
 
     @property

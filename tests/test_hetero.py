@@ -170,11 +170,9 @@ class TestHetero(unittest.TestCase):
         layer_twisted = tb.make_hetero_layer(prim_cell_twisted, hetero_lattice)
 
         # Get the Cartesian coordinates of orbitals of fixed layer
-        layer_fixed.sync_array()
         pos_fixed = layer_fixed.orb_pos_nm
 
         # Same for twisted layer
-        layer_twisted.sync_array()
         pos_twisted = layer_twisted.orb_pos_nm
 
         # Loop over neighbouring cells to build inter-hopping dictionary

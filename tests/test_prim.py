@@ -184,13 +184,11 @@ class TestPrimitive(unittest.TestCase):
         cell_ref = PrimitiveCell(vectors)
         cell_ref.add_orbital((1. / 3, 1. / 3), 0.0, label="C_pz")
         cell_ref.add_orbital((2. / 3, 2. / 3), 0.0, label="C_pz")
-        cell_ref.sync_array()
         orb_pos_ref = frac2cart(cell_ref.lat_vec, cell_ref.orb_pos)
 
         cell_test = PrimitiveCell(vectors)
         cell_test.add_orbital_cart(orb_pos_ref[0] * 10, unit=ANG, label="C_pz")
         cell_test.add_orbital_cart(orb_pos_ref[1], unit=NM, label="C_pz")
-        cell_test.sync_array()
 
         th.test_equal_array(cell_ref.orb_pos, cell_test.orb_pos, almost=True)
         orb_pos_test = frac2cart(cell_test.lat_vec, cell_test.orb_pos)
@@ -249,13 +247,11 @@ class TestPrimitive(unittest.TestCase):
         cell_ref = make_cell()
         cell_ref.set_orbital(0, position=(1. / 3, 1. / 3))
         cell_ref.set_orbital(1, position=(2. / 3, 2. / 3))
-        cell_ref.sync_array()
         orb_pos_ref = frac2cart(cell_ref.lat_vec, cell_ref.orb_pos)
 
         cell_test = make_cell()
         cell_test.set_orbital_cart(0, position=orb_pos_ref[0]*10, unit=ANG)
         cell_test.set_orbital_cart(1, position=orb_pos_ref[1], unit=NM)
-        cell_test.sync_array()
 
         th.test_equal_array(cell_ref.orb_pos, cell_test.orb_pos, almost=True)
         orb_pos_test = frac2cart(cell_test.lat_vec, cell_test.orb_pos)
@@ -357,7 +353,6 @@ class TestPrimitive(unittest.TestCase):
         # The normal case
         th = TestHelper(self)
         cell = make_cell()
-        cell.sync_array()
         self.assertEqual(cell.num_hop, 3)
         th.test_equal_array(cell.hop_ind[0], np.array([0, 0, 0, 0, 1]))
         th.test_equal_array(cell.hop_ind[1], np.array([1, 0, 0, 1, 0]))
@@ -707,7 +702,6 @@ class TestPrimitive(unittest.TestCase):
         """
         th = TestHelper(self)
         cell = make_cell()
-        cell.sync_array()
         orb_pos_ref = frac2cart(cell.lat_vec, cell.orb_pos)
         orb_pos_test = cell.orb_pos_nm
         th.test_equal_array(orb_pos_ref, orb_pos_test, almost=True)

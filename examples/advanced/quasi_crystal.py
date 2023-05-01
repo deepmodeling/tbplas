@@ -133,7 +133,6 @@ def make_quasi_crystal_pc(prim_cell: tb.PrimitiveCell,
 
     # Extend hopping terms
     extend_hop(final_cell)
-    final_cell.sync_array()
     return final_cell
 
 

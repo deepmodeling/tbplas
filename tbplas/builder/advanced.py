@@ -88,7 +88,6 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
                     rn = (na, nb, nc)
                     extend_cell.add_hopping(rn, id_sc_i, id_sc_j, energy)
 
-    extend_cell.sync_array()
     return extend_cell
 
 
@@ -134,7 +133,6 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
 
     # Determine searching range
     # Now only the God knows how this piece of code works.
-    prim_cell.sync_array()
     rn_range = np.zeros((3, 2), dtype=np.int32)
     for i in range(3):
         sum_vec = lat_frac.sum(axis=0) - lat_frac[i]
@@ -168,7 +166,6 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
                                              prim_cell.orbitals[i_o].label)
 
     # Add hopping terms
-    res_cell.sync_array(force_sync=True)
     kd_tree = KDTree(res_cell.orb_pos)
     for id_sc_i in range(res_cell.num_orb):
         id_pc_i = orb_id_pc[id_sc_i]
@@ -191,7 +188,6 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
                         res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
                                              prim_cell.hop_eng.item(i_h))
 
-    res_cell.sync_array()
     return res_cell
 
 
@@ -212,8 +208,6 @@ def spiral_prim_cell(prim_cell: PrimitiveCell,
     :param shift: distance of shift in NANOMETER
     :return: None
     """
-    prim_cell.sync_array()
-
     # Get rotated lattice vectors and origin
     end_points = np.vstack((np.zeros(3), prim_cell.lat_vec)) + prim_cell.origin
     end_points = rotate_coord(end_points, angle=angle, center=center)
@@ -233,7 +227,6 @@ def spiral_prim_cell(prim_cell: PrimitiveCell,
     # # Or alternatively, working with Cartesian coordinates
     # for i, pos in enumerate(orb_pos):
     #     prim_cell.set_orbital_cart(i, position=tuple(pos), unit=consts.NM)
-    prim_cell.sync_array()
 
 
 def make_hetero_layer(prim_cell: PrimitiveCell,
@@ -385,7 +378,6 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
                 merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
                                         energy=energy)
 
-    merged_cell.sync_array()
     return merged_cell
 
 
@@ -421,8 +413,6 @@ def find_neighbors(cell_bra: Union[PrimitiveCell, SuperCell],
         cell_ket = cell_bra
 
     # Get orbital positions
-    cell_bra.sync_array()
-    cell_ket.sync_array()
     if isinstance(cell_bra, PrimitiveCell):
         pos_bra = cell_bra.orb_pos_nm
         pos_ket = cell_ket.orb_pos_nm

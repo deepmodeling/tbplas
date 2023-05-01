@@ -209,5 +209,4 @@ def wan2pc(seed_name: str = "wannier90",
         ind, orb_i, orb_j = hop[:3], hop.item(3), hop.item(4)
         prim_cell.add_hopping(tuple(ind), orb_i, orb_j, hop_eng.item(i_h))
 
-    prim_cell.sync_array()
     return prim_cell

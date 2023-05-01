@@ -121,7 +121,6 @@ class OrbitalSet(Lockable):
 
         # Synchronize and lock primitive cell
         self.prim_cell = prim_cell
-        self.prim_cell.sync_array()
         self.prim_cell.lock()
 
         # Check and set dimension
@@ -935,7 +934,6 @@ class SuperCell(OrbitalSet):
         :return: (num_orb_pc, 3) float64 array
             fractional positions of primitive cell
         """
-        self.prim_cell.sync_array()
         return self.prim_cell.orb_pos
 
     @property
@@ -946,7 +944,6 @@ class SuperCell(OrbitalSet):
         :return: (num_orb_pc,) float64 array
             energies of orbitals of primitive cell in eV.
         """
-        self.prim_cell.sync_array()
         return self.prim_cell.orb_eng
 
     @property
@@ -957,7 +954,6 @@ class SuperCell(OrbitalSet):
         :return: (num_hop_pc, 5) int32 array
             indices of hopping terms of primitive cell
         """
-        self.prim_cell.sync_array()
         return self.prim_cell.hop_ind
 
     @property
@@ -968,5 +964,4 @@ class SuperCell(OrbitalSet):
         :return: (num_hop_pc,) complex128 array
             hopping energies of primitive cell in eV
         """
-        self.prim_cell.sync_array()
         return self.prim_cell.hop_eng
