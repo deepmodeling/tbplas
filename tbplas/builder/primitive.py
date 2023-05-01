@@ -26,9 +26,11 @@ class PrimitiveCell(Lockable):
 
     Attributes
     ----------
-    lat_vec: (3, 3) float64 array
+    _lat_vec: (3, 3) float64 array
         Cartesian coordinates of lattice vectors in NANO METER
         Each ROW corresponds to one lattice vector.
+    _origin: (3,) float64 array
+        Cartesian coordinates of origin of lattice vectors in NANO METER
     _orbital_list: List[Orbital]
         list of orbitals in the primitive cell
     _hopping_dict: 'IntraHopping' instance
@@ -53,21 +55,32 @@ class PrimitiveCell(Lockable):
         In most cases it will be an integer. However, if the primitive cell
         has been created by reshaping another cell, it will become a float.
     """
-    def __init__(self, lat_vec: np.ndarray, unit: float = consts.ANG) -> None:
+    def __init__(self, lat_vec: np.ndarray = np.eye(3, dtype=np.float64),
+                 origin: np.ndarray = np.zeros(3, dtype=np.float64),
+                 unit: float = consts.ANG) -> None:
         """
         :param lat_vec: (3, 3) float64 array
             Cartesian coordinates of lattice vectors in arbitrary unit
+        :param origin: (3,) float64 array
+            Cartesian coordinate of lattice origin in arbitrary unit
         :param unit: conversion coefficient from arbitrary unit to NM
         :return: None
         :raises LatVecError: if shape of lat_vec is not (3, 3)
+        :raise ValueError: if shape of origin is not (3,)
         """
         super().__init__()
 
         # Setup lattice vectors
-        lat_vec = np.array(lat_vec)
+        lat_vec = np.array(lat_vec, dtype=np.float64)
         if lat_vec.shape != (3, 3):
             raise exc.LatVecError()
-        self.lat_vec = lat_vec * unit
+        self._lat_vec = lat_vec * unit
+
+        # Setup lattice origin
+        origin = np.array(origin, dtype=np.float64)
+        if origin.shape != (3,):
+            raise ValueError(f"Length of origin is not 3")
+        self._origin = origin * unit
 
         # Setup orbitals and hopping terms
         self._orbital_list = []
@@ -132,6 +145,32 @@ class PrimitiveCell(Lockable):
             raise exc.OrbPositionLenError(position)
         return position
 
+    def _check_hop_index(self, rn: rn_type,
+                         orb_i: int,
+                         orb_j: int) -> Tuple[rn3_type, int, int]:
+        """
+        Check cell index and orbital pair of hopping term.
+
+        :param rn: cell index of the hopping term, i.e. R
+        :param orb_i: index of orbital i in <i,0|H|j,R>
+        :param orb_j: index of orbital j in <i,0|H|j,R>
+        :return: checked cell index and orbital pair
+        :raises PCOrbIndexError: if orb_i or orb_j falls out of range
+        :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
+        :raises CellIndexLenError: if len(rn) != 2 or 3
+        """
+        rn, legal = check_rn(rn)
+        if not legal:
+            raise exc.CellIndexLenError(rn)
+        num_orbitals = self.num_orb
+        if not (0 <= orb_i < num_orbitals):
+            raise exc.PCOrbIndexError(orb_i)
+        if not (0 <= orb_j < num_orbitals):
+            raise exc.PCOrbIndexError(orb_j)
+        if rn == (0, 0, 0) and orb_i == orb_j:
+            raise exc.PCHopDiagonalError(rn, orb_i)
+        return rn, orb_i, orb_j
+
     def check_lock(self) -> None:
         """
         Check lock state of this instance.
@@ -181,9 +220,9 @@ class PrimitiveCell(Lockable):
         :raises PCLockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
-        position_cart = np.array([self._check_position(position)])
-        position_frac = lat.cart2frac(self.lat_vec, position_cart * unit)[0]
-        self.add_orbital(position_frac, **kwargs)
+        position = np.array([self._check_position(position)]) * unit
+        position = lat.cart2frac(self._lat_vec, position, self._origin)[0]
+        self.add_orbital(position, **kwargs)
 
     def set_orbital(self, orb_i: int,
                     position: pos_type = None,
@@ -250,8 +289,8 @@ class PrimitiveCell(Lockable):
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         if position is not None:
-            position = np.array([self._check_position(position)])
-            position = lat.cart2frac(self.lat_vec, position * unit)[0]
+            position = np.array([self._check_position(position)]) * unit
+            position = lat.cart2frac(self._lat_vec, position, self._origin)[0]
         self.set_orbital(orb_i, position, **kwargs)
 
     def get_orbital(self, orb_i: int) -> Orbital:
@@ -316,32 +355,6 @@ class PrimitiveCell(Lockable):
         # Update arrays
         if sync_array:
             self.sync_array(**kwargs)
-
-    def _check_hop_index(self, rn: rn_type,
-                         orb_i: int,
-                         orb_j: int) -> Tuple[rn3_type, int, int]:
-        """
-        Check cell index and orbital pair of hopping term.
-
-        :param rn: cell index of the hopping term, i.e. R
-        :param orb_i: index of orbital i in <i,0|H|j,R>
-        :param orb_j: index of orbital j in <i,0|H|j,R>
-        :return: checked cell index and orbital pair
-        :raises PCOrbIndexError: if orb_i or orb_j falls out of range
-        :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
-        :raises CellIndexLenError: if len(rn) != 2 or 3
-        """
-        rn, legal = check_rn(rn)
-        if not legal:
-            raise exc.CellIndexLenError(rn)
-        num_orbitals = self.num_orb
-        if not (0 <= orb_i < num_orbitals):
-            raise exc.PCOrbIndexError(orb_i)
-        if not (0 <= orb_j < num_orbitals):
-            raise exc.PCOrbIndexError(orb_j)
-        if rn == (0, 0, 0) and orb_i == orb_j:
-            raise exc.PCHopDiagonalError(rn, orb_i)
-        return rn, orb_i, orb_j
 
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
@@ -497,6 +510,56 @@ class PrimitiveCell(Lockable):
                 self._hopping_dict.remove_rn(rn)
         self.sync_array()
 
+    def reset_lattice(self, lat_vec: np.ndarray = None,
+                      origin: np.ndarray = None,
+                      unit: float = consts.ANG,
+                      fix_orb: bool = True) -> None:
+        """
+        Reset lattice vectors and origin.
+
+        :param lat_vec: (3, 3) float64 array
+            Cartesian coordinates of lattice vectors in arbitrary unit
+        :param origin: (3,) float64 array
+            Cartesian coordinate of lattice origin in arbitrary unit
+        :param unit: conversion coefficient from arbitrary unit to NM
+        :param fix_orb: whether to keep Cartesian coordinates of orbitals
+            unchanged after resetting lattice
+        :return: None
+        :raises LatVecError: if shape of lat_vec is not (3, 3)
+        :raise ValueError: if shape of origin is not (3,)
+        """
+        # Check lattice vectors and convert unit
+        if lat_vec is None:
+            lat_vec = self._lat_vec
+        else:
+            lat_vec = np.array(lat_vec, dtype=np.float64)
+            if lat_vec.shape != (3, 3):
+                raise exc.LatVecError()
+            lat_vec = lat_vec * unit
+
+        # Check lattice origin and convert unit
+        if origin is None:
+            origin = self._origin
+        else:
+            origin = np.array(origin, dtype=np.float64)
+            if origin.shape != (3,):
+                raise ValueError(f"Length of origin is not 3")
+            origin = origin * unit
+
+        # Update orbital positions if needed
+        if fix_orb and self.num_orb > 0:
+            self.sync_array()
+            orb_pos = lat.cart2frac(lat_vec, self.orb_pos_nm, origin)
+            for i, pos in enumerate(orb_pos):
+                orbital = self._orbital_list[i]
+                self._orbital_list[i] = Orbital(tuple(pos), orbital.energy,
+                                                orbital.label)
+
+        # Finally update the attributes
+        self._lat_vec = lat_vec
+        self._origin = origin
+        self.sync_array()
+
     def sync_array(self, verbose: bool = False,
                    force_sync: bool = False) -> None:
         """
@@ -553,7 +616,7 @@ class PrimitiveCell(Lockable):
             by lattice vectors in the aOb plane.
         :return: area formed by lattice vectors in NM^2.
         """
-        return lat.get_lattice_area(self.lat_vec, direction)
+        return lat.get_lattice_area(self._lat_vec, direction)
 
     def get_lattice_volume(self) -> float:
         """
@@ -561,7 +624,7 @@ class PrimitiveCell(Lockable):
 
         :return: volume in NM^3.
         """
-        return lat.get_lattice_volume(self.lat_vec)
+        return lat.get_lattice_volume(self._lat_vec)
 
     def get_reciprocal_vectors(self) -> np.ndarray:
         """
@@ -570,7 +633,7 @@ class PrimitiveCell(Lockable):
         :return: (3, 3) float64 array
             reciprocal vectors in 1/NM.
         """
-        return lat.gen_reciprocal_vectors(self.lat_vec)
+        return lat.gen_reciprocal_vectors(self._lat_vec)
 
     def plot(self, fig_name: str = None,
              fig_size: Tuple[float, float] = None,
@@ -605,7 +668,7 @@ class PrimitiveCell(Lockable):
         self.sync_array()
         fig, axes = plt.subplots(figsize=fig_size)
         axes.set_aspect('equal')
-        viewer = ModelViewer(axes, self.lat_vec, view)
+        viewer = ModelViewer(axes, self._lat_vec, self._origin, view)
 
         # Prepare hopping terms and plot ranges
         if self.num_hop > 0:
@@ -641,7 +704,7 @@ class PrimitiveCell(Lockable):
             for i_a in range(ra_min, ra_max+1):
                 for i_b in range(rb_min, rb_max+1):
                     for i_c in range(rc_min, rc_max+1):
-                        center = np.matmul((i_a, i_b, i_c), self.lat_vec)
+                        center = np.matmul((i_a, i_b, i_c), self._lat_vec)
                         pos_rn = pos_r0 + center
                         viewer.scatter(pos_rn, s=100, c=self.orb_eng)
 
@@ -660,7 +723,7 @@ class PrimitiveCell(Lockable):
         # Plot hopping terms
         for i_h, hop in enumerate(hop_ind_full):
             if abs(hop_eng_full.item(i_h)) >= hop_eng_cutoff:
-                center = np.matmul(hop[:3], self.lat_vec)
+                center = np.matmul(hop[:3], self._lat_vec)
                 pos_i = pos_r0[hop.item(3)]
                 pos_j = pos_r0[hop.item(4)] + center
                 if hop_as_arrows:
@@ -691,8 +754,12 @@ class PrimitiveCell(Lockable):
 
         :return: None
         """
+        print("Lattice origin (nm):")
+        for v in self._origin:
+            print("%10.5f" % v, end="")
+        print()
         print("Lattice vectors (nm):")
-        for vec in self.lat_vec:
+        for vec in self._lat_vec:
             vec_format = "%10.5f%10.5f%10.5f" % (vec[0], vec[1], vec[2])
             print(vec_format)
         print("Orbitals:")
@@ -816,6 +883,26 @@ class PrimitiveCell(Lockable):
         return energies, dos
 
     @property
+    def lat_vec(self) -> np.ndarray:
+        """
+        Interface for the lattice vectors.
+
+        :return: (3, 3) float64 array
+            Cartesian coordinates of lattice vectors in NM
+        """
+        return self._lat_vec
+
+    @property
+    def origin(self) -> np.ndarray:
+        """
+        Interface for the origin.
+
+        :return: (3,) float64 array
+            Cartesian coordinate of origin in NM
+        """
+        return self._origin
+
+    @property
     def orbitals(self) -> List[Orbital]:
         """
         Interface for the '_orbital_list' attribute.
@@ -860,7 +947,7 @@ class PrimitiveCell(Lockable):
             Cartesian coordinates of orbitals in NANOMETER
         """
         self.sync_array()
-        orb_pos_nm = lat.frac2cart(self.lat_vec, self.orb_pos)
+        orb_pos_nm = lat.frac2cart(self._lat_vec, self.orb_pos, self._origin)
         return orb_pos_nm
 
     @property
@@ -897,7 +984,7 @@ class PrimitiveCell(Lockable):
         :return: (num_hop, 3) float64 array
             hopping distances in NM
         """
-        return lat.frac2cart(self.lat_vec, self.hop_dr)
+        return lat.frac2cart(self._lat_vec, self.hop_dr)
 
     @property
     def hop_dr_ang(self) -> np.ndarray:

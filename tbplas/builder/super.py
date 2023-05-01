@@ -571,6 +571,7 @@ class SuperCell(OrbitalSet):
         self.sync_array()
         orb_pos = core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
                                      self.orb_id_pc)
+        orb_pos += self.pc_origin
         if self.orb_pos_modifier is not None:
             self.orb_pos_modifier(orb_pos)
         return orb_pos
@@ -857,7 +858,7 @@ class SuperCell(OrbitalSet):
             to a vacancy
         :raises ValueError: if view is illegal
         """
-        viewer = ModelViewer(axes, self.pc_lat_vec, view)
+        viewer = ModelViewer(axes, self.pc_lat_vec, self.pc_origin, view)
 
         # Plot orbitals
         orb_pos = self.get_orb_pos()
@@ -871,7 +872,6 @@ class SuperCell(OrbitalSet):
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos[hop_i.item(i_h)]
-                # pos_j = orb_pos[hop_j.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
                     viewer.plot_arrow(pos_i, pos_j, color=hop_color,
@@ -916,6 +916,16 @@ class SuperCell(OrbitalSet):
         for i in range(3):
             sc_lat_vec[i] *= self.dim.item(i)
         return sc_lat_vec
+
+    @property
+    def pc_origin(self) -> np.ndarray:
+        """
+        Get the lattice origin of primitive cell.
+
+        :return: (3,) float64 array
+            lattice origin of primitive cell in NM
+        """
+        return self.prim_cell.origin
 
     @property
     def pc_orb_pos(self) -> np.ndarray:

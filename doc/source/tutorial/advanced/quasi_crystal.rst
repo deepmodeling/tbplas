@@ -28,17 +28,8 @@ importing the packages and defining the geometric parameters:
 Here ``angle`` is the twisting angle and ``center`` is the fractional coordinate of twisting
 center. The radius of the quasicrystal is controlled by ``radius``, while ``shift`` specifies the
 interlayer distance. We need a large cell to hold the quasicrystal, whose dimension is given in
-``dim``. After introducing the parameters, we build the fixed and twisted layers by:
-
-.. code-block:: python
-
-    # Build the layers
-    prim_cell = tb.make_graphene_diamond()
-    layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
-    layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
-
-Then we shift and rotate the twisted layer with respect to the center and reshape it to the lattice
-vectors of fixed layer:
+``dim``. After introducing the parameters, we firstly get the Cartesian coordinate of the twisting
+center by:
 
 .. code-block:: python
 
@@ -46,38 +37,73 @@ vectors of fixed layer:
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
     center = np.matmul(center, prim_cell.lat_vec)
 
-    # Twist, shift and reshape top layer
-    tb.spiral_prim_cell(layer_twisted, angle=angle, center=center, shift=shift)
-    conv_mat = np.matmul(layer_fixed.lat_vec, np.linalg.inv(layer_twisted.lat_vec))
-    layer_twisted = tb.reshape_prim_cell(layer_twisted, conv_mat)
-
 Since we have extended the primitive cell by :math:`33\times33\times1` times, and we want the
 quasicrystal to be located in the center of the cell, we need to convert the coordinate of twisting
-center in line 2-3. The twisting operation is done by the :func:`.spiral_prim_cell` function, where
-the Cartesian coordinate of the center is given in the ``center`` argument. The fixed and twisted
-layers have the same lattice vectors after reshaping, so we can merge them safely:
+center in line 2-3. Then we build the fixed and twisted layers by:
 
 .. code-block:: python
 
-    # Merge the layers
-    final_cell = tb.merge_prim_cell(layer_twisted, layer_fixed)
+    # Build fixed and twisted layers
+    prim_cell = tb.make_graphene_diamond()
+    layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
+    layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
 
-Then we remove unnecessary orbitals to produce a round quasicrystal with finite radius. This is
-done by a loop over orbital positions to collect the indices of unnecessary orbitals, and function
-calls to ``remove_orbitals`` and ``trim`` functions:
+and shift and twist the twisted layer with respect to the center:
+
+.. code-block:: python
+
+    # Twist and shift twisted layer
+    tb.spiral_prim_cell(layer_twisted, angle=angle, center=center, shift=shift)
+
+The twisting operation is done by the :func:`.spiral_prim_cell` function, where the Cartesian
+coordinate of the center is given in the ``center`` argument. Then we remove unnecessary orbitals to
+produce a round quasicrystal with finite radius. This is done by calling the ``cutoff_pc`` function:
 
 .. code-block:: python
 
     # Remove unnecessary orbitals
-    idx_remove = []
-    orb_pos = final_cell.orb_pos_nm
-    for i, pos in enumerate(orb_pos):
-        if np.linalg.norm(pos[:2] - center[:2]) > radius:
-            idx_remove.append(i)
-    final_cell.remove_orbitals(idx_remove)
+    cutoff_pc(layer_fixed, center=center, radius=radius)
+    cutoff_pc(layer_twisted, center=center, radius=radius)
 
-    # Remove dangling orbitals
-    final_cell.trim()
+which is defined as:
+
+.. code-block:: python
+
+    def cutoff_pc(prim_cell: tb.PrimitiveCell, center: np.ndarray,
+                  radius: float = 3.0) -> None:
+        """
+        Cutoff primitive cell up to given radius with respect to given center.
+
+        :param prim_cell: supercell to cut
+        :param center: Cartesian coordinate of center in nm
+        :param radius: cutoff radius in nm
+        :return: None. The incoming supercell is modified.
+        """
+        idx_remove = []
+        orb_pos = prim_cell.orb_pos_nm
+        for i, pos in enumerate(orb_pos):
+            if norm(pos[:2] - center[:2]) > radius:
+                idx_remove.append(i)
+        prim_cell.remove_orbitals(idx_remove)
+        prim_cell.trim()
+
+where we loop over orbital positions to collect the indices of unnecessary orbitals, then call the
+``remove_orbitals`` and ``trim`` functions. Before merging the fixed and twisted layers, we need to
+reset the lattice vectors and origin of twisted layer to that of fixed layer by calling the
+``reset_lattice`` function:
+
+.. code-block:: python
+
+    # Reset the lattice of twisted layer
+    layer_twisted.reset_lattice(layer_fixed.lat_vec, layer_fixed.origin,
+                                unit=tb.NM, fix_orb=True)
+
+After that, we can merge them safely:
+
+.. code-block:: python
+
+    # Merge layers
+    final_cell = tb.merge_prim_cell(layer_fixed, layer_twisted)
 
 Finally, we extend the hoppings and visualize the quasicrystal:
 

@@ -149,17 +149,16 @@ class SCInterHopping(Lockable, InterHopping):
             instance
         :raises ValueError: if view is illegal
         """
-        viewer = ModelViewer(axes, self._sc_bra.pc_lat_vec, view)
+        viewer = ModelViewer(axes, self._sc_bra.pc_lat_vec,
+                             self._sc_bra.pc_origin, view)
 
         # Plot hopping terms
         orb_pos_i = self._sc_bra.get_orb_pos()
-        # orb_pos_j = self.sc_ket.get_orb_pos()
         hop_i, hop_j, hop_v = self.get_hop()
         dr = self.get_dr()
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
                 pos_i = orb_pos_i[hop_i.item(i_h)]
-                # pos_j = orb_pos_j[hop_j.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
                     viewer.plot_arrow(pos_i, pos_j, color=hop_color,

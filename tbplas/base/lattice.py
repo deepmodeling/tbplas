@@ -72,7 +72,8 @@ def gen_reciprocal_vectors(lattice_vectors: np.ndarray) -> np.ndarray:
 
 
 def cart2frac(lattice_vectors: np.ndarray,
-              cartesian_coordinates: np.ndarray) -> np.ndarray:
+              cartesian_coordinates: np.ndarray,
+              origin: np.ndarray = np.zeros(3)) -> np.ndarray:
     """
     Convert Cartesian coordinates to fractional coordinates.
 
@@ -80,18 +81,26 @@ def cart2frac(lattice_vectors: np.ndarray,
         Cartesian coordinates of lattice vectors
     :param cartesian_coordinates: (num_coord, 3) float64 array
         Cartesian coordinates to convert
+    :param origin: (3,) float64 array
+        Cartesian coordinate of lattice origin
     :return: (num_coord, 3) float64 array
         fractional coordinates in basis of lattice vectors
     """
+    if not isinstance(lattice_vectors, np.ndarray):
+        lattice_vectors = np.array(lattice_vectors)
+    if not isinstance(cartesian_coordinates, np.ndarray):
+        cartesian_coordinates = np.array(cartesian_coordinates)
     fractional_coordinates = np.zeros(cartesian_coordinates.shape)
     conversion_matrix = np.linalg.inv(lattice_vectors.T)
     for i, row in enumerate(cartesian_coordinates):
-        fractional_coordinates[i] = np.matmul(conversion_matrix, row.T)
+        fractional_coordinates[i] = np.matmul(conversion_matrix,
+                                              (row - origin).T)
     return fractional_coordinates
 
 
 def frac2cart(lattice_vectors: np.ndarray,
-              fractional_coordinates: np.ndarray) -> np.ndarray:
+              fractional_coordinates: np.ndarray,
+              origin: np.ndarray = np.zeros(3)) -> np.ndarray:
     """
     Convert fractional coordinates to Cartesian coordinates.
 
@@ -99,13 +108,19 @@ def frac2cart(lattice_vectors: np.ndarray,
         Cartesian coordinates of lattice vectors
     :param fractional_coordinates: (num_coord, 3) float64 array
         fractional coordinates to convert in basis of lattice vectors
+    :param origin: (3,) float64 array
+        Cartesian coordinate of lattice origin
     :return: (num_coord, 3) float64 array
         Cartesian coordinates converted from fractional coordinates
     """
+    if not isinstance(lattice_vectors, np.ndarray):
+        lattice_vectors = np.array(lattice_vectors)
+    if not isinstance(fractional_coordinates, np.ndarray):
+        fractional_coordinates = np.ndarray(fractional_coordinates)
     cartesian_coordinates = np.zeros(fractional_coordinates.shape)
     conversion_matrix = lattice_vectors.T
     for i, row in enumerate(fractional_coordinates):
-        cartesian_coordinates[i] = np.matmul(conversion_matrix, row.T)
+        cartesian_coordinates[i] = np.matmul(conversion_matrix, row.T) + origin
     return cartesian_coordinates
 
 

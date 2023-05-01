@@ -1,6 +1,6 @@
 """Functions and classes for advanced modeling."""
 
-import math
+from math import floor, ceil, sqrt
 from typing import Union, List, Tuple, Dict
 from collections import namedtuple
 from copy import deepcopy
@@ -48,8 +48,11 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
     for i_dim in range(3):
         lat_vec_ext[i_dim] *= dim[i_dim]
 
+    # Extended cell shares the same origin
+    origin_ext = prim_cell.origin.copy()
+
     # Create extended cell and add orbitals
-    extend_cell = PrimitiveCell(lat_vec_ext, unit=consts.NM)
+    extend_cell = PrimitiveCell(lat_vec_ext, origin_ext, unit=consts.NM)
     extend_cell.extended = prim_cell.extended * np.prod(dim)
     orb_id_pc, orb_id_sc = [], {}
     id_sc = 0
@@ -91,66 +94,61 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
 
 def reshape_prim_cell(prim_cell: PrimitiveCell,
                       lat_frac: np.ndarray,
-                      origin: np.ndarray = np.zeros(3),
-                      delta: float = 0.01,
+                      delta: float = 1e-2,
                       pos_tol: float = 1e-5) -> PrimitiveCell:
     """
-    Reshape primitive cell to given lattice vectors and origin.
+    Reshape primitive cell to given lattice vectors.
 
     :param prim_cell: primitive cell from which the reshaped cell is constructed
     :param lat_frac: (3, 3) float64 array
         FRACTIONAL coordinates of lattice vectors of reshaped cell in basis
         vectors of primitive cell
-    :param origin: (3,) float64 array
-        FRACTIONAL coordinates of origin of reshaped cell in basis vectors
-        of reshaped cell
-    :param delta: small parameter to add to origin such that orbitals fall on
-        cell borders will not be clipped
-        This parameter will be subtracted from orbital positions of reshaped
-        cell. So the origin is still correct.
+    :param delta: small displacement added to orbital positions such that orbitals
+        fall on cell borders will not be clipped
     :param pos_tol: tolerance on positions for identifying equivalent orbitals
     :return: reshaped cell
     :raises LatVecError: if shape of lat_frac.shape is not (3, 3)
-    :raises ValueError: if length of origin is not 3
     """
-    # Check lattice vectors and origin
+    # Check lattice vectors
     if lat_frac.shape != (3, 3):
         raise exc.LatVecError()
-    if origin.shape != (3,):
-        raise ValueError("Length of origin is not 3")
 
     # Conversion matrix of fractional coordinates from primitive cell to
     # reshaped cell: x_res = x_prim * conv_mat, with x_new and x_prim
     # being ROW vectors
     conv_mat = np.linalg.inv(lat_frac)
 
-    # Function for getting cell index from fractional coordinates
-    def _get_cell_index(x):
-        return math.floor(x.item(0)), math.floor(x.item(1)), \
-               math.floor(x.item(2))
-
-    # Create reshaped cell
+    # Reshaped cell lattice vectors
     lat_cart = np.zeros((3, 3), dtype=np.float64)
     for i_dim in range(3):
         lat_cart[i_dim] = np.matmul(lat_frac[i_dim], prim_cell.lat_vec)
-    res_cell = PrimitiveCell(lat_cart, unit=1.0)
+
+    # Reshaped cell shares the same origin
+    origin = prim_cell.origin.copy()
+
+    # Create reshaped cell
+    res_cell = PrimitiveCell(lat_cart, origin, unit=consts.NM)
     vol_res = res_cell.get_lattice_volume()
     vol_prim = prim_cell.get_lattice_volume()
     res_cell.extended = prim_cell.extended * (vol_res / vol_prim)
 
-    # Add orbitals
+    # Determine searching range
+    # Now only the God knows how this piece of code works.
     prim_cell.sync_array()
     rn_range = np.zeros((3, 2), dtype=np.int32)
-    for i_dim in range(3):
-        sum_vec = lat_frac.sum(axis=0) - lat_frac[i_dim]
-        for j_dim in range(3):
-            rn_range[j_dim, 0] = min(rn_range.item(j_dim, 0),
-                                     math.floor(sum_vec[j_dim]))
-            rn_range[j_dim, 1] = max(rn_range.item(j_dim, 1),
-                                     math.ceil(sum_vec[j_dim]))
+    for i in range(3):
+        sum_vec = lat_frac.sum(axis=0) - lat_frac[i]
+        for j in range(3):
+            rn_range[j, 0] = min(rn_range[j, 0], floor(sum_vec[j]))
+            rn_range[j, 1] = max(rn_range[j, 1], ceil(sum_vec[j]))
     rn_range[:, 0] -= 1
     rn_range[:, 1] += 1
 
+    # Function for getting cell index from fractional coordinates
+    def _get_cell_index(x):
+        return floor(x.item(0)), floor(x.item(1)), floor(x.item(2))
+
+    # Add orbitals
     orb_id_pc, orb_id_sc = [], {}
     id_sc = 0
     for i_a in range(rn_range.item(0, 0), rn_range.item(0, 1)+1):
@@ -158,14 +156,14 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
             for i_c in range(rn_range.item(2, 0), rn_range.item(2, 1)+1):
                 rn = (i_a, i_b, i_c)
                 for i_o, pos in enumerate(prim_cell.orb_pos):
-                    res_pos = np.matmul(rn + pos, conv_mat) - origin + delta
-                    res_rn = _get_cell_index(res_pos)
+                    res_pos = np.matmul(rn + pos, conv_mat)
+                    res_rn = _get_cell_index(res_pos + delta)
                     if res_rn == (0, 0, 0):
                         id_pc = (i_a, i_b, i_c, i_o)
                         orb_id_pc.append(id_pc)
                         orb_id_sc[id_pc] = id_sc
                         id_sc += 1
-                        res_cell.add_orbital(res_pos,
+                        res_cell.add_orbital(tuple(res_pos),
                                              prim_cell.orbitals[i_o].energy,
                                              prim_cell.orbitals[i_o].label)
 
@@ -179,10 +177,10 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
                 # Get fractional coordinate of id_sc_j in reshaped cell
                 rn = id_pc_i[:3] + hop[:3]
                 pos = prim_cell.orb_pos[hop.item(4)]
-                res_pos = np.matmul(rn + pos, conv_mat) - origin + delta
+                res_pos = np.matmul(rn + pos, conv_mat)
 
                 # Wrap back into (0, 0, 0)-th reshaped cell
-                res_rn = _get_cell_index(res_pos)
+                res_rn = _get_cell_index(res_pos + delta)
                 res_pos -= res_rn
 
                 # Determine corresponding id_sc_j
@@ -192,11 +190,6 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
                     if id_pc_j[3] == hop.item(4):
                         res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
                                              prim_cell.hop_eng.item(i_h))
-
-    # Subtract delta from orbital positions
-    res_cell.orb_pos -= delta
-    for i_o, pos in enumerate(res_cell.orb_pos):
-        res_cell.set_orbital(i_o, position=tuple(pos))
 
     res_cell.sync_array()
     return res_cell
@@ -221,25 +214,25 @@ def spiral_prim_cell(prim_cell: PrimitiveCell,
     """
     prim_cell.sync_array()
 
-    # Get rotated lattice vectors
-    end_points = np.vstack((np.zeros(3), prim_cell.lat_vec))
+    # Get rotated lattice vectors and origin
+    end_points = np.vstack((np.zeros(3), prim_cell.lat_vec)) + prim_cell.origin
     end_points = rotate_coord(end_points, angle=angle, center=center)
     lat_vec = end_points[1:] - end_points[0]
+    origin = end_points[0]
 
-    # Get rotated orbital positions
-    # CAUTION: DO NOT normalize the positions after rotation.
-    # They should be kept as they are.
-    orb_pos = prim_cell.orb_pos_nm
-    orb_pos = rotate_coord(orb_pos, angle=angle, center=center)
+    # Reset lattice vectors and origin without fixing the orbitals
+    prim_cell.reset_lattice(lat_vec, origin, unit=consts.NM, fix_orb=False)
 
-    # Shift orbital positions
-    orb_pos[:, 2] += shift
+    # Shift orbitals along z-axis
+    orb_pos = prim_cell.orb_pos_nm + np.array([0, 0, shift])
 
-    # Update lattice vectors and orbital positions
-    prim_cell.lat_vec = lat_vec
-    orb_pos = cart2frac(lat_vec, orb_pos)
+    # Update orbital positions in fractional coordinates
+    orb_pos = cart2frac(lat_vec, orb_pos, origin)
     for i, pos in enumerate(orb_pos):
         prim_cell.set_orbital(i, position=tuple(pos))
+    # # Or alternatively, working with Cartesian coordinates
+    # for i, pos in enumerate(orb_pos):
+    #     prim_cell.set_orbital_cart(i, position=tuple(pos), unit=consts.NM)
     prim_cell.sync_array()
 
 
@@ -350,7 +343,10 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
     ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
 
     # Create merged primitive cell
-    merged_cell = PrimitiveCell(pc_list[0].lat_vec, unit=consts.NM)
+    # The merge cell shares the same lattice vector and origin as the 1st
+    # primitive cell.
+    origin_ref = pc_list[0].origin
+    merged_cell = PrimitiveCell(lat_ref, origin_ref, unit=consts.NM)
 
     # Determine the 'extended' attribute
     extended = pc_list[0].extended
@@ -363,6 +359,7 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
 
     # Add orbitals
     for pc in pc_list:
+        pc.reset_lattice(lat_ref, origin_ref, unit=consts.NM, fix_orb=True)
         for orb in pc.orbitals:
             merged_cell.add_orbital(position=orb.position, energy=orb.energy,
                                     label=orb.label)
@@ -485,7 +482,7 @@ class SK:
         self.dz2 = "dz2"
         self.p_labels = {self.px, self.py, self.pz}
         self.d_labels = {self.dxy, self.dyz, self.dzx, self.dx2_y2, self.dz2}
-        self.sqrt3 = math.sqrt(3)
+        self.sqrt3 = sqrt(3)
         self.half_sqrt3 = self.sqrt3 * 0.5
 
     def _check_p_labels(self, *labels: str) -> None:
@@ -1036,7 +1033,7 @@ class AtomicOrbital:
             l, m = key
             key_new = (l, m+1)
             if key_new in self.allowed_keys:
-                factor = math.sqrt((l - m) * (l + m + 1))
+                factor = sqrt((l - m) * (l + m + 1))
                 new_coefficients[key_new] = value * factor
         self.coefficients = new_coefficients
 
@@ -1057,7 +1054,7 @@ class AtomicOrbital:
             l, m = key
             key_new = (l, m-1)
             if key_new in self.allowed_keys:
-                factor = math.sqrt((l + m) * (l - m + 1))
+                factor = sqrt((l + m) * (l - m + 1))
                 new_coefficients[key_new] = value * factor
         self.coefficients = new_coefficients
 
@@ -1163,7 +1160,7 @@ class SOC:
 
         # Reference:
         # https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
-        c = math.sqrt(0.5)
+        c = sqrt(0.5)
         ci = c * 1j
 
         # s state
