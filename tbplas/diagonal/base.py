@@ -1,12 +1,13 @@
 """Fundamentals of Solvers based on exact diagonalization."""
 
 import math
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Callable
 from collections import namedtuple
 
 import numpy as np
 import scipy.linalg.lapack as lapack
 from scipy.sparse.linalg import eigsh
+from scipy.sparse import csr_matrix
 
 
 from ..base import lattice as lat
@@ -55,8 +56,17 @@ class DiagSolver(MPIEnv):
     ----------
     model: 'PrimitiveCell' or 'Sample' instance
         model for which properties will be calculated
+    hk_dense: Callable[[np.ndarray, np.ndarray], None]
+        user-defined function to set up the dense Hamiltonian in place, with the
+        1st argument being the fractional coordinate of k-point and the 2nd
+        argument being the Hamiltonian
+    hk_csr: Callable[[np.ndarray], csr_matrix]
+        user-defined function to return the sparse Hamiltonian from the
+        fractional coordinate of k-point as the 1st argument
     """
     def __init__(self, model: Any,
+                 hk_dense: Callable[[np.ndarray, np.ndarray], None] = None,
+                 hk_csr: Callable[[np.ndarray], csr_matrix] = None,
                  enable_mpi: bool = False,
                  echo_details: bool = True) -> None:
         """
@@ -66,6 +76,8 @@ class DiagSolver(MPIEnv):
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
         self.model = model
+        self.hk_dense = hk_dense
+        self.hk_csr = hk_csr
         self.update_model()
 
     @property
@@ -198,11 +210,18 @@ class DiagSolver(MPIEnv):
 
         # Calculate band structure
         for i_k in k_index:
+            kpt_i = k_points[i_k]
             if solver == "lapack":
-                self.model.set_ham_dense(k_points[i_k], ham_dense, convention)
+                if self.hk_dense is not None:
+                    self.hk_dense(kpt_i, ham_dense)
+                else:
+                    self.model.set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                ham_csr = self.model.set_ham_csr(k_points[i_k], convention)
+                if self.hk_csr is not None:
+                    ham_csr = self.hk_csr(kpt_i)
+                else:
+                    ham_csr = self.model.set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
 
             # Sort eigenvalues
@@ -341,11 +360,18 @@ class DiagSolver(MPIEnv):
 
         # Calculate band structure
         for i_k in k_index:
+            kpt_i = k_points[i_k]
             if solver == "lapack":
-                self.model.set_ham_dense(k_points[i_k], ham_dense, convention)
+                if self.hk_dense is not None:
+                    self.hk_dense(kpt_i, ham_dense)
+                else:
+                    self.model.set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                ham_csr = self.model.set_ham_csr(k_points[i_k], convention)
+                if self.hk_csr is not None:
+                    ham_csr = self.hk_csr(kpt_i)
+                else:
+                    ham_csr = self.model.set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T

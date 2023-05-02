@@ -1,11 +1,12 @@
 #! /usr/bin/env python
 
 import unittest
+from math import cos, sin, sqrt
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
+from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh, DiagSolver,
                     PrimitiveCell, extend_prim_cell, reshape_prim_cell,
                     ANG, NM, Visualizer, frac2cart, TestHelper)
 import tbplas.builder.exceptions as exc
@@ -568,6 +569,27 @@ class TestPrimitive(unittest.TestCase):
         k_points = gen_kmesh((120, 120, 1))
         energies, dos = cell.calc_dos(k_points)
         plt.plot(energies, dos)
+        plt.show()
+
+        # Calculate band structure from user-defined analytical Hamiltonian
+        a, t, sqrt3 = 0.246, 2.7, sqrt(3.0)
+        recip_lat = cell.get_reciprocal_vectors()
+
+        def _exp(x):
+            return cos(x) + 1j * sin(x)
+
+        def _hk(kpt, ham):
+            ka = np.matmul(kpt, recip_lat) * a
+            kxa, kya = ka.item(0), ka.item(1)
+            fk = _exp(kya / sqrt3) + 2 * _exp(-kya / 2 / sqrt3) * cos(kxa / 2)
+            ham[0, 1] = t * fk
+            ham[1, 0] = t * fk.conjugate()
+
+        solver = DiagSolver(cell, hk_dense=_hk)
+        k_len, bands = solver.calc_bands(k_path)[:2]
+        num_bands = bands.shape[1]
+        for i in range(num_bands):
+            plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
         plt.show()
 
     def test12_extend_prim_cell(self):
