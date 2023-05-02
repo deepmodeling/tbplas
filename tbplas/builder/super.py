@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from ..base import lattice as lat
+from ..cython import super as core
 from . import exceptions as exc
-from . import core
 from .base import (check_rn, check_pbc, Lockable, IntraHopping, rn_type,
                    pbc_type, id_pc_type)
 from .primitive import PrimitiveCell
@@ -109,7 +109,6 @@ class OrbitalSet(Lockable):
             and c directions
         :param vacancies: list of indices of vacancies in primitive cell
             representation
-        :param identifier: identifier for the supercell
         :raises SCDimLenError: if len(dim) != 2 or 3
         :raises SCDimSizeError: if dimension is smaller than minimal value
         :raises PBCLenError: if len(pbc) != 2 or 3

@@ -8,7 +8,7 @@ import numpy as np
 from ..base import (gen_reciprocal_vectors, get_lattice_volume,
                     frac2cart, cart2frac, NM, KB, EPSILON0)
 from ..fortran import f2py
-from . import core
+from ..cython import lindhard as core
 from .base import DiagSolver
 
 

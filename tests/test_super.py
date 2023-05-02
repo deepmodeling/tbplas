@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 from scipy.sparse import coo_matrix
 
-import tbplas.builder.core as core
+from tbplas.cython import super as core
 
 from tbplas import (gen_lattice_vectors, extend_prim_cell,
                     PrimitiveCell, SuperCell, TestHelper)

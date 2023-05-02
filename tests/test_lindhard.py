@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas as tb
-import tbplas.diagonal.core as core
+from tbplas.cython import lindhard as core
 from tbplas import TestHelper
 
 

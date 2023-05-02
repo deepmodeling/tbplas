@@ -9,7 +9,7 @@ import numpy as np
 
 from ..base import BOHR2ANG, cart2frac
 from ..builder import PrimitiveCell
-from ..builder import core
+from ..cython import primitive as core
 
 
 __all__ = ["wan2pc"]

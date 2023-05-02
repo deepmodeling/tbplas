@@ -7,8 +7,8 @@ from scipy.sparse import dia_matrix, csr_matrix
 import matplotlib.pyplot as plt
 
 from ..base import lattice as lat
+from ..cython import sample as core
 from . import exceptions as exc
-from . import core
 from .base import Lockable, InterHopping, rn_type
 from .super import SuperCell
 from .utils import ModelViewer

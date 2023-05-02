@@ -10,7 +10,7 @@ from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, SuperCell,
                     SCInterHopping, Sample, Timer, TestHelper)
 import tbplas.builder.exceptions as exc
-import tbplas.builder.core as core
+from tbplas.cython import sample as core
 
 
 def make_cell():

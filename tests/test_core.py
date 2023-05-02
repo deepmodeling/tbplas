@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from tbplas import gen_lattice_vectors, PrimitiveCell, Timer, TestHelper
-import tbplas.builder.core as core
+from tbplas.cython import super as core
 from tbplas.builder.super import OrbitalSet
 
 

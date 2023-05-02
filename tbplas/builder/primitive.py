@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 
 from ..base import constants as consts
 from ..base import lattice as lat
+from ..cython import primitive as core
 from . import exceptions as exc
-from . import core
 from .base import (check_rn, check_pos, Orbital, Lockable, IntraHopping,
                    HopDict, pair_type, rn_type, rn3_type, pos_type, pos3_type)
 from .utils import ModelViewer

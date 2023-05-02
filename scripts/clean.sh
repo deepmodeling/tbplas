@@ -1,6 +1,9 @@
 #! /bin/bash
 
-find . -name *.so | xargs rm
+postfix="c so"
+for i in $postfix; do
+    find . -name *.$i | xargs rm
+done
 
 tmp_list="build dist tbplas.egg-info"
 for i in $tmp_list; do

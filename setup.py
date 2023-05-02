@@ -4,15 +4,24 @@ import configparser
 
 
 # Shared package information by FORTRAN and C extensions
-PKG_INFO = {
+pkg_info = {
     'name': 'tbplas',
     'version': '1.0',
     'description': 'Tight-binding Package for Large-scale Simulation',
+    'long_description': 'TBPLaS is a tight-binding package for large scale '
+                        'simulation, which implements featuring exact '
+                        'diagonalization, kernel polynomial and propagation '
+                        'methods.',
+    'author': 'the TBPLaS development team',
+    'author_email': 'liyunhai1016@whu.edu.cn',
+    'url': 'www.tbplas.net',
+    'license': 'BSD 3-clause',
+    'platforms': 'Unix-like operating systems',
 }
 full_packages = ['tbplas', 'tbplas.adapter', 'tbplas.base', 'tbplas.builder',
-                 'tbplas.diagonal',  'tbplas.fortran', 'tbplas.materials',
-                 'tbplas.tbpm']
-c_packages = ['tbplas.builder', 'tbplas.diagonal']
+                 'tbplas.cython', 'tbplas.diagonal',  'tbplas.fortran',
+                 'tbplas.materials', 'tbplas.tbpm']
+c_packages = ['tbplas.cython']
 f_packages = set(full_packages).difference(c_packages)
 
 # FORTRAN extension
@@ -44,9 +53,7 @@ f_extensions = [
 ]
 
 setup(
-    name=PKG_INFO['name'],
-    version=PKG_INFO['version'],
-    description=PKG_INFO['description'],
+    **pkg_info,
     packages=f_packages,
     ext_modules=f_extensions,
 )
@@ -75,18 +82,16 @@ if cc == 'intelem':
     os.environ['CC'] = 'icc'
     os.environ['LDSHARED'] = 'icc -shared'
 
-ext_names = ['tbplas.builder.core', 'tbplas.diagonal.core']
+ext_names = ['primitive', 'super', 'sample', 'lindhard']
 c_extensions = [
-    Extension(name=name,
-              sources=[f"{name.replace('.', '/')}.pyx"],
+    Extension(name=f"tbplas.cython.{name}",
+              sources=[f"tbplas/cython/{name}.pyx"],
               include_dirs=[np.get_include()])
     for name in ext_names
 ]
 
 setup(
-    name=PKG_INFO['name'],
-    version=PKG_INFO['version'],
-    description=PKG_INFO['description'],
+    **pkg_info,
     packages=c_packages,
     ext_modules=cythonize(c_extensions),
 )
