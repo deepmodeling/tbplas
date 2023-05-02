@@ -99,6 +99,17 @@ class PrimitiveCell(Lockable):
         # Setup misc. attributes.
         self.extended = 1.0
 
+    def __hash__(self) -> int:
+        """
+        Return the hash of this instance.
+
+        NOTE: DO NOT use the hashes in self._hash_dict because they may be out
+        of date.
+
+        :return: hash of this instance
+        """
+        return hash((self._get_hash("orb"), self._get_hash("hop")))
+
     def _get_hash(self, attr: str) -> int:
         """
         Get the hash of given attribute.
@@ -171,15 +182,6 @@ class PrimitiveCell(Lockable):
             raise exc.PCHopDiagonalError(rn, orb_i)
         return rn, orb_i, orb_j
 
-    def check_lock(self) -> None:
-        """
-        Check lock state of this instance.
-
-        :return: None
-        """
-        if self.is_locked:
-            raise exc.PCLockError()
-
     def add_orbital(self, position: pos_type,
                     energy: float = 0.0,
                     label: Hashable = "X") -> None:
@@ -190,7 +192,7 @@ class PrimitiveCell(Lockable):
         :param energy: on-site energy of the orbital in eV
         :param label: orbital label
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
         # Check arguments
@@ -210,9 +212,10 @@ class PrimitiveCell(Lockable):
         :param unit: conversion coefficient from arbitrary unit to NM
         :param kwargs: keyword arguments for 'add_orbital'
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
+        self.check_lock()
         position = np.array([self._check_position(position)]) * unit
         position = lat.cart2frac(self._lat_vec, position, self._origin)[0]
         self.add_orbital(position, **kwargs)
@@ -232,7 +235,7 @@ class PrimitiveCell(Lockable):
         :param energy: new on-site energy of the orbital in eV
         :param label: new orbital label
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
@@ -270,10 +273,11 @@ class PrimitiveCell(Lockable):
         :param unit: conversion coefficient from arbitrary unit to NM
         :param kwargs: keyword arguments for 'set_orbital'
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         :raises OrbPositionLenError: if len(position) != 2 or 3
         """
+        self.check_lock()
         if position is not None:
             position = np.array([self._check_position(position)]) * unit
             position = lat.cart2frac(self._lat_vec, position, self._origin)[0]
@@ -299,9 +303,10 @@ class PrimitiveCell(Lockable):
 
         :param orb_i: index of the orbital to remove
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         """
+        self.check_lock()
         self.remove_orbitals([orb_i])
 
     def remove_orbitals(self, indices: List[int]) -> None:
@@ -311,7 +316,7 @@ class PrimitiveCell(Lockable):
 
         :param indices: indices of orbitals to remove
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i falls out of range
         """
         # Check arguments
@@ -341,7 +346,7 @@ class PrimitiveCell(Lockable):
         :param orb_j: index of orbital j in <i,0|H|j,R>
         :param energy: hopping integral in eV
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCOrbIndexError: if orb_i or orb_j falls out of range
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
@@ -359,8 +364,9 @@ class PrimitiveCell(Lockable):
 
         :param hop_dict: hopping dictionary
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         """
+        self.check_lock()
         hop_dict.to_spare()
         for rn, hop_mat in hop_dict.hoppings.items():
             for i in range(hop_mat.nnz):
@@ -402,7 +408,7 @@ class PrimitiveCell(Lockable):
         :param orb_i: index of orbital i in <i,0|H|j,R>
         :param orb_j: index of orbital j in <i,0|H|j,R>
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises PCHopNotFoundError: if rn + (orb_i, orb_j) or its conjugate
             counterpart is not found in the hopping terms
         :raises PCOrbIndexError: if orb_i or orb_j falls out of range
@@ -420,8 +426,10 @@ class PrimitiveCell(Lockable):
         Trim dangling orbitals and associated hopping terms.
 
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         """
+        self.check_lock()
+
         # Count the number of hopping terms of each orbital
         hop_count = np.zeros(self.num_orb, dtype=np.int32)
         for rn, hop_rn in self.hoppings.items():
@@ -442,7 +450,7 @@ class PrimitiveCell(Lockable):
 
         :param pbc: whether pbc is enabled along 3 directions
         :return: None
-        :raises PCLockError: if the primitive cell is locked
+        :raises LockError: if the primitive cell is locked
         :raises ValueError: if len(pbc) != 3
         """
         self.check_lock()
@@ -474,9 +482,12 @@ class PrimitiveCell(Lockable):
         :param fix_orb: whether to keep Cartesian coordinates of orbitals
             unchanged after resetting lattice
         :return: None
+        :raises LockError: if the primitive cell is locked
         :raises LatVecError: if shape of lat_vec is not (3, 3)
         :raise ValueError: if shape of origin is not (3,)
         """
+        self.check_lock()
+
         # Check lattice vectors and convert unit
         if lat_vec is None:
             lat_vec = self._lat_vec
@@ -507,18 +518,16 @@ class PrimitiveCell(Lockable):
         self._lat_vec = lat_vec
         self._origin = origin
 
-    def sync_array(self, verbose: bool = False,
-                   force_sync: bool = False) -> None:
+    def sync_orb(self, verbose: bool = False,
+                 force_sync: bool = False) -> None:
         """
-        Synchronize orb_pos, orb_eng, hop_ind and hop_eng according to orbitals
-        and hopping terms.
+        Synchronize orb_pos and orb_eng according to the orbitals.
 
         :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if the
-            orbitals and hopping terms did not change
+            orbitals did not change
         :return: None
         """
-        # Update orbital arrays
         to_update = self._update_hash('orb')
         if force_sync or to_update:
             if verbose:
@@ -537,7 +546,16 @@ class PrimitiveCell(Lockable):
             if verbose:
                 print("INFO: no need to update pc orbital arrays")
 
-        # Update hopping arrays
+    def sync_hop(self, verbose: bool = False,
+                 force_sync: bool = False):
+        """
+        Synchronize hop_ind and hop_eng according to the hopping terms.
+
+        :param verbose: whether to output additional debugging information
+        :param force_sync: whether to force synchronizing the arrays even if the
+            hopping terms did not change
+        :return: None
+        """
         to_update = self._update_hash('hop')
         if force_sync or to_update:
             if verbose:
@@ -554,6 +572,17 @@ class PrimitiveCell(Lockable):
         else:
             if verbose:
                 print("INFO: no need to update pc hopping arrays")
+
+    def sync_array(self, **kwargs) -> None:
+        """
+        Synchronize orb_pos, orb_eng, hop_ind and hop_eng according to orbitals
+        and hopping terms.
+
+        :param kwargs: arguments for 'sync_orb' and sync_'hop'
+        :return: None
+        """
+        self.sync_orb(**kwargs)
+        self.sync_hop(**kwargs)
 
     def get_lattice_area(self, direction: str = "c") -> float:
         """
@@ -893,7 +922,7 @@ class PrimitiveCell(Lockable):
         :return: (num_orb, 3) float64 array
             fractional coordinates or orbitals
         """
-        self.sync_array()
+        self.sync_orb()
         return self._orb_pos
 
     @property
@@ -904,7 +933,7 @@ class PrimitiveCell(Lockable):
         :return: (num_orb,) float64 array
             on-site energies in eV
         """
-        self.sync_array()
+        self.sync_orb()
         return self._orb_eng
 
     @property
@@ -915,7 +944,7 @@ class PrimitiveCell(Lockable):
         :return: (num_hop, 5) int32 array
             hopping indices
         """
-        self.sync_array()
+        self.sync_hop()
         return self._hop_ind
 
     @property
@@ -926,7 +955,7 @@ class PrimitiveCell(Lockable):
         :return: (num_hop,) complex128 array
             hopping energies
         """
-        self.sync_array()
+        self.sync_hop()
         return self._hop_eng
 
     @property
@@ -937,7 +966,7 @@ class PrimitiveCell(Lockable):
         :return: (num_orb, 3) float64 array
             Cartesian coordinates of orbitals in NANOMETER
         """
-        self.sync_array()
+        self.sync_orb()
         orb_pos_nm = lat.frac2cart(self._lat_vec, self._orb_pos, self._origin)
         return orb_pos_nm
 
@@ -960,7 +989,7 @@ class PrimitiveCell(Lockable):
         :return: (num_hop, 3) float64 array
             hopping distances in FRACTIONAL coordinates
         """
-        self.sync_array()
+        self.sync_hop()
         hop_dr = np.zeros((self.num_hop, 3), dtype=np.float64)
         for i_h, ind in enumerate(self._hop_ind):
             orb_i, orb_j = ind.item(3), ind.item(4)

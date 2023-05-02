@@ -3,7 +3,6 @@
 import unittest
 
 import numpy as np
-import scipy.linalg.lapack as lapack
 import matplotlib.pyplot as plt
 
 import tbplas as tb

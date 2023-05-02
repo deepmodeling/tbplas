@@ -53,11 +53,6 @@ class SCInterHopping(Lockable, InterHopping):
         self._sc_bra = sc_bra
         self._sc_ket = sc_ket
 
-    def check_lock(self) -> None:
-        """Check lock state of this instance."""
-        if self.is_locked:
-            raise exc.InterHopLockError()
-
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
@@ -186,9 +181,9 @@ class Sample:
 
     Attributes
     ----------
-    sc_list: List[SuperCell]
+    _sc_list: List[SuperCell]
         list of supercells within the sample
-    hop_list: List[SCInterHopping]
+    _hop_list: List[SCInterHopping]
         list of inter-hopping sets between supercells within the sample
     orb_eng: (num_orb_sc,) float64 array
         on-site energies of orbitals in the supercell in eV
@@ -228,22 +223,22 @@ class Sample:
             raise exc.SampleVoidError()
 
         # Parse supercells and inter-hopping terms
-        self.sc_list = []
-        self.hop_list = []
+        self._sc_list = []
+        self._hop_list = []
         for i_arg, arg in enumerate(args):
             if isinstance(arg, SuperCell):
-                self.sc_list.append(arg)
+                self._sc_list.append(arg)
             elif isinstance(arg, SCInterHopping):
-                self.hop_list.append(arg)
-                arg.lock()
+                self._hop_list.append(arg)
             else:
                 raise exc.SampleCompError(i_arg)
+            arg.lock(id(self))
 
         # Check closure of inter-hopping instances
-        for i_h, hop in enumerate(self.hop_list):
-            if hop.sc_bra not in self.sc_list:
+        for i_h, hop in enumerate(self._hop_list):
+            if hop.sc_bra not in self._sc_list:
                 raise exc.SampleClosureError(i_h, "sc_bra")
-            if hop.sc_ket not in self.sc_list:
+            if hop.sc_ket not in self._sc_list:
                 raise exc.SampleClosureError(i_h, "sc_ket")
 
         # Declare arrays
@@ -262,7 +257,7 @@ class Sample:
 
         :return: numbers of orbitals in each supercell
         """
-        num_orb = [sc.num_orb_sc for sc in self.sc_list]
+        num_orb = [sc.num_orb_sc for sc in self._sc_list]
         return num_orb
 
     def _get_ind_start(self) -> List[int]:
@@ -288,7 +283,7 @@ class Sample:
         :returns: None
         """
         if force_init or self.orb_eng is None:
-            orb_eng = [sc.get_orb_eng() for sc in self.sc_list]
+            orb_eng = [sc.get_orb_eng() for sc in self._sc_list]
             self.orb_eng = np.concatenate(orb_eng)
 
     def init_orb_pos(self, force_init: bool = False) -> None:
@@ -303,7 +298,7 @@ class Sample:
         :returns: None
         """
         if force_init or self.orb_pos is None:
-            orb_pos = [sc.get_orb_pos() for sc in self.sc_list]
+            orb_pos = [sc.get_orb_pos() for sc in self._sc_list]
             self.orb_pos = np.concatenate(orb_pos)
 
     def init_hop(self, force_init: bool = False) -> None:
@@ -325,7 +320,7 @@ class Sample:
             ind_start = self._get_ind_start()
 
             # Collect hopping terms from each supercell
-            for i_sc, sc in enumerate(self.sc_list):
+            for i_sc, sc in enumerate(self._sc_list):
                 hop_i, hop_j, hop_v = sc.get_hop()
                 hop_i += ind_start[i_sc]
                 hop_j += ind_start[i_sc]
@@ -334,10 +329,10 @@ class Sample:
                 hop_v_tot.append(hop_v)
 
             # Collect hopping terms from each inter hopping set
-            for hop in self.hop_list:
+            for hop in self._hop_list:
                 hop_i, hop_j, hop_v = hop.get_hop()
-                hop_i += ind_start[self.sc_list.index(hop.sc_bra)]
-                hop_j += ind_start[self.sc_list.index(hop.sc_ket)]
+                hop_i += ind_start[self._sc_list.index(hop.sc_bra)]
+                hop_j += ind_start[self._sc_list.index(hop.sc_ket)]
                 hop_i_tot.append(hop_i)
                 hop_j_tot.append(hop_j)
                 hop_v_tot.append(hop_v)
@@ -366,9 +361,9 @@ class Sample:
         """
         if force_init or self.dr is None:
             dr_tot = []
-            for sc in self.sc_list:
+            for sc in self._sc_list:
                 dr_tot.append(sc.get_dr())
-            for hop in self.hop_list:
+            for hop in self._hop_list:
                 dr_tot.append(hop.get_dr())
             self.dr = np.concatenate(dr_tot)
 
@@ -607,16 +602,16 @@ class Sample:
         axes.set_aspect('equal')
 
         if sc_colors is None:
-            sc_colors = ['r' for _ in range(len(self.sc_list))]
+            sc_colors = ['r' for _ in range(len(self._sc_list))]
         if hop_colors is None:
-            hop_colors = ['r' for _ in range(len(self.hop_list))]
+            hop_colors = ['r' for _ in range(len(self._hop_list))]
 
         # Plot supercells and hopping terms
-        for i, sc in enumerate(self.sc_list):
+        for i, sc in enumerate(self._sc_list):
             sc.plot(axes, with_orbitals=with_orbitals, with_cells=with_cells,
                     hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
                     hop_color=sc_colors[i], view=view)
-        for i, hop in enumerate(self.hop_list):
+        for i, hop in enumerate(self._hop_list):
             hop.plot(axes,
                      hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
                      hop_color=hop_colors[i], view=view)
@@ -655,8 +650,7 @@ class Sample:
             raise ValueError(f"Illegal convention {convention}")
 
         # Convert k-point to Cartesian Coordinates
-        sc0 = self.sc_list[0]
-        sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
+        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Set up the Hamiltonian
@@ -683,8 +677,7 @@ class Sample:
             raise ValueError(f"Illegal convention {convention}")
 
         # Convert k-point to Cartesian Coordinates
-        sc0 = self.sc_list[0]
-        sc_recip_vec = lat.gen_reciprocal_vectors(sc0.sc_lat_vec)
+        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Diagonal terms
@@ -759,6 +752,15 @@ class Sample:
         return sum(self._get_num_orb())
 
     @property
+    def sc0(self) -> SuperCell:
+        """
+        Interface for the 1st supercell.
+
+        :return: the 1st supercell
+        """
+        return self._sc_list[0]
+
+    @property
     def energy_range(self) -> float:
         """
         Get energy range to consider in calculations.
@@ -781,8 +783,7 @@ class Sample:
 
         :return: area formed by a1 and a2 in NM^2
         """
-        sc0 = self.sc_list[0]
-        return sc0.prim_cell.get_lattice_area()
+        return self.sc0.prim_cell.get_lattice_area()
 
     @property
     def volume_unit_cell(self) -> float:
@@ -793,8 +794,7 @@ class Sample:
 
         :return: volume of primitive cell in NM^3
         """
-        sc0 = self.sc_list[0]
-        return sc0.prim_cell.get_lattice_volume()
+        return self.sc0.prim_cell.get_lattice_volume()
 
     @property
     def extended(self) -> float:
@@ -805,8 +805,7 @@ class Sample:
 
         :return: number of extended times of primitive cells
         """
-        sc0 = self.sc_list[0]
-        return sc0.prim_cell.extended
+        return self.sc0.prim_cell.extended
 
     @property
     def nr_orbitals(self) -> int:
@@ -818,5 +817,4 @@ class Sample:
         :return: nr_orbitals: integer
             number of orbitals in the primitive cell.
         """
-        sc0 = self.sc_list[0]
-        return sc0.num_orb_pc
+        return self.sc0.num_orb_pc

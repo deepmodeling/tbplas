@@ -100,7 +100,7 @@ class DiagSolver(MPIEnv):
         if self.model_is_pc:
             return self.model.lat_vec
         else:
-            return self.model.sc_list[0].sc_lat_vec
+            return self.model.sc0.sc_lat_vec
 
     @property
     def recip_lat_vec(self) -> np.ndarray:

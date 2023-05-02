@@ -20,24 +20,23 @@ class OrbitalSet(Lockable):
 
     Attributes
     ----------
-    prim_cell: 'PrimitiveCell' instance
+    _prim_cell: 'PrimitiveCell' instance
         primitive cell from which the supercell is constructed
-    dim: (3,) int32 array
+    _dim: (3,) int32 array
         dimension of the supercell along a, b, and c directions
-    pbc: (3,) int32 array
+    _pbc: (3,) int32 array
         whether to enable periodic condition along a, b, and c directions
         0 for False, 1 for True.
-    vacancy_list: List[Tuple[int, int, int, int]]
+    _vacancy_list: List[Tuple[int, int, int, int]]
         indices of vacancies in primitive cell representation (ia, ib, ic, io)
         None if there are no vacancies.
-    hash_dict: Dict[str, int]
-        dictionary of hash of tuple(vacancy_list)
+    _hash_dict: Dict[str, int]
         hashes of attributes to be used by 'sync_array' to update the arrays
-    vac_id_pc: (num_vac, 4) int32 array
+    _vac_id_pc: (num_vac, 4) int32 array
         indices of vacancies in primitive cell representation
-    vac_id_sc: (num_vac,) int64 array
+    _vac_id_sc: (num_vac,) int64 array
         indices of vacancies in supercell representation
-    orb_id_pc: (num_orb_sc, 4) int32 array
+    _orb_id_pc: (num_orb_sc, 4) int32 array
         indices of orbitals in primitive cell representation
 
     NOTES
@@ -110,44 +109,47 @@ class OrbitalSet(Lockable):
             and c directions
         :param vacancies: list of indices of vacancies in primitive cell
             representation
+        :param identifier: identifier for the supercell
         :raises SCDimLenError: if len(dim) != 2 or 3
         :raises SCDimSizeError: if dimension is smaller than minimal value
         :raises PBCLenError: if len(pbc) != 2 or 3
-        :raises VacIDPCLenError: if any vacancy does not have right length
-        :raises VacIDPCIndexError: if cell or orbital index of any vacancy is
+        :raises IDPCLenError: if any vacancy does not have right length
+        :raises IDPCIndexError: if cell or orbital index of any vacancy is
             out of range
         """
         super().__init__()
 
-        # Synchronize and lock primitive cell
-        self.prim_cell = prim_cell
-        self.prim_cell.lock()
+        # Set and lock the primitive cell
+        self._prim_cell = prim_cell
+        self._prim_cell.lock(id(self))
 
         # Check and set dimension
         dim, legal = check_rn(dim, complete_item=1)
         if not legal:
             raise exc.SCDimLenError(dim)
+        hop_ind = self._prim_cell.hop_ind
         for i in range(3):
-            rn_min = self.prim_cell.hop_ind[:, i].min()
-            rn_max = self.prim_cell.hop_ind[:, i].max()
+            rn_min = hop_ind[:, i].min()
+            rn_max = hop_ind[:, i].max()
             dim_min = max(abs(rn_min), abs(rn_max))
             if dim[i] < dim_min:
                 raise exc.SCDimSizeError(i, dim_min)
-        self.dim = np.array(dim, dtype=np.int32)
+        self._dim = np.array(dim, dtype=np.int32)
 
         # Check and set periodic boundary condition
         pbc, legal = check_pbc(pbc, complete_item=False)
         if not legal:
             raise exc.PBCLenError(pbc)
-        self.pbc = np.array([1 if _ else 0 for _ in pbc], dtype=np.int32)
+        self._pbc = np.array([1 if _ else 0 for _ in pbc], dtype=np.int32)
 
         # Initialize lists and arrays assuming no vacancies
-        self.vacancy_list = []
-        self.hash_dict = {'vac': self._get_hash('vac')}
-        self.vac_id_pc = None
-        self.vac_id_sc = None
-        self.orb_id_pc = core.build_orb_id_pc(self.dim, self.num_orb_pc,
-                                              self.vac_id_pc)
+        self._vacancy_list = []
+        self._hash_dict = {'pc': self._get_hash('pc'),
+                           'vac': self._get_hash('vac')}
+        self._vac_id_pc = None
+        self._vac_id_sc = None
+        self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
+                                               self._vac_id_pc)
 
         # Set vacancies if any
         if vacancies is not None:
@@ -157,12 +159,18 @@ class OrbitalSet(Lockable):
         """
         Get hash of given attribute.
 
+        For the primitive cell, we can use both its actual hash or the number
+        of orbitals as the fingerprint, while the latter is much faster.
+
         :param attr: name of the attribute
         :return: hash of the attribute
         :raises ValueError: if attr is illegal
         """
-        if attr == "vac":
-            new_hash = hash(tuple(self.vacancy_list))
+        if attr == "pc":
+            new_hash = hash(self._prim_cell)
+            # new_hash = self.num_orb_pc
+        elif attr == "vac":
+            new_hash = hash(tuple(self._vacancy_list))
         else:
             raise ValueError(f"Illegal attribute name {attr}")
         return new_hash
@@ -176,8 +184,8 @@ class OrbitalSet(Lockable):
         :raises ValueError: if attr is illegal
         """
         new_hash = self._get_hash(attr)
-        if self.hash_dict[attr] != new_hash:
-            self.hash_dict[attr] = new_hash
+        if self._hash_dict[attr] != new_hash:
+            self._hash_dict[attr] = new_hash
             status = True
         else:
             status = False
@@ -203,102 +211,75 @@ class OrbitalSet(Lockable):
             raise exc.IDPCLenError(id_pc)
         if isinstance(id_pc, tuple):
             for i in range(3):
-                if id_pc[i] not in range(self.dim.item(i)):
+                if id_pc[i] not in range(self._dim.item(i)):
                     raise exc.IDPCIndexError(i, id_pc)
             if id_pc[3] not in range(self.num_orb_pc):
                 raise exc.IDPCIndexError(3, id_pc)
         elif isinstance(id_pc, np.ndarray):
             for i in range(3):
-                if id_pc.item(i) not in range(self.dim.item(i)):
+                if id_pc.item(i) not in range(self._dim.item(i)):
                     raise exc.IDPCIndexError(i, id_pc)
             if id_pc.item(3) not in range(self.num_orb_pc):
                 raise exc.IDPCIndexError(3, id_pc)
         else:
             raise exc.IDPCTypeError(id_pc)
 
-    def check_lock(self) -> None:
-        """Check lock state of this instance."""
-        if self.is_locked:
-            raise exc.SCLockError()
-
-    def add_vacancy(self, vacancy: Union[id_pc_type, np.ndarray],
-                    sync_array: bool = False,
-                    **kwargs) -> None:
+    def add_vacancy(self, vacancy: Union[id_pc_type, np.ndarray]) -> None:
         """
         Wrapper over 'add_vacancies' to add a single vacancy to the orbital set.
 
         :param vacancy: (ia, ib, ic, io) or equivalent int32 array
             vacancy index in primitive cell representation
-        :param sync_array: whether to call 'sync_array' to update the arrays
-        :param kwargs: arguments for method 'sync_array'
         :return: None
-        :raises SCLockError: if the object is locked
-        :raises VacIDPCLenError: if length of vacancy index is not 4
-        :raises VacIDPCIndexError: if cell or orbital index of vacancy is
+        :raises LockError: if the object is locked
+        :raises IDPCLenError: if length of vacancy index is not 4
+        :raises IDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
-        self.add_vacancies([vacancy], sync_array=sync_array, **kwargs)
+        self.check_lock()
+        self.add_vacancies([vacancy])
 
-    def add_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray],
-                      sync_array: bool = True,
-                      **kwargs) -> None:
+    def add_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray]) -> None:
         """
         Add a list of vacancies to the orbital set.
 
         :param vacancies: list of (ia, ib, ic, io) or equivalent int32 arrays
             list of indices of vacancies in primitive cell representation
-        :param sync_array: whether to call 'sync_array' to update the arrays
-        :param kwargs: arguments for method 'sync_array'
         :return: None
-        :raises SCLockError: if the object is locked
-        :raises VacIDPCLenError: if length of vacancy index is not 4
-        :raises VacIDPCIndexError: if cell or orbital index of vacancy is
+        :raises LockError: if the object is locked
+        :raises IDPCLenError: if length of vacancy index is not 4
+        :raises IDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
         self.check_lock()
-
         for vacancy in vacancies:
-            # Convert and check vacancy
             if not isinstance(vacancy, tuple):
                 vacancy = tuple(vacancy)
-            try:
-                self._check_id_pc(vacancy)
-            except exc.IDPCLenError as err:
-                raise exc.VacIDPCLenError(err.id_pc) from err
-            except exc.IDPCIndexError as err:
-                raise exc.VacIDPCIndexError(err.i_dim, err.id_pc) from err
+            self._check_id_pc(vacancy)
+            if vacancy not in self._vacancy_list:
+                self._vacancy_list.append(vacancy)
 
-            # Add vacancy
-            if vacancy not in self.vacancy_list:
-                self.vacancy_list.append(vacancy)
-
-        if sync_array:
-            self.sync_array(**kwargs)
-
-    def set_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray] = None,
-                      sync_array: bool = True,
-                      **kwargs) -> None:
+    def set_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray] = None) -> None:
         """
         Reset the list of vacancies to given ones.
 
         :param vacancies: list of (ia, ib, ic, io) or equivalent int32 arrays
             list of indices of vacancies in primitive cell representation
-        :param sync_array: whether to call 'sync_array' to update the arrays
-        :param kwargs: arguments for method 'sync_array'
         :return: None
-        :raises SCLockError: if the object is locked
-        :raises VacIDPCLenError: if length of vacancy index is not 4
-        :raises VacIDPCIndexError: if cell or orbital index of vacancy is
+        :raises LockError: if the object is locked
+        :raises IDPCLenError: if length of vacancy index is not 4
+        :raises IDPCIndexError: if cell or orbital index of vacancy is
             out of range
         """
-        self.vacancy_list = []
-        self.add_vacancies(vacancies, sync_array=sync_array, **kwargs)
+        self.check_lock()
+        self._vacancy_list = []
+        self.add_vacancies(vacancies)
 
     def sync_array(self, verbose: bool = False,
                    force_sync: bool = False) -> None:
         """
-        Synchronize vac_id_pc, vac_id_sc and orb_id_pc according to
-        vacancy_list.
+        Synchronize vac_id_pc, vac_id_sc and orb_id_pc according to primitive
+        cell and vacancies.
 
         NOTE: The core function '_id_pc2sc_vac' requires vac_id_sc to be sorted
         in increasing order. Otherwise, it won't work properly! So we must sort
@@ -306,29 +287,29 @@ class OrbitalSet(Lockable):
 
         :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if
-            vacancy_list did not change
+            primitive cell and vacancy_list did not change
         :return: None
         """
-        to_update = self._update_hash('vac')
+        to_update = self._update_hash("pc") or self._update_hash("vac")
         if force_sync or to_update:
             if verbose:
                 print("INFO: updating sc vacancy and orbital arrays")
             # If vacancy list is not [], update arrays as usual.
-            if len(self.vacancy_list) != 0:
-                vac_id_pc = np.array(self.vacancy_list, dtype=np.int32)
-                vac_id_sc = core.build_vac_id_sc(self.dim, self.num_orb_pc,
+            if len(self._vacancy_list) != 0:
+                vac_id_pc = np.array(self._vacancy_list, dtype=np.int32)
+                vac_id_sc = core.build_vac_id_sc(self._dim, self.num_orb_pc,
                                                  vac_id_pc)
                 sorted_idx = np.argsort(vac_id_sc, axis=0)
-                self.vac_id_pc = vac_id_pc[sorted_idx]
-                self.vac_id_sc = vac_id_sc[sorted_idx]
-                self.orb_id_pc = core.build_orb_id_pc(self.dim, self.num_orb_pc,
-                                                      self.vac_id_pc)
+                self._vac_id_pc = vac_id_pc[sorted_idx]
+                self._vac_id_sc = vac_id_sc[sorted_idx]
+                self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
+                                                       self._vac_id_pc)
             # Otherwise, restore to default settings as in __ini__.
             else:
-                self.vac_id_pc = None
-                self.vac_id_sc = None
-                self.orb_id_pc = core.build_orb_id_pc(self.dim, self.num_orb_pc,
-                                                      self.vac_id_pc)
+                self._vac_id_pc = None
+                self._vac_id_sc = None
+                self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
+                                                       self._vac_id_pc)
         else:
             if verbose:
                 print("INFO: no need to update sc vacancy and orbital arrays")
@@ -348,7 +329,7 @@ class OrbitalSet(Lockable):
         """
         self.sync_array()
         try:
-            id_pc = self.orb_id_pc[id_sc]
+            id_pc = self._orb_id_pc[id_sc]
         except IndexError as err:
             raise exc.IDSCIndexError(id_sc) from err
         return id_pc
@@ -374,8 +355,8 @@ class OrbitalSet(Lockable):
         self._check_id_pc(id_pc)
         if not isinstance(id_pc, np.ndarray) or id_pc.dtype != np.int32:
             id_pc = np.array(id_pc, dtype=np.int32)
-        orb_id_sc = core.id_pc2sc(self.dim, self.num_orb_pc,
-                                  id_pc, self.vac_id_sc)
+        orb_id_sc = core.id_pc2sc(self._dim, self.num_orb_pc, id_pc,
+                                  self._vac_id_sc)
         if orb_id_sc == -1:
             raise exc.IDPCVacError(id_pc)
         return orb_id_sc
@@ -389,16 +370,19 @@ class OrbitalSet(Lockable):
             orbital indices in supercell representation
         :return: (num_orb, 4) int32 array
             orbital indices in primitive cell representation
+        :raises ValueError: if id_sc_array is not a vector
         :raises IDSCIndexError: if any id_sc in id_sc_array is out of range
         """
         self.sync_array()
         if not isinstance(id_sc_array, np.ndarray) \
                 or id_sc_array.dtype != np.int64:
             id_sc_array = np.array(id_sc_array, dtype=np.int64)
+        if len(id_sc_array.shape) != 1:
+            raise ValueError("id_sc_array should be a vector")
         status = core.check_id_sc_array(self.num_orb_sc, id_sc_array)
         if status[0] == -1:
             raise exc.IDSCIndexError(id_sc_array[status[1]])
-        id_pc_array = core.id_sc2pc_array(self.orb_id_pc, id_sc_array)
+        id_pc_array = core.id_sc2pc_array(self._orb_id_pc, id_sc_array)
         return id_pc_array
 
     def orb_id_pc2sc_array(self, id_pc_array: np.ndarray) -> np.ndarray:
@@ -420,14 +404,14 @@ class OrbitalSet(Lockable):
             id_pc_array = np.array(id_pc_array, dtype=np.int32)
         if id_pc_array.shape[1] != 4:
             raise exc.IDPCLenError(id_pc_array[0])
-        status = core.check_id_pc_array(self.dim, self.num_orb_pc,
-                                        id_pc_array, self.vac_id_pc)
+        status = core.check_id_pc_array(self._dim, self.num_orb_pc,
+                                        id_pc_array, self._vac_id_pc)
         if status[0] == -2:
             raise exc.IDPCIndexError(status[2], id_pc_array[status[1]])
         if status[0] == -1:
             raise exc.IDPCVacError(id_pc_array[status[1]])
-        id_sc_array = core.id_pc2sc_array(self.dim, self.num_orb_pc,
-                                          id_pc_array, self.vac_id_sc)
+        id_sc_array = core.id_pc2sc_array(self._dim, self.num_orb_pc,
+                                          id_pc_array, self._vac_id_sc)
         return id_sc_array
 
     @property
@@ -437,7 +421,7 @@ class OrbitalSet(Lockable):
 
         :return: number of orbitals in primitive cell.
         """
-        return self.prim_cell.num_orb
+        return self._prim_cell.num_orb
 
     @property
     def num_orb_sc(self) -> int:
@@ -446,8 +430,8 @@ class OrbitalSet(Lockable):
 
         :return: number of orbitals in supercell
         """
-        num_orb_sc = self.num_orb_pc * np.prod(self.dim).item()
-        num_orb_sc -= len(self.vacancy_list)
+        num_orb_sc = self.num_orb_pc * np.prod(self._dim).item()
+        num_orb_sc -= len(self._vacancy_list)
         return num_orb_sc
 
 
@@ -472,9 +456,9 @@ class SuperCell(OrbitalSet):
 
     Attributes
     ----------
-    hop_modifier: 'SCIntraHopping' instance
+    _hop_modifier: 'SCIntraHopping' instance
         modification to hopping terms in the supercell
-    orb_pos_modifier: function
+    _orb_pos_modifier: function
         modification to orbital positions in the supercell
     """
     def __init__(self, prim_cell: PrimitiveCell,
@@ -493,16 +477,16 @@ class SuperCell(OrbitalSet):
         :raises SCDimLenError: if len(dim) != 2 or 3
         :raises SCDimSizeError: if dimension is smaller than minimal value
         :raises PBCLenError: if len(pbc) != 2 or 3
-        :raises VacIDPCLenError: if any vacancy does not have right length
-        :raises VacIDPCIndexError: if cell or orbital index of any vacancy is
+        :raises IDPCLenError: if any vacancy does not have right length
+        :raises IDPCIndexError: if cell or orbital index of any vacancy is
             out of range
         """
         # Build orbital set
         super().__init__(prim_cell, dim, pbc=pbc, vacancies=vacancies)
 
         # Initialize hop_modifier and orb_pos_modifier
-        self.hop_modifier = IntraHopping()
-        self.orb_pos_modifier = orb_pos_modifier
+        self._hop_modifier = IntraHopping()
+        self._orb_pos_modifier = orb_pos_modifier
 
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
@@ -516,7 +500,7 @@ class SuperCell(OrbitalSet):
         :param orb_j: index of orbital j in <i,0|H|j,R>
         :param energy: hopping integral in eV
         :return: None
-        :raises SCLockError: if the supercell is locked
+        :raises LockError: if the supercell is locked
         :raises SCOrbIndexError: if orb_i or orb_j falls out of range
         :raises SCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
@@ -537,7 +521,7 @@ class SuperCell(OrbitalSet):
             raise exc.SCHopDiagonalError(rn, orb_i)
 
         # Add the hopping term
-        self.hop_modifier.add_hopping(rn, orb_i, orb_j, energy)
+        self._hop_modifier.add_hopping(rn, orb_i, orb_j, energy)
 
     def set_orb_pos_modifier(self, orb_pos_modifier: Callable = None) -> None:
         """
@@ -545,10 +529,10 @@ class SuperCell(OrbitalSet):
 
         :param orb_pos_modifier: modifier to orbital positions
         :return: None
-        :raises SCLockError: if the supercell is locked
+        :raises LockError: if the supercell is locked
         """
         self.check_lock()
-        self.orb_pos_modifier = orb_pos_modifier
+        self._orb_pos_modifier = orb_pos_modifier
 
     def get_orb_eng(self) -> np.ndarray:
         """
@@ -558,7 +542,7 @@ class SuperCell(OrbitalSet):
             on-site energies of orbitals in the supercell in eV
         """
         self.sync_array()
-        return core.build_orb_eng(self.pc_orb_eng, self.orb_id_pc)
+        return core.build_orb_eng(self.pc_orb_eng, self._orb_id_pc)
 
     def get_orb_pos(self) -> np.ndarray:
         """
@@ -569,10 +553,10 @@ class SuperCell(OrbitalSet):
         """
         self.sync_array()
         orb_pos = core.build_orb_pos(self.pc_lat_vec, self.pc_orb_pos,
-                                     self.orb_id_pc)
+                                     self._orb_id_pc)
         orb_pos += self.pc_origin
-        if self.orb_pos_modifier is not None:
-            self.orb_pos_modifier(orb_pos)
+        if self._orb_pos_modifier is not None:
+            self._orb_pos_modifier(orb_pos)
         return orb_pos
 
     def _init_hop(self, with_dr: bool = False,
@@ -593,15 +577,15 @@ class SuperCell(OrbitalSet):
         if with_dr:
             hop_i, hop_j, hop_v, dr = \
                 core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
-                               self.dim, self.pbc, self.num_orb_pc,
-                               self.orb_id_pc, self.vac_id_sc,
+                               self._dim, self._pbc, self.num_orb_pc,
+                               self._orb_id_pc, self._vac_id_sc,
                                self.sc_lat_vec, orb_pos,
                                data_kind=1)
         else:
             hop_i, hop_j, hop_v =  \
                 core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
-                               self.dim, self.pbc, self.num_orb_pc,
-                               self.orb_id_pc, self.vac_id_sc,
+                               self._dim, self._pbc, self.num_orb_pc,
+                               self._orb_id_pc, self._vac_id_sc,
                                self.sc_lat_vec, None,
                                data_kind=0)
             dr = None
@@ -629,20 +613,20 @@ class SuperCell(OrbitalSet):
 
         # Split pc hopping terms into free and periodic parts
         ind_pbc, eng_pbc, ind_free, eng_free = \
-            core.split_pc_hop(self.pc_hop_ind, self.pc_hop_eng, self.pbc)
+            core.split_pc_hop(self.pc_hop_ind, self.pc_hop_eng, self._pbc)
 
         # Build sc hopping terms from periodic parts
         # This is fast since we can predict the number of hopping terms.
         if with_dr:
             i_pbc, j_pbc, v_pbc, dr_pbc = \
                 core.build_hop_pbc(ind_pbc, eng_pbc,
-                                   self.dim, self.pbc, self.num_orb_pc,
+                                   self._dim, self._pbc, self.num_orb_pc,
                                    self.sc_lat_vec, orb_pos,
                                    data_kind=1)
         else:
             i_pbc, j_pbc, v_pbc = \
                 core.build_hop_pbc(ind_pbc, eng_pbc,
-                                   self.dim, self.pbc, self.num_orb_pc,
+                                   self._dim, self._pbc, self.num_orb_pc,
                                    self.sc_lat_vec, None,
                                    data_kind=0)
             dr_pbc = None
@@ -653,15 +637,15 @@ class SuperCell(OrbitalSet):
         if with_dr:
             i_free, j_free, v_free, dr_free = \
                 core.build_hop(ind_free, eng_free,
-                               self.dim, self.pbc, self.num_orb_pc,
-                               self.orb_id_pc, self.vac_id_sc,
+                               self._dim, self._pbc, self.num_orb_pc,
+                               self._orb_id_pc, self._vac_id_sc,
                                self.sc_lat_vec, orb_pos,
                                data_kind=1)
         else:
             i_free, j_free, v_free =  \
                 core.build_hop(ind_free, eng_free,
-                               self.dim, self.pbc, self.num_orb_pc,
-                               self.orb_id_pc, self.vac_id_sc,
+                               self._dim, self._pbc, self.num_orb_pc,
+                               self._orb_id_pc, self._vac_id_sc,
                                self.sc_lat_vec, None,
                                data_kind=0)
             dr_free = None
@@ -676,15 +660,15 @@ class SuperCell(OrbitalSet):
             dr = None
         return hop_i, hop_j, hop_v, dr
 
-    def get_hop(self, use_fast: str = "auto") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_hop(self, algo: str = "auto") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get indices and energies of all hopping terms in the supercell.
 
         NOTE: The hopping terms will be reduced by conjugate relation.
         So only half of them will be returned as results.
 
-        :param use_fast: whether to enable the fast algorithm to build the
-            hopping terms
+        :param algo: algorithm to build the hopping terms, should be "fast" or
+            "auto"
         :return: (hop_i, hop_j, hop_v)
             hop_i: (num_hop_sc,) int64 array
             row indices of hopping terms reduced by conjugate relation
@@ -696,16 +680,20 @@ class SuperCell(OrbitalSet):
         self.sync_array()
 
         # Get initial hopping terms
-        if use_fast == "auto":
-            use_fast = (len(self.vacancy_list) == 0)
+        if algo == "auto":
+            use_fast = (len(self._vacancy_list) == 0)
+        elif algo == "fast":
+            use_fast = True
+        else:
+            use_fast = False
         if use_fast:
             hop_i, hop_j, hop_v = self._init_hop_fast()[:3]
         else:
             hop_i, hop_j, hop_v = self._init_hop()[:3]
 
         # Apply hopping modifier
-        if self.hop_modifier.num_hop != 0:
-            hop_ind, hop_eng = self.hop_modifier.to_array(use_int64=True)
+        if self._hop_modifier.num_hop != 0:
+            hop_ind, hop_eng = self._hop_modifier.to_array(use_int64=True)
             hop_i_new, hop_j_new, hop_v_new = [], [], []
 
             for ih in range(hop_ind.shape[0]):
@@ -729,7 +717,7 @@ class SuperCell(OrbitalSet):
             hop_v = np.append(hop_v, hop_v_new)
         return hop_i, hop_j, hop_v
 
-    def get_dr(self, use_fast: str = "auto") -> np.ndarray:
+    def get_dr(self, algo: str = "auto") -> np.ndarray:
         """
         Get distances of all hopping terms in the supercell.
 
@@ -742,8 +730,8 @@ class SuperCell(OrbitalSet):
         for adding magnetic field, calculating band structure and many
         properties involving dx and dy.
 
-        :param use_fast: whether to enable the fast algorithm to build the
-            hopping distances
+        :param algo: algorithm to build the hopping terms, should be "fast" or
+            "auto"
         :return: dr: (num_hop_sc, 3) float64 array
             distances of hopping terms in accordance with hop_i and hop_j in nm
         """
@@ -751,8 +739,12 @@ class SuperCell(OrbitalSet):
         orb_pos = self.get_orb_pos()
 
         # Get initial hopping terms and dr
-        if use_fast == "auto":
-            use_fast = (len(self.vacancy_list) == 0)
+        if algo == "auto":
+            use_fast = (len(self._vacancy_list) == 0)
+        elif algo == "fast":
+            use_fast = True
+        else:
+            use_fast = False
         if use_fast:
             hop_i, hop_j, hop_v, dr = self._init_hop_fast(with_dr=True,
                                                           orb_pos=orb_pos)
@@ -761,8 +753,8 @@ class SuperCell(OrbitalSet):
                                                      orb_pos=orb_pos)
 
         # Apply hopping modifier
-        if self.hop_modifier.num_hop != 0:
-            hop_ind, hop_eng = self.hop_modifier.to_array(use_int64=True)
+        if self._hop_modifier.num_hop != 0:
+            hop_ind, hop_eng = self._hop_modifier.to_array(use_int64=True)
             dr_new = []
 
             for ih in range(hop_ind.shape[0]):
@@ -789,21 +781,20 @@ class SuperCell(OrbitalSet):
         Trim dangling orbitals and associated hopping terms.
 
         :return: None.
-        :raises SCLockError: if the object is locked
+        :raises LockError: if the object is locked
         """
-        if self.is_locked:
-            raise exc.SCLockError()
+        self.check_lock()
 
         # Get indices of dangling orbitals
         hop_i, hop_j, hop_v = self.get_hop()
-        id_pc_trim = core.get_orb_id_trim(self.orb_id_pc, hop_i, hop_j)
+        id_pc_trim = core.get_orb_id_trim(self._orb_id_pc, hop_i, hop_j)
         id_sc_trim = self.orb_id_pc2sc_array(id_pc_trim)
 
         # Add vacancies
         self.add_vacancies(id_pc_trim)
 
         # Also trim hop_modifier
-        self.hop_modifier.remove_orbitals(id_sc_trim)
+        self._hop_modifier.remove_orbitals(id_sc_trim)
 
     def get_reciprocal_vectors(self) -> np.ndarray:
         """
@@ -884,14 +875,23 @@ class SuperCell(OrbitalSet):
         # Plot cells
         if with_cells:
             if view in ("ab", "ba"):
-                viewer.add_grid(0, self.dim.item(0), 0, self.dim.item(1))
+                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(1))
             elif view in ("bc", "cb"):
-                viewer.add_grid(0, self.dim.item(1), 0, self.dim.item(2))
+                viewer.add_grid(0, self._dim.item(1), 0, self._dim.item(2))
             else:
-                viewer.add_grid(0, self.dim.item(0), 0, self.dim.item(2))
+                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(2))
             viewer.plot_grid(color="k", linestyle=":")
             viewer.plot_lat_vec(color="k", length_includes_head=True,
                                 width=0.005, head_width=0.02)
+
+    @property
+    def prim_cell(self) -> PrimitiveCell:
+        """
+        Interface for the '_prim_cell' attribute.
+
+        :return: the primitive cell
+        """
+        return self._prim_cell
 
     @property
     def pc_lat_vec(self) -> np.ndarray:
@@ -901,7 +901,7 @@ class SuperCell(OrbitalSet):
         :return: (3, 3) float64 array
             lattice vectors of primitive cell in nm.
         """
-        return self.prim_cell.lat_vec
+        return self._prim_cell.lat_vec
 
     @property
     def sc_lat_vec(self) -> np.ndarray:
@@ -913,7 +913,7 @@ class SuperCell(OrbitalSet):
         """
         sc_lat_vec = self.pc_lat_vec.copy()
         for i in range(3):
-            sc_lat_vec[i] *= self.dim.item(i)
+            sc_lat_vec[i] *= self._dim.item(i)
         return sc_lat_vec
 
     @property
@@ -924,7 +924,7 @@ class SuperCell(OrbitalSet):
         :return: (3,) float64 array
             lattice origin of primitive cell in NM
         """
-        return self.prim_cell.origin
+        return self._prim_cell.origin
 
     @property
     def pc_orb_pos(self) -> np.ndarray:
@@ -934,7 +934,7 @@ class SuperCell(OrbitalSet):
         :return: (num_orb_pc, 3) float64 array
             fractional positions of primitive cell
         """
-        return self.prim_cell.orb_pos
+        return self._prim_cell.orb_pos
 
     @property
     def pc_orb_eng(self) -> np.ndarray:
@@ -944,7 +944,7 @@ class SuperCell(OrbitalSet):
         :return: (num_orb_pc,) float64 array
             energies of orbitals of primitive cell in eV.
         """
-        return self.prim_cell.orb_eng
+        return self._prim_cell.orb_eng
 
     @property
     def pc_hop_ind(self) -> np.ndarray:
@@ -954,7 +954,7 @@ class SuperCell(OrbitalSet):
         :return: (num_hop_pc, 5) int32 array
             indices of hopping terms of primitive cell
         """
-        return self.prim_cell.hop_ind
+        return self._prim_cell.hop_ind
 
     @property
     def pc_hop_eng(self) -> np.ndarray:
@@ -964,4 +964,4 @@ class SuperCell(OrbitalSet):
         :return: (num_hop_pc,) complex128 array
             hopping energies of primitive cell in eV
         """
-        return self.prim_cell.hop_eng
+        return self._prim_cell.hop_eng

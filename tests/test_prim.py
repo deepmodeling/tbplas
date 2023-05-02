@@ -61,43 +61,43 @@ class TestPrimitive(unittest.TestCase):
         """
         # add_orbital
         cell = make_cell()
-        cell.lock()
-        with self.assertRaises(exc.PCLockError) as cm:
+        cell.lock(0)
+        with self.assertRaises(exc.LockError) as cm:
             cell.add_orbital((1.2, 0.5), 0.1)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
         # set_orbital
         cell = make_cell()
-        cell.lock()
-        with self.assertRaises(exc.PCLockError) as cm:
+        cell.lock(0)
+        with self.assertRaises(exc.LockError) as cm:
             cell.set_orbital(1, energy=0.25)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
         # remove_orbital
         cell = make_cell()
-        cell.lock()
-        with self.assertRaises(exc.PCLockError) as cm:
+        cell.lock(0)
+        with self.assertRaises(exc.LockError) as cm:
             cell.remove_orbital(0)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
         # add_hopping
         cell = make_cell()
-        cell.lock()
-        with self.assertRaises(exc.PCLockError) as cm:
+        cell.lock(0)
+        with self.assertRaises(exc.LockError) as cm:
             cell.add_hopping((-1, 0), 0, 0, 2.5)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
         # remove_hopping
         cell = make_cell()
-        cell.lock()
-        with self.assertRaises(exc.PCLockError) as cm:
+        cell.lock(0)
+        with self.assertRaises(exc.LockError) as cm:
             cell.remove_hopping((0, 0), 0, 1)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
     def test02_unlock(self):
         """
@@ -110,48 +110,48 @@ class TestPrimitive(unittest.TestCase):
 
         # add_orbital
         cell = make_cell()
-        cell.lock()
+        cell.lock(0)
         cell.unlock()
 
         def _test():
             cell.add_orbital((1.2, 0.5), 0.1)
-        th.test_no_raise(_test, exc.PCLockError)
+        th.test_no_raise(_test, exc.LockError)
 
         # set_orbital
         cell = make_cell()
-        cell.lock()
+        cell.lock(0)
         cell.unlock()
 
         def _test():
             cell.set_orbital(1, energy=0.25)
-        th.test_no_raise(_test, exc.PCLockError)
+        th.test_no_raise(_test, exc.LockError)
 
         # remove_orbital
         cell = make_cell()
-        cell.lock()
+        cell.lock(0)
         cell.unlock()
 
         def _test():
             cell.remove_orbital(0)
-        th.test_no_raise(_test, exc.PCLockError)
+        th.test_no_raise(_test, exc.LockError)
 
         # add_hopping
         cell = make_cell()
-        cell.lock()
+        cell.lock(0)
         cell.unlock()
 
         def _test():
             cell.add_hopping((-1, 0), 0, 0, 2.5)
-        th.test_no_raise(_test, exc.PCLockError)
+        th.test_no_raise(_test, exc.LockError)
 
         # remove_hopping
         cell = make_cell()
-        cell.lock()
+        cell.lock(0)
         cell.unlock()
 
         def _test():
             cell.remove_hopping((0, 0), 0, 1)
-        th.test_no_raise(_test, exc.PCLockError)
+        th.test_no_raise(_test, exc.LockError)
 
     def test03_add_orbital(self):
         """

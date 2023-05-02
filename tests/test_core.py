@@ -37,9 +37,9 @@ class TestCore(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=self.dim_small)
         record = "acc_sps"
         self.timer.tic(record)
-        result = core.test_acc_sps(orb_set.dim,
+        result = core.test_acc_sps(orb_set._dim,
                                    orb_set.num_orb_pc,
-                                   orb_set.orb_id_pc)
+                                   orb_set._orb_id_pc)
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
@@ -52,9 +52,9 @@ class TestCore(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=self.dim_small)
         record = "acc_psp"
         self.timer.tic(record)
-        result = core.test_acc_psp(orb_set.dim,
+        result = core.test_acc_psp(orb_set._dim,
                                    orb_set.num_orb_pc,
-                                   orb_set.orb_id_pc)
+                                   orb_set._orb_id_pc)
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
@@ -67,12 +67,13 @@ class TestCore(unittest.TestCase):
         """
         orb_set = OrbitalSet(self.cell, dim=self.dim_small)
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         record = "acc_sps_vac"
         self.timer.tic(record)
-        result = core.test_acc_sps_vac(orb_set.dim,
+        result = core.test_acc_sps_vac(orb_set._dim,
                                        orb_set.num_orb_pc,
-                                       orb_set.orb_id_pc,
-                                       orb_set.vac_id_sc)
+                                       orb_set._orb_id_pc,
+                                       orb_set._vac_id_sc)
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
@@ -85,12 +86,13 @@ class TestCore(unittest.TestCase):
         """
         orb_set = OrbitalSet(self.cell, dim=self.dim_small)
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         record = "acc_psp_vac"
         self.timer.tic(record)
-        result = core.test_acc_psp_vac(orb_set.dim,
+        result = core.test_acc_psp_vac(orb_set._dim,
                                        orb_set.num_orb_pc,
-                                       orb_set.orb_id_pc,
-                                       orb_set.vac_id_sc)
+                                       orb_set._orb_id_pc,
+                                       orb_set._vac_id_sc)
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
@@ -103,9 +105,9 @@ class TestCore(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=self.dim_large)
         record = "speed_pc2sc"
         self.timer.tic(record)
-        core.test_speed_pc2sc(orb_set.dim,
+        core.test_speed_pc2sc(orb_set._dim,
                               orb_set.num_orb_pc,
-                              orb_set.orb_id_pc)
+                              orb_set._orb_id_pc)
         self.timer.toc(record)
 
     def test05_speed_pc2sc_vac(self):
@@ -117,12 +119,13 @@ class TestCore(unittest.TestCase):
         """
         orb_set = OrbitalSet(self.cell, dim=self.dim_large)
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         record = "speed_pc2sc_vac"
         self.timer.tic(record)
-        core.test_speed_pc2sc_vac(orb_set.dim,
+        core.test_speed_pc2sc_vac(orb_set._dim,
                                   orb_set.num_orb_pc,
-                                  orb_set.orb_id_pc,
-                                  orb_set.vac_id_sc)
+                                  orb_set._orb_id_pc,
+                                  orb_set._vac_id_sc)
         self.timer.toc(record)
 
     def test06_speed_sc2pc(self):
@@ -134,7 +137,7 @@ class TestCore(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=self.dim_large)
         record = "speed_sc2pc"
         self.timer.tic(record)
-        core.test_speed_sc2pc(orb_set.orb_id_pc)
+        core.test_speed_sc2pc(orb_set._orb_id_pc)
         self.timer.toc(record)
 
     def test07_acc_py(self):
@@ -158,7 +161,7 @@ class TestCore(unittest.TestCase):
         result = 0
         record = "acc_psp_py"
         self.timer.tic(record)
-        for i in orb_set.orb_id_pc:
+        for i in orb_set._orb_id_pc:
             sc = orb_set.orb_id_pc2sc(i)
             pc = orb_set.orb_id_sc2pc(sc)
             for j in range(4):
@@ -189,7 +192,7 @@ class TestCore(unittest.TestCase):
         result = 0
         record = "acc_psp_vac_py"
         self.timer.tic(record)
-        for i in orb_set.orb_id_pc:
+        for i in orb_set._orb_id_pc:
             sc = orb_set.orb_id_pc2sc(i)
             pc = orb_set.orb_id_sc2pc(sc)
             for j in range(4):
@@ -206,7 +209,7 @@ class TestCore(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=self.dim_large)
         record = "speed_pc2sc_py"
         self.timer.tic(record)
-        for pc in orb_set.orb_id_pc:
+        for pc in orb_set._orb_id_pc:
             orb_set.orb_id_pc2sc(pc)
         self.timer.toc(record)
 
@@ -219,9 +222,10 @@ class TestCore(unittest.TestCase):
         """
         orb_set = OrbitalSet(self.cell, dim=self.dim_large)
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         record = "speed_pc2sc_vac_py"
         self.timer.tic(record)
-        for pc in orb_set.orb_id_pc:
+        for pc in orb_set._orb_id_pc:
             orb_set.orb_id_pc2sc(pc)
         self.timer.toc(record)
 
@@ -249,7 +253,7 @@ class TestCore(unittest.TestCase):
 
         record = "acc_pc2sc_array"
         self.timer.tic(record)
-        sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
+        sc_test = orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
         sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                              dtype=np.int64)
         self.timer.toc(record)
@@ -257,33 +261,15 @@ class TestCore(unittest.TestCase):
 
         record = "acc_pc2sc_array_vac"
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         self.timer.tic(record)
-        sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
+        sc_test = orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
         sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                              dtype=np.int64)
         self.timer.toc(record)
         th.test_equal_array(sc_test, sc_ref)
 
-    def test13_speed_pc2sc_array(self):
-        """
-        Test the efficiency of Python interface orb_id_pc2sc_array.
-
-        :return: None
-        """
-        orb_set = OrbitalSet(self.cell, dim=self.dim_large)
-
-        record = "speed_pc2sc_array"
-        self.timer.tic(record)
-        orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
-        self.timer.toc(record)
-
-        record = "speed_pc2sc_array_vac"
-        orb_set.set_vacancies(self.vac)
-        self.timer.tic(record)
-        orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
-        self.timer.toc(record)
-
-    def test14_acc_sc2pc_array(self):
+    def test13_acc_sc2pc_array(self):
         """
         Test the accuracy of Python interface orb_id_sc2pc_array.
 
@@ -298,16 +284,37 @@ class TestCore(unittest.TestCase):
         self.timer.tic(record)
         pc = orb_set.orb_id_sc2pc_array(sc)
         self.timer.toc(record)
-        th.test_equal_array(pc, orb_set.orb_id_pc)
+        th.test_equal_array(pc, orb_set._orb_id_pc)
 
         record = "acc_sc2pc_array_vac"
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         sc = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                          dtype=np.int64)
         self.timer.tic(record)
         pc = orb_set.orb_id_sc2pc_array(sc)
         self.timer.toc(record)
-        th.test_equal_array(pc, orb_set.orb_id_pc)
+        th.test_equal_array(pc, orb_set._orb_id_pc)
+
+    def test14_speed_pc2sc_array(self):
+        """
+        Test the efficiency of Python interface orb_id_pc2sc_array.
+
+        :return: None
+        """
+        orb_set = OrbitalSet(self.cell, dim=self.dim_large)
+
+        record = "speed_pc2sc_array"
+        self.timer.tic(record)
+        orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
+        self.timer.toc(record)
+
+        record = "speed_pc2sc_array_vac"
+        orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
+        self.timer.tic(record)
+        orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
+        self.timer.toc(record)
 
     def test15_speed_sc2pc_array(self):
         """
@@ -326,6 +333,7 @@ class TestCore(unittest.TestCase):
 
         record = "speed_sc2pc_array_vac"
         orb_set.set_vacancies(self.vac)
+        orb_set.sync_array()
         sc = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                          dtype=np.int64)
         self.timer.tic(record)

@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 """Example for constructing graphene sample with vacancies."""
 
-from typing import Tuple, List
-
 import numpy as np
 
 import tbplas as tb
@@ -11,7 +9,7 @@ import tbplas as tb
 def get_vacancies(super_cell: tb.SuperCell,
                   orb_pos: np.ndarray,
                   centers: np.ndarray,
-                  radius: float = 0.5) -> List[Tuple[int, int, int, int]]:
+                  radius: float = 0.5) -> np.ndarray:
     """
     Get indices of vacancies according to given center and radius.
 
@@ -22,11 +20,12 @@ def get_vacancies(super_cell: tb.SuperCell,
     :return: indices of vacancies in primitive cell representation
     """
     vacancies = []
-    for i, id_pc in enumerate(super_cell.orb_id_pc):
+    for i in range(super_cell.num_orb_sc):
         for c0 in centers:
             if np.linalg.norm(orb_pos[i] - c0) <= radius:
-                vacancies.append(tuple(id_pc))
-    return vacancies
+                vacancies.append(i)
+    vacancies = np.array(vacancies)
+    return super_cell.orb_id_sc2pc_array(vacancies)
 
 
 def main():

@@ -36,11 +36,11 @@ class TestSuper(unittest.TestCase):
         :return: None.
         """
         # PCLockError
-        with self.assertRaises(exc.PCLockError) as cm:
+        with self.assertRaises(exc.LockError) as cm:
             orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
-            orb_set.prim_cell.add_orbital((0.0, 0.0), 1.5)
+            orb_set._prim_cell.add_orbital((0.0, 0.0), 1.5)
         self.assertRegex(str(cm.exception),
-                         r"trying to modify a locked primitive cell")
+                         r"trying to modify a locked object")
 
         # DimLenError
         with self.assertRaises(exc.SCDimLenError) as cm:
@@ -73,10 +73,10 @@ class TestSuper(unittest.TestCase):
         :return: None.
         """
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
-        self.assertEqual(orb_set.vacancy_list, [])
-        self.assertIsNone(orb_set.vac_id_pc)
-        self.assertIsNone(orb_set.vac_id_sc)
-        self.assertEqual(orb_set.orb_id_pc.shape, (18, 4))
+        self.assertEqual(orb_set._vacancy_list, [])
+        self.assertIsNone(orb_set._vac_id_pc)
+        self.assertIsNone(orb_set._vac_id_sc)
+        self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
 
     def test02_check_id_pc_illegal(self):
         """
@@ -166,13 +166,13 @@ class TestSuper(unittest.TestCase):
         vacancies = [(0, 0, 0, 1), (3, 0, 0, 1)]
 
         # VacIDPCLenError
-        with self.assertRaises(exc.VacIDPCLenError) as cm:
+        with self.assertRaises(exc.IDPCLenError) as cm:
             orb_set.set_vacancies([(0, 1, 0), (0, 0, 1, 0, 0)])
         self.assertRegex(str(cm.exception),
                          r"length of id_pc .+ is not 4")
 
         # VacIDPCIndexError
-        with self.assertRaises(exc.VacIDPCIndexError) as cm:
+        with self.assertRaises(exc.IDPCIndexError) as cm:
             orb_set.set_vacancies(vacancies)
         self.assertRegex(str(cm.exception),
                          r"cell index .+ of id_pc .+ out of range")
@@ -197,20 +197,22 @@ class TestSuper(unittest.TestCase):
 
         # First we feed some effective input to set_vacancies.
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
-        orb_set.set_vacancies(vacancies, force_sync=True)
-        self.assertListEqual(orb_set.vacancy_list, vacancies)
-        th.test_equal_array(orb_set.vac_id_pc, vac_id_pc)
-        th.test_equal_array(orb_set.vac_id_pc, vac_id_pc)
-        th.test_equal_array(orb_set.vac_id_sc, vac_id_sc)
-        th.test_equal_array(orb_set.orb_id_pc, orb_id_pc)
+        orb_set.set_vacancies(vacancies)
+        orb_set.sync_array()
+        self.assertListEqual(orb_set._vacancy_list, vacancies)
+        th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
+        th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
+        th.test_equal_array(orb_set._vac_id_sc, vac_id_sc)
+        th.test_equal_array(orb_set._orb_id_pc, orb_id_pc)
 
         # Then we feed a blank to set_vacancies.
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
         orb_set.set_vacancies([])
-        self.assertEqual(orb_set.vacancy_list, [])
-        self.assertIsNone(orb_set.vac_id_pc)
-        self.assertIsNone(orb_set.vac_id_sc)
-        self.assertEqual(orb_set.orb_id_pc.shape, (18, 4))
+        orb_set.sync_array()
+        self.assertEqual(orb_set._vacancy_list, [])
+        self.assertIsNone(orb_set._vac_id_pc)
+        self.assertIsNone(orb_set._vac_id_sc)
+        self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
 
         # Finally, we feed a list of vacancies with redundant items.
         # These redundant items should be detected and removed.
@@ -218,7 +220,7 @@ class TestSuper(unittest.TestCase):
         vacancies = [(0, 0, 0, 1), (1, 0, 0, 0), (0, 0, 0, 1)]
         orb_set.set_vacancies(vacancies)
         reduced_vacancies = [(0, 0, 0, 1), (1, 0, 0, 0)]
-        self.assertListEqual(orb_set.vacancy_list, reduced_vacancies)
+        self.assertListEqual(orb_set._vacancy_list, reduced_vacancies)
 
     def test06_sync_array(self):
         """
@@ -241,7 +243,7 @@ class TestSuper(unittest.TestCase):
 
         # 2nd call
         # As we have updated orb_set.vacancy_list, arrays will be updated.
-        orb_set.vacancy_list = vacancies
+        orb_set._vacancy_list = vacancies
         th.test_stdout(_test, update)
 
         # 3rd call
@@ -249,7 +251,7 @@ class TestSuper(unittest.TestCase):
         th.test_stdout(_test, no_update)
 
         # 4th call with vacancy_list set to []
-        orb_set.vacancy_list = []
+        orb_set._vacancy_list = []
         th.test_stdout(_test, update)
 
         # 5th call
@@ -266,7 +268,7 @@ class TestSuper(unittest.TestCase):
         th = TestHelper(self)
         self.assertEqual(sc.num_orb_pc,
                          sc.prim_cell.num_orb)
-        self.assertEqual(sc.num_orb_sc, sc.orb_id_pc.shape[0])
+        self.assertEqual(sc.num_orb_sc, sc._orb_id_pc.shape[0])
         th.test_equal_array(sc.pc_lat_vec, sc.prim_cell.lat_vec, almost=True)
         th.test_equal_array(sc.pc_orb_pos, sc.prim_cell.orb_pos, almost=True)
         th.test_equal_array(sc.pc_orb_eng, sc.prim_cell.orb_eng, almost=True)
@@ -291,7 +293,7 @@ class TestSuper(unittest.TestCase):
 
         # Then test the normal case
         for i in range(orb_set.num_orb_sc):
-            th.test_equal_array(orb_set.orb_id_sc2pc(i), orb_set.orb_id_pc[i])
+            th.test_equal_array(orb_set.orb_id_sc2pc(i), orb_set._orb_id_pc[i])
 
     def test09_orb_id_pc2sc(self):
         """
@@ -314,7 +316,7 @@ class TestSuper(unittest.TestCase):
 
         # Then test the normal case
         for i in range(orb_set.num_orb_sc):
-            self.assertEqual(orb_set.orb_id_pc2sc(orb_set.orb_id_pc[i]), i)
+            self.assertEqual(orb_set.orb_id_pc2sc(orb_set._orb_id_pc[i]), i)
 
     def test10_orb_id_sc2pc_array(self):
         """
@@ -336,7 +338,7 @@ class TestSuper(unittest.TestCase):
         id_sc = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                             dtype=np.int64)
         id_pc = orb_set.orb_id_sc2pc_array(id_sc)
-        th.test_equal_array(id_pc, orb_set.orb_id_pc)
+        th.test_equal_array(id_pc, orb_set._orb_id_pc)
 
     def test11_orb_id_pc2sc_array(self):
         """
@@ -373,7 +375,7 @@ class TestSuper(unittest.TestCase):
                                             r" a vacancy")
 
         # Normal case
-        id_sc_test = orb_set.orb_id_pc2sc_array(orb_set.orb_id_pc)
+        id_sc_test = orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
         id_sc_ref = np.linspace(0, orb_set.num_orb_sc-1, orb_set.num_orb_sc,
                                 dtype=np.int64)
         th.test_equal_array(id_sc_test, id_sc_ref)
@@ -419,8 +421,8 @@ class TestSuper(unittest.TestCase):
             (1, 2, 0, 0),  # new term
             (2, 0, 0, 1),  # new term
         ]
-        id_sc_bra = sc.orb_id_pc2sc_array(id_pc_bra)
-        id_sc_ket = sc.orb_id_pc2sc_array(id_pc_ket)
+        id_sc_bra = sc.orb_id_pc2sc_array(np.array(id_pc_bra))
+        id_sc_ket = sc.orb_id_pc2sc_array(np.array(id_pc_ket))
         for i in range(id_sc_bra.shape[0]):
             sc.add_hopping((0, 0, 0), id_sc_bra[i], id_sc_ket[i], energy=0.0)
 
@@ -463,10 +465,10 @@ class TestSuper(unittest.TestCase):
         prim_cell = extend_prim_cell(self.cell, dim=(10, 10, 1))
         super_cell = SuperCell(prim_cell, dim=(10, 10, 1), pbc=(True, True, False))
 
-        i1, j1, v1 = super_cell.get_hop(use_fast=False)
-        dr1 = super_cell.get_dr(use_fast=False)
-        i2, j2, v2 = super_cell.get_hop(use_fast=True)
-        dr2 = super_cell.get_dr(use_fast=True)
+        i1, j1, v1 = super_cell.get_hop(algo="no")
+        dr1 = super_cell.get_dr(algo="no")
+        i2, j2, v2 = super_cell.get_hop(algo="fast")
+        dr2 = super_cell.get_dr(algo="fast")
 
         shape = (super_cell.num_orb_sc, super_cell.num_orb_sc)
         h1 = coo_matrix((v1, (i1, j1)), shape=shape)

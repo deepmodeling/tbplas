@@ -101,6 +101,8 @@ class TestHetero(unittest.TestCase):
 
         # Then we glue them with 'merge_prim_cell'.
         # It should yield the same result.
+        pc_bra.unlock()
+        pc_ket.unlock()
         merged_cell = tb.merge_prim_cell(pc_bra, pc_ket)
         sample = tb.Sample(tb.SuperCell(merged_cell, dim=(3, 3, 1),
                                         pbc=(False, False, False)))
@@ -111,6 +113,8 @@ class TestHetero(unittest.TestCase):
         inter_hop = tb.PCInterHopping(pc_bra, pc_ket)
         inter_hop.add_hopping((0, 0, 0), 0, 0, 1.0)
         inter_hop.add_hopping((1, 1, 0), 0, 1, 1.0)
+        pc_bra.unlock()
+        pc_ket.unlock()
         merged_cell = tb.merge_prim_cell(pc_bra, pc_ket, inter_hop)
         sample = tb.Sample(tb.SuperCell(merged_cell, dim=(3, 3, 1),
                                         pbc=(False, False, False)))

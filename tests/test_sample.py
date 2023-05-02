@@ -75,10 +75,9 @@ class TestSample(unittest.TestCase):
         # Exception handling
         def _test():
             inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.lock()
+            inter_hop2.lock(0)
             inter_hop2.add_hopping(rn=(2, 1, 3), orb_i=1, orb_j=1, energy=-1.1)
-        th.test_raise(_test, exc.InterHopLockError, r"trying to modify a locked"
-                                                    r" inter-hopping object")
+        th.test_raise(_test, exc.LockError, r"trying to modify a locked object")
 
     def test01_get_hop(self):
         """
@@ -573,19 +572,19 @@ class TestSample(unittest.TestCase):
 
         holes = []
         center = np.array([2.101, 1.361, 0.0])
-        for i, id_pc in enumerate(sc.orb_id_pc):
+        for i, id_pc in enumerate(sc._orb_id_pc):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
         center = np.array([3.101, 3.361, 0.0])
-        for i, id_pc in enumerate(sc.orb_id_pc):
+        for i, id_pc in enumerate(sc._orb_id_pc):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
         center = np.array([5.84, 3.51, 0.0])
-        for i, id_pc in enumerate(sc.orb_id_pc):
+        for i, id_pc in enumerate(sc._orb_id_pc):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
         center = np.array([4.82, 1.11, 0.0])
-        for i, id_pc in enumerate(sc.orb_id_pc):
+        for i, id_pc in enumerate(sc._orb_id_pc):
             if np.linalg.norm(positions[i] - center) <= 0.5:
                 holes.append(tuple(id_pc))
 

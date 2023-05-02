@@ -98,7 +98,6 @@ class Mask:
         :param super_cell: supercell to mask
         :return: None. The incoming supercell is modified.
         """
-        super_cell.sync_array()
         masked_id_pc = []
         for box in self.boxes:
             if box.void:
@@ -108,7 +107,6 @@ class Mask:
                 masked_id_pc.extend(id_pc)
         super_cell.unlock()
         super_cell.set_vacancies(masked_id_pc)
-        super_cell.sync_array()
 
     def etch_prim_cell(self, prim_cell: tb.PrimitiveCell, width: int) -> None:
         """

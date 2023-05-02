@@ -13,7 +13,7 @@ from scipy.optimize import leastsq
 from ..base import cart2frac, rotate_coord
 from ..base import constants as consts
 from . import exceptions as exc
-from .base import check_rn, InterHopping, rn_type
+from .base import check_rn, Lockable, InterHopping, rn_type
 from .primitive import PrimitiveCell
 from .super import SuperCell
 
@@ -247,7 +247,7 @@ def make_hetero_layer(prim_cell: PrimitiveCell,
     return hetero_layer
 
 
-class PCInterHopping(InterHopping):
+class PCInterHopping(Lockable, InterHopping):
     """
     Class for holding hopping terms between different primitive cells
     in hetero-structure.
@@ -270,9 +270,27 @@ class PCInterHopping(InterHopping):
         :param pc_bra: 'bra' primitive cell from which the hopping terms exist
         :param pc_ket: 'ket' primitive cell from which the hopping terms exist
         """
-        super().__init__()
+        Lockable.__init__(self)
+        InterHopping.__init__(self)
         self._pc_bra = pc_bra
         self._pc_ket = pc_ket
+
+    def add_hopping(self, rn: rn_type,
+                    orb_i: int,
+                    orb_j: int,
+                    energy: complex) -> None:
+        """
+        Add a new hopping term or update existing term.
+
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
+        :param energy: hopping energy
+        :return: None
+        :raises LockError: is the object is locked
+        """
+        self.check_lock()
+        super().add_hopping(rn, orb_i, orb_j, energy)
 
     @property
     def pc_bra(self) -> PrimitiveCell:
@@ -378,6 +396,11 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
                 merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
                                         energy=energy)
 
+    # Finally, lock all components before return
+    for pc in pc_list:
+        pc.lock(id(merged_cell))
+    for hop in hop_list:
+        hop.lock(id(merged_cell))
     return merged_cell
 
 

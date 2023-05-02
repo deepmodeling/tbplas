@@ -102,20 +102,25 @@ class Lockable(ABC):
 
     Attributes
     ----------
-    is_locked: bool
+    __locked: bool
         whether the object is locked
+    __locker_id: List[int]
+        ids of lockers who locked this object
     """
     def __init__(self) -> None:
-        self.is_locked = False
+        self.__locked = False
+        self.__locker_id = []
 
-    def lock(self) -> None:
+    def lock(self, locker_id: int) -> None:
         """
         Lock the object. Modifications are not allowed then unless the 'unlock'
         method is called.
 
+        :param locker_id: id of the locker
         :return: None
         """
-        self.is_locked = True
+        self.__locked = True
+        self.__locker_id.append(locker_id)
 
     def unlock(self) -> None:
         """
@@ -123,12 +128,19 @@ class Lockable(ABC):
 
         :return: None
         """
-        self.is_locked = False
+        self.__locked = False
 
-    @abstractmethod
     def check_lock(self) -> None:
-        """Check the lock state of the object."""
-        pass
+        """
+        Check the lock state of the object.
+
+        :return: None
+        :raises LockError: if the object is locked
+        """
+        if self.__locked:
+            print("This object has been locked by:")
+            print(self.__locker_id)
+            raise exc.LockError()
 
 
 class Hopping(ABC):

@@ -48,13 +48,6 @@ class LockError(Exception):
         return f"trying to modify a locked {self.object_name}"
 
 
-class PCLockError(LockError):
-    """Exception for modifying a locked primitive cell."""
-    def __init__(self):
-        super().__init__()
-        self.object_name = "primitive cell"
-
-
 class PCOrbIndexError(Exception):
     """Exception for reading or modifying an orbital with wrong index."""
     def __init__(self, orb_i):
@@ -140,11 +133,6 @@ class IDPCIndexError(IDPCError):
                f" {self.id_pc} out of range"
 
 
-class VacIDPCIndexError(IDPCIndexError):
-    """IDPCIndexError for vacancy."""
-    pass
-
-
 class IDPCLenError(IDPCError):
     """
     Exception for orbital index in PC representation with wrong length.
@@ -159,11 +147,6 @@ class IDPCLenError(IDPCError):
         return f"length of id_pc {self.id_pc} is not 4"
 
 
-class VacIDPCLenError(IDPCLenError):
-    """IDPCLenError for vacancy."""
-    pass
-
-
 class IDPCTypeError(IDPCError):
     """Exception for wrong type of orbital index in PC representation."""
     def __init__(self, id_pc):
@@ -171,11 +154,6 @@ class IDPCTypeError(IDPCError):
 
     def __str__(self):
         return f"illegal type {type(self.id_pc)} of id_pc"
-
-
-class VacIDPCTypeError(IDPCTypeError):
-    """IDPCTypeError for vacancy."""
-    pass
 
 
 class IDPCVacError(IDPCError):
@@ -212,25 +190,6 @@ class IDSCIndexError(IDSCError):
         return f"id_sc {self.id_sc} out of range"
 
 
-class VacIDSCIndexError(IDSCIndexError):
-    """IDSCIndexError for vacancy."""
-    pass
-
-
-class OrbSetLockError(LockError):
-    """Exception for modifying a locked orbital set."""
-    def __init__(self):
-        super().__init__()
-        self.object_name = "orbital set"
-
-
-class SCLockError(LockError):
-    """Exception for modifying a locked SuperCell instance."""
-    def __init__(self):
-        super().__init__()
-        self.object_name = "supercell object"
-
-
 class SCOrbIndexError(Exception):
     """Exception for reading or modifying an orbital with wrong index."""
     def __init__(self, orb_i):
@@ -249,13 +208,6 @@ class SCHopDiagonalError(Exception):
 
     def __str__(self):
         return f"hopping term {self.hop_ind} is diagonal"
-
-
-class InterHopLockError(LockError):
-    """Exception for modifying a locked SCInterHopping instance."""
-    def __init__(self):
-        super().__init__()
-        self.object_name = "inter-hopping object"
 
 
 class InterHopVoidError(Exception):
