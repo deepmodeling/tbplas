@@ -104,14 +104,14 @@ class Lockable(ABC):
     ----------
     __locked: bool
         whether the object is locked
-    __locker_id: List[int]
+    __locker_id: List[str]
         ids of lockers who locked this object
     """
     def __init__(self) -> None:
         self.__locked = False
         self.__locker_id = []
 
-    def lock(self, locker_id: int) -> None:
+    def lock(self, locker_id: str) -> None:
         """
         Lock the object. Modifications are not allowed then unless the 'unlock'
         method is called.
@@ -120,6 +120,10 @@ class Lockable(ABC):
         :return: None
         """
         self.__locked = True
+        try:
+            self.__locker_id.remove(locker_id)
+        except ValueError:
+            pass
         self.__locker_id.append(locker_id)
 
     def unlock(self) -> None:
@@ -129,6 +133,7 @@ class Lockable(ABC):
         :return: None
         """
         self.__locked = False
+        self.__locker_id = []
 
     def check_lock(self) -> None:
         """
@@ -139,7 +144,8 @@ class Lockable(ABC):
         """
         if self.__locked:
             print("This object has been locked by:")
-            print(self.__locker_id)
+            for locker in self.__locker_id:
+                print(locker)
             raise exc.LockError()
 
 

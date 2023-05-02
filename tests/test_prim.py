@@ -61,7 +61,7 @@ class TestPrimitive(unittest.TestCase):
         """
         # add_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         with self.assertRaises(exc.LockError) as cm:
             cell.add_orbital((1.2, 0.5), 0.1)
         self.assertRegex(str(cm.exception),
@@ -69,7 +69,7 @@ class TestPrimitive(unittest.TestCase):
 
         # set_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         with self.assertRaises(exc.LockError) as cm:
             cell.set_orbital(1, energy=0.25)
         self.assertRegex(str(cm.exception),
@@ -77,7 +77,7 @@ class TestPrimitive(unittest.TestCase):
 
         # remove_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         with self.assertRaises(exc.LockError) as cm:
             cell.remove_orbital(0)
         self.assertRegex(str(cm.exception),
@@ -85,7 +85,7 @@ class TestPrimitive(unittest.TestCase):
 
         # add_hopping
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         with self.assertRaises(exc.LockError) as cm:
             cell.add_hopping((-1, 0), 0, 0, 2.5)
         self.assertRegex(str(cm.exception),
@@ -93,7 +93,7 @@ class TestPrimitive(unittest.TestCase):
 
         # remove_hopping
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         with self.assertRaises(exc.LockError) as cm:
             cell.remove_hopping((0, 0), 0, 1)
         self.assertRegex(str(cm.exception),
@@ -110,7 +110,7 @@ class TestPrimitive(unittest.TestCase):
 
         # add_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         cell.unlock()
 
         def _test():
@@ -119,7 +119,7 @@ class TestPrimitive(unittest.TestCase):
 
         # set_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         cell.unlock()
 
         def _test():
@@ -128,7 +128,7 @@ class TestPrimitive(unittest.TestCase):
 
         # remove_orbital
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         cell.unlock()
 
         def _test():
@@ -137,7 +137,7 @@ class TestPrimitive(unittest.TestCase):
 
         # add_hopping
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         cell.unlock()
 
         def _test():
@@ -146,7 +146,7 @@ class TestPrimitive(unittest.TestCase):
 
         # remove_hopping
         cell = make_cell()
-        cell.lock(0)
+        cell.lock("test")
         cell.unlock()
 
         def _test():

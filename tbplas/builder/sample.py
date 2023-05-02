@@ -232,7 +232,7 @@ class Sample:
                 self._hop_list.append(arg)
             else:
                 raise exc.SampleCompError(i_arg)
-            arg.lock(id(self))
+            arg.lock(f"sample #{id(self)}")
 
         # Check closure of inter-hopping instances
         for i_h, hop in enumerate(self._hop_list):

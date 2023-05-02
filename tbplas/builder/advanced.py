@@ -397,10 +397,11 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
                                         energy=energy)
 
     # Finally, lock all components before return
+    locker_id = f"merged_cell #{id(merged_cell)}"
     for pc in pc_list:
-        pc.lock(id(merged_cell))
+        pc.lock(locker_id)
     for hop in hop_list:
-        hop.lock(id(merged_cell))
+        hop.lock(locker_id)
     return merged_cell
 
 

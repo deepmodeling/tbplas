@@ -120,7 +120,7 @@ class OrbitalSet(Lockable):
 
         # Set and lock the primitive cell
         self._prim_cell = prim_cell
-        self._prim_cell.lock(id(self))
+        self._prim_cell.lock(f"supercell #{id(self)}")
 
         # Check and set dimension
         dim, legal = check_rn(dim, complete_item=1)

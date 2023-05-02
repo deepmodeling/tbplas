@@ -75,7 +75,7 @@ class TestSample(unittest.TestCase):
         # Exception handling
         def _test():
             inter_hop2 = SCInterHopping(sc_bra=sc1, sc_ket=sc2)
-            inter_hop2.lock(0)
+            inter_hop2.lock("test")
             inter_hop2.add_hopping(rn=(2, 1, 3), orb_i=1, orb_j=1, energy=-1.1)
         th.test_raise(_test, exc.LockError, r"trying to modify a locked object")
 
