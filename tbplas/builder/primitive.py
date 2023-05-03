@@ -748,6 +748,71 @@ class PrimitiveCell(Lockable):
             for pair, energy in hop_rn.items():
                 print(" ", rn, pair, energy)
 
+    def print_hk(self) -> None:
+        """
+        Print analytical Hamiltonian as the function of k-point.
+
+        :return: None
+        """
+        self.sync_array()
+
+        # Collect on-site energies
+        hk = dict()
+        for i, energy in enumerate(self._orb_eng):
+            hk[(i, i)] = str(energy)
+
+        # Function for processing formula
+        def _strip(x):
+            x.lstrip()
+            x.rstrip()
+            if x[0] == "+":
+                x = x[1:]
+            x.lstrip()
+            x.rstrip()
+            return x
+
+        # Function to add a hopping term to the Hamiltonian
+        def _add_term(_pair, _energy, _dr):
+            # Evaluate k_dot_r with fractional coordinates
+            k_dot_r = ""
+            k_labels = ("ka", "kb", "kc")
+            for i_dim in range(3):
+                r_dim = _dr.item(i_dim)
+                k_dim = k_labels[i_dim]
+                if abs(r_dim) > 1.0e-5:
+                    k_dot_r += f"+ {r_dim} * {k_dim} "
+            k_dot_r = _strip(k_dot_r)
+
+            # Add the hopping term
+            term = f"{_energy} * exp_i({k_dot_r})\n"
+            try:
+                hk[_pair] += f" + {term}"
+            except KeyError:
+                hk[_pair] = term
+
+        # Collect hopping terms
+        hop_dr = self.hop_dr
+        for ih, hop in enumerate(self._hop_ind):
+            pair = (hop.item(3), hop.item(4))
+            energy = self._hop_eng.item(ih)
+            _add_term(pair, energy, hop_dr[ih])
+            if pair[0] != pair[1]:
+                pair = (pair[1], pair[0])
+                energy = energy.conjugate()
+                _add_term(pair, energy, -hop_dr[ih])
+
+        # Print formulae
+        reduced_pairs = [pair for pair in hk.keys() if pair[0] <= pair[1]]
+        for pair in reduced_pairs:
+            ham_ij = f"ham[{pair[0]}, {pair[1]}]"
+            formula = _strip(hk[pair])
+            print(f"{ham_ij} = {formula}\n")
+            if pair[0] != pair[1]:
+                ham_ji = f"ham[{pair[1]}, {pair[0]}]"
+                formula = f"{ham_ij}.conjugate()"
+                print(f"{ham_ji} = {formula}\n")
+        print("with exp_i(x) := cos(2 * pi * x) + 1j * sin(2 * pi * x)")
+
     def set_ham_dense(self, k_point: np.ndarray,
                       ham_dense: np.ndarray,
                       convention: int = 1) -> None:

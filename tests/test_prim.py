@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import unittest
-from math import cos, sin, sqrt
+from math import cos, sin, sqrt, pi
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -572,25 +572,37 @@ class TestPrimitive(unittest.TestCase):
         plt.show()
 
         # Calculate band structure from user-defined analytical Hamiltonian
-        a, t, sqrt3 = 0.246, 2.7, sqrt(3.0)
-        recip_lat = cell.get_reciprocal_vectors()
-
         def _exp(x):
             return cos(x) + 1j * sin(x)
 
-        def _hk(kpt, ham):
+        def _exp2(x):
+            return cos(2 * pi * x) + 1j * sin(2 * pi * x)
+
+        def _hk1(kpt, ham):
+            # Working in Cartesian coordinates
+            a, t, sqrt3 = 0.246, 2.7, sqrt(3.0)
+            recip_lat = cell.get_reciprocal_vectors()
             ka = np.matmul(kpt, recip_lat) * a
             kxa, kya = ka.item(0), ka.item(1)
             fk = _exp(kya / sqrt3) + 2 * _exp(-kya / 2 / sqrt3) * cos(kxa / 2)
             ham[0, 1] = t * fk
             ham[1, 0] = t * fk.conjugate()
 
-        solver = DiagSolver(cell, hk_dense=_hk)
-        k_len, bands = solver.calc_bands(k_path)[:2]
-        num_bands = bands.shape[1]
-        for i in range(num_bands):
-            plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
-        plt.show()
+        def _hk2(kpt, ham):
+            # Working in fractional coordinates
+            ka, kb = kpt.item(0), kpt.item(1)
+            ham[0, 1] = 2.7 * (_exp2(1./3 * ka + 1./3 * kb) +
+                               _exp2(-2./3 * ka + 1./3 * kb) +
+                               _exp2(1./3 * ka - 2./3 * kb))
+            ham[1, 0] = ham[0, 1].conjugate()
+
+        for _hk in (_hk1, _hk2):
+            solver = DiagSolver(cell, hk_dense=_hk)
+            k_len, bands = solver.calc_bands(k_path)[:2]
+            num_bands = bands.shape[1]
+            for i in range(num_bands):
+                plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
+            plt.show()
 
     def test12_extend_prim_cell(self):
         """
