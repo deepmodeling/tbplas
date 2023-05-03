@@ -668,8 +668,8 @@ class PrimitiveCell(Lockable):
             rb_min, rb_max = rb.min(), rb.max()
             rc_min, rc_max = rc.min(), rc.max()
         else:
-            hop_ind_full = None
-            hop_eng_full = None
+            hop_ind_full = np.array([])
+            hop_eng_full = np.array([])
             ra_min, ra_max = 0, 0
             rb_min, rb_max = 0, 0
             rc_min, rc_max = 0, 0
