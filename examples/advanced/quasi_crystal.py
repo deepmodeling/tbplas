@@ -96,7 +96,8 @@ def make_quasi_crystal_pc(prim_cell: tb.PrimitiveCell,
                           dim: Tuple[int, int, int],
                           angle: float, center: np.ndarray,
                           radius: float = 3.0,
-                          shift: float = 0.3) -> tb.PrimitiveCell:
+                          shift: float = 0.3,
+                          algo: int = 0) -> tb.PrimitiveCell:
     """
     Create quasi-crystal at primitive level.
 
@@ -107,7 +108,8 @@ def make_quasi_crystal_pc(prim_cell: tb.PrimitiveCell,
         cell
     :param radius: radius of quasi-crystal in nm
     :param shift: distance of shift along z-axis in NANOMETER
-    :return: quasi-crystal
+    :param algo: algorithm to build the quasi-crystal
+    :return: the quasi-crystal
     """
     # Get the Cartesian coordinate of rotation center
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
@@ -117,22 +119,44 @@ def make_quasi_crystal_pc(prim_cell: tb.PrimitiveCell,
     layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
     layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
 
-    # Rotate and shift twisted layer
-    tb.spiral_prim_cell(layer_twisted, angle=angle, center=center, shift=shift)
+    # We have 2 approaches to build the quasi-crystal
+    if algo == 0:
+        # Rotate and shift twisted layer
+        tb.spiral_prim_cell(layer_twisted, angle=angle, center=center,
+                            shift=shift)
 
-    # Remove unnecessary orbitals
-    cutoff_pc(layer_fixed, center=center, radius=radius)
-    cutoff_pc(layer_twisted, center=center, radius=radius)
+        # Remove unnecessary orbitals
+        cutoff_pc(layer_fixed, center=center, radius=radius)
+        cutoff_pc(layer_twisted, center=center, radius=radius)
 
-    # Reset the lattice of twisted layer
-    layer_twisted.reset_lattice(layer_fixed.lat_vec, layer_fixed.origin,
-                                unit=tb.NM, fix_orb=True)
+        # Reset the lattice of twisted layer
+        layer_twisted.reset_lattice(layer_fixed.lat_vec, layer_fixed.origin,
+                                    unit=tb.NM, fix_orb=True)
+    else:
+        # Remove unnecessary orbitals
+        cutoff_pc(layer_fixed, center=center, radius=radius)
+        cutoff_pc(layer_twisted, center=center, radius=radius)
 
-    # Merge layers
-    final_cell = tb.merge_prim_cell(layer_fixed, layer_twisted)
+        # Rotate and shift twisted layer
+        orb_pos = tb.rotate_coord(layer_twisted.orb_pos_nm, angle,
+                                  center=center)
+        orb_pos += np.array([0, 0, shift])
+        orb_pos = tb.cart2frac(layer_twisted.lat_vec, orb_pos)
+        for i, pos in enumerate(orb_pos):
+            layer_twisted.set_orbital(i, position=pos)
+
+    # Build inter-cell hopping terms
+    inter_hop = tb.PCInterHopping(layer_fixed, layer_twisted)
+    neighbors = tb.find_neighbors(layer_fixed, layer_twisted,
+                                  a_max=0, b_max=0, max_distance=0.75)
+    for term in neighbors:
+        i, j = term.pair
+        inter_hop.add_hopping(term.rn, i, j, calc_hop(term.rij))
 
     # Extend hopping terms
-    extend_hop(final_cell)
+    extend_hop(layer_fixed)
+    extend_hop(layer_twisted)
+    final_cell = tb.merge_prim_cell(layer_fixed, layer_twisted, inter_hop)
     return final_cell
 
 
@@ -141,7 +165,8 @@ def make_quasi_crystal_sample(pc_fixed: tb.PrimitiveCell,
                               dim: Tuple[int, int, int],
                               angle: float, center: np.ndarray,
                               radius: float = 3.0,
-                              shift: float = 0.3) -> tb.Sample:
+                              shift: float = 0.3,
+                              algo: int = 0) -> tb.Sample:
     """
     Create quasi-crystal at primitive level.
 
@@ -153,22 +178,39 @@ def make_quasi_crystal_sample(pc_fixed: tb.PrimitiveCell,
         cell
     :param radius: radius of quasi-crystal in nm
     :param shift: distance of shift along z-axis in NANOMETER
-    :return: quasi-crystal
+    :param algo: algorithm to build the quasi-crystal
+    :return: the quasi-crystal
     """
     # Calculate the Cartesian coordinate of rotation center
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
     center = np.matmul(center, pc_fixed.lat_vec)
 
-    # Rotate and shift primitive cell of twisted layer
-    tb.spiral_prim_cell(pc_twisted, angle=angle, center=center, shift=shift)
+    # We have 2 approaches to build the quasi-crystal
+    if algo == 0:
+        # Rotate and shift primitive cell of twisted layer
+        tb.spiral_prim_cell(pc_twisted, angle=angle, center=center, shift=shift)
 
-    # Make the supercells
-    sc_fixed = tb.SuperCell(pc_fixed, dim)
-    sc_twisted = tb.SuperCell(pc_twisted, dim)
+        # Make the supercells
+        sc_fixed = tb.SuperCell(pc_fixed, dim)
+        sc_twisted = tb.SuperCell(pc_twisted, dim)
 
-    # Remove unnecessary orbitals
-    cutoff_sc(sc_fixed, center, radius=radius)
-    cutoff_sc(sc_twisted, center, radius=radius)
+        # Remove unnecessary orbitals
+        cutoff_sc(sc_fixed, center, radius=radius)
+        cutoff_sc(sc_twisted, center, radius=radius)
+    else:
+        # Make the supercells
+        sc_fixed = tb.SuperCell(pc_fixed, dim)
+        sc_twisted = tb.SuperCell(pc_twisted, dim)
+
+        # Remove unnecessary orbitals
+        cutoff_sc(sc_fixed, center, radius=radius)
+        cutoff_sc(sc_twisted, center, radius=radius)
+
+        # Rotate and shift twisted layer
+        def _modifier(orb_pos):
+            orb_pos[:, :] = tb.rotate_coord(orb_pos, angle, center=center)
+            orb_pos[:, 2] += shift
+        sc_twisted.set_orb_pos_modifier(_modifier)
 
     # Build inter-cell hopping terms
     inter_hop = tb.SCInterHopping(sc_fixed, sc_twisted)
