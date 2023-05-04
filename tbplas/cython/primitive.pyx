@@ -117,7 +117,7 @@ def reduce_hop(int [:,::1] hop_ind, double complex [::1] hop_eng,
 
     # Intermediate variables
     cdef int ra, rb, rc, ii, jj
-    cdef int kk, is_kept, num_hop_re, ptr
+    cdef int kk, num_hop_re, ptr
     cdef int [::1] status
 
     # Results
@@ -140,19 +140,10 @@ def reduce_hop(int [:,::1] hop_ind, double complex [::1] hop_eng,
             orb_eng[ii] = hop_eng[ih].real
         else:
             # Check whether to keep this hopping term
-            is_kept = 1
             if abs(hop_eng[ih]) < eng_cutoff:
-                is_kept = 0
+                status[ih] = 0
             else:
-                for kk in range(ih):
-                    if hop_ind[kk, 0] == -ra and \
-                       hop_ind[kk, 1] == -rb and \
-                       hop_ind[kk, 2] == -rc and \
-                       hop_ind[kk, 3] == jj and \
-                       hop_ind[kk, 4] == ii:
-                        is_kept = 0
-                        break
-            status[ih] = is_kept
+                status[ih] = 1
 
     # Reduce hopping terms
     num_hop_re = np.sum(status)
