@@ -155,14 +155,14 @@ class Hopping(ABC):
 
     Attributes
     ----------
-    _hoppings: Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]
+    __hoppings: Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]
         Keys are cell indices (rn), while values are dictionaries.
         Keys of value dictionary are orbital pairs, while values are hopping
         energies.
     """
     def __init__(self) -> None:
         super().__init__()
-        self._hoppings = {}
+        self.__hoppings = {}
 
     def __hash__(self) -> int:
         """Return the hash of this instance."""
@@ -211,9 +211,9 @@ class Hopping(ABC):
         if conj:
             energy = energy.conjugate()
         try:
-            hop_rn = self._hoppings[rn]
+            hop_rn = self.__hoppings[rn]
         except KeyError:
-            hop_rn = self._hoppings[rn] = dict()
+            hop_rn = self.__hoppings[rn] = dict()
         hop_rn[pair] = energy
 
     def get_hopping(self, rn: rn_type,
@@ -231,7 +231,7 @@ class Hopping(ABC):
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
-            energy = self._hoppings[rn][pair]
+            energy = self.__hoppings[rn][pair]
             status = True
         except KeyError:
             energy = None
@@ -255,7 +255,7 @@ class Hopping(ABC):
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
         try:
-            self._hoppings[rn].pop(pair)
+            self.__hoppings[rn].pop(pair)
             status = True
         except KeyError:
             status = False
@@ -298,7 +298,7 @@ class Hopping(ABC):
                 idx_remap[orb_i] = result
             return result
 
-        for rn, hop_rn in self._hoppings.items():
+        for rn, hop_rn in self.__hoppings.items():
             new_hop_rn = dict()
             for pair in hop_rn.keys():
                 ii, jj = pair
@@ -308,7 +308,7 @@ class Hopping(ABC):
                     ii = _remap(ii)
                     jj = _remap(jj)
                     new_hop_rn[(ii, jj)] = hop_rn[pair]
-            self._hoppings[rn] = new_hop_rn
+            self.__hoppings[rn] = new_hop_rn
 
         if purge:
             self.purge()
@@ -322,7 +322,7 @@ class Hopping(ABC):
         """
         rn, pair, conj = self._norm_keys(rn, 0, 0)
         try:
-            self._hoppings.pop(rn)
+            self.__hoppings.pop(rn)
             status = True
         except KeyError:
             status = False
@@ -334,9 +334,9 @@ class Hopping(ABC):
 
         :return: None
         """
-        for rn in list(self._hoppings.keys()):
-            if self._hoppings[rn] == {}:
-                self._hoppings.pop(rn)
+        for rn in list(self.__hoppings.keys()):
+            if self.__hoppings[rn] == {}:
+                self.__hoppings.pop(rn)
 
     def to_list(self) -> List[Tuple[int, int, int, int, int, complex]]:
         """
@@ -346,7 +346,7 @@ class Hopping(ABC):
         """
         self.purge()
         hop_list = [rn + pair + (energy,)
-                    for rn, hop_rn in self._hoppings.items()
+                    for rn, hop_rn in self.__hoppings.items()
                     for pair, energy in hop_rn.items()]
         return hop_list
 
@@ -363,10 +363,10 @@ class Hopping(ABC):
         """
         self.purge()
         hop_ind = [rn + pair
-                   for rn, hop_rn in self._hoppings.items()
+                   for rn, hop_rn in self.__hoppings.items()
                    for pair, energy in hop_rn.items()]
         hop_eng = [energy
-                   for rn, hop_rn in self._hoppings.items()
+                   for rn, hop_rn in self.__hoppings.items()
                    for pair, energy in hop_rn.items()]
         if use_int64:
             hop_ind = np.array(hop_ind, dtype=np.int64)
@@ -386,15 +386,15 @@ class Hopping(ABC):
         self.purge()
         count = 0
         pair = (orb_i, orb_j)
-        for rn, hop_rn in self._hoppings.items():
+        for rn, hop_rn in self.__hoppings.items():
             if pair in hop_rn.keys():
                 count += 1
         return count
 
     @property
     def hoppings(self) -> Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]:
-        """Interface for the '_hoppings' attribute."""
-        return self._hoppings
+        """Interface for the '__hoppings' attribute."""
+        return self.__hoppings
 
     @property
     def cell_indices(self) -> List[rn3_type]:
@@ -403,7 +403,7 @@ class Hopping(ABC):
 
         :return: list of cell indices
         """
-        return list(self._hoppings.keys())
+        return list(self.__hoppings.keys())
 
     @property
     def num_hop(self) -> int:
@@ -414,7 +414,7 @@ class Hopping(ABC):
         """
         self.purge()
         num_hop = 0
-        for rn, hop_rn in self._hoppings.items():
+        for rn, hop_rn in self.__hoppings.items():
             num_hop += len(hop_rn)
         return num_hop
 
