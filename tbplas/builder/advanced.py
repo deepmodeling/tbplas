@@ -13,7 +13,7 @@ from scipy.optimize import leastsq
 from ..base import cart2frac, rotate_coord
 from ..base import constants as consts
 from . import exceptions as exc
-from .base import check_rn, Lockable, InterHopping, rn_type
+from .base import check_rn, Lockable, InterHopping, rn_type, id_pc_type
 from .primitive import PrimitiveCell
 from .super import SuperCell
 
@@ -21,6 +21,55 @@ from .super import SuperCell
 __all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
            "make_hetero_layer", "PCInterHopping", "merge_prim_cell",
            "find_neighbors", "SK", "SOC", "ParamFit"]
+
+
+class OrbitalMap:
+    """
+    Helper class for converting orbital indices between pc and sc
+    representations, inspired by the 'OrbitalSet' class in super.py.
+
+    Attributes
+    ----------
+    _id_pc: List[Tuple[int, int, int, int]]
+        orbital indices in pc representation
+    _id_sc: Dict[Tuple[int, int, int, int], int]
+        map of orbital indices from pc to sc representation
+    _counter: int
+        counter of the orbitals
+    """
+    def __init__(self) -> None:
+        self._id_pc = []
+        self._id_sc = dict()
+        self._counter = 0
+
+    def add(self, id_pc: id_pc_type) -> None:
+        """
+        Add an orbital from index in pc representation.
+
+        :param id_pc: index of the orbital
+        :return: None
+        """
+        self._id_pc.append(id_pc)
+        self._id_sc[id_pc] = self._counter
+        self._counter += 1
+
+    def pc2sc(self, id_pc: id_pc_type) -> int:
+        """
+        Convert orbital index from pc to sc representation.
+
+        :param id_pc: index of the orbital
+        :return: corresponding index in sc representation
+        """
+        return self._id_sc[id_pc]
+
+    def sc2pc(self, id_sc: int) -> id_pc_type:
+        """
+        Convert orbital index from sc to pc representation.
+
+        :param id_sc: index of the orbital
+        :return: corresponding index in pc representation
+        """
+        return self._id_pc[id_sc]
 
 
 def extend_prim_cell(prim_cell: PrimitiveCell,
@@ -54,16 +103,12 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
     # Create extended cell and add orbitals
     extend_cell = PrimitiveCell(lat_vec_ext, origin_ext, unit=consts.NM)
     extend_cell.extended = prim_cell.extended * np.prod(dim)
-    orb_id_pc, orb_id_sc = [], {}
-    id_sc = 0
+    orb_map = OrbitalMap()
     for i_a in range(dim[0]):
         for i_b in range(dim[1]):
             for i_c in range(dim[2]):
                 for i_o, orbital in enumerate(prim_cell.orbitals):
-                    id_pc = (i_a, i_b, i_c, i_o)
-                    orb_id_pc.append(id_pc)
-                    orb_id_sc[id_pc] = id_sc
-                    id_sc += 1
+                    orb_map.add((i_a, i_b, i_c, i_o))
                     pos_ext = ((orbital.position[0] + i_a) / dim[0],
                                (orbital.position[1] + i_b) / dim[1],
                                (orbital.position[2] + i_c) / dim[2])
@@ -76,7 +121,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
 
     # Add hopping terms
     for id_sc_i in range(extend_cell.num_orb):
-        id_pc_i = orb_id_pc[id_sc_i]
+        id_pc_i = orb_map.sc2pc(id_sc_i)
         for rn, hop_rn in prim_cell.hoppings.items():
             for pair, energy in hop_rn.items():
                 if id_pc_i[3] == pair[0]:
@@ -84,7 +129,7 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
                     jb, nb = _wrap_pbc(id_pc_i[1] + rn[1], dim[1])
                     jc, nc = _wrap_pbc(id_pc_i[2] + rn[2], dim[2])
                     id_pc_j = (ja, jb, jc, pair[1])
-                    id_sc_j = orb_id_sc[id_pc_j]
+                    id_sc_j = orb_map.pc2sc(id_pc_j)
                     rn = (na, nb, nc)
                     extend_cell.add_hopping(rn, id_sc_i, id_sc_j, energy)
 
@@ -147,46 +192,46 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
         return floor(x.item(0)), floor(x.item(1)), floor(x.item(2))
 
     # Add orbitals
-    orb_id_pc, orb_id_sc = [], {}
-    id_sc = 0
+    orb_pos = prim_cell.orb_pos
+    orb_map = OrbitalMap()
     for i_a in range(rn_range.item(0, 0), rn_range.item(0, 1)+1):
         for i_b in range(rn_range.item(1, 0), rn_range.item(1, 1)+1):
             for i_c in range(rn_range.item(2, 0), rn_range.item(2, 1)+1):
                 rn = (i_a, i_b, i_c)
-                for i_o, pos in enumerate(prim_cell.orb_pos):
+                for i_o, pos in enumerate(orb_pos):
                     res_pos = np.matmul(rn + pos, conv_mat)
                     res_rn = _get_cell_index(res_pos + delta)
                     if res_rn == (0, 0, 0):
-                        id_pc = (i_a, i_b, i_c, i_o)
-                        orb_id_pc.append(id_pc)
-                        orb_id_sc[id_pc] = id_sc
-                        id_sc += 1
+                        orb_map.add((i_a, i_b, i_c, i_o))
                         res_cell.add_orbital(tuple(res_pos),
                                              prim_cell.orbitals[i_o].energy,
                                              prim_cell.orbitals[i_o].label)
 
     # Add hopping terms
+    hop_ind = prim_cell.hop_ind
+    hop_eng = prim_cell.hop_eng
     kd_tree = KDTree(res_cell.orb_pos)
     for id_sc_i in range(res_cell.num_orb):
-        id_pc_i = orb_id_pc[id_sc_i]
-        for i_h, hop in enumerate(prim_cell.hop_ind):
+        id_pc_i = orb_map.sc2pc(id_sc_i)
+        for i_h, hop in enumerate(hop_ind):
             if id_pc_i[3] == hop.item(3):
-                # Get fractional coordinate of id_sc_j in reshaped cell
+                # Get cell index of id_sc_j in reshaped cell
                 rn = id_pc_i[:3] + hop[:3]
                 pos = prim_cell.orb_pos[hop.item(4)]
                 res_pos = np.matmul(rn + pos, conv_mat)
-
-                # Wrap back into (0, 0, 0)-th reshaped cell
                 res_rn = _get_cell_index(res_pos + delta)
+
+                # Wrap fractional coordinate of id_sc_j back into the (0, 0, 0)
+                # reshaped cell
                 res_pos -= res_rn
 
                 # Determine corresponding id_sc_j
-                neighbours = kd_tree.query_ball_point(res_pos, r=pos_tol)
-                for id_sc_j in neighbours:
-                    id_pc_j = orb_id_pc[id_sc_j]
+                candidates = kd_tree.query_ball_point(res_pos, r=pos_tol)
+                for id_sc_j in candidates:
+                    id_pc_j = orb_map.sc2pc(id_sc_j)
                     if id_pc_j[3] == hop.item(4):
                         res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
-                                             prim_cell.hop_eng.item(i_h))
+                                             hop_eng.item(i_h))
 
     return res_cell
 
