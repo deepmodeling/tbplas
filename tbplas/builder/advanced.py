@@ -20,7 +20,7 @@ from .super import SuperCell
 
 __all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
            "make_hetero_layer", "PCInterHopping", "merge_prim_cell",
-           "find_neighbors", "SK", "SOC", "ParamFit"]
+           "find_neighbors", "SK", "SOC", "SOCTable", "ParamFit"]
 
 
 class OrbitalMap:
@@ -1259,15 +1259,16 @@ class SOC:
                 for direction, matrix in self.pauli_matrices.items():
                     product = np.matmul(bra, np.matmul(matrix, ket))
                     if abs(product) > 0.0:
-                        print("\t", direction, product)
+                        print("\t", f"l{direction}", product)
 
-    def print_orbital_table(self, operator: str = "lz") -> None:
+    def print_orbital_table(self, operator: str = "lz", formatted=True) -> None:
         """
-        Print the matrix elements of l_dot_s between orbital basis functions.
+        Print the matrix elements of lz/l+/l- between orbital basis functions.
 
-        NOTE: the results get a factor of h_bar from the lz, l+ and l-
-        operators.
+        NOTE: the results get a factor of h_bar from the operator.
 
+        :param operator: operator to evaluate
+        :param formatted: whether to format output
         :return: None
         :raises ValueError: if operator is not in "lz", "l+", "l-"
         """
@@ -1283,8 +1284,15 @@ class SOC:
                 else:
                     prod = bra.mtxel_l_minus(ket)
                 if abs(prod) >= 1.0e-15:
-                    print(f"{label_bra:8s} {label_ket:8s} {prod.real:16.9f}"
-                          f" {prod.imag:16.9f}")
+                    if formatted:
+                        result = f"{label_bra:8s} {label_ket:8s}"
+                    else:
+                        result = f"(\"{label_bra}\", \"{label_ket}\"):"
+                    if abs(prod.real) >= 1.0e-15:
+                        result += f"{prod.real:16.12f}"
+                    if abs(prod.imag) >= 1.0e-15:
+                        result += f"{prod.imag:16.12f}j"
+                    print(result)
 
     def eval(self, label_i: str = "s",
              spin_i: str = "up",
@@ -1323,6 +1331,115 @@ class SOC:
         else:
             product = -1 * bra.mtxel_l_z(ket)
         product *= 0.5
+        return product
+
+
+class SOCTable:
+    """
+    Hard-coded spin-orbital coupling term table, generated using the
+    'print_orbital_table' method of 'SOC' class with formatted = False.
+
+    Attributes
+    ----------
+    l_z: Dict[[str, str], complex]
+        soc terms for operator lz
+    l_plus: Dict[[str, str], complex]
+        soc terms for operator l+
+    l_minus: Dict[[str, str], complex]
+        soc terms for operator l-
+    spin_labels: Tuple[str]
+        directions of spins
+    orbital_labels: Tuple[str]
+        labels of atomic orbitals
+    """
+    def __init__(self):
+        self.l_z = {
+            ("px", "py"): -1.000000000000j,
+            ("py", "px"):  1.000000000000j,
+            ("dxy", "dx2-y2"): 2.000000000000j,
+            ("dx2-y2", "dxy"): -2.000000000000j,
+            ("dyz", "dzx"): 1.000000000000j,
+            ("dzx", "dyz"): -1.000000000000j,
+        }
+        self.l_plus = {
+            ("px", "pz"): -1.000000000000,
+            ("py", "pz"): -1.000000000000j,
+            ("pz", "px"): 1.000000000000,
+            ("pz", "py"): 1.000000000000j,
+            ("dxy", "dyz"): -1.000000000000,
+            ("dxy", "dzx"): -1.000000000000j,
+            ("dx2-y2", "dyz"): 1.000000000000j,
+            ("dx2-y2", "dzx"): -1.000000000000,
+            ("dyz", "dxy"): 1.000000000000,
+            ("dyz", "dx2-y2"): -1.000000000000j,
+            ("dyz", "dz2"): -1.732050807569j,
+            ("dzx", "dxy"): 1.000000000000j,
+            ("dzx", "dx2-y2"): 1.000000000000,
+            ("dzx", "dz2"): -1.732050807569,
+            ("dz2", "dyz"): 1.732050807569j,
+            ("dz2", "dzx"): 1.732050807569,
+        }
+        self.l_minus = {
+            ("px", "pz"): 1.000000000000,
+            ("py", "pz"): -1.000000000000j,
+            ("pz", "px"): -1.000000000000,
+            ("pz", "py"): 1.000000000000j,
+            ("dxy", "dyz"): 1.000000000000,
+            ("dxy", "dzx"): -1.000000000000j,
+            ("dx2-y2", "dyz"): 1.000000000000j,
+            ("dx2-y2", "dzx"): 1.000000000000,
+            ("dyz", "dxy"): -1.000000000000,
+            ("dyz", "dx2-y2"): -1.000000000000j,
+            ("dyz", "dz2"): -1.732050807569j,
+            ("dzx", "dxy"): 1.000000000000j,
+            ("dzx", "dx2-y2"): -1.000000000000,
+            ("dzx", "dz2"): 1.732050807569,
+            ("dz2", "dyz"): 1.732050807569j,
+            ("dz2", "dzx"): -1.732050807569
+        }
+        self.spin_labels = ("up", "down")
+        self.orbital_labels = ("s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
+                               "dzx", "dz2")
+
+    def eval(self, label_i: str = "s",
+             spin_i: str = "up",
+             label_j: str = "s",
+             spin_j: str = "down") -> complex:
+        """
+        Evaluate the matrix element <i,s_i|l*s|j,s_j>.
+
+        NOTE: the result has a factor of h_bar / 2 from the spin part, and a
+        factor of h_bar from the orbital part. Since we further divide the
+        result by 2, the final factor becomes h_bar**2
+
+        :param label_i: orbital label of bra
+        :param spin_i: spin direction of bra
+        :param label_j: orbital label of ket
+        :param spin_j: spin direction kf ket
+        :return: matrix element in h_bar**2
+        :raises ValueError: if orbital labels or spin directions are illegal
+        """
+        label_idx = (label_i, label_j)
+        spin_idx = (spin_i, spin_j)
+        for label in label_idx:
+            if label not in self.orbital_labels:
+                raise ValueError(f"Illegal orbital label {label}")
+        for spin in spin_idx:
+            if spin not in self.spin_labels:
+                raise ValueError(f"Illegal spin direction {spin}")
+
+        try:
+            if spin_idx == ("up", "up"):
+                product = self.l_z[label_idx]
+            elif spin_idx == ("up", "down"):
+                product = self.l_minus[label_idx]
+            elif spin_idx == ("down", "up"):
+                product = self.l_plus[label_idx]
+            else:
+                product = -1 * self.l_z[label_idx]
+            product *= 0.5
+        except KeyError:
+            product = 0.0
         return product
 
 
