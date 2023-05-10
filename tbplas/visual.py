@@ -1,12 +1,13 @@
 """Utilities for visualizing results from exact diagonalization or TBPM."""
 
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.collections as mc
 from scipy.interpolate import griddata
 
-from .builder import Sample
+from .builder import PrimitiveCell, Sample
 from .parallel import MPIEnv
 
 
@@ -212,11 +213,40 @@ class Visualizer(MPIEnv):
             plt.tight_layout()
             self._output(fig_name, fig_dpi)
 
+    def _plot_model(self, model: Union[PrimitiveCell, Sample],
+                    ax: plt.axes) -> None:
+        """
+        Plot model onto axes.
+
+        :param model: model to plot
+        :param ax: axes on which the model will be plotted
+        :return: None
+        """
+        if self.is_master:
+            if isinstance(model, PrimitiveCell):
+                orb_pos = model.orb_pos_nm
+                hop_i = model.hop_ind[:, 3]
+                dr = model.hop_dr_nm
+            else:
+                model.init_orb_pos()
+                model.init_hop()
+                model.init_dr()
+                orb_pos = model.orb_pos
+                hop_i, dr = model.hop_i, model.dr
+            hop_lc = []
+            for i_h in range(hop_i.shape[0]):
+                pos_i = orb_pos[hop_i.item(i_h)]
+                pos_j = pos_i + dr[i_h]
+                hop_lc.append((pos_i[:2], pos_j[:2]))
+            ax.add_collection(mc.LineCollection(hop_lc, color='gray'))
+
     def plot_scalar(self, x: np.ndarray,
                     y: np.ndarray,
                     z: np.ndarray,
+                    model: Union[PrimitiveCell, Sample] = None,
                     scatter: bool = False,
-                    site_size: int = 5,
+                    site_size: Union[int, np.ndarray] = 5,
+                    site_color: Union[str, List[str]] = "cmap",
                     num_grid: Tuple[int, int] = (200, 200),
                     cmap: str = "viridis",
                     with_colorbar: bool = False,
@@ -233,8 +263,11 @@ class Visualizer(MPIEnv):
             y-component of Cartesian coordinates of data points
         :param z: (num_data,) float64 array
             z-value of data points
+        :param model: model with which the data will be plotted
         :param scatter: whether to plot the wave function as scatter
-        :param site_size: site size for scatter plot
+        :param site_size: size of the sites for scatter plot
+        :param site_color: color of the sites, use colormap from z-value if set
+            to camp, otherwise monochromatic
         :param num_grid: (nx, ny) number of grid-points for interpolation along
             x and y directions when plotting the wave function
         :param cmap: color map for plotting the wave function
@@ -246,10 +279,18 @@ class Visualizer(MPIEnv):
         :return: None
         """
         if self.is_master:
-            # Plot data
             fig, ax = plt.subplots()
+            if model is not None:
+                self._plot_model(model, ax)
+
+            # Plot data
             if scatter:
-                img = ax.scatter(x, y, c=z, s=site_size, cmap=cmap, **kwargs)
+                if site_color == "cmap":
+                    img = ax.scatter(x, y, c=z, s=site_size, cmap=cmap,
+                                     **kwargs)
+                else:
+                    img = ax.scatter(x, y, c=site_color, s=site_size,
+                                     **kwargs)
             else:
                 x_min, x_max = np.min(x), np.max(x)
                 y_min, y_max = np.min(y), np.max(y)
@@ -263,6 +304,7 @@ class Visualizer(MPIEnv):
                                 origin="lower",
                                 extent=(x_min, x_max, y_min, y_max), **kwargs)
 
+            # Adjustment
             if with_colorbar:
                 plt.colorbar(img)
             plt.axis('equal')
@@ -279,6 +321,7 @@ class Visualizer(MPIEnv):
                     y: np.ndarray,
                     u: np.ndarray,
                     v: np.ndarray,
+                    model: Union[PrimitiveCell, Sample] = None,
                     beautifier: Callable = None,
                     fig_name: str = None,
                     fig_dpi: int = 300,
@@ -294,6 +337,7 @@ class Visualizer(MPIEnv):
             x component of arrow directions
         :param v: (num_data,) float64 array
             y component of arrow directions
+        :param model: model with which the data will be plotted
         :param beautifier: function for improving the plot
         :param fig_name: image file name
         :param fig_dpi: dpi of output figure
@@ -302,6 +346,8 @@ class Visualizer(MPIEnv):
         """
         if self.is_master:
             fig, ax = plt.subplots()
+            if model is not None:
+                self._plot_model(model, ax)
             c = np.linalg.norm(u.real + 1j * v.real)
             ax.quiver(x, y, u, v, c, **kwargs)
             plt.axis('equal')
@@ -312,20 +358,31 @@ class Visualizer(MPIEnv):
             plt.autoscale()
             self._output(fig_name, fig_dpi)
 
-    def plot_wfc(self, sample: Sample, wfc: np.ndarray, **kwargs) -> None:
+    def plot_wfc(self, model: Union[PrimitiveCell, Sample],
+                 wfc: np.ndarray,
+                 with_model: bool = True,
+                 **kwargs) -> None:
         """
         Plot wave function in real space.
 
-        :param sample: sample under study
-        :param wfc: (num_orb_sample,) float64 array
+        :param model: model under study
+        :param with_model: whether to plot model along with the wave function
+        :param wfc: (num_orb,) float64 array
             projection of wave function on all the sites
         :param kwargs: arguments for 'plot_scalar'
         :return: None
         """
         # Get site locations
-        sample.init_orb_pos()
-        x = np.array(sample.orb_pos[:, 0])
-        y = np.array(sample.orb_pos[:, 1])
+        if isinstance(model, PrimitiveCell):
+            orb_pos = model.orb_pos_nm
+        else:
+            model.init_orb_pos()
+            orb_pos = model.orb_pos
+        x = np.array(orb_pos[:, 0])
+        y = np.array(orb_pos[:, 1])
 
         # Plot wfc
-        self.plot_scalar(x, y, wfc, **kwargs)
+        if with_model:
+            self.plot_scalar(x, y, wfc, model, **kwargs)
+        else:
+            self.plot_scalar(x, y, wfc, None, **kwargs)
