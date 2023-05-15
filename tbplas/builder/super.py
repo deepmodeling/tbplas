@@ -825,6 +825,7 @@ class SuperCell(OrbitalSet):
     def plot(self, axes: plt.Axes,
              with_orbitals: bool = True,
              with_cells: bool = True,
+             with_conj: bool = False,
              hop_as_arrows: bool = True,
              hop_eng_cutoff: float = 1e-5,
              hop_color: str = "r",
@@ -835,6 +836,7 @@ class SuperCell(OrbitalSet):
         :param axes: axes on which the figure will be plotted
         :param with_orbitals: whether to plot orbitals as filled circles
         :param with_cells: whether to plot borders of primitive cells
+        :param with_conj: whether to plot conjugate hopping terms as well
         :param hop_as_arrows: whether to plot hopping terms as arrows
         :param hop_eng_cutoff: cutoff for showing hopping terms
         :param hop_color: color of hopping terms
@@ -858,16 +860,25 @@ class SuperCell(OrbitalSet):
         # Plot hopping terms
         hop_i, hop_j, hop_v = self.get_hop()
         dr = self.get_dr()
+        arrow_args = {"color": hop_color, "length_includes_head": True,
+                      "width": 0.002, "head_width": 0.02, "fill": False}
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
+                # Original term
                 pos_i = orb_pos[hop_i.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, color=hop_color,
-                                      length_includes_head=True,
-                                      width=0.002, head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
                 else:
                     viewer.add_line(pos_i, pos_j)
+                # Conjugate term
+                if with_conj:
+                    pos_j = orb_pos[hop_j.item(i_h)]
+                    pos_i = pos_j - dr[i_h]
+                    if hop_as_arrows:
+                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                    else:
+                        viewer.add_line(pos_j, pos_i)
         if not hop_as_arrows:
             viewer.plot_line(color=hop_color)
 

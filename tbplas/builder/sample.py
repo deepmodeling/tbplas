@@ -126,6 +126,7 @@ class SCInterHopping(Lockable, InterHopping):
         return dr
 
     def plot(self, axes: plt.Axes,
+             with_conj: bool = False,
              hop_as_arrows: bool = True,
              hop_eng_cutoff: float = 1e-5,
              hop_color: str = "r",
@@ -134,6 +135,7 @@ class SCInterHopping(Lockable, InterHopping):
         Plot hopping terms to axes.
 
         :param axes: axes on which the figure will be plotted
+        :param with_conj: whether to plot conjugate hopping terms as well
         :param hop_as_arrows: whether to plot hopping terms as arrows
         :param hop_eng_cutoff: cutoff for showing hopping terms.
         :param hop_color: color of hopping terms
@@ -148,19 +150,29 @@ class SCInterHopping(Lockable, InterHopping):
                              self._sc_bra.pc_origin, view)
 
         # Plot hopping terms
-        orb_pos_i = self._sc_bra.get_orb_pos()
+        orb_pos_bra = self._sc_bra.get_orb_pos()
+        orb_pos_ket = self._sc_ket.get_orb_pos() if with_conj else None
         hop_i, hop_j, hop_v = self.get_hop()
         dr = self.get_dr()
+        arrow_args = {"color": hop_color, "length_includes_head": True,
+                      "width": 0.002, "head_width": 0.02, "fill": False}
         for i_h in range(hop_i.shape[0]):
             if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
-                pos_i = orb_pos_i[hop_i.item(i_h)]
+                # Original term
+                pos_i = orb_pos_bra[hop_i.item(i_h)]
                 pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, color=hop_color,
-                                      length_includes_head=True,
-                                      width=0.002, head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
                 else:
                     viewer.add_line(pos_i, pos_j)
+                # Conjugate term
+                if with_conj:
+                    pos_j = orb_pos_ket[hop_j.item(i_h)]
+                    pos_i = pos_j - dr[i_h]
+                    if hop_as_arrows:
+                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                    else:
+                        viewer.add_line(pos_j, pos_i)
         if not hop_as_arrows:
             viewer.plot_line(color=hop_color)
 
@@ -564,13 +576,9 @@ class Sample:
     def plot(self, fig_name: str = None,
              fig_size: str = None,
              fig_dpi: int = 300,
-             with_orbitals: bool = True,
-             with_cells: bool = True,
-             hop_as_arrows: bool = True,
-             hop_eng_cutoff: float = 1e-5,
              sc_colors: List[str] = None,
              hop_colors: List[str] = None,
-             view: str = "ab") -> None:
+             **kwargs) -> None:
         """
         Plot lattice vectors, orbitals, and hopping terms.
 
@@ -580,18 +588,11 @@ class Sample:
         :param fig_name: file name to which the figure will be saved
         :param fig_size: size of the figure
         :param fig_dpi: resolution of the figure file
-        :param with_orbitals: whether to plot orbitals as filled circles
-        :param with_cells: whether to plot borders of primitive cells
-        :param hop_as_arrows: whether to plot hopping terms as arrows
-            If true, hopping terms will be plotted as arrows using axes.arrow()
-            method. Otherwise, they will be plotted as lines using
-            LineCollection. The former is more intuitive but much slower.
-        :param hop_eng_cutoff: cutoff for showing hopping terms
         :param sc_colors: colors for the hopping terms of each supercell
         :param hop_colors: colors for the hopping terms each inter-hopping
             container
-        :param view: kind of view point,  should be in 'ab', 'bc', 'ca', 'ba',
-            'cb', 'ac'
+        :param kwargs: arguments for the 'plot' method of 'Super' and
+            'SCInterHopping' classes
         :return: None
         :raises InterHopVoidError: if any inter-hopping set is empty
         :raises ValueError: if duplicate terms have been detected in any
@@ -608,13 +609,9 @@ class Sample:
 
         # Plot supercells and hopping terms
         for i, sc in enumerate(self._sc_list):
-            sc.plot(axes, with_orbitals=with_orbitals, with_cells=with_cells,
-                    hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
-                    hop_color=sc_colors[i], view=view)
+            sc.plot(axes, hop_color=sc_colors[i], **kwargs)
         for i, hop in enumerate(self._hop_list):
-            hop.plot(axes,
-                     hop_as_arrows=hop_as_arrows, hop_eng_cutoff=hop_eng_cutoff,
-                     hop_color=hop_colors[i], view=view)
+            hop.plot(axes, hop_color=hop_colors[i], **kwargs)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
