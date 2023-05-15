@@ -482,6 +482,26 @@ class Sample:
         core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
                            self.orb_pos, intensity, gauge)
 
+    def set_k_point(self, k_point: np.ndarray) -> None:
+        """
+        Set the k-point of Hamiltonian.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :return: None
+        """
+        self.init_hop()
+        self.init_dr()
+
+        # Convert k-point to Cartesian Coordinates
+        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
+        k_point = np.matmul(k_point, sc_recip_vec)
+
+        # Set up the Hamiltonian
+        hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
+        core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
+        self.hop_v = hop_k
+
     def build_ham_csr(self) -> csr_matrix:
         """
         Build sparse Hamiltonian for DOS and LDOS calculations using TBPM.
