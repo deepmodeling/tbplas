@@ -11,7 +11,7 @@ from . import exceptions as exc
 from .base import (check_rn, check_pbc, Lockable, IntraHopping, rn_type,
                    pbc_type, id_pc_type)
 from .primitive import PrimitiveCell
-from .utils import ModelViewer
+from .visual import ModelViewer
 
 
 class OrbitalSet(Lockable):

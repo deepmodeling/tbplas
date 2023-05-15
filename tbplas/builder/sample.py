@@ -11,7 +11,7 @@ from ..cython import sample as core
 from . import exceptions as exc
 from .base import Lockable, InterHopping, rn_type
 from .super import SuperCell
-from .utils import ModelViewer
+from .visual import ModelViewer
 from ..diagonal import DiagSolver
 
 

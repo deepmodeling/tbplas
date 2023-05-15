@@ -1,4 +1,4 @@
-"""Helper classes and functions used among builder package."""
+"""Helper classes and functions for visualizing models."""
 
 from typing import List, Tuple, Union
 
@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as mc
 
 from .base import rn3_type, pos3_type
+
+
+__all__ = ["ModelViewer"]
 
 
 class ModelViewer:

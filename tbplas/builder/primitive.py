@@ -13,7 +13,7 @@ from ..cython import primitive as core
 from . import exceptions as exc
 from .base import (check_rn, check_pos, Orbital, Lockable, IntraHopping,
                    HopDict, pair_type, rn_type, rn3_type, pos_type, pos3_type)
-from .utils import ModelViewer
+from .visual import ModelViewer
 from ..diagonal import DiagSolver
 
 
@@ -684,18 +684,6 @@ class PrimitiveCell(Lockable):
                         pos_rn = pos_r0 + center
                         viewer.scatter(pos_rn, s=100, c=self._orb_eng)
 
-        # Plot cells
-        if with_cells:
-            if view in ("ab", "ba"):
-                viewer.add_grid(ra_min, ra_max + 1, rb_min, rb_max + 1)
-            elif view in ("bc", "cb"):
-                viewer.add_grid(rb_min, rb_max + 1, rc_min, rc_max + 1)
-            else:
-                viewer.add_grid(ra_min, ra_max + 1, rc_min, rc_max + 1)
-            viewer.plot_grid(color="k", linestyle=":")
-            viewer.plot_lat_vec(color="k", length_includes_head=True,
-                                width=0.005, head_width=0.02)
-
         # Plot hopping terms
         for i_h, hop in enumerate(hop_ind_full):
             if abs(hop_eng_full.item(i_h)) >= hop_eng_cutoff:
@@ -710,6 +698,18 @@ class PrimitiveCell(Lockable):
                     viewer.add_line(pos_i, pos_j)
         if not hop_as_arrows:
             viewer.plot_line(color='r')
+
+        # Plot cells
+        if with_cells:
+            if view in ("ab", "ba"):
+                viewer.add_grid(ra_min, ra_max + 1, rb_min, rb_max + 1)
+            elif view in ("bc", "cb"):
+                viewer.add_grid(rb_min, rb_max + 1, rc_min, rc_max + 1)
+            else:
+                viewer.add_grid(ra_min, ra_max + 1, rc_min, rc_max + 1)
+            viewer.plot_grid(color="k", linestyle=":")
+            viewer.plot_lat_vec(color="k", length_includes_head=True,
+                                width=0.005, head_width=0.02)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):
