@@ -281,7 +281,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        corr_dos = self.average(corr_dos)
+        corr_dos = self.all_average(corr_dos)
         self._save_data(corr_dos, self.output["corr_DOS"])
         return corr_dos
 
@@ -312,7 +312,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        corr_ldos = self.average(corr_ldos)
+        corr_ldos = self.all_average(corr_ldos)
         self._save_data(corr_ldos, self.output["corr_LDOS"])
         return corr_ldos
 
@@ -349,7 +349,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        corr_ac = self.average(corr_ac)
+        corr_ac = self.all_average(corr_ac)
         self._save_data(corr_ac, self.output["corr_AC"])
         return corr_ac
 
@@ -388,7 +388,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        corr_dyn_pol = self.average(corr_dyn_pol)
+        corr_dyn_pol = self.all_average(corr_dyn_pol)
         self._save_data(corr_dyn_pol, self.output["corr_dyn_pol"])
         return corr_dyn_pol
 
@@ -436,8 +436,8 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        corr_dos = self.average(corr_dos)
-        corr_dc = self.average(corr_dc)
+        corr_dos = self.all_average(corr_dos)
+        corr_dc = self.all_average(corr_dc)
         self._save_data(corr_dos, self.output["corr_DOS"])
         self._save_data(corr_dc, self.output["corr_DC"])
         return corr_dos, corr_dc
@@ -467,7 +467,7 @@ class Solver(MPIEnv):
             self.config.dckb['n_kernel'],
             self.config.dckb['direction'],
             self.rank)
-        mu_mn = self.average(mu_mn)
+        mu_mn = self.all_average(mu_mn)
         self._save_data(mu_mn, self.output['hall_mu'])
         return mu_mn
 
@@ -501,7 +501,7 @@ class Solver(MPIEnv):
             self.config.generic['wfn_check_steps'],
             self.config.generic['wfn_check_thr']
         )
-        states = self.average(states)
+        states = self.all_average(states)
         if save_data:
             self._save_data(states, self.output['qe'])
         return states
