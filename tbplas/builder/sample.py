@@ -6,7 +6,6 @@ import numpy as np
 from scipy.sparse import dia_matrix, csr_matrix
 import matplotlib.pyplot as plt
 
-from ..base import lattice as lat
 from ..cython import sample as core
 from . import exceptions as exc
 from .base import Lockable, InterHopping, rn_type
@@ -197,19 +196,19 @@ class Sample:
         list of supercells within the sample
     _hop_list: List[SCInterHopping]
         list of inter-hopping sets between supercells within the sample
-    orb_eng: (num_orb_sc,) float64 array
+    orb_eng: (num_orb_tot,) float64 array
         on-site energies of orbitals in the supercell in eV
-    orb_pos: (num_orb_sc, 3) float64 array
+    orb_pos: (num_orb_tot, 3) float64 array
         Cartesian coordinates of orbitals in the supercell in nm
-    hop_i: (num_hop_sc,) int64 array
+    hop_i: (num_hop_tot,) int64 array
         row indices of hopping terms reduced by conjugate relation
-    hop_j: (num_hop_sc,) int64 array
+    hop_j: (num_hop_tot,) int64 array
         column indices of hopping terms reduced by conjugate relation
-    hop_v: (num_hop_sc,) complex128 array
+    hop_v: (num_hop_tot,) complex128 array
         energies of hopping terms in accordance with hop_i and hop_j in eV
-    dr: (num_hop_sc, 3) float64 array
+    dr: (num_hop_tot, 3) float64 array
         distances of hopping terms in accordance with hop_i and hop_j in nm
-    rescale: float
+    _rescale: float
         rescaling factor for the Hamiltonian
         reserved for compatibility with old version of TBPlaS
 
@@ -261,7 +260,7 @@ class Sample:
         self.hop_j = None
         self.hop_v = None
         self.dr = None
-        self.rescale = 1.0
+        self._rescale = 1.0
 
     def _get_num_orb(self) -> List[int]:
         """
@@ -355,7 +354,7 @@ class Sample:
             self.hop_v = np.concatenate(hop_v_tot)
 
             # Reset scaling factor
-            self.rescale = 1.0
+            self._rescale = 1.0
 
     def init_dr(self, force_init: bool = False) -> None:
         """
@@ -422,9 +421,9 @@ class Sample:
         if factor is None:
             factor = core.get_rescale(self.orb_eng, self.hop_i, self.hop_j,
                                       self.hop_v)
-        self.orb_eng /= (factor / self.rescale)
-        self.hop_v /= (factor / self.rescale)
-        self.rescale = factor
+        self.orb_eng /= (factor / self._rescale)
+        self.hop_v /= (factor / self._rescale)
+        self._rescale = factor
 
     def set_magnetic_field(self, intensity: float, gauge: int = 0) -> None:
         """
@@ -494,7 +493,7 @@ class Sample:
         self.init_dr()
 
         # Convert k-point to Cartesian Coordinates
-        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
+        sc_recip_vec = self.sc0.get_reciprocal_vectors()
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Set up the Hamiltonian
@@ -630,6 +629,9 @@ class Sample:
         # Plot supercells and hopping terms
         for i, sc in enumerate(self._sc_list):
             sc.plot(axes, hop_color=sc_colors[i], **kwargs)
+        for arg in ("with_orbitals", "with_cells"):
+            if arg in kwargs.keys():
+                kwargs.pop(arg)
         for i, hop in enumerate(self._hop_list):
             hop.plot(axes, hop_color=hop_colors[i], **kwargs)
 
@@ -667,7 +669,7 @@ class Sample:
             raise ValueError(f"Illegal convention {convention}")
 
         # Convert k-point to Cartesian Coordinates
-        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
+        sc_recip_vec = self.sc0.get_reciprocal_vectors()
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Set up the Hamiltonian
@@ -694,7 +696,7 @@ class Sample:
             raise ValueError(f"Illegal convention {convention}")
 
         # Convert k-point to Cartesian Coordinates
-        sc_recip_vec = lat.gen_reciprocal_vectors(self.sc0.sc_lat_vec)
+        sc_recip_vec = self.sc0.get_reciprocal_vectors()
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Diagonal terms
@@ -760,6 +762,15 @@ class Sample:
         return energies, dos
 
     @property
+    def rescale(self) -> float:
+        """
+        Interface the '_rescale' attribute.
+
+        :return: the rescaling factor
+        """
+        return self._rescale
+
+    @property
     def num_orb_tot(self) -> int:
         """
         Get the total number of orbitals of the sample.
@@ -788,7 +799,7 @@ class Sample:
 
         :returns: the energy range
         """
-        en_range = 2.0 * self.rescale
+        en_range = 2.0 * self._rescale
         return en_range
 
     @property

@@ -584,33 +584,6 @@ class PrimitiveCell(Lockable):
         self.sync_orb(**kwargs)
         self.sync_hop(**kwargs)
 
-    def get_lattice_area(self, direction: str = "c") -> float:
-        """
-        Get the area formed by lattice vectors normal to given direction.
-
-        :param direction: direction of area, e.g. "c" indicates the area formed
-            by lattice vectors in the aOb plane.
-        :return: area formed by lattice vectors in NM^2.
-        """
-        return lat.get_lattice_area(self._lat_vec, direction)
-
-    def get_lattice_volume(self) -> float:
-        """
-        Get the volume formed by all three lattice vectors in NM^3.
-
-        :return: volume in NM^3.
-        """
-        return lat.get_lattice_volume(self._lat_vec)
-
-    def get_reciprocal_vectors(self) -> np.ndarray:
-        """
-        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
-
-        :return: (3, 3) float64 array
-            reciprocal vectors in 1/NM.
-        """
-        return lat.gen_reciprocal_vectors(self._lat_vec)
-
     def plot(self, fig_name: str = None,
              fig_size: Tuple[float, float] = None,
              fig_dpi: int = 300,
@@ -923,10 +896,37 @@ class PrimitiveCell(Lockable):
         energies, dos = diag_solver.calc_dos(k_points, **kwargs)
         return energies, dos
 
+    def get_lattice_area(self, direction: str = "c") -> float:
+        """
+        Get the area formed by lattice vectors normal to given direction.
+
+        :param direction: direction of area, e.g. "c" indicates the area formed
+            by lattice vectors in the aOb plane.
+        :return: area formed by lattice vectors in NM^2.
+        """
+        return lat.get_lattice_area(self._lat_vec, direction)
+
+    def get_lattice_volume(self) -> float:
+        """
+        Get the volume formed by all three lattice vectors in NM^3.
+
+        :return: volume in NM^3.
+        """
+        return lat.get_lattice_volume(self._lat_vec)
+
+    def get_reciprocal_vectors(self) -> np.ndarray:
+        """
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+
+        :return: (3, 3) float64 array
+            reciprocal vectors in 1/NM.
+        """
+        return lat.gen_reciprocal_vectors(self._lat_vec)
+
     @property
     def lat_vec(self) -> np.ndarray:
         """
-        Interface for the lattice vectors.
+        Interface for the '_lat_vec' attribute.
 
         :return: (3, 3) float64 array
             Cartesian coordinates of lattice vectors in NM
@@ -936,7 +936,7 @@ class PrimitiveCell(Lockable):
     @property
     def origin(self) -> np.ndarray:
         """
-        Interface for the origin.
+        Interface for the '_origin' attribute.
 
         :return: (3,) float64 array
             Cartesian coordinate of origin in NM

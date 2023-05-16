@@ -122,7 +122,10 @@ class DiagSolver(MPIEnv):
         :return: (3, 3) float64 array
             reciprocal lattice vectors of in nm
         """
-        return lat.gen_reciprocal_vectors(self.lat_vec)
+        if self.model_is_pc:
+            return self.model.get_reciprocal_vectors()
+        else:
+            return self.model.sc0.get_reciprocal_vectors()
 
     def update_model(self) -> None:
         """

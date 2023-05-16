@@ -533,6 +533,98 @@ class SuperCell(OrbitalSet):
         self.check_lock()
         self._orb_pos_modifier = orb_pos_modifier
 
+    def trim(self) -> None:
+        """
+        Trim dangling orbitals and associated hopping terms.
+
+        :return: None.
+        :raises LockError: if the object is locked
+        """
+        self.check_lock()
+
+        # Get indices of dangling orbitals
+        hop_i, hop_j, hop_v = self.get_hop()
+        id_pc_trim = core.get_orb_id_trim(self._orb_id_pc, hop_i, hop_j)
+        id_sc_trim = self.orb_id_pc2sc_array(id_pc_trim)
+
+        # Add vacancies
+        self.add_vacancies(id_pc_trim)
+
+        # Also trim hop_modifier
+        self._hop_modifier.remove_orbitals(id_sc_trim)
+
+    def plot(self, axes: plt.Axes,
+             with_orbitals: bool = True,
+             with_cells: bool = True,
+             with_conj: bool = False,
+             hop_as_arrows: bool = True,
+             hop_eng_cutoff: float = 1e-5,
+             hop_color: str = "r",
+             view: str = "ab") -> None:
+        """
+        Plot lattice vectors, orbitals, and hopping terms to axes.
+
+        :param axes: axes on which the figure will be plotted
+        :param with_orbitals: whether to plot orbitals as filled circles
+        :param with_cells: whether to plot borders of primitive cells
+        :param with_conj: whether to plot conjugate hopping terms as well
+        :param hop_as_arrows: whether to plot hopping terms as arrows
+        :param hop_eng_cutoff: cutoff for showing hopping terms
+        :param hop_color: color of hopping terms
+        :param view: kind of view point, should be in 'ab', 'bc', 'ca', 'ba',
+            'cb', 'ac'
+        :return: None
+        :raises IDPCIndexError: if cell or orbital index of bra or ket in
+            hop_modifier is out of range
+        :raises IDPCVacError: if bra or ket in hop_modifier corresponds
+            to a vacancy
+        :raises ValueError: if view is illegal
+        """
+        viewer = ModelViewer(axes, self.pc_lat_vec, self.pc_origin, view)
+
+        # Plot orbitals
+        orb_pos = self.get_orb_pos()
+        orb_eng = self.get_orb_eng()
+        if with_orbitals:
+            viewer.scatter(orb_pos, c=orb_eng)
+
+        # Plot hopping terms
+        hop_i, hop_j, hop_v = self.get_hop()
+        dr = self.get_dr()
+        arrow_args = {"color": hop_color, "length_includes_head": True,
+                      "width": 0.002, "head_width": 0.02, "fill": False}
+        for i_h in range(hop_i.shape[0]):
+            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
+                # Original term
+                pos_i = orb_pos[hop_i.item(i_h)]
+                pos_j = pos_i + dr[i_h]
+                if hop_as_arrows:
+                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
+                else:
+                    viewer.add_line(pos_i, pos_j)
+                # Conjugate term
+                if with_conj:
+                    pos_j = orb_pos[hop_j.item(i_h)]
+                    pos_i = pos_j - dr[i_h]
+                    if hop_as_arrows:
+                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                    else:
+                        viewer.add_line(pos_j, pos_i)
+        if not hop_as_arrows:
+            viewer.plot_line(color=hop_color)
+
+        # Plot cells
+        if with_cells:
+            if view in ("ab", "ba"):
+                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(1))
+            elif view in ("bc", "cb"):
+                viewer.add_grid(0, self._dim.item(1), 0, self._dim.item(2))
+            else:
+                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(2))
+            viewer.plot_grid(color="k", linestyle=":")
+            viewer.plot_lat_vec(color="k", length_includes_head=True,
+                                width=0.005, head_width=0.02)
+
     def get_orb_eng(self) -> np.ndarray:
         """
         Get energies of all orbitals in the supercell.
@@ -775,35 +867,6 @@ class SuperCell(OrbitalSet):
                 dr = np.vstack((dr, dr_new))
         return dr
 
-    def trim(self) -> None:
-        """
-        Trim dangling orbitals and associated hopping terms.
-
-        :return: None.
-        :raises LockError: if the object is locked
-        """
-        self.check_lock()
-
-        # Get indices of dangling orbitals
-        hop_i, hop_j, hop_v = self.get_hop()
-        id_pc_trim = core.get_orb_id_trim(self._orb_id_pc, hop_i, hop_j)
-        id_sc_trim = self.orb_id_pc2sc_array(id_pc_trim)
-
-        # Add vacancies
-        self.add_vacancies(id_pc_trim)
-
-        # Also trim hop_modifier
-        self._hop_modifier.remove_orbitals(id_sc_trim)
-
-    def get_reciprocal_vectors(self) -> np.ndarray:
-        """
-        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
-
-        :return: (3, 3) float64 array
-            reciprocal vectors in 1/NM
-        """
-        return lat.gen_reciprocal_vectors(self.sc_lat_vec)
-
     def get_lattice_area(self, direction: str = "c") -> float:
         """
         Get the area formed by lattice vectors normal to given direction.
@@ -822,77 +885,14 @@ class SuperCell(OrbitalSet):
         """
         return lat.get_lattice_volume(self.sc_lat_vec)
 
-    def plot(self, axes: plt.Axes,
-             with_orbitals: bool = True,
-             with_cells: bool = True,
-             with_conj: bool = False,
-             hop_as_arrows: bool = True,
-             hop_eng_cutoff: float = 1e-5,
-             hop_color: str = "r",
-             view: str = "ab") -> None:
+    def get_reciprocal_vectors(self) -> np.ndarray:
         """
-        Plot lattice vectors, orbitals, and hopping terms to axes.
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
 
-        :param axes: axes on which the figure will be plotted
-        :param with_orbitals: whether to plot orbitals as filled circles
-        :param with_cells: whether to plot borders of primitive cells
-        :param with_conj: whether to plot conjugate hopping terms as well
-        :param hop_as_arrows: whether to plot hopping terms as arrows
-        :param hop_eng_cutoff: cutoff for showing hopping terms
-        :param hop_color: color of hopping terms
-        :param view: kind of view point, should be in 'ab', 'bc', 'ca', 'ba',
-            'cb', 'ac'
-        :return: None
-        :raises IDPCIndexError: if cell or orbital index of bra or ket in
-            hop_modifier is out of range
-        :raises IDPCVacError: if bra or ket in hop_modifier corresponds
-            to a vacancy
-        :raises ValueError: if view is illegal
+        :return: (3, 3) float64 array
+            reciprocal vectors in 1/NM
         """
-        viewer = ModelViewer(axes, self.pc_lat_vec, self.pc_origin, view)
-
-        # Plot orbitals
-        orb_pos = self.get_orb_pos()
-        orb_eng = self.get_orb_eng()
-        if with_orbitals:
-            viewer.scatter(orb_pos, c=orb_eng)
-
-        # Plot hopping terms
-        hop_i, hop_j, hop_v = self.get_hop()
-        dr = self.get_dr()
-        arrow_args = {"color": hop_color, "length_includes_head": True,
-                      "width": 0.002, "head_width": 0.02, "fill": False}
-        for i_h in range(hop_i.shape[0]):
-            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
-                # Original term
-                pos_i = orb_pos[hop_i.item(i_h)]
-                pos_j = pos_i + dr[i_h]
-                if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
-                else:
-                    viewer.add_line(pos_i, pos_j)
-                # Conjugate term
-                if with_conj:
-                    pos_j = orb_pos[hop_j.item(i_h)]
-                    pos_i = pos_j - dr[i_h]
-                    if hop_as_arrows:
-                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
-                    else:
-                        viewer.add_line(pos_j, pos_i)
-        if not hop_as_arrows:
-            viewer.plot_line(color=hop_color)
-
-        # Plot cells
-        if with_cells:
-            if view in ("ab", "ba"):
-                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(1))
-            elif view in ("bc", "cb"):
-                viewer.add_grid(0, self._dim.item(1), 0, self._dim.item(2))
-            else:
-                viewer.add_grid(0, self._dim.item(0), 0, self._dim.item(2))
-            viewer.plot_grid(color="k", linestyle=":")
-            viewer.plot_lat_vec(color="k", length_includes_head=True,
-                                width=0.005, head_width=0.02)
+        return lat.gen_reciprocal_vectors(self.sc_lat_vec)
 
     @property
     def prim_cell(self) -> PrimitiveCell:
