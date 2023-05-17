@@ -136,8 +136,7 @@ def test_spin_texture(plot=True):
     sx = spin_texture.eval("x")
     sy = spin_texture.eval("y")
     if plot:
-        vis.plot_vector(x=k_cart[:, 0], y=k_cart[:, 1], u=sx[:, 2], v=sy[:, 2],
-                        units="dots")
+        vis.plot_vector(x=k_cart[:, 0], y=k_cart[:, 1], u=sx[:, 2], v=sy[:, 2])
 
 
 def main():

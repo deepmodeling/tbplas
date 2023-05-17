@@ -166,7 +166,7 @@ def prod_dp_arb(double [:,::1] bands, double complex [:,:,::1] states,
     """
     Calculate delta_eng and prod_df for arbitrary q-point.
 
-    Parmaters
+    Parameters
     ---------
     bands: (num_kpt, num_orb) float64 array
         eigenvalues on regular k-grid in eV
@@ -238,7 +238,7 @@ def dyn_pol(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
     Calculate dynamic polarizability using Lindhard function,
     for cross-validation with FORTRAN version.
 
-    Parmaters
+    Parameters
     ---------
     delta_eng: (num_kpt, num_orb, num_orb) float64 array
         energy difference for evaluating dyn_pol
@@ -303,7 +303,7 @@ def prod_ac(double [:,::1] bands, double complex [:,:,::1] states,
     hop_eng: (num_hop,) complex128 array
         hopping energies of reduced hopping terms in eV
     hop_dr: (num_hop, 3) float64 array
-        hopping distances in CARTESIAN coordiantes in NM
+        hopping distances in CARTESIAN coordinates in NM
     kmesh: (num_kpt, 3) float64 array
         CARTESIAN coordinates of k-points in 1/NM
     beta: double
@@ -383,7 +383,7 @@ def ac_cond(double [:,:,::1] delta_eng, double complex [:,:,::1] prod_df,
     """
     Evaluate full AC conductivity using Kubo-Greenwood formula.
 
-    Parmaters
+    Parameters
     ---------
     delta_eng: (num_kpt, num_orb, num_orb) float64 array
         energy difference for evaluating ac_cond

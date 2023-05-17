@@ -258,7 +258,7 @@ class Visualizer(MPIEnv):
             if isinstance(model, PrimitiveCell):
                 orb_pos = model.orb_pos_nm
                 hop_i = model.hop_ind[:, 3]
-                dr = model.hop_dr_nm
+                dr = model.dr_nm
             else:
                 model.init_orb_pos()
                 model.init_hop()

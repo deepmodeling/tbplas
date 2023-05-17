@@ -157,7 +157,7 @@ def init_wfc_random(sample: tb.Sample) -> np.ndarray:
     :param sample: sample for which the wave function shall be generated
     :return: initial wave function
     """
-    phase = 2 * np.pi * np.random.rand(sample.num_orb_tot)
+    phase = 2 * np.pi * np.random.rand(sample.num_orb)
     wfc = np.exp(1j * phase)
     wfc /= np.linalg.norm(wfc)
     return wfc
@@ -170,7 +170,7 @@ def init_wfc_uniform(sample: tb.Sample) -> np.ndarray:
     :param sample: sample for which the wave function shall be generated
     :return: initial wave function
     """
-    wfc = np.ones(sample.num_orb_tot, dtype=np.complex128)
+    wfc = np.ones(sample.num_orb, dtype=np.complex128)
     wfc /= np.linalg.norm(wfc)
     return wfc
 

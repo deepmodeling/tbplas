@@ -262,14 +262,14 @@ class Sample:
         self.dr = None
         self._rescale = 1.0
 
-    def _get_num_orb(self) -> List[int]:
+    def _get_num_orb_sc(self) -> List[int]:
         """
         Get numbers of orbitals in each supercell.
 
         :return: numbers of orbitals in each supercell
         """
-        num_orb = [sc.num_orb_sc for sc in self._sc_list]
-        return num_orb
+        num_orb_sc = [sc.num_orb_sc for sc in self._sc_list]
+        return num_orb_sc
 
     def _get_ind_start(self) -> List[int]:
         """
@@ -278,8 +278,8 @@ class Sample:
 
         :return: starting indices of orbitals for each supercell
         """
-        num_orb = self._get_num_orb()
-        ind_start = [sum(num_orb[:_]) for _ in range(len(num_orb))]
+        num_orb_sc = self._get_num_orb_sc()
+        ind_start = [sum(num_orb_sc[:_]) for _ in range(len(num_orb_sc))]
         return ind_start
 
     def init_orb_eng(self, force_init: bool = False) -> None:
@@ -512,7 +512,7 @@ class Sample:
         """
         self.init_orb_eng()
         self.init_hop()
-        ham_shape = (self.num_orb_tot, self.num_orb_tot)
+        ham_shape = (self.num_orb, self.num_orb)
         ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
         ham_half = csr_matrix((self.hop_v, (self.hop_i, self.hop_j)),
                               shape=ham_shape)
@@ -536,7 +536,7 @@ class Sample:
         """
         self.init_dr()
         dx, dy = self.dr[:, 0], self.dr[:, 1]
-        shape = (self.num_orb_tot, self.num_orb_tot)
+        shape = (self.num_orb, self.num_orb)
         dx_csr = csr_matrix((dx, (self.hop_i, self.hop_j)), shape)
         dy_csr = csr_matrix((dy, (self.hop_i, self.hop_j)), shape)
         dx_csr = dx_csr - dx_csr.getH()
@@ -591,7 +591,7 @@ class Sample:
         return indptr, indices, hop, dx, dy
 
     def plot(self, fig_name: str = None,
-             fig_size: str = None,
+             fig_size: Tuple[float, float] = None,
              fig_dpi: int = 300,
              sc_colors: List[str] = None,
              hop_colors: List[str] = None,
@@ -698,7 +698,7 @@ class Sample:
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Diagonal terms
-        ham_shape = (self.num_orb_tot, self.num_orb_tot)
+        ham_shape = (self.num_orb, self.num_orb)
         ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
 
         # Off-diagonal terms
@@ -769,13 +769,23 @@ class Sample:
         return self._rescale
 
     @property
-    def num_orb_tot(self) -> int:
+    def num_orb(self) -> int:
         """
         Get the total number of orbitals of the sample.
 
         :return: total number of orbitals
         """
-        return sum(self._get_num_orb())
+        return sum(self._get_num_orb_sc())
+
+    @property
+    def num_hop(self) -> int:
+        """
+        Get the total number of hopping terms of the sample.
+
+        :return: total number of hopping terms
+        """
+        self.init_hop()
+        return self.hop_i.shape[0]
 
     @property
     def sc0(self) -> SuperCell:

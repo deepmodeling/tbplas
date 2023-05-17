@@ -222,35 +222,35 @@ class TestSample(unittest.TestCase):
 
         # Normal case with 1 supercell
         sample = Sample(sc1)
-        num_orb = sample._get_num_orb()
+        num_orb = sample._get_num_orb_sc()
         ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18])
         self.assertListEqual(ind_start, [0])
 
         # Normal case with 2 supercells and 1 inter-hopping
         sample = Sample(sc1, sc2, inter_hop1)
-        num_orb = sample._get_num_orb()
+        num_orb = sample._get_num_orb_sc()
         ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18])
         self.assertListEqual(ind_start, [0, 18])
 
         # Normal case with 3 supercells and 2 inter-hopping
         sample = Sample(sc1, sc2, sc3, inter_hop1, inter_hop2)
-        num_orb = sample._get_num_orb()
+        num_orb = sample._get_num_orb_sc()
         ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18, 18])
         self.assertListEqual(ind_start, [0, 18, 36])
 
         # Abnormal case with 2 supercells and no inter-hopping
         sample = Sample(sc1, sc2)
-        num_orb = sample._get_num_orb()
+        num_orb = sample._get_num_orb_sc()
         ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18])
         self.assertListEqual(ind_start, [0, 18])
 
         # Abnormal case with 3 supercells and no inter-hopping
         sample = Sample(sc1, sc2, sc3)
-        num_orb = sample._get_num_orb()
+        num_orb = sample._get_num_orb_sc()
         ind_start = sample._get_ind_start()
         self.assertListEqual(num_orb, [18, 18, 18])
         self.assertListEqual(ind_start, [0, 18, 36])
@@ -673,7 +673,7 @@ class TestSample(unittest.TestCase):
         sample.init_dr()
 
         # Check if set_ham_dense agrees with set_ham_csr
-        num_orb = sample.num_orb_tot
+        num_orb = sample.num_orb
         ham1 = np.zeros((num_orb, num_orb), dtype=np.complex128)
         kpt = np.array([0.35, 0.50, 0.0])
         sample.set_ham_dense(kpt, ham1, convention=1)

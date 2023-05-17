@@ -552,7 +552,7 @@ class Lindhard(DiagSolver):
 
         # Build hopping indices and distances
         hop_ind = self.cell.hop_ind[:, 3:5].copy()
-        hop_dr = self.cell.hop_dr_nm
+        hop_dr = self.cell.dr_nm
 
         # Get eigenvalues and eigenstates
         # It is important not to synchronize the wave functions on each process.

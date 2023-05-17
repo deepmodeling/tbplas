@@ -649,7 +649,7 @@ class PrimitiveCell(Lockable):
         hop_i = self._hop_ind[:, 3]
         hop_j = self._hop_ind[:, 4]
         hop_v = self._hop_eng
-        dr = self.hop_dr_nm
+        dr = self.dr_nm
         arrow_args = {"color": "r", "length_includes_head": True,
                       "width": 0.002, "head_width": 0.02, "fill": False}
         for i_h in range(hop_i.shape[0]):
@@ -764,15 +764,15 @@ class PrimitiveCell(Lockable):
                 hk[_pair] = term
 
         # Collect hopping terms
-        hop_dr = self.hop_dr
+        dr = self.dr
         for ih, hop in enumerate(self._hop_ind):
             pair = (hop.item(3), hop.item(4))
             energy = self._hop_eng.item(ih)
-            _add_term(pair, energy, hop_dr[ih])
+            _add_term(pair, energy, dr[ih])
             if pair[0] != pair[1]:
                 pair = (pair[1], pair[0])
                 energy = energy.conjugate()
-                _add_term(pair, energy, -hop_dr[ih])
+                _add_term(pair, energy, -dr[ih])
 
         # Print formulae
         reduced_pairs = [pair for pair in hk.keys() if pair[0] <= pair[1]]
@@ -1047,7 +1047,7 @@ class PrimitiveCell(Lockable):
         return orb_pos_ang
 
     @property
-    def hop_dr(self) -> np.ndarray:
+    def dr(self) -> np.ndarray:
         """
         Get the hopping distances in FRACTIONAL coordinates.
 
@@ -1055,28 +1055,28 @@ class PrimitiveCell(Lockable):
             hopping distances in FRACTIONAL coordinates
         """
         self.sync_hop()
-        hop_dr = np.zeros((self.num_hop, 3), dtype=np.float64)
+        dr = np.zeros((self.num_hop, 3), dtype=np.float64)
         for i_h, ind in enumerate(self._hop_ind):
             orb_i, orb_j = ind.item(3), ind.item(4)
-            hop_dr[i_h] = self._orb_pos[orb_j] + ind[0:3] - self._orb_pos[orb_i]
-        return hop_dr
+            dr[i_h] = self._orb_pos[orb_j] + ind[0:3] - self._orb_pos[orb_i]
+        return dr
 
     @property
-    def hop_dr_nm(self) -> np.ndarray:
+    def dr_nm(self) -> np.ndarray:
         """
         Get the hopping distances in NM.
 
         :return: (num_hop, 3) float64 array
             hopping distances in NM
         """
-        return lat.frac2cart(self._lat_vec, self.hop_dr)
+        return lat.frac2cart(self._lat_vec, self.dr)
 
     @property
-    def hop_dr_ang(self) -> np.ndarray:
+    def dr_ang(self) -> np.ndarray:
         """
         Get the hopping distances in ANGSTROM.
 
         :return: (num_hop, 3) float64 array
             hopping distances in ANGSTROM
         """
-        return self.hop_dr_nm * 10
+        return self.dr_nm * 10

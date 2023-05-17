@@ -9,8 +9,6 @@ import scipy.linalg.lapack as lapack
 from scipy.sparse.linalg import eigsh
 from scipy.sparse import csr_matrix
 
-
-from ..base import lattice as lat
 from ..base import kpoints as kpt
 from ..parallel import MPIEnv
 
@@ -96,10 +94,7 @@ class DiagSolver(MPIEnv):
 
         :return: number of orbitals
         """
-        if self.model_is_pc:
-            return self.model.num_orb
-        else:
-            return self.model.num_orb_tot
+        return self.model.num_orb
 
     @property
     def lat_vec(self) -> np.ndarray:

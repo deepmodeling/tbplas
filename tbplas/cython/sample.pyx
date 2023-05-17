@@ -28,11 +28,11 @@ def build_inter_dr(long [:,::1] hop_ind,
     hop_ind: (num_hop, 5) int64 array
         hopping indices
     pos_bra: (num_hop, 3) float64 array
-        Cartesian coordiantes of orbitals of the 'bra' super cell in nm
+        Cartesian coordinates of orbitals of the 'bra' super cell in nm
     pos_ket: (num_hop, 3) float64 array
-        Cartesian coordiantes of orbitals of the 'ket' super cell in nm
+        Cartesian coordinates of orbitals of the 'ket' super cell in nm
     sc_lat_ket: (3, 3) float64 array
-        Cartesian coordiantes of 'ket' super cell lattice vectors in nm
+        Cartesian coordinates of 'ket' super cell lattice vectors in nm
 
     Returns
     -------
