@@ -619,58 +619,58 @@ class PrimitiveCell(Lockable):
         axes.set_aspect('equal')
         viewer = ModelViewer(axes, self._lat_vec, self._origin, view)
 
-        # Prepare hopping terms and plot ranges
+        # Determine the range of rn
+        rn_range = np.zeros((3, 2), dtype=np.int32)
         if self.num_hop > 0:
-            # Restore conjugate hopping terms
-            if with_conj:
-                hop_ind_conj = np.zeros(self._hop_ind.shape, dtype=np.int32)
-                hop_ind_conj[:, :3] = -self._hop_ind[:, :3]
-                hop_ind_conj[:, 3] = self._hop_ind[:, 4]
-                hop_ind_conj[:, 4] = self._hop_ind[:, 3]
-                hop_ind_full = np.vstack((self._hop_ind, hop_ind_conj))
-                hop_eng_full = np.vstack((self._hop_eng, self._hop_eng))
-            else:
-                hop_ind_full = self._hop_ind
-                hop_eng_full = self._hop_eng
-
-            # Determine the range of rn
-            ra = hop_ind_full[:, 0]
-            rb = hop_ind_full[:, 1]
-            rc = hop_ind_full[:, 2]
-            ra_min, ra_max = ra.min(), ra.max()
-            rb_min, rb_max = rb.min(), rb.max()
-            rc_min, rc_max = rc.min(), rc.max()
-        else:
-            hop_ind_full = np.array([])
-            hop_eng_full = np.array([])
-            ra_min, ra_max = 0, 0
-            rb_min, rb_max = 0, 0
-            rc_min, rc_max = 0, 0
+            for i in range(3):
+                ri_min = self._hop_ind[:, i].min()
+                ri_max = self._hop_ind[:, i].max()
+                if with_conj:
+                    rn_range[i, 0] = min([ri_min, ri_max, -ri_min, -ri_max])
+                    rn_range[i, 1] = max([ri_min, ri_max, -ri_min, -ri_max])
+                else:
+                    rn_range[i, 0] = ri_min
+                    rn_range[i, 1] = ri_max
+        ra_min, ra_max = rn_range.item(0, 0), rn_range.item(0, 1)
+        rb_min, rb_max = rn_range.item(1, 0), rn_range.item(1, 1)
+        rc_min, rc_max = rn_range.item(2, 0), rn_range.item(2, 1)
 
         # Plot orbitals
-        pos_r0 = self.orb_pos_nm
+        orb_pos = self.orb_pos_nm
         if with_orbitals:
             for i_a in range(ra_min, ra_max+1):
                 for i_b in range(rb_min, rb_max+1):
                     for i_c in range(rc_min, rc_max+1):
                         center = np.matmul((i_a, i_b, i_c), self._lat_vec)
-                        pos_rn = pos_r0 + center
+                        pos_rn = orb_pos + center
                         viewer.scatter(pos_rn, s=100, c=self._orb_eng)
 
         # Plot hopping terms
-        for i_h, hop in enumerate(hop_ind_full):
-            if abs(hop_eng_full.item(i_h)) >= hop_eng_cutoff:
-                center = np.matmul(hop[:3], self._lat_vec)
-                pos_i = pos_r0[hop.item(3)]
-                pos_j = pos_r0[hop.item(4)] + center
+        hop_i = self._hop_ind[:, 3]
+        hop_j = self._hop_ind[:, 4]
+        hop_v = self._hop_eng
+        dr = self.hop_dr_nm
+        arrow_args = {"color": "r", "length_includes_head": True,
+                      "width": 0.002, "head_width": 0.02, "fill": False}
+        for i_h in range(hop_i.shape[0]):
+            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
+                # Original term
+                pos_i = orb_pos[hop_i.item(i_h)]
+                pos_j = pos_i + dr[i_h]
                 if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, color="r",
-                                      length_includes_head=True, width=0.002,
-                                      head_width=0.02, fill=False)
+                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
                 else:
                     viewer.add_line(pos_i, pos_j)
+                # Conjugate term
+                if with_conj:
+                    pos_j = orb_pos[hop_j.item(i_h)]
+                    pos_i = pos_j - dr[i_h]
+                    if hop_as_arrows:
+                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                    else:
+                        viewer.add_line(pos_j, pos_i)
         if not hop_as_arrows:
-            viewer.plot_line(color='r')
+            viewer.plot_line(color="r")
 
         # Plot cells
         if with_cells:
