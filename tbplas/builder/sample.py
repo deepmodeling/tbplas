@@ -512,8 +512,7 @@ class Sample:
         """
         self.init_orb_eng()
         self.init_hop()
-        ham_size = sum(self._get_num_orb())
-        ham_shape = (ham_size, ham_size)
+        ham_shape = (self.num_orb_tot, self.num_orb_tot)
         ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
         ham_half = csr_matrix((self.hop_v, (self.hop_i, self.hop_j)),
                               shape=ham_shape)
@@ -537,8 +536,7 @@ class Sample:
         """
         self.init_dr()
         dx, dy = self.dr[:, 0], self.dr[:, 1]
-        mat_size = sum(self._get_num_orb())
-        shape = (mat_size, mat_size)
+        shape = (self.num_orb_tot, self.num_orb_tot)
         dx_csr = csr_matrix((dx, (self.hop_i, self.hop_j)), shape)
         dy_csr = csr_matrix((dy, (self.hop_i, self.hop_j)), shape)
         dx_csr = dx_csr - dx_csr.getH()
