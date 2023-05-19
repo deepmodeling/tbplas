@@ -1054,6 +1054,7 @@ class PrimitiveCell(Lockable):
         :return: (num_hop, 3) float64 array
             hopping distances in FRACTIONAL coordinates
         """
+        self.sync_orb()
         self.sync_hop()
         dr = np.zeros((self.num_hop, 3), dtype=np.float64)
         for i_h, ind in enumerate(self._hop_ind):
