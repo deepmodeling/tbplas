@@ -100,15 +100,11 @@ class PrimitiveCell(Lockable):
         self.extended = 1.0
 
     def __hash__(self) -> int:
-        """
-        Return the hash of this instance.
-
-        NOTE: DO NOT use the hashes in self._hash_dict because they may be out
-        of date.
-
-        :return: hash of this instance
-        """
-        return hash((self._get_hash("orb"), self._get_hash("hop")))
+        """Return the hash of this instance."""
+        lat_vec = tuple([tuple(_) for _ in self._lat_vec])
+        fp = (lat_vec, tuple(self._origin), tuple(self._orbital_list),
+              self._hopping_dict, self.extended)
+        return hash(fp)
 
     def _get_hash(self, attr: str) -> int:
         """

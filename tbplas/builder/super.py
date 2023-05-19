@@ -309,6 +309,7 @@ class OrbitalSet(Lockable):
                 self._vac_id_sc = None
                 self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                        self._vac_id_pc)
+            self._prim_cell.lock(f"supercell #{id(self)}")
         else:
             if verbose:
                 print("INFO: no need to update sc vacancy and orbital arrays")
@@ -455,7 +456,7 @@ class SuperCell(OrbitalSet):
 
     Attributes
     ----------
-    _hop_modifier: 'SCIntraHopping' instance
+    _hop_modifier: 'IntraHopping' instance
         modification to hopping terms in the supercell
     _orb_pos_modifier: function
         modification to orbital positions in the supercell
@@ -486,6 +487,13 @@ class SuperCell(OrbitalSet):
         # Initialize hop_modifier and orb_pos_modifier
         self._hop_modifier = IntraHopping()
         self._orb_pos_modifier = orb_pos_modifier
+
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
+        fp = (self._prim_cell, tuple(self._dim), tuple(self._pbc),
+              tuple(self._vacancy_list), self._hop_modifier,
+              self._orb_pos_modifier)
+        return hash(fp)
 
     def add_hopping(self, rn: rn_type,
                     orb_i: int,

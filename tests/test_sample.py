@@ -6,6 +6,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 
+import tbplas
 from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, SuperCell,
                     SCInterHopping, Sample, Timer, TestHelper)
@@ -679,6 +680,96 @@ class TestSample(unittest.TestCase):
         sample.set_ham_dense(kpt, ham1, convention=1)
         ham1_csr = sample.set_ham_csr(kpt, convention=1)
         th.test_equal_array(ham1, ham1_csr.todense(), almost=True)
+
+    def test16_data_update(self):
+        """
+        Check if the data-updating mechanism works as expected.
+
+        :return: None
+        """
+        # Test hash of primitive cell
+        cell = tbplas.make_graphene_diamond()
+        hash_old = hash(cell)
+
+        # Add an orbital and compare
+        cell.add_orbital((0.5, 0.5))
+        hash_new = hash(cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Add a hopping term and compare
+        hash_old = hash_new
+        cell.add_hopping((0, 0), 0, 2, 1.0)
+        hash_new = hash(cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Test hash of SuperCell
+        cell = tbplas.make_graphene_diamond()
+        super_cell = tbplas.SuperCell(cell, dim=(3, 3, 1),
+                                      pbc=(True, True, False))
+        hash_old = hash(super_cell)
+
+        # Modify the primitive cell
+        cell.unlock()
+        cell.add_orbital((0.5, 0.5))
+        cell.add_hopping((0, 0), 0, 2, 1.0)
+        hash_new = hash(super_cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Modify the vacancies
+        hash_old = hash_new
+        super_cell.add_vacancy((0, 0, 0, 1))
+        hash_new = hash(super_cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Add an hopping term
+        super_cell.add_hopping((0, 0), 0, 9, 1.0)
+        hash_new = hash(super_cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Set modifier
+        def _test():
+            pass
+        hash_old = hash_new
+        super_cell.set_orb_pos_modifier(_test)
+        hash_new = hash(super_cell)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Test SCInterHopping
+        cell1 = tbplas.make_graphene_diamond()
+        super_cell1 = tbplas.SuperCell(cell1, dim=(3, 3, 1),
+                                       pbc=(True, True, False))
+        cell2 = tbplas.make_graphene_diamond()
+        super_cell2 = tbplas.SuperCell(cell2, dim=(3, 3, 1),
+                                       pbc=(True, True, False))
+        inter_hop = SCInterHopping(super_cell1, super_cell2)
+        hash_old = hash(inter_hop)
+        cell1.unlock()
+        cell1.add_orbital((0.5, 0.5))
+        hash_new = hash(inter_hop)
+        self.assertNotEqual(hash_old, hash_new)
+        cell2.unlock()
+        cell1.add_orbital((0.5, 0.5))
+        hash_new = hash(inter_hop)
+        self.assertNotEqual(hash_old, hash_new)
+
+        # Test the full dependency chain
+        cell = tbplas.make_graphene_diamond()
+        super_cell = tbplas.SuperCell(cell, dim=(3, 3, 1),
+                                      pbc=(True, True, False))
+        sample = tbplas.Sample(super_cell)
+        sample.init_dr()
+        cell.unlock()
+        cell.add_orbital((0.5, 0.5))
+        super_cell.unlock()
+        super_cell.add_vacancy((0, 0, 0, 2))
+        sample.reset_array()
+        self.assertEqual(cell.num_orb, 3)
+        self.assertEqual(cell._orb_eng.shape[0], 3)
+        self.assertEqual(cell._orb_pos.shape[0], 3)
+        self.assertEqual(super_cell.num_orb_pc, 3)
+        self.assertEqual(super_cell.num_orb_sc, 26)
+        self.assertEqual(super_cell._orb_id_pc.shape[0], 26)
+        self.assertEqual(sample.num_orb, 26)
 
 
 if __name__ == "__main__":

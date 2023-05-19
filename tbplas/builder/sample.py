@@ -52,6 +52,11 @@ class SCInterHopping(Lockable, InterHopping):
         self._sc_bra = sc_bra
         self._sc_ket = sc_ket
 
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
+        fp = (tuple(self.to_list()), self._sc_bra, self._sc_ket)
+        return hash(fp)
+
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
@@ -395,6 +400,10 @@ class Sample:
             self.init_hop(force_init=True)
         if self.dr is not None:
             self.init_dr(force_init=True)
+        for arg in self._sc_list:
+            arg.lock(f"sample #{id(self)}")
+        for arg in self._hop_list:
+            arg.lock(f"sample #{id(self)}")
 
     def rescale_ham(self, factor: float = None) -> None:
         """

@@ -320,6 +320,11 @@ class PCInterHopping(Lockable, InterHopping):
         self._pc_bra = pc_bra
         self._pc_ket = pc_ket
 
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
+        fp = (tuple(self.to_list()), self._pc_bra, self._pc_ket)
+        return hash(fp)
+
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
