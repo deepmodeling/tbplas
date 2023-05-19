@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from ..cython import sample as core
 from . import exceptions as exc
-from .base import Lockable, InterHopping, rn_type
+from .base import InterHopping
 from .super import SuperCell
 from .visual import ModelViewer
 from ..diagonal import DiagSolver
@@ -17,7 +17,7 @@ from ..diagonal import DiagSolver
 __all__ = ["SCInterHopping", "Sample"]
 
 
-class SCInterHopping(Lockable, InterHopping):
+class SCInterHopping(InterHopping):
     """
     Container class for hopping terms between different supercells within the
     sample.
@@ -47,8 +47,7 @@ class SCInterHopping(Lockable, InterHopping):
         :param sc_bra: the 'bra' supercell from which the hopping terms exist
         :param sc_ket: the 'ket' supercell to which the hopping terms exist
         """
-        Lockable.__init__(self)
-        InterHopping.__init__(self)
+        super().__init__()
         self._sc_bra = sc_bra
         self._sc_ket = sc_ket
 
@@ -56,23 +55,6 @@ class SCInterHopping(Lockable, InterHopping):
         """Return the hash of this instance."""
         fp = (tuple(self.to_list()), self._sc_bra, self._sc_ket)
         return hash(fp)
-
-    def add_hopping(self, rn: rn_type,
-                    orb_i: int,
-                    orb_j: int,
-                    energy: complex) -> None:
-        """
-        Add a new hopping term or update existing term.
-
-        :param rn: (r_a, r_b, r_c), cell index
-        :param orb_i: orbital index or bra
-        :param orb_j: orbital index of ket
-        :param energy: hopping energy
-        :return: None
-        :raises InterHopLockError: is the object is locked
-        """
-        self.check_lock()
-        super().add_hopping(rn, orb_i, orb_j, energy)
 
     def get_hop(self, check_dup: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """

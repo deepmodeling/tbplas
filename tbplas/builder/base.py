@@ -1,7 +1,6 @@
 """Base functions and classes used through the builder package."""
 
 from collections import namedtuple
-from abc import ABC, abstractmethod
 from typing import List, Tuple, Union, Dict
 
 import numpy as np
@@ -96,7 +95,7 @@ def invert_rn(rn: Tuple[int, int, int], i: int = 0) -> bool:
 Orbital = namedtuple("Orbital", ["position", "energy", "label"])
 
 
-class Lockable(ABC):
+class Lockable:
     """
     Base class for all lockable objects.
 
@@ -149,9 +148,10 @@ class Lockable(ABC):
             raise exc.LockError()
 
 
-class Hopping(ABC):
+class IntraHopping:
     """
-    Base class for IntraHopping and InterHopping.
+    Container class for holding hopping terms in a primitive cell or
+    modifications to hopping terms in a supercell.
 
     Attributes
     ----------
@@ -159,6 +159,12 @@ class Hopping(ABC):
         Keys are cell indices (rn), while values are dictionaries.
         Keys of value dictionary are orbital pairs, while values are hopping
         energies.
+
+    NOTES
+    -----
+    This class is intended to be utilized by the PrimitiveCell and SuperCell
+    classes. It is assumed that the applicant will take care of all the
+    arguments passed to this class. NO CHECKING WILL BE PERFORMED HERE.
     """
     def __init__(self) -> None:
         super().__init__()
@@ -169,17 +175,14 @@ class Hopping(ABC):
         return hash(tuple(self.to_list()))
 
     @staticmethod
-    @abstractmethod
     def _norm_keys(rn: rn_type,
                    orb_i: int,
                    orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
-        Normalize cell index and orbital pair into permitted keys of self.dict.
+        Normalize cell index and orbital pair into permitted keys.
 
         For IntraHopping, it should check whether to take the conjugation and
-        return the status in conj. For InterHopping, it should check if rn is
-        legal since the class is exposed to the user. The status conj should
-        always be False for InterHopping.
+        return the status in conj.
 
         :param rn: (r_a, r_b, r_c), cell index
         :param orb_i: orbital index or bra
@@ -189,7 +192,19 @@ class Hopping(ABC):
             pair is the normalized orbital pair,
             conj is the flag of whether to take the conjugate of hopping energy
         """
-        pass
+        if invert_rn(rn):
+            rn = (-rn[0], -rn[1], -rn[2])
+            pair = (orb_j, orb_i)
+            conj = True
+        elif rn == (0, 0, 0) and orb_i > orb_j:
+            rn = rn
+            pair = (orb_j, orb_i)
+            conj = True
+        else:
+            rn = rn
+            pair = (orb_i, orb_j)
+            conj = False
+        return rn, pair, conj
 
     def add_hopping(self, rn: rn_type,
                     orb_i: int,
@@ -419,61 +434,23 @@ class Hopping(ABC):
         return num_hop
 
 
-class IntraHopping(Hopping):
+class InterHopping(Lockable, IntraHopping):
     """
-    Container class for holding hopping terms of a primitive cell or
-    modifications to a supercell.
-
-    NOTE: this class is intended to be called by the 'PrimitiveCell' and
-    'SuperCell' classes. It is assumed that the caller will take care of all the
-    parameters passed to this class. NO CHECKING WILL BE PERFORMED HERE.
+    Container class for holding hopping terms between two models.
     """
     def __init__(self) -> None:
-        super().__init__()
+        Lockable.__init__(self)
+        IntraHopping.__init__(self)
 
     @staticmethod
     def _norm_keys(rn: rn_type,
                    orb_i: int,
                    orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
         """
-        Normalize cell index and orbital pair into permitted keys of self.dict.
+        Normalize cell index and orbital pair into permitted keys.
 
-        :param rn: (r_a, r_b, r_c), cell index
-        :param orb_i: orbital index or bra
-        :param orb_j: orbital index of ket
-        :return: (rn, pair, conj)
-            where rn is the normalized cell index,
-            pair is the normalized orbital pair,
-            conj is the flag of whether to take the conjugate of hopping energy
-        """
-        if invert_rn(rn):
-            rn = (-rn[0], -rn[1], -rn[2])
-            pair = (orb_j, orb_i)
-            conj = True
-        elif rn == (0, 0, 0) and orb_i > orb_j:
-            rn = rn
-            pair = (orb_j, orb_i)
-            conj = True
-        else:
-            rn = rn
-            pair = (orb_i, orb_j)
-            conj = False
-        return rn, pair, conj
-
-
-class InterHopping(Hopping):
-    """
-    Base class for container classes holding hopping terms between two models.
-    """
-    def __init__(self) -> None:
-        super().__init__()
-
-    @staticmethod
-    def _norm_keys(rn: rn_type,
-                   orb_i: int,
-                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
-        """
-        Normalize cell index and orbital pair into permitted keys of self.dict.
+        For InterHopping, it should check if rn is legal since the class is
+        exposed to the user. The status conj should always be False.
 
         :param rn: (r_a, r_b, r_c), cell index
         :param orb_i: orbital index or bra
@@ -490,6 +467,23 @@ class InterHopping(Hopping):
         pair = (orb_i, orb_j)
         conj = False
         return rn, pair, conj
+
+    def add_hopping(self, rn: rn_type,
+                    orb_i: int,
+                    orb_j: int,
+                    energy: complex) -> None:
+        """
+        Add a new hopping term or update existing term.
+
+        :param rn: (r_a, r_b, r_c), cell index
+        :param orb_i: orbital index or bra
+        :param orb_j: orbital index of ket
+        :param energy: hopping energy
+        :return: None
+        :raises LockError: is the object is locked
+        """
+        self.check_lock()
+        super().add_hopping(rn, orb_i, orb_j, energy)
 
 
 class HopDict:
