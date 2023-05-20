@@ -11,7 +11,7 @@ from ..base import constants as consts
 from ..base import lattice as lat
 from ..cython import primitive as core
 from . import exceptions as exc
-from .base import (check_rn, check_pos, Orbital, Lockable, IntraHopping,
+from .base import (check_rn, check_pos, Orbital, Observable, IntraHopping,
                    HopDict, pair_type, rn_type, rn3_type, pos_type, pos3_type)
 from .visual import ModelViewer
 from ..diagonal import DiagSolver
@@ -20,7 +20,7 @@ from ..diagonal import DiagSolver
 __all__ = ["PrimitiveCell"]
 
 
-class PrimitiveCell(Lockable):
+class PrimitiveCell(Observable):
     """
     Class for representing the primitive cell.
 

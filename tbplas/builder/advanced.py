@@ -427,13 +427,6 @@ def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCel
                 orb_j = orb_pair[1] + offset_ket
                 merged_cell.add_hopping(rn, orb_i=orb_i, orb_j=orb_j,
                                         energy=energy)
-
-    # Finally, lock all components before return
-    locker_id = f"merged_cell #{id(merged_cell)}"
-    for pc in pc_list:
-        pc.lock(locker_id)
-    for hop in hop_list:
-        hop.lock(locker_id)
     return merged_cell
 
 

@@ -230,6 +230,7 @@ class Sample:
                 self._hop_list.append(arg)
             else:
                 raise exc.SampleCompError(i_arg)
+            arg.add_subscriber(f"sample #{id(self)}", self)
             arg.lock(f"sample #{id(self)}")
 
         # Check closure of inter-hopping instances

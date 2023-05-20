@@ -1,7 +1,7 @@
 """Base functions and classes used through the builder package."""
 
 from collections import namedtuple
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union, Dict, Hashable
 
 import numpy as np
 from scipy.sparse import coo_matrix
@@ -95,35 +95,58 @@ def invert_rn(rn: Tuple[int, int, int], i: int = 0) -> bool:
 Orbital = namedtuple("Orbital", ["position", "energy", "label"])
 
 
-class Lockable:
+class Observable:
     """
-    Base class for all lockable objects.
+    Base class for all observable objects.
 
     Attributes
     ----------
     __locked: bool
         whether the object is locked
-    __locker_id: List[str]
-        ids of lockers who locked this object
+    __subscribers: Dict[str, Hashable]
+        names and subscribers to this object
     """
     def __init__(self) -> None:
         self.__locked = False
-        self.__locker_id = []
+        self.__subscribers = dict()
 
-    def lock(self, locker_id: str) -> None:
+    def add_subscriber(self, sub_name: str, sub_obj: Hashable) -> None:
+        """
+        Add a new subscriber.
+
+        :param sub_name: subscriber name
+        :param sub_obj: subscriber object
+        :return: None
+        """
+        self.__subscribers[sub_name] = sub_obj
+
+    def get_subscribers(self, recur_level: int = 0) -> Dict[Tuple[str, Hashable], int]:
+        """
+        Get all subscribers and their levels recursively.
+
+        :param recur_level: recursion level
+        :return: dictionary with keys being (sub_name, sub_obj) and values being
+            levels
+        """
+        subscribers = {(_k, _v): recur_level
+                       for _k, _v in self.__subscribers.items()}
+        for sub_name, sub_obj in self.__subscribers.items():
+            if hasattr(sub_obj, "get_subscribers"):
+                subscribers.update(sub_obj.get_subscribers(recur_level+1))
+        return subscribers
+
+    def lock(self, sub_name: str) -> None:
         """
         Lock the object. Modifications are not allowed then unless the 'unlock'
         method is called.
 
-        :param locker_id: id of the locker
+        :param sub_name: identifier of the subscriber
         :return: None
+        :raises ValueError: if sub_name is not in subscribers
         """
+        if sub_name not in self.__subscribers.keys():
+            raise ValueError(f"{sub_name} not in subscribers")
         self.__locked = True
-        try:
-            self.__locker_id.remove(locker_id)
-        except ValueError:
-            pass
-        self.__locker_id.append(locker_id)
 
     def unlock(self) -> None:
         """
@@ -132,7 +155,6 @@ class Lockable:
         :return: None
         """
         self.__locked = False
-        self.__locker_id = []
 
     def check_lock(self) -> None:
         """
@@ -142,10 +164,39 @@ class Lockable:
         :raises LockError: if the object is locked
         """
         if self.__locked:
-            print("This object has been locked by:")
-            for locker in self.__locker_id:
-                print(locker)
             raise exc.LockError()
+
+    def notify(self, recursive: bool = True) -> None:
+        """
+        Notify all subscribers.
+
+        :param recursive: whether to notify the subscribers recursively
+        :return: None
+        """
+        if recursive:  # Elegant, transparent but superfluous
+            for sub_name, sub_obj in self.__subscribers.items():
+                print(f"Updating {sub_name}")
+                if hasattr(sub_obj, "sync_array"):
+                    sub_obj.sync_array(force_sync=True)
+                elif hasattr(sub_obj, "reset_array"):
+                    sub_obj.reset_array()
+                else:
+                    pass
+                if hasattr(sub_obj, "notify"):
+                    sub_obj.notify()
+        else:  # Fast, streamlined but ugly
+            full_subs = self.get_subscribers()
+            full_subs = [(_k, _v) for _k, _v in full_subs.items()]
+            full_subs = sorted(full_subs, key=lambda x: x[1], reverse=True)
+            for item in full_subs:
+                sub_name, sub_obj = item[0]
+                print(f"Updating {sub_name}")
+                if hasattr(sub_obj, "sync_array"):
+                    sub_obj.sync_array(force_sync=True)
+                elif hasattr(sub_obj, "reset_array"):
+                    sub_obj.reset_array()
+                else:
+                    pass
 
 
 class IntraHopping:
@@ -434,12 +485,12 @@ class IntraHopping:
         return num_hop
 
 
-class InterHopping(Lockable, IntraHopping):
+class InterHopping(Observable, IntraHopping):
     """
     Container class for holding hopping terms between two models.
     """
     def __init__(self) -> None:
-        Lockable.__init__(self)
+        Observable.__init__(self)
         IntraHopping.__init__(self)
 
     @staticmethod

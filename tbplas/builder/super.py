@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 from ..base import lattice as lat
 from ..cython import super as core
 from . import exceptions as exc
-from .base import (check_rn, check_pbc, Lockable, IntraHopping, rn_type,
+from .base import (check_rn, check_pbc, Observable, IntraHopping, rn_type,
                    pbc_type, id_pc_type)
 from .primitive import PrimitiveCell
 from .visual import ModelViewer
 
 
-class OrbitalSet(Lockable):
+class OrbitalSet(Observable):
     """
     Container class for orbitals and vacancies in the supercell.
 
@@ -120,6 +120,7 @@ class OrbitalSet(Lockable):
 
         # Set and lock the primitive cell
         self._prim_cell = prim_cell
+        self._prim_cell.add_subscriber(f"supercell #{id(self)}", self)
         self._prim_cell.lock(f"supercell #{id(self)}")
 
         # Check and set dimension
