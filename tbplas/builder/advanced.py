@@ -177,7 +177,9 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
     res_cell.extended = prim_cell.extended * (vol_res / vol_prim)
 
     # Determine searching range
-    # Now only the God knows how this piece of code works.
+    # sum_vec is actually a0+a1, a1+a2 or a2+a0 depending on j, i.e., the
+    # diagonal vector. If it is not taken into consideration, orbitals and
+    # hopping terms in the top right corner of reshaped cell may be missing.
     rn_range = np.zeros((3, 2), dtype=np.int32)
     for i in range(3):
         sum_vec = lat_frac.sum(axis=0) - lat_frac[i]
