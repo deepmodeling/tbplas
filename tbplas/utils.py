@@ -4,6 +4,7 @@ import time
 import datetime
 import random
 import os
+from collections import defaultdict
 import unittest
 from io import StringIO
 from unittest.mock import patch
@@ -23,17 +24,17 @@ class Timer:
 
     Attributes
     ----------
-    total_time: Dict[str, float]
-        overall time usage
-    start_time: Dict[str, float]
+    _start_time: Dict[str, float]
         time of last self.tic() call
-    end_time: Dict[str, float]
+    _end_time: Dict[str, float]
         time of last self.toc() call
+    _total_time: Dict[str, float]
+        overall time usage
     """
     def __init__(self) -> None:
-        self.total_time = {}
-        self.start_time = {}
-        self.end_time = {}
+        self._start_time = {}
+        self._end_time = {}
+        self._total_time = defaultdict(float)
 
     def tic(self, slot: str) -> None:
         """
@@ -42,9 +43,7 @@ class Timer:
         :param slot: name of the slot
         :return: None
         """
-        if slot not in self.total_time.keys():
-            self.total_time[slot] = 0.0
-        self.start_time[slot] = time.time()
+        self._start_time[slot] = time.time()
 
     def toc(self, slot: str) -> None:
         """
@@ -53,12 +52,14 @@ class Timer:
         :param slot: name of the slot
         :return: None
         """
-        if slot not in self.start_time.keys():
-            raise RuntimeError("Record for slot '%s' not started!" % slot)
+        try:
+            start_time = self._start_time[slot]
+        except KeyError:
+            raise RuntimeError(f"Record for slot '{slot}' not started")
         else:
-            self.end_time[slot] = time.time()
-            self.total_time[slot] += self.end_time[slot] - \
-                self.start_time[slot]
+            end_time = time.time()
+            self._end_time[slot] = end_time
+            self._total_time[slot] += (end_time - start_time)
 
     def report_time(self) -> None:
         """
@@ -67,15 +68,15 @@ class Timer:
 
         :return: None
         """
-        max_slot_length = max([len(slot) for slot in self.start_time.keys()])
-        indent = "%3s" % ""
-        time_format = "%%%ds : %%10.2fs" % max_slot_length
-        for slot in self.start_time.keys():
-            if slot in self.end_time.keys():
-                print(indent, time_format %
-                      (slot, self.end_time[slot]-self.start_time[slot]))
+        max_len = max([len(slot) for slot in self._start_time.keys()])
+        for slot, start_time in self._start_time.items():
+            try:
+                end_time = self._end_time[slot]
+            except KeyError:
+                raise RuntimeError(f"Record for slot '{slot}' not ended")
             else:
-                raise RuntimeError("Record for slot '%s' not ended!" % slot)
+                duration = end_time - start_time
+                print("\t", f"{slot:<{max_len}} : {duration:10.5f}")
         self.reset()
 
     def report_total_time(self) -> None:
@@ -84,31 +85,29 @@ class Timer:
 
         :return: None
         """
-        max_slot_length = max([len(slot) for slot in self.total_time.keys()])
-        indent = "%3s" % ""
-        time_format = "%%%ds : %%10.2fs" % max_slot_length
-        for slot in self.total_time.keys():
-            print(indent, time_format % (slot, self.total_time[slot]))
+        max_len = max([len(slot) for slot in self._start_time.keys()])
+        for slot, duration in self._total_time.items():
+            print("\t", f"{slot:<{max_len}} : {duration:10.5f}")
         self.reset_total()
 
     def reset(self) -> None:
         """
-        Reset self.start_time and self.end_time for next measurement.
+        Reset self._start_time and self._end_time for next measurement.
 
         :return: None
         """
-        self.start_time = {}
-        self.end_time = {}
+        self._start_time = {}
+        self._end_time = {}
 
     def reset_total(self) -> None:
         """
-        Same as reset(), also resets self.total_time.
+        Same as reset(), also resets self._total_time.
 
         :return: None
         """
-        self.start_time = {}
-        self.end_time = {}
-        self.total_time = {}
+        self._start_time = {}
+        self._end_time = {}
+        self._total_time = defaultdict(float)
 
 
 class ProgressBar:
@@ -117,53 +116,44 @@ class ProgressBar:
 
     Attributes
     ----------
-    num_count: int
-        total amount of tasks
+    _num_tasks: int
+        total number of tasks
         For example, if you are going to do some calculation for a vector with
         length of 1000, then set it to 1000.
-    num_scales: int
+    _num_scales: int
         total number of scales in the progress bar
         For example, if you want to split the whole task into 10 parts, then set
-        it to 10. When one part finishes, the program will report 10% of the
-        whole task has been finished.
-    scale_unit: float
-        amount of tasks between two ad-joint scales
+        it to 10.
+    _scale_unit: float
+        amount of tasks between two neighboring scales
         See the schematic plot below for demonstration.
-    next_scale: float
+    _next_scale: float
         the next scale waiting for counter
         If counter exceeds next_scale, then we can know one part of the task
         finish. See the schematic plot for demonstration.
-    counter: int
-        counter in range of [1, num_count]
-    num_scales_past: int
-        number of past scales
-    percent_unit: float
-        percentage of tasks between two ad-joint scales
+    _counter: int
+        counter for statistics
 
     NOTES
     -----
     Schematic plot of the working mechanism:
-        num_count:  50
+        num_tasks:  50
         num_scales: 10
         scale_unit: 5
         scales:     0----|----|----|----|----|----|----|----|----|----|
         next_scale: ....................* -> * -> * -> * -> * -> * -> *
         counter:    ................^
-        num_scales_past: 3
-        percent_unit: 10%
     """
-    def __init__(self, num_count: int, num_scales: int = 10) -> None:
+    def __init__(self, num_tasks: int, num_scales: int = 10) -> None:
         """
-        :param num_count: total amount of tasks
+        :param num_tasks: total number of tasks
         :param num_scales: total number of scales in the progress bar
         """
-        self.num_count = num_count
-        self.num_scales = num_scales
-        self.scale_unit = num_count / num_scales
-        self.next_scale = self.scale_unit
-        self.counter = 0
-        self.num_scales_past = 0
-        self.percent_unit = 100 / num_scales
+        self._num_tasks = num_tasks
+        self._num_scales = num_scales
+        self._scale_unit = self._num_tasks / self._num_scales
+        self._next_scale = self._scale_unit
+        self._counter = 0
 
     def count(self) -> None:
         """
@@ -171,13 +161,12 @@ class ProgressBar:
 
         :return: None
         """
-        self.counter += 1
-        if self.counter >= self.next_scale:
-            self.num_scales_past += 1
-            self.next_scale += self.scale_unit
-            print("[%3d%%] finished %6d of %6d" %
-                  (self.num_scales_past * self.percent_unit,
-                   self.counter, self.num_count))
+        self._counter += 1
+        if self._counter >= self._next_scale:
+            self._next_scale += self._scale_unit
+            percent = 100.0 * self._counter / self._num_tasks
+            print(f"finished {self._counter:6d} of {self._num_tasks:6d} "
+                  f"({percent:6.2f}%)")
 
 
 class TestHelper:
@@ -186,14 +175,14 @@ class TestHelper:
 
     Attributes
     ----------
-    tester: unittest.TestCase
+    _tester: unittest.TestCase
         TestCase instance upon which tests are performed
     """
     def __init__(self, tester: unittest.TestCase) -> None:
         """
         :param tester: instance of unittest.TestCase
         """
-        self.tester = tester
+        self._tester = tester
 
     def test_equal_array(self, array1: np.ndarray,
                          array2: np.ndarray,
@@ -210,9 +199,9 @@ class TestHelper:
         """
         diff = np.sum(np.abs(array1 - array2)).item(0)
         if not almost:
-            self.tester.assertEqual(diff, 0)
+            self._tester.assertEqual(diff, 0)
         else:
-            self.tester.assertAlmostEqual(diff, 0.0, delta=delta)
+            self._tester.assertAlmostEqual(diff, 0.0, delta=delta)
 
     def test_no_equal_array(self, array1: np.ndarray,
                             array2: np.ndarray,
@@ -229,9 +218,9 @@ class TestHelper:
         """
         diff = np.sum(np.abs(array1 - array2)).item(0)
         if not almost:
-            self.tester.assertNotEqual(diff, 0)
+            self._tester.assertNotEqual(diff, 0)
         else:
-            self.tester.assertNotAlmostEqual(diff, 0.0, delta=delta)
+            self._tester.assertNotAlmostEqual(diff, 0.0, delta=delta)
 
     def test_raise(self, func: Callable, exception: Any, message: str) -> None:
         """
@@ -242,10 +231,10 @@ class TestHelper:
         :param message: expected exception message
         :return: None
         """
-        with self.tester.assertRaises(exception) as cm:
+        with self._tester.assertRaises(exception) as cm:
             func()
         if message is not None:
-            self.tester.assertRegex(str(cm.exception), message)
+            self._tester.assertRegex(str(cm.exception), message)
 
     def test_no_raise(self, func: Callable, exception: Any) -> None:
         """
@@ -261,7 +250,7 @@ class TestHelper:
             status = True
         else:
             status = False
-        self.tester.assertFalse(status)
+        self._tester.assertFalse(status)
 
     def test_stdout(self, func: Callable, message: List[str]) -> None:
         """
@@ -276,7 +265,7 @@ class TestHelper:
             func()
         output = [out for out in fake_out.getvalue().split("\n") if out != ""]
         for i, msg in enumerate(message):
-            self.tester.assertRegex(output[i], msg)
+            self._tester.assertRegex(output[i], msg)
 
 
 def gen_seeds(num_seeds: int) -> List[int]:
@@ -378,7 +367,7 @@ def print_banner_line(text: str,
     num_marks_left = num_marks_total // 2
     num_marks_right = num_marks_total - num_marks_left
     banner_with_marks = end + mark * num_marks_left
-    banner_with_marks += " %s " % text
+    banner_with_marks += f" {text} "
     banner_with_marks += mark * num_marks_right + end
     print(banner_with_marks)
 
