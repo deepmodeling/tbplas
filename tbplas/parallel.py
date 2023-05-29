@@ -21,11 +21,11 @@ class MPIEnv:
 
     Attributes
     ----------
-    comm: 'mpi4py.MPI.Intracomm' class
+    __comm: 'mpi4py.MPI.Intracomm' class
         default global mpi communicator
-    rank: integer
+    __rank: integer
         id of this process in mpi communicator
-    size: integer
+    __size: integer
         number of processes in mpi communicator
     """
     def __init__(self, enable_mpi: bool = True,
@@ -43,22 +43,22 @@ class MPIEnv:
         # Initialize MPI variables
         if enable_mpi:
             if MPI is not None:
-                self.comm = MPI.COMM_WORLD
-                self.rank = self.comm.Get_rank()
-                self.size = self.comm.Get_size()
+                self.__comm = MPI.COMM_WORLD
+                self.__rank = self.__comm.Get_rank()
+                self.__size = self.__comm.Get_size()
             else:
                 raise ImportError("MPI4PY cannot be imported")
         else:
-            self.comm = None
-            self.rank = 0
-            self.size = 1
+            self.__comm = None
+            self.__rank = 0
+            self.__size = 1
 
         # Print simulation details
         if echo_details:
             spaces = " " * 2
             self.print("\nParallelization details:")
             if self.mpi_enabled:
-                self.print(f"{spaces}{'MPI processes':16s} : {self.size:6d}")
+                self.print(f"{spaces}{'MPI processes':16s} : {self.__size:<6d}")
             else:
                 self.print(f"{spaces}{'MPI disabled':16s}")
             for env_name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -66,18 +66,18 @@ class MPIEnv:
                     env_value = os.environ[env_name]
                 except KeyError:
                     env_value = "n/a"
-                self.print(f"{spaces}{env_name:16s} : {env_value:6s}")
+                self.print(f"{spaces}{env_name:16s} : {env_value:<6s}")
             self.print()
 
     @property
     def mpi_enabled(self) -> bool:
         """Determine whether MPI is enabled."""
-        return self.comm is not None
+        return self.__comm is not None
 
     @property
     def is_master(self) -> bool:
         """Determine whether this is the master process."""
-        return self.rank == 0
+        return self.__rank == 0
 
     @staticmethod
     def __get_array_order(array: np.ndarray) -> str:
@@ -111,7 +111,7 @@ class MPIEnv:
             or "range"
         :return: sublist assigned to this process
         """
-        return split_list(raw_list, self.size, algorithm)[self.rank]
+        return split_list(raw_list, self.__size, algorithm)[self.__rank]
 
     def dist_range(self, n_max: int) -> range:
         """
@@ -120,7 +120,7 @@ class MPIEnv:
         :param n_max: upper bound of the range
         :return: subrange assigned to this process
         """
-        return split_range(n_max, num_group=self.size)[self.rank]
+        return split_range(n_max, num_group=self.__size)[self.__rank]
 
     def dist_bound(self, n_max: int) -> Tuple[int, int]:
         """
@@ -147,7 +147,7 @@ class MPIEnv:
                                 order=self.__get_array_order(data_local))
             else:
                 data = None
-            self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
+            self.__comm.Reduce(data_local, data, op=MPI.SUM, root=0)
         else:
             data = data_local
         return data
@@ -162,7 +162,7 @@ class MPIEnv:
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
                             order=self.__get_array_order(data_local))
-            self.comm.Allreduce(data_local, data, op=MPI.SUM)
+            self.__comm.Allreduce(data_local, data, op=MPI.SUM)
         else:
             data = data_local
         return data
@@ -180,9 +180,9 @@ class MPIEnv:
                                 order=self.__get_array_order(data_local))
             else:
                 data = None
-            self.comm.Reduce(data_local, data, op=MPI.SUM, root=0)
+            self.__comm.Reduce(data_local, data, op=MPI.SUM, root=0)
             if self.is_master:
-                data /= self.size
+                data /= self.__size
         else:
             data = data_local
         return data
@@ -197,8 +197,8 @@ class MPIEnv:
         if self.mpi_enabled:
             data = np.zeros(data_local.shape, dtype=data_local.dtype,
                             order=self.__get_array_order(data_local))
-            self.comm.Allreduce(data_local, data, op=MPI.SUM)
-            data /= self.size
+            self.__comm.Allreduce(data_local, data, op=MPI.SUM)
+            data /= self.__size
         else:
             data = data_local
         return data
@@ -211,12 +211,12 @@ class MPIEnv:
         :return: None
         """
         if self.mpi_enabled:
-            self.comm.Bcast(data_local, root=0)
+            self.__comm.Bcast(data_local, root=0)
 
     def barrier(self) -> None:
         """Wrapper for self.comm.Barrier."""
         if self.mpi_enabled:
-            self.comm.Barrier()
+            self.__comm.Barrier()
 
     def print(self, text: str = "") -> None:
         """
@@ -242,3 +242,21 @@ class MPIEnv:
         if self.is_master:
             date_time = get_datetime(fmt=fmt)
             print(f"{event} at {date_time}", flush=True)
+
+    @property
+    def rank(self) -> int:
+        """
+        Interface for the '__rank' attribute.
+
+        :return: rank of this MPI process
+        """
+        return self.__rank
+
+    @property
+    def size(self) -> int:
+        """
+        Interface for the '__size' attribute.
+
+        :return: number of MPI processes
+        """
+        return self.__size

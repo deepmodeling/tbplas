@@ -146,7 +146,7 @@ class Lindhard(DiagSolver):
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
         super().__init__(cell, **kwargs)
-        self.cell = self.model
+        self.cell = cell
         self.omegas = np.linspace(0, energy_max, energy_step+1)
         if len(kmesh_size) != 3:
             raise ValueError("Length of kmesh_size should be 3")

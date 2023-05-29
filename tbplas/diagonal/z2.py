@@ -64,7 +64,7 @@ class Z2(DiagSolver):
             eigenstates of the given k-point
         """
         self.h_mat *= 0.0
-        self.model.set_ham_dense(kpt, self.h_mat)
+        self.set_ham_dense(kpt, self.h_mat)
         eigenvalues, eigenstates, info = spla.zheev(self.h_mat)
         idx = eigenvalues.argsort()
         return eigenstates[:, idx]

@@ -52,13 +52,13 @@ class DiagSolver(MPIEnv):
 
     Attributes
     ----------
-    model: 'PrimitiveCell' or 'Sample' instance
+    __model: 'PrimitiveCell' or 'Sample' instance
         model for which properties will be calculated
-    hk_dense: Callable[[np.ndarray, np.ndarray], None]
+    __hk_dense: Callable[[np.ndarray, np.ndarray], None]
         user-defined function to set up the dense Hamiltonian in place, with the
         1st argument being the fractional coordinate of k-point and the 2nd
         argument being the Hamiltonian
-    hk_csr: Callable[[np.ndarray], csr_matrix]
+    __hk_csr: Callable[[np.ndarray], csr_matrix]
         user-defined function to return the sparse Hamiltonian from the
         fractional coordinate of k-point as the 1st argument
     """
@@ -73,9 +73,9 @@ class DiagSolver(MPIEnv):
         :param echo_details: whether to output parallelization details
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
-        self.model = model
-        self.hk_dense = hk_dense
-        self.hk_csr = hk_csr
+        self.__model = model
+        self.__hk_dense = hk_dense
+        self.__hk_csr = hk_csr
         self.update_model()
 
     @property
@@ -85,7 +85,7 @@ class DiagSolver(MPIEnv):
 
         :return: whether the model is a primitive cell
         """
-        return hasattr(self.model, "_orbital_list")
+        return hasattr(self.__model, "_orbital_list")
 
     @property
     def num_orb(self) -> int:
@@ -94,7 +94,7 @@ class DiagSolver(MPIEnv):
 
         :return: number of orbitals
         """
-        return self.model.num_orb
+        return self.__model.num_orb
 
     @property
     def lat_vec(self) -> np.ndarray:
@@ -105,9 +105,9 @@ class DiagSolver(MPIEnv):
             lattice vectors of in nm
         """
         if self.model_is_pc:
-            return self.model.lat_vec
+            return self.__model.lat_vec
         else:
-            return self.model.sc0.sc_lat_vec
+            return self.__model.sc0.sc_lat_vec
 
     @property
     def recip_lat_vec(self) -> np.ndarray:
@@ -118,9 +118,9 @@ class DiagSolver(MPIEnv):
             reciprocal lattice vectors of in nm
         """
         if self.model_is_pc:
-            return self.model.get_reciprocal_vectors()
+            return self.__model.get_reciprocal_vectors()
         else:
-            return self.model.sc0.get_reciprocal_vectors()
+            return self.__model.sc0.get_reciprocal_vectors()
 
     def update_model(self) -> None:
         """
@@ -129,12 +129,12 @@ class DiagSolver(MPIEnv):
         :return: None
         """
         if self.model_is_pc:
-            self.model.sync_array()
+            self.__model.sync_array()
         else:
-            self.model.init_orb_pos()
-            self.model.init_orb_eng()
-            self.model.init_hop()
-            self.model.init_dr()
+            self.__model.init_orb_pos()
+            self.__model.init_orb_eng()
+            self.__model.init_hop()
+            self.__model.init_dr()
 
     @staticmethod
     def _calc_proj(orbital_indices: List[int],
@@ -154,6 +154,42 @@ class DiagSolver(MPIEnv):
             for i_o in orbital_indices:
                 proj_k[i_b] += abs(eigenstates.item(i_b, i_o))**2
         return proj_k
+
+    def set_ham_dense(self, k_point: np.ndarray,
+                      ham_dense: np.ndarray,
+                      convention: int = 1) -> None:
+        """
+        Set up dense Hamiltonian for given k-point.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :param ham_dense: (num_orb, num_orb) complex128 array
+            incoming Hamiltonian
+        :param convention: convention for setting up the Hamiltonian
+        :return: None
+        :raises ValueError: if convention not in (1, 2)
+        """
+        if self.__hk_dense is not None:
+            self.__hk_dense(k_point, ham_dense)
+        else:
+            self.__model.set_ham_dense(k_point, ham_dense, convention)
+
+    def set_ham_csr(self, k_point: np.ndarray,
+                    convention: int = 1) -> csr_matrix:
+        """
+        Set up sparse Hamiltonian in csr format for given k-point.
+
+        :param k_point: (3,) float64 array
+            FRACTIONAL coordinate of the k-point
+        :param convention: convention for setting up the Hamiltonian
+        :return: sparse Hamiltonian
+        :raises ValueError: if convention not in (1, 2)
+        """
+        if self.__hk_csr is not None:
+            ham_csr = self.__hk_csr(k_point)
+        else:
+            ham_csr = self.__model.set_ham_csr(k_point, convention)
+        return ham_csr
 
     def calc_bands(self, k_points: np.ndarray,
                    convention: int = 1,
@@ -210,16 +246,10 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                if self.hk_dense is not None:
-                    self.hk_dense(kpt_i, ham_dense)
-                else:
-                    self.model.set_ham_dense(kpt_i, ham_dense, convention)
+                self.set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                if self.hk_csr is not None:
-                    ham_csr = self.hk_csr(kpt_i)
-                else:
-                    ham_csr = self.model.set_ham_csr(kpt_i, convention)
+                ham_csr = self.set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
 
             # Sort eigenvalues
@@ -360,16 +390,10 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                if self.hk_dense is not None:
-                    self.hk_dense(kpt_i, ham_dense)
-                else:
-                    self.model.set_ham_dense(kpt_i, ham_dense, convention)
+                self.set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                if self.hk_csr is not None:
-                    ham_csr = self.hk_csr(kpt_i)
-                else:
-                    ham_csr = self.model.set_ham_csr(kpt_i, convention)
+                ham_csr = self.set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T
