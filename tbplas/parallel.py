@@ -55,16 +55,18 @@ class MPIEnv:
 
         # Print simulation details
         if echo_details:
+            spaces = " " * 2
             self.print("\nParallelization details:")
             if self.mpi_enabled:
-                self.print("%17s:%4d" % ("MPI processes", self.size))
+                self.print(f"{spaces}{'MPI processes':16s} : {self.size:6d}")
             else:
-                self.print("%17s" % "MPI disabled")
+                self.print(f"{spaces}{'MPI disabled':16s}")
             for env_name in ("OMP_NUM_THREADS", "MKL_NUM_THREADS"):
-                if env_name in os.environ.keys():
-                    self.print("%17s:%4s" % (env_name, os.environ[env_name]))
-                else:
-                    self.print("%17s: n/a" % env_name)
+                try:
+                    env_value = os.environ[env_name]
+                except KeyError:
+                    env_value = "n/a"
+                self.print(f"{spaces}{env_name:16s} : {env_value:6s}")
             self.print()
 
     @property
