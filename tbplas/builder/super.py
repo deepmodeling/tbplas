@@ -1,6 +1,6 @@
 """Functions and classes for supercell."""
 
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple, Union, Set
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,9 +27,8 @@ class OrbitalSet(Observable):
     _pbc: (3,) int32 array
         whether to enable periodic condition along a, b, and c directions
         0 for False, 1 for True.
-    _vacancy_list: List[Tuple[int, int, int, int]]
+    _vacancy_set: Set[Tuple[int, int, int, int]]
         indices of vacancies in primitive cell representation (ia, ib, ic, io)
-        None if there are no vacancies.
     _hash_dict: Dict[str, int]
         hashes of attributes to be used by 'sync_array' to update the arrays
     _vac_id_pc: (num_vac, 4) int32 array
@@ -143,7 +142,7 @@ class OrbitalSet(Observable):
         self._pbc = np.array([1 if _ else 0 for _ in pbc], dtype=np.int32)
 
         # Initialize lists and arrays assuming no vacancies
-        self._vacancy_list = []
+        self._vacancy_set = set()
         self._hash_dict = {'pc': self._get_hash('pc'),
                            'vac': self._get_hash('vac')}
         self._vac_id_pc = None
@@ -170,7 +169,7 @@ class OrbitalSet(Observable):
             new_hash = hash(self._prim_cell)
             # new_hash = self.num_orb_pc
         elif attr == "vac":
-            new_hash = hash(tuple(self._vacancy_list))
+            new_hash = hash(tuple(self._vacancy_set))
         else:
             raise ValueError(f"Illegal attribute name {attr}")
         return new_hash
@@ -256,8 +255,7 @@ class OrbitalSet(Observable):
             if not isinstance(vacancy, tuple):
                 vacancy = tuple(vacancy)
             self._check_id_pc(vacancy)
-            if vacancy not in self._vacancy_list:
-                self._vacancy_list.append(vacancy)
+            self._vacancy_set.add(vacancy)
 
     def set_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray] = None) -> None:
         """
@@ -272,7 +270,7 @@ class OrbitalSet(Observable):
             out of range
         """
         self.check_lock()
-        self._vacancy_list = []
+        self._vacancy_set = set()
         self.add_vacancies(vacancies)
 
     def sync_array(self, verbose: bool = False,
@@ -295,8 +293,8 @@ class OrbitalSet(Observable):
             if verbose:
                 print("INFO: updating sc vacancy and orbital arrays")
             # If vacancy list is not [], update arrays as usual.
-            if len(self._vacancy_list) != 0:
-                vac_id_pc = np.array(self._vacancy_list, dtype=np.int32)
+            if len(self._vacancy_set) != 0:
+                vac_id_pc = np.array(sorted(self._vacancy_set), dtype=np.int32)
                 vac_id_sc = core.build_vac_id_sc(self._dim, self.num_orb_pc,
                                                  vac_id_pc)
                 sorted_idx = np.argsort(vac_id_sc, axis=0)
@@ -432,7 +430,7 @@ class OrbitalSet(Observable):
         :return: number of orbitals in supercell
         """
         num_orb_sc = self.num_orb_pc * np.prod(self._dim).item()
-        num_orb_sc -= len(self._vacancy_list)
+        num_orb_sc -= len(self._vacancy_set)
         return num_orb_sc
 
 
@@ -492,7 +490,7 @@ class SuperCell(OrbitalSet):
     def __hash__(self) -> int:
         """Return the hash of this instance."""
         fp = (self._prim_cell, tuple(self._dim), tuple(self._pbc),
-              tuple(self._vacancy_list), self._hop_modifier,
+              tuple(self._vacancy_set), self._hop_modifier,
               self._orb_pos_modifier)
         return hash(fp)
 
@@ -781,7 +779,7 @@ class SuperCell(OrbitalSet):
 
         # Get initial hopping terms
         if algo == "auto":
-            use_fast = (len(self._vacancy_list) == 0)
+            use_fast = (len(self._vacancy_set) == 0)
         elif algo == "fast":
             use_fast = True
         else:
@@ -840,7 +838,7 @@ class SuperCell(OrbitalSet):
 
         # Get initial hopping terms and dr
         if algo == "auto":
-            use_fast = (len(self._vacancy_list) == 0)
+            use_fast = (len(self._vacancy_set) == 0)
         elif algo == "fast":
             use_fast = True
         else:

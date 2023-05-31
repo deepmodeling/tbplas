@@ -73,7 +73,7 @@ class TestSuper(unittest.TestCase):
         :return: None.
         """
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
-        self.assertEqual(orb_set._vacancy_list, [])
+        self.assertEqual(orb_set._vacancy_set, set())
         self.assertIsNone(orb_set._vac_id_pc)
         self.assertIsNone(orb_set._vac_id_sc)
         self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
@@ -199,7 +199,7 @@ class TestSuper(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
         orb_set.set_vacancies(vacancies)
         orb_set.sync_array()
-        self.assertListEqual(orb_set._vacancy_list, vacancies)
+        self.assertSetEqual(orb_set._vacancy_set, set(vacancies))
         th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
         th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
         th.test_equal_array(orb_set._vac_id_sc, vac_id_sc)
@@ -209,7 +209,7 @@ class TestSuper(unittest.TestCase):
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
         orb_set.set_vacancies([])
         orb_set.sync_array()
-        self.assertEqual(orb_set._vacancy_list, [])
+        self.assertSetEqual(orb_set._vacancy_set, set())
         self.assertIsNone(orb_set._vac_id_pc)
         self.assertIsNone(orb_set._vac_id_sc)
         self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
@@ -220,7 +220,7 @@ class TestSuper(unittest.TestCase):
         vacancies = [(0, 0, 0, 1), (1, 0, 0, 0), (0, 0, 0, 1)]
         orb_set.set_vacancies(vacancies)
         reduced_vacancies = [(0, 0, 0, 1), (1, 0, 0, 0)]
-        self.assertListEqual(orb_set._vacancy_list, reduced_vacancies)
+        self.assertSetEqual(orb_set._vacancy_set, set(reduced_vacancies))
 
     def test06_sync_array(self):
         """
@@ -243,7 +243,7 @@ class TestSuper(unittest.TestCase):
 
         # 2nd call
         # As we have updated orb_set.vacancy_list, arrays will be updated.
-        orb_set._vacancy_list = vacancies
+        orb_set._vacancy_set = set(vacancies)
         th.test_stdout(_test, update)
 
         # 3rd call
@@ -251,7 +251,7 @@ class TestSuper(unittest.TestCase):
         th.test_stdout(_test, no_update)
 
         # 4th call with vacancy_list set to []
-        orb_set._vacancy_list = []
+        orb_set._vacancy_set = set()
         th.test_stdout(_test, update)
 
         # 5th call
