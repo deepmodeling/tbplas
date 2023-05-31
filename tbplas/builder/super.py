@@ -31,8 +31,6 @@ class OrbitalSet(Observable):
         indices of vacancies in primitive cell representation (ia, ib, ic, io)
     _hash_dict: Dict[str, int]
         hashes of attributes to be used by 'sync_array' to update the arrays
-    _vac_id_pc: (num_vac, 4) int32 array
-        indices of vacancies in primitive cell representation
     _vac_id_sc: (num_vac,) int64 array
         indices of vacancies in supercell representation
     _orb_id_pc: (num_orb_sc, 4) int32 array
@@ -63,13 +61,11 @@ class OrbitalSet(Observable):
     for the furthest primitive cell index. In that case, N should be the
     maximum of |N_max| and |N_min| as the result of translational symmetry.
 
-    2. Why not orb_id_sc
+    2. Why no vac_id_pc and orb_id_sc
 
-    It's unnecessary to have the orb_id_sc array, as it can be generated from
-    orb_id_pc on-the-fly. Actually, the vac_id_sc array is also unnecessary,
-    as it can also be generated from vac_id_pc. We keep it just to accelerate
-    some operations. For orb_id_sc, there is no such need, and we do not keep
-    it for reduce memory usage.
+    It's unnecessary to have the vac_id_pc array, as it can be generated from
+    vacancy_set on-the-fly. Similarly, orb_id_sc can be generated from
+    orb_id_pc. So we do not keep it in memory for reducing RAM usage.
 
     However, it should be noted that vac_id_sc and orb_id_sc are generated via
     different approaches. We show it by an example of 2*2 supercell with 2
@@ -145,7 +141,6 @@ class OrbitalSet(Observable):
         self._vacancy_set = set()
         self._hash_dict = {'pc': self._get_hash('pc'),
                            'vac': self._get_hash('vac')}
-        self._vac_id_pc = None
         self._vac_id_sc = None
         self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                self._vac_id_sc)
@@ -276,12 +271,12 @@ class OrbitalSet(Observable):
     def sync_array(self, verbose: bool = False,
                    force_sync: bool = False) -> None:
         """
-        Synchronize vac_id_pc, vac_id_sc and orb_id_pc according to primitive
-        cell and vacancies.
+        Synchronize vac_id_sc and orb_id_pc according to primitive cell and
+        vacancies.
 
         NOTE: The core function '_id_pc2sc_vac' requires vac_id_sc to be sorted
         in increasing order. Otherwise, it won't work properly! So we must sort
-        it here. We also re-order vac_id_pc accordingly to avoid potential bugs.
+        it here.
 
         :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if
@@ -299,14 +294,12 @@ class OrbitalSet(Observable):
                 vac_id_sc = core.build_vac_id_sc(self._dim, self.num_orb_pc,
                                                  vac_id_pc)
                 sorted_idx = np.argsort(vac_id_sc, axis=0)
-                self._vac_id_pc = vac_id_pc[sorted_idx]
                 self._vac_id_sc = vac_id_sc[sorted_idx]
                 self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                        self._vac_id_sc)
 
             # Otherwise, restore to default settings as in __init__.
             else:
-                self._vac_id_pc = None
                 self._vac_id_sc = None
                 self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                        self._vac_id_sc)

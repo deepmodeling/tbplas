@@ -74,7 +74,6 @@ class TestSuper(unittest.TestCase):
         """
         orb_set = OrbitalSet(self.cell, dim=(3, 3, 1))
         self.assertEqual(orb_set._vacancy_set, set())
-        self.assertIsNone(orb_set._vac_id_pc)
         self.assertIsNone(orb_set._vac_id_sc)
         self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
 
@@ -185,7 +184,6 @@ class TestSuper(unittest.TestCase):
         """
         th = TestHelper(self)
         vacancies = [(0, 0, 0, 1), (0, 1, 0, 0), (1, 1, 0, 1)]
-        vac_id_pc = np.array(vacancies)
         vac_id_sc = np.array([1, 2, 9])
         orb_id_pc = [(i_a, i_b, 0, i_o)
                      for i_a in range(3)
@@ -200,8 +198,6 @@ class TestSuper(unittest.TestCase):
         orb_set.set_vacancies(vacancies)
         orb_set.sync_array()
         self.assertSetEqual(orb_set._vacancy_set, set(vacancies))
-        th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
-        th.test_equal_array(orb_set._vac_id_pc, vac_id_pc)
         th.test_equal_array(orb_set._vac_id_sc, vac_id_sc)
         th.test_equal_array(orb_set._orb_id_pc, orb_id_pc)
 
@@ -210,7 +206,6 @@ class TestSuper(unittest.TestCase):
         orb_set.set_vacancies([])
         orb_set.sync_array()
         self.assertSetEqual(orb_set._vacancy_set, set())
-        self.assertIsNone(orb_set._vac_id_pc)
         self.assertIsNone(orb_set._vac_id_sc)
         self.assertEqual(orb_set._orb_id_pc.shape, (18, 4))
 
