@@ -141,14 +141,14 @@ class OrbitalSet(Observable):
             raise exc.PBCLenError(pbc)
         self._pbc = np.array([1 if _ else 0 for _ in pbc], dtype=np.int32)
 
-        # Initialize lists and arrays assuming no vacancies
+        # Initialize arrays assuming no vacancies
         self._vacancy_set = set()
         self._hash_dict = {'pc': self._get_hash('pc'),
                            'vac': self._get_hash('vac')}
         self._vac_id_pc = None
         self._vac_id_sc = None
         self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
-                                               self._vac_id_pc)
+                                               self._vac_id_sc)
 
         # Set vacancies if any
         if vacancies is not None:
@@ -259,7 +259,7 @@ class OrbitalSet(Observable):
 
     def set_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray] = None) -> None:
         """
-        Reset the list of vacancies to given ones.
+        Reset the set of vacancies.
 
         :param vacancies: list of (ia, ib, ic, io) or equivalent int32 arrays
             list of indices of vacancies in primitive cell representation
@@ -285,14 +285,15 @@ class OrbitalSet(Observable):
 
         :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if
-            primitive cell and vacancy_list did not change
+            primitive cell and vacancy_set did not change
         :return: None
         """
         to_update = self._update_hash("pc") or self._update_hash("vac")
         if force_sync or to_update:
             if verbose:
                 print("INFO: updating sc vacancy and orbital arrays")
-            # If vacancy list is not [], update arrays as usual.
+
+            # If vacancy set is not empty, update arrays as usual.
             if len(self._vacancy_set) != 0:
                 vac_id_pc = np.array(sorted(self._vacancy_set), dtype=np.int32)
                 vac_id_sc = core.build_vac_id_sc(self._dim, self.num_orb_pc,
@@ -301,13 +302,14 @@ class OrbitalSet(Observable):
                 self._vac_id_pc = vac_id_pc[sorted_idx]
                 self._vac_id_sc = vac_id_sc[sorted_idx]
                 self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
-                                                       self._vac_id_pc)
-            # Otherwise, restore to default settings as in __ini__.
+                                                       self._vac_id_sc)
+
+            # Otherwise, restore to default settings as in __init__.
             else:
                 self._vac_id_pc = None
                 self._vac_id_sc = None
                 self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
-                                                       self._vac_id_pc)
+                                                       self._vac_id_sc)
             self._prim_cell.lock(f"supercell #{id(self)}")
         else:
             if verbose:
@@ -404,7 +406,7 @@ class OrbitalSet(Observable):
         if id_pc_array.shape[1] != 4:
             raise exc.IDPCLenError(id_pc_array[0])
         status = core.check_id_pc_array(self._dim, self.num_orb_pc,
-                                        id_pc_array, self._vac_id_pc)
+                                        id_pc_array, self._vac_id_sc)
         if status[0] == -2:
             raise exc.IDPCIndexError(status[2], id_pc_array[status[1]])
         if status[0] == -1:

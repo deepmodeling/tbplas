@@ -203,7 +203,7 @@ def check_id_sc_array(long num_orb_sc, long [::1] id_sc_array):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
-                      int [:,::1] vac_id_pc):
+                      long [::1] vac_id_sc):
     """
     Check for errors in id_pc_array and return information of the 0th
     encountered error.
@@ -216,8 +216,8 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
         number of orbitals in primitive cell
     id_pc_array: (num_orb, 4) int32 array
         orbital indices in primitive cell representation
-    vac_id_pc: (num_vac, 4) int32 array
-        indices of vacancies in primitive cell representation
+    vac_id_sc: (num_vac,) int64 array
+        indices of vacancies in super cell representation
 
     Returns
     -------
@@ -254,12 +254,11 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
         if status[0] == -2:
             break
         else:
-            if vac_id_pc is None:
+            if vac_id_sc is None:
                 pass
             else:
-                if _check_vac(id_pc_array[io, 0], id_pc_array[io, 1],
-                              id_pc_array[io, 2], id_pc_array[io, 3],
-                              vac_id_pc) == 1:
+                if _id_pc2sc_vac(dim, num_orb_pc, id_pc_array[io],
+                                 vac_id_sc) == -1:
                     status[0] = -1
                     status[1] = io
                     break
@@ -334,10 +333,11 @@ def id_pc2sc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
     id_sc_array = np.zeros(num_orb, dtype=np.int64)
 
     # Convert orbital indices from pc to sc representation
-    for io in range(num_orb):
-        if vac_id_sc is None:
+    if vac_id_sc is None:
+        for io in range(num_orb):
             id_sc_array[io] = _id_pc2sc(dim, num_orb_pc, id_pc_array[io])
-        else:
+    else:
+        for io in range(num_orb):
             id_sc_array[io] = _id_pc2sc_vac(dim, num_orb_pc, id_pc_array[io],
                                             vac_id_sc)
     return np.asarray(id_sc_array)
@@ -378,37 +378,7 @@ def build_vac_id_sc(int [::1] dim, int num_orb_pc, int [:,::1] vac_id_pc):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef int _check_vac(int ia, int ib, int ic, int io, int [:,::1] vac_id_pc):
-    """
-    Check if the given orbital is a vacancy.
-
-    Parameters
-    ----------
-    ia, ib, ic, io: int32
-        index of orbital in pc representation
-    vac_id_pc: (num_vac, 4) int32 arrray
-        indices of vacancies in pc representation
-
-    Returns
-    -------
-    result: int32
-        1 if the orbital is a vacancy. Otherwise 0.
-    """
-    cdef int iv, result
-    result = 0
-    for iv in range(vac_id_pc.shape[0]):
-        if ia == vac_id_pc[iv, 0] and \
-           ib == vac_id_pc[iv, 1] and \
-           ic == vac_id_pc[iv, 2] and \
-           io == vac_id_pc[iv, 3]:
-               result = 1
-               break
-    return result
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def build_orb_id_pc(int [::1] dim, int num_orb_pc, int [:,::1] vac_id_pc):
+def build_orb_id_pc(int [::1] dim, int num_orb_pc, long [::1] vac_id_sc):
     """
     Build the indices of orbitals in primitive cell representation.
 
@@ -418,8 +388,8 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, int [:,::1] vac_id_pc):
         dimension of the super cell
     num_orb_pc: int32
         number of orbitals in primitive cell
-    vac_id_pc: (num_vac, 4) int32 arrray
-        indices of vacancies in pc representation
+    vac_id_sc: (num_vac,) int64 arrray
+        indices of vacancies in sc representation
     
     Returns
     -------
@@ -428,26 +398,43 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, int [:,::1] vac_id_pc):
     """
     cdef long num_orb_sc, ptr
     cdef int ia, ib, ic, io
+    cdef int [::1] id_work
     cdef int [:,::1] orb_id_pc
 
-    if vac_id_pc is None:
+    if vac_id_sc is None:
         num_orb_sc = np.prod(dim) * num_orb_pc
     else:
-        num_orb_sc = np.prod(dim) * num_orb_pc - vac_id_pc.shape[0]
+        num_orb_sc = np.prod(dim) * num_orb_pc - vac_id_sc.shape[0]
+    id_work = np.zeros(4, dtype=np.int32)
     orb_id_pc = np.zeros((num_orb_sc, 4), dtype=np.int32)
     ptr = 0
 
-    for ia in range(dim[0]):
-        for ib in range(dim[1]):
-            for ic in range(dim[2]):
-                for io in range(num_orb_pc):
-                    if vac_id_pc is None or \
-                            _check_vac(ia, ib, ic, io, vac_id_pc) == 0:
+    if vac_id_sc is None:
+        for ia in range(dim[0]):
+            for ib in range(dim[1]):
+                for ic in range(dim[2]):
+                    for io in range(num_orb_pc):
                         orb_id_pc[ptr, 0] = ia
                         orb_id_pc[ptr, 1] = ib
                         orb_id_pc[ptr, 2] = ic
                         orb_id_pc[ptr, 3] = io
                         ptr += 1
+    else:
+        for ia in range(dim[0]):
+            id_work[0] = ia
+            for ib in range(dim[1]):
+                id_work[1] = ib
+                for ic in range(dim[2]):
+                    id_work[2] = ic
+                    for io in range(num_orb_pc):
+                        id_work[3] = io
+                        if _id_pc2sc_vac(dim, num_orb_pc, id_work,
+                                         vac_id_sc) != -1:
+                            orb_id_pc[ptr, 0] = ia
+                            orb_id_pc[ptr, 1] = ib
+                            orb_id_pc[ptr, 2] = ic
+                            orb_id_pc[ptr, 3] = io
+                            ptr += 1
     return np.asarray(orb_id_pc)
 
 

@@ -528,12 +528,14 @@ class PrimitiveCell(Observable):
         if force_sync or to_update:
             if verbose:
                 print("INFO: updating pc orbital arrays")
-            # If orbital_list is not [], update as usual.
+
+            # If orbital list is not empty, update as usual.
             if len(self._orbital_list) != 0:
                 self._orb_pos = np.array(
                     [orb.position for orb in self._orbital_list], dtype=np.float64)
                 self._orb_eng = np.array(
                     [orb.energy for orb in self._orbital_list], dtype=np.float64)
+
             # Otherwise, restore to default settings as in __init__.
             else:
                 self._orb_pos = None
@@ -556,11 +558,13 @@ class PrimitiveCell(Observable):
         if force_sync or to_update:
             if verbose:
                 print("INFO: updating pc hopping arrays")
-            hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
-            # if hop_eng is not [], update as usual.
-            if len(hop_eng) != 0:
+
+            # If hopping_dict is not empty, update as usual.
+            if self._hopping_dict.num_hop != 0:
+                hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
                 self._hop_ind = hop_ind
                 self._hop_eng = hop_eng
+
             # Otherwise, restore to default settings as in __init__.
             else:
                 self._hop_ind = None
