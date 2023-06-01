@@ -162,7 +162,7 @@ def id_pc2sc(int [::1] dim, int num_orb_pc, int [::1] id_pc,
     if vac_id_sc is None:
         return _id_pc2sc(dim, num_orb_pc, id_pc)
     else:
-        return _id_pc2sc_vac(dim, num_orb_pc, id_pc, vac_id_sc)
+        return _id_pc2sc_vac2(dim, num_orb_pc, id_pc, vac_id_sc)
 
 
 @cython.boundscheck(False)
@@ -257,8 +257,8 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
             if vac_id_sc is None:
                 pass
             else:
-                if _id_pc2sc_vac(dim, num_orb_pc, id_pc_array[io],
-                                 vac_id_sc) == -1:
+                if _id_pc2sc_vac2(dim, num_orb_pc, id_pc_array[io],
+                                  vac_id_sc) == -1:
                     status[0] = -1
                     status[1] = io
                     break
@@ -338,8 +338,8 @@ def id_pc2sc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
             id_sc_array[io] = _id_pc2sc(dim, num_orb_pc, id_pc_array[io])
     else:
         for io in range(num_orb):
-            id_sc_array[io] = _id_pc2sc_vac(dim, num_orb_pc, id_pc_array[io],
-                                            vac_id_sc)
+            id_sc_array[io] = _id_pc2sc_vac2(dim, num_orb_pc, id_pc_array[io],
+                                             vac_id_sc)
     return np.asarray(id_sc_array)
 
 
@@ -428,8 +428,8 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, long [::1] vac_id_sc):
                     id_work[2] = ic
                     for io in range(num_orb_pc):
                         id_work[3] = io
-                        if _id_pc2sc_vac(dim, num_orb_pc, id_work,
-                                         vac_id_sc) != -1:
+                        if _id_pc2sc_vac2(dim, num_orb_pc, id_work,
+                                          vac_id_sc) != -1:
                             orb_id_pc[ptr, 0] = ia
                             orb_id_pc[ptr, 1] = ib
                             orb_id_pc[ptr, 2] = ic
@@ -441,80 +441,6 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, long [::1] vac_id_sc):
 #-------------------------------------------------------------------------------
 #              Functions for building arrays for SuperCell class
 #-------------------------------------------------------------------------------
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def build_orb_pos(double [:,::1] pc_lattice, double [:,::1] pc_orb_pos,
-                  int [:,::1] orb_id_pc):
-    """
-    Build the array of Cartesian coordinates for all the orbitals in
-    super cell.
-
-    Parameters
-    ----------
-    pc_lattice: (3, 3) float64 array
-        lattice vectors of primitive cell in NM
-    pc_orb_pos: (num_orb_pc, 3) float64 array
-        FRACTIONAL coordinates of orbitals in primitive cell
-    orb_id_pc: (num_orb_sc, 4) int32 array
-        indices of orbitals of super cell in pc representation
-
-    Returns
-    -------
-    orb_pos: (num_orb_sc, 3) float64 array
-        CARTESIAN coordinates of all orbitals in super cell in NM
-    """
-    cdef long num_orb_sc, io
-    cdef double [::1] pos_frac
-    cdef double ra, rb, rc
-    cdef double [:,::1] orb_pos
-
-    num_orb_sc = orb_id_pc.shape[0]
-    orb_pos = np.zeros((num_orb_sc, 3), dtype=np.float64)
-    for io in range(num_orb_sc):
-        pos_frac = pc_orb_pos[orb_id_pc[io, 3]]
-        ra = pos_frac[0] + orb_id_pc[io, 0]
-        rb = pos_frac[1] + orb_id_pc[io, 1]
-        rc = pos_frac[2] + orb_id_pc[io, 2]
-        orb_pos[io, 0] = ra * pc_lattice[0, 0] \
-                       + rb * pc_lattice[1, 0] \
-                       + rc * pc_lattice[2, 0]
-        orb_pos[io, 1] = ra * pc_lattice[0, 1] \
-                       + rb * pc_lattice[1, 1] \
-                       + rc * pc_lattice[2, 1]
-        orb_pos[io, 2] = ra * pc_lattice[0, 2] \
-                       + rb * pc_lattice[1, 2] \
-                       + rc * pc_lattice[2, 2]
-    return np.asarray(orb_pos)
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def build_orb_eng(double [::1] pc_orb_eng, int [:,::1] orb_id_pc):
-    """
-    Build the array of energies for all the orbitals in super cell.
-
-    Parameters
-    ----------
-    pc_orb_eng: (num_orb_pc,) float64 array
-        energies of orbitals in primitive cell in eV
-    orb_id_pc: (num_orb_sc, 4) int32 array
-        indices of orbitals of super cell in pc representation
-
-    Returns
-    -------
-    orb_eng: (num_orb_sc,) float64 array
-        energies of all orbitals in super cell in eV
-    """
-    cdef long num_orb_sc, io
-    cdef double [::1] orb_eng
-
-    num_orb_sc = orb_id_pc.shape[0]
-    orb_eng = np.zeros(num_orb_sc, dtype=np.float64)
-    for io in range(num_orb_sc):
-        orb_eng[io] = pc_orb_eng[orb_id_pc[io, 3]]
-    return np.asarray(orb_eng)
-
-
 cdef int _wrap_pbc(int ji, int ni, int pbc_i):
     """
     Wrap primitive cell index back into the 0th period of super cell based on
@@ -611,86 +537,103 @@ cdef int _fast_div(int ji, int ni):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef long _get_num_hop_sc(int [:,::1] pc_hop_ind,
-                          int [::1] dim, int [::1] pbc, int num_orb_pc,
-                          int [:,::1] orb_id_pc, long [::1] vac_id_sc):
+cdef int _zero_rn(int [:,::1] pc_hop_ind, int ih):
     """
-    Determine the number of hopping terms in the super cell.
+    Check if the given hopping term has rn == (0, 0, 0).
 
-    This function is a reduced version of 'build_hop'. But we just count
-    the number of hopping terms, rather than actually filling the arrays.
-    
     Parameters
     ----------
     pc_hop_ind: (num_hop_pc, 5) int32 array
         reduced hopping indices of primitive cell
-    dim: (3,) int32 array
-        dimension of the super cell
-    pbc: (3,) int32 array
-        periodic conditions
-    num_orb_pc: int32
-        number of orbitals in primitive cell
-    orb_id_pc: (num_orb_sc, 4) int32 array
-        indices of orbitals of super cell in pc representation
-    vac_id_sc: (num_vac,) int64 array
-        indices of vacancies in sc representation
+    ih: int32
+        index of the hopping term to check
 
     Returns
     -------
-    num_hop_sc: int64
-        number of hopping terms in the super cell
-
-    NOTES
-    -----
-    Dimension of the super cell along each direction should be no smaller
-    than a minimum value. Otherwise the result will be wrong. See the
-    documentation of 'OrbitalSet' class for more details.
-
-    The hopping terms have been reduced by the conjugate relation. So only
-    half of the terms are taken into consideration.
+    is_zero: int32
+        1 if rn == (0, 0, 0), 0 otherwise.
     """
-    # Loop counters and bounds
+    cdef int is_zero, i
+    is_zero = 1
+    for i in range(3):
+        if pc_hop_ind[ih, i] != 0:
+            is_zero = 0
+            break
+    return is_zero
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_orb_pos(double [:,::1] pc_lattice, double [:,::1] pc_orb_pos,
+                  int [:,::1] orb_id_pc):
+    """
+    Build the array of Cartesian coordinates for all the orbitals in
+    super cell.
+
+    Parameters
+    ----------
+    pc_lattice: (3, 3) float64 array
+        lattice vectors of primitive cell in NM
+    pc_orb_pos: (num_orb_pc, 3) float64 array
+        FRACTIONAL coordinates of orbitals in primitive cell
+    orb_id_pc: (num_orb_sc, 4) int32 array
+        indices of orbitals of super cell in pc representation
+
+    Returns
+    -------
+    orb_pos: (num_orb_sc, 3) float64 array
+        CARTESIAN coordinates of all orbitals in super cell in NM
+    """
     cdef long num_orb_sc, io
-    cdef int num_hop_pc, ih
+    cdef double [::1] pos_frac
+    cdef double ra, rb, rc
+    cdef double [:,::1] orb_pos
 
-    # Cell and orbital IDs
-    cdef int ja, jb, jc
-    cdef int [::1] id_pc_j
-    cdef long id_sc_j
-
-    # Results
-    cdef long num_hop_sc
-
-    # Initialize variables
     num_orb_sc = orb_id_pc.shape[0]
-    num_hop_pc = pc_hop_ind.shape[0]
-    id_pc_j = np.zeros(4, dtype=np.int32)
-    num_hop_sc = 0
-
+    orb_pos = np.zeros((num_orb_sc, 3), dtype=np.float64)
     for io in range(num_orb_sc):
-        for ih in range(num_hop_pc):
-            if orb_id_pc[io, 3] == pc_hop_ind[ih, 3]:
-                ja = _wrap_pbc(orb_id_pc[io, 0]+pc_hop_ind[ih, 0],
-                               dim[0], pbc[0])
-                jb = _wrap_pbc(orb_id_pc[io, 1]+pc_hop_ind[ih, 1],
-                               dim[1], pbc[1])
-                jc = _wrap_pbc(orb_id_pc[io, 2]+pc_hop_ind[ih, 2],
-                               dim[2], pbc[2])
-                if ja == -1 or jb == -1 or jc == -1:
-                    pass
-                else:
-                    if vac_id_sc is None:
-                        num_hop_sc += 1
-                    else: 
-                        id_pc_j[0] = ja
-                        id_pc_j[1] = jb
-                        id_pc_j[2] = jc
-                        id_pc_j[3] = pc_hop_ind[ih, 4]
-                        id_sc_j = _id_pc2sc_vac(dim, num_orb_pc, id_pc_j,
-                                                vac_id_sc)
-                        if id_sc_j != -1:
-                            num_hop_sc += 1
-    return num_hop_sc
+        pos_frac = pc_orb_pos[orb_id_pc[io, 3]]
+        ra = pos_frac[0] + orb_id_pc[io, 0]
+        rb = pos_frac[1] + orb_id_pc[io, 1]
+        rc = pos_frac[2] + orb_id_pc[io, 2]
+        orb_pos[io, 0] = ra * pc_lattice[0, 0] \
+                       + rb * pc_lattice[1, 0] \
+                       + rc * pc_lattice[2, 0]
+        orb_pos[io, 1] = ra * pc_lattice[0, 1] \
+                       + rb * pc_lattice[1, 1] \
+                       + rc * pc_lattice[2, 1]
+        orb_pos[io, 2] = ra * pc_lattice[0, 2] \
+                       + rb * pc_lattice[1, 2] \
+                       + rc * pc_lattice[2, 2]
+    return np.asarray(orb_pos)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_orb_eng(double [::1] pc_orb_eng, int [:,::1] orb_id_pc):
+    """
+    Build the array of energies for all the orbitals in super cell.
+
+    Parameters
+    ----------
+    pc_orb_eng: (num_orb_pc,) float64 array
+        energies of orbitals in primitive cell in eV
+    orb_id_pc: (num_orb_sc, 4) int32 array
+        indices of orbitals of super cell in pc representation
+
+    Returns
+    -------
+    orb_eng: (num_orb_sc,) float64 array
+        energies of all orbitals in super cell in eV
+    """
+    cdef long num_orb_sc, io
+    cdef double [::1] orb_eng
+
+    num_orb_sc = orb_id_pc.shape[0]
+    orb_eng = np.zeros(num_orb_sc, dtype=np.float64)
+    for io in range(num_orb_sc):
+        orb_eng[io] = pc_orb_eng[orb_id_pc[io, 3]]
+    return np.asarray(orb_eng)
 
 
 @cython.boundscheck(False)
@@ -762,9 +705,8 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     cdef double [:,::1] dr
 
     # Get the number of hopping terms and allocate arrays
-    num_hop_sc = _get_num_hop_sc(pc_hop_ind,
-                                 dim, pbc, num_orb_pc,
-                                 orb_id_pc, vac_id_sc)
+    num_hop_pc = pc_hop_ind.shape[0]
+    num_hop_sc = num_hop_pc * np.prod(dim)
     hop_i = np.zeros(num_hop_sc, dtype=np.int64)
     hop_j = np.zeros(num_hop_sc, dtype=np.int64)
     hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
@@ -772,7 +714,6 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
 
     # Initialize variables
     num_orb_sc = orb_id_pc.shape[0]
-    num_hop_pc = pc_hop_ind.shape[0]
     id_pc_j = np.zeros(4, dtype=np.int32)
     ptr = 0
 
@@ -802,8 +743,8 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                     if vac_id_sc is None:
                         id_sc_j = _id_pc2sc(dim, num_orb_pc, id_pc_j)
                     else:
-                        id_sc_j = _id_pc2sc_vac(dim, num_orb_pc, id_pc_j,
-                                                vac_id_sc)
+                        id_sc_j = _id_pc2sc_vac2(dim, num_orb_pc, id_pc_j,
+                                                 vac_id_sc)
 
                     # Check if id_sc_j corresponds to a vacancy
                     if vac_id_sc is None or id_sc_j != -1:
@@ -829,6 +770,10 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                                    + nb * sc_lattice[1, 2] \
                                    + nc * sc_lattice[2, 2]
                         ptr += 1
+    hop_i = hop_i[:ptr]
+    hop_j = hop_j[:ptr]
+    hop_v = hop_v[:ptr]
+    dr = dr[:ptr]
     return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
 
 
@@ -904,33 +849,6 @@ def split_pc_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
             ptr_free += 1
 
     return np.asarray(ind_pbc), np.asarray(eng_pbc), np.asarray(ind_free), np.asarray(eng_free)
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int _zero_rn(int [:,::1] pc_hop_ind, int ih):
-    """
-    Check if the given hopping term has rn == (0, 0, 0).
-
-    Parameters
-    ----------
-    pc_hop_ind: (num_hop_pc, 5) int32 array
-        reduced hopping indices of primitive cell
-    ih: int32
-        index of the hopping term to check
-
-    Returns
-    -------
-    is_zero: int32
-        1 if rn == (0, 0, 0), 0 otherwise.
-    """
-    cdef int is_zero, i
-    is_zero = 1
-    for i in range(3):
-        if pc_hop_ind[ih, i] != 0:
-            is_zero = 0
-            break
-    return is_zero
 
 
 @cython.boundscheck(False)
@@ -1258,6 +1176,8 @@ def test_acc_sps_vac(int [::1] dim, int num_orb_pc, int [:,::1] orb_id_pc,
     for id_sc in range(orb_id_pc.shape[0]):
         id_sc2 = _id_pc2sc_vac(dim, num_orb_pc, orb_id_pc[id_sc], vac_id_sc)
         result += abs(id_sc - id_sc2)
+        id_sc2 = _id_pc2sc_vac2(dim, num_orb_pc, orb_id_pc[id_sc], vac_id_sc)
+        result += abs(id_sc - id_sc2)
     return result
 
 
@@ -1296,6 +1216,7 @@ def test_acc_psp_vac(int [::1] dim, int num_orb_pc, int [:,::1] orb_id_pc,
         id_pc2 = orb_id_pc[_id_pc2sc_vac(dim, num_orb_pc, id_pc, vac_id_sc)]
         for i in range(4):
             result += abs(id_pc[i] - id_pc2[i])
+        id_pc2 = orb_id_pc[_id_pc2sc_vac2(dim, num_orb_pc, id_pc, vac_id_sc)]
     return result
 
 

@@ -3,12 +3,10 @@
 import unittest
 
 import numpy as np
-from scipy.sparse import coo_matrix
 
 from tbplas.cython import super as core
 
-from tbplas import (gen_lattice_vectors, extend_prim_cell,
-                    PrimitiveCell, SuperCell, TestHelper)
+from tbplas import (gen_lattice_vectors, PrimitiveCell, SuperCell, TestHelper)
 import tbplas.builder.exceptions as exc
 from tbplas.builder.super import OrbitalSet
 
@@ -422,8 +420,7 @@ class TestSuper(unittest.TestCase):
             sc.add_hopping((0, 0, 0), id_sc_bra[i], id_sc_ket[i], energy=0.0)
 
         # Inspect the arrays
-        hop_i = sc.get_hop()[0]
-        dr = sc.get_dr()
+        hop_i, hop_j, hop_v, dr = sc.get_hop()
         self.assertEqual(hop_i.shape[0], dr.shape[0])
 
     def test15_fast_algo(self):
@@ -455,24 +452,6 @@ class TestSuper(unittest.TestCase):
         th.test_equal_array(eng_pbc, eng_pbc_ref)
         th.test_equal_array(ind_free, ind_free_ref)
         th.test_equal_array(eng_free, eng_free_ref)
-
-        # Check the hopping terms generated using different algorithms
-        prim_cell = extend_prim_cell(self.cell, dim=(10, 10, 1))
-        super_cell = SuperCell(prim_cell, dim=(10, 10, 1), pbc=(True, True, False))
-
-        i1, j1, v1 = super_cell.get_hop(algo="no")
-        dr1 = super_cell.get_dr(algo="no")
-        i2, j2, v2 = super_cell.get_hop(algo="fast")
-        dr2 = super_cell.get_dr(algo="fast")
-
-        shape = (super_cell.num_orb_sc, super_cell.num_orb_sc)
-        h1 = coo_matrix((v1, (i1, j1)), shape=shape)
-        h2 = coo_matrix((v2, (i2, j2)), shape=shape)
-        th.test_equal_array(h1, h2)
-        for i in range(3):
-            h1 = coo_matrix((dr1[:, i], (i1, j1)), shape=shape)
-            h2 = coo_matrix((dr2[:, i], (i2, j2)), shape=shape)
-            th.test_equal_array(h1, h2)
 
 
 if __name__ == "__main__":
