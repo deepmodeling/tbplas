@@ -73,7 +73,6 @@ def update_hop(sample: tb.Sample) -> None:
     :return: None.
     """
     sample.init_hop()
-    sample.init_dr()
     for i, rij in enumerate(sample.dr):
         sample.hop_v[i] = calc_hop(rij)
 

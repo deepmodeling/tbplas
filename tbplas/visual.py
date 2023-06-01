@@ -262,7 +262,6 @@ class Visualizer(MPIEnv):
             else:
                 model.init_orb_pos()
                 model.init_hop()
-                model.init_dr()
                 orb_pos = model.orb_pos
                 hop_i, dr = model.hop_i, model.dr
             hop_lc = []

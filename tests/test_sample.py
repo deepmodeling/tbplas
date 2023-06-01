@@ -123,7 +123,7 @@ class TestSample(unittest.TestCase):
         hop_i_ref = np.array([0, 15, 12])
         hop_j_ref = np.array([11, 10, 5])
         hop_v_ref = np.array([-1.2, 1.5, -0.7])
-        hop_i, hop_j, hop_v = inter_hop.get_hop()
+        hop_i, hop_j, hop_v = inter_hop.get_hop()[:3]
         th.test_equal_array(hop_i, hop_i_ref)
         th.test_equal_array(hop_j, hop_j_ref)
         th.test_equal_array(hop_v, hop_v_ref)
@@ -161,13 +161,12 @@ class TestSample(unittest.TestCase):
                               orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
                               orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
 
-        hop_i, hop_j, hop_v = inter_hop.get_hop()
+        hop_i, hop_j, hop_v, dr = inter_hop.get_hop()
         orb_pos1 = sc1.get_orb_pos()
         orb_pos2 = sc2.get_orb_pos()
         dr_ref = []
         for i in range(hop_i.shape[0]):
             dr_ref.append(orb_pos2[hop_j.item(i)] - orb_pos1[hop_i.item(i)])
-        dr = inter_hop.get_dr()
         th.test_equal_array(dr, np.array(dr_ref))
 
     def test03_init(self):
@@ -311,35 +310,30 @@ class TestSample(unittest.TestCase):
         # Normal case with 1 supercell
         sample = Sample(sc1)
         sample.init_hop()
-        sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (27,))
         self.assertTupleEqual(sample.dr.shape, (27, 3))
 
         # Normal case with 2 supercells and 1 inter-hopping
         sample = Sample(sc1, sc2, inter_hop1)
         sample.init_hop()
-        sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (57,))
         self.assertTupleEqual(sample.dr.shape, (57, 3))
 
         # Normal case with 3 supercells and 2 inter-hopping
         sample = Sample(sc1, sc2, sc3, inter_hop1, inter_hop2)
         sample.init_hop()
-        sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (87,))
         self.assertTupleEqual(sample.dr.shape, (87, 3))
 
         # Abnormal case with 2 supercells and no inter-hopping
         sample = Sample(sc1, sc2)
         sample.init_hop()
-        sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (54,))
         self.assertTupleEqual(sample.dr.shape, (54, 3))
 
         # Abnormal case with 3 supercells and no inter-hopping
         sample = Sample(sc1, sc2, sc3)
         sample.init_hop()
-        sample.init_dr()
         self.assertTupleEqual(sample.hop_i.shape, (81,))
         self.assertTupleEqual(sample.dr.shape, (81, 3))
 
@@ -479,7 +473,6 @@ class TestSample(unittest.TestCase):
         sample.init_orb_eng()
         timer.toc("init_orb_eng")
         timer.tic("init_dr")
-        sample.init_dr()
         timer.toc("init_dr")
 
         # build_*
@@ -672,7 +665,6 @@ class TestSample(unittest.TestCase):
         sample.init_orb_pos()
         sample.init_orb_eng()
         sample.init_hop()
-        sample.init_dr()
 
         # Check if set_ham_dense agrees with set_ham_csr
         num_orb = sample.num_orb
@@ -771,7 +763,7 @@ class TestSample(unittest.TestCase):
         super_cell = tb.SuperCell(prim_cell, dim=(3, 3, 1),
                                   pbc=(True, True, False))
         sample = tb.Sample(super_cell)
-        sample.init_dr()
+        sample.init_hop()
 
         # Change primitive cell and update in top-down approach
         prim_cell.unlock()

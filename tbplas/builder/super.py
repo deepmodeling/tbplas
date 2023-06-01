@@ -14,6 +14,9 @@ from .primitive import PrimitiveCell
 from .visual import ModelViewer
 
 
+hop_type = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+
+
 class OrbitalSet(Observable):
     """
     Container class for orbitals and vacancies in the supercell.
@@ -545,7 +548,7 @@ class SuperCell(OrbitalSet):
         self.check_lock()
 
         # Get indices of dangling orbitals
-        hop_i, hop_j, hop_v = self.get_hop()
+        hop_i, hop_j, hop_v = self.get_hop()[:3]
         id_pc_trim = core.get_orb_id_trim(self._orb_id_pc, hop_i, hop_j)
         id_sc_trim = self.orb_id_pc2sc_array(id_pc_trim)
 
@@ -591,8 +594,7 @@ class SuperCell(OrbitalSet):
             viewer.scatter(orb_pos, c=orb_eng)
 
         # Plot hopping terms
-        hop_i, hop_j, hop_v = self.get_hop()
-        dr = self.get_dr()
+        hop_i, hop_j, hop_v, dr = self.get_hop()
         arrow_args = {"color": hop_color, "length_includes_head": True,
                       "width": 0.002, "head_width": 0.02, "fill": False}
         for i_h in range(hop_i.shape[0]):
@@ -652,40 +654,23 @@ class SuperCell(OrbitalSet):
             self._orb_pos_modifier(orb_pos)
         return orb_pos
 
-    def _init_hop(self, with_dr: bool = False,
-                  orb_pos: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _init_hop_gen(self, orb_pos: np.ndarray) -> hop_type:
         """
         Get initial hopping terms and distances using the general algorithm.
 
-        :param with_dr: whether to build initial hopping distances
         :param orb_pos: (num_orb_sc, 3) float64 array
             Cartesian coordinates of orbitals in NM
         :return: (hop_i, hop_j, hop_v, dr)
-            initial hopping terms and distances (optional)
-        :raises ValueError: if with_dr is True but orbital positions are not
-            specified
+            initial hopping terms and distances
         """
-        if with_dr and orb_pos is None:
-            raise ValueError("Orbital positions not specified")
-        if with_dr:
-            hop_i, hop_j, hop_v, dr = \
-                core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
+        hop_i, hop_j, hop_v, dr = \
+            core.build_hop_gen(self.pc_hop_ind, self.pc_hop_eng,
                                self._dim, self._pbc, self.num_orb_pc,
                                self._orb_id_pc, self._vac_id_sc,
-                               self.sc_lat_vec, orb_pos,
-                               data_kind=1)
-        else:
-            hop_i, hop_j, hop_v =  \
-                core.build_hop(self.pc_hop_ind, self.pc_hop_eng,
-                               self._dim, self._pbc, self.num_orb_pc,
-                               self._orb_id_pc, self._vac_id_sc,
-                               self.sc_lat_vec, None,
-                               data_kind=0)
-            dr = None
+                               self.sc_lat_vec, orb_pos)
         return hop_i, hop_j, hop_v, dr
 
-    def _init_hop_fast(self, with_dr: bool = False,
-                       orb_pos: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _init_hop_fast(self, orb_pos: np.ndarray) -> hop_type:
         """
         Get initial hopping terms and distance using the fast algorithm.
 
@@ -693,181 +678,106 @@ class SuperCell(OrbitalSet):
 
         TODO: parallelize this method with MPI.
 
-        :param with_dr: whether to build initial hopping distances
         :param orb_pos: (num_orb_sc, 3) float64 array
             Cartesian coordinates of orbitals in NM
         :return: (hop_i, hop_j, hop_v, dr)
-            initial hopping terms and distances (optional)
-        :raises ValueError: if with_dr is True but orbital positions are not
-            specified
+            initial hopping terms and distances
         """
-        if with_dr and orb_pos is None:
-            raise ValueError("Orbital positions not specified")
-
         # Split pc hopping terms into free and periodic parts
         ind_pbc, eng_pbc, ind_free, eng_free = \
             core.split_pc_hop(self.pc_hop_ind, self.pc_hop_eng, self._pbc)
 
         # Build sc hopping terms from periodic parts
         # This is fast since we can predict the number of hopping terms.
-        if with_dr:
-            i_pbc, j_pbc, v_pbc, dr_pbc = \
-                core.build_hop_pbc(ind_pbc, eng_pbc,
-                                   self._dim, self._pbc, self.num_orb_pc,
-                                   self.sc_lat_vec, orb_pos,
-                                   data_kind=1)
-        else:
-            i_pbc, j_pbc, v_pbc = \
-                core.build_hop_pbc(ind_pbc, eng_pbc,
-                                   self._dim, self._pbc, self.num_orb_pc,
-                                   self.sc_lat_vec, None,
-                                   data_kind=0)
-            dr_pbc = None
+        i_pbc, j_pbc, v_pbc, dr_pbc = \
+            core.build_hop_pbc(ind_pbc, eng_pbc,
+                               self._dim, self._pbc, self.num_orb_pc,
+                               self.sc_lat_vec, orb_pos)
 
         # Build hopping terms from free parts
         # Here we must call the general Cython function as we cannot predict
         # the number of hopping terms.
-        if with_dr:
-            i_free, j_free, v_free, dr_free = \
-                core.build_hop(ind_free, eng_free,
+        i_free, j_free, v_free, dr_free = \
+            core.build_hop_gen(ind_free, eng_free,
                                self._dim, self._pbc, self.num_orb_pc,
                                self._orb_id_pc, self._vac_id_sc,
-                               self.sc_lat_vec, orb_pos,
-                               data_kind=1)
-        else:
-            i_free, j_free, v_free =  \
-                core.build_hop(ind_free, eng_free,
-                               self._dim, self._pbc, self.num_orb_pc,
-                               self._orb_id_pc, self._vac_id_sc,
-                               self.sc_lat_vec, None,
-                               data_kind=0)
-            dr_free = None
+                               self.sc_lat_vec, orb_pos)
 
         # Assemble hopping terms and distances
         hop_i = np.append(i_pbc, i_free)
         hop_j = np.append(j_pbc, j_free)
         hop_v = np.append(v_pbc, v_free)
-        if with_dr:
-            dr = np.vstack((dr_pbc, dr_free))
-        else:
-            dr = None
+        dr = np.vstack((dr_pbc, dr_free))
         return hop_i, hop_j, hop_v, dr
 
-    def get_hop(self, algo: str = "auto") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_hop(self) -> hop_type:
         """
-        Get indices and energies of all hopping terms in the supercell.
+        Get hopping indices, energies and distances.
 
-        NOTE: The hopping terms will be reduced by conjugate relation.
-        So only half of them will be returned as results.
+        The hopping terms will be reduced by conjugate relation. So only half
+        of them will be returned as results.
 
-        :param algo: algorithm to build the hopping terms, should be "fast" or
-            "auto"
-        :return: (hop_i, hop_j, hop_v)
+        If periodic conditions are enabled, orbital indices in hop_j may be
+        wrapped back if it falls out of the supercell. Nevertheless, the
+        distances in dr are still the ones before wrapping. This is essential
+        for adding magnetic field, calculating band structure and many
+        properties involving dx and dy.
+
+        :return: (hop_i, hop_j, hop_v, dr)
             hop_i: (num_hop_sc,) int64 array
             row indices of hopping terms reduced by conjugate relation
             hop_j: (num_hop_sc,) int64 array
             column indices of hopping terms reduced by conjugate relation
             hop_v: (num_hop_sc,) complex128 array
             energies of hopping terms in accordance with hop_i and hop_j in eV
-        """
-        self.sync_array()
-
-        # Get initial hopping terms
-        if algo == "auto":
-            use_fast = (len(self._vacancy_set) == 0)
-        elif algo == "fast":
-            use_fast = True
-        else:
-            use_fast = False
-        if use_fast:
-            hop_i, hop_j, hop_v = self._init_hop_fast()[:3]
-        else:
-            hop_i, hop_j, hop_v = self._init_hop()[:3]
-
-        # Apply hopping modifier
-        if self._hop_modifier.num_hop != 0:
-            hop_ind, hop_eng = self._hop_modifier.to_array(use_int64=True)
-            hop_i_new, hop_j_new, hop_v_new = [], [], []
-
-            for ih in range(hop_ind.shape[0]):
-                id_bra = hop_ind.item(ih, 3)
-                id_ket = hop_ind.item(ih, 4)
-                hop_energy = hop_eng.item(ih)
-                id_same, id_conj = \
-                    core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
-                if id_same != -1:
-                    hop_v[id_same] = hop_energy
-                elif id_conj != -1:
-                    hop_v[id_conj] = hop_energy.conjugate()
-                else:
-                    hop_i_new.append(id_bra)
-                    hop_j_new.append(id_ket)
-                    hop_v_new.append(hop_energy)
-
-            # Append additional hopping terms
-            hop_i = np.append(hop_i, hop_i_new)
-            hop_j = np.append(hop_j, hop_j_new)
-            hop_v = np.append(hop_v, hop_v_new)
-        return hop_i, hop_j, hop_v
-
-    def get_dr(self, algo: str = "auto") -> np.ndarray:
-        """
-        Get distances of all hopping terms in the supercell.
-
-        NOTE: The hopping distances will be reduced by conjugate relation.
-        So only half of them will be returned as results.
-
-        NOTE: If periodic conditions are enabled, orbital indices in hop_j may
-        be wrapped back if it falls out of the supercell. Nevertheless, the
-        distances in dr are still the ones before wrapping. This is essential
-        for adding magnetic field, calculating band structure and many
-        properties involving dx and dy.
-
-        :param algo: algorithm to build the hopping terms, should be "fast" or
-            "auto"
-        :return: dr: (num_hop_sc, 3) float64 array
+            dr: (num_hop_sc, 3) float64 array
             distances of hopping terms in accordance with hop_i and hop_j in nm
         """
         self.sync_array()
         orb_pos = self.get_orb_pos()
 
-        # Get initial hopping terms and dr
-        if algo == "auto":
-            use_fast = (len(self._vacancy_set) == 0)
-        elif algo == "fast":
-            use_fast = True
-        else:
-            use_fast = False
+        # Get initial hopping terms
+        use_fast = (len(self._vacancy_set) == 0)
         if use_fast:
-            hop_i, hop_j, hop_v, dr = self._init_hop_fast(with_dr=True,
-                                                          orb_pos=orb_pos)
+            hop_i, hop_j, hop_v, dr = self._init_hop_fast(orb_pos)
         else:
-            hop_i, hop_j, hop_v, dr = self._init_hop(with_dr=True,
-                                                     orb_pos=orb_pos)
+            hop_i, hop_j, hop_v, dr = self._init_hop_gen(orb_pos)
 
         # Apply hopping modifier
         if self._hop_modifier.num_hop != 0:
             hop_ind, hop_eng = self._hop_modifier.to_array(use_int64=True)
-            dr_new = []
+            hop_i_new, hop_j_new, hop_v_new, dr_new = [], [], [], []
 
             for ih in range(hop_ind.shape[0]):
+                # Extract data
                 id_bra = hop_ind.item(ih, 3)
                 id_ket = hop_ind.item(ih, 4)
+                hop_energy = hop_eng.item(ih)
                 rn = np.matmul(hop_ind[ih, :3], self.sc_lat_vec)
                 dr_i = orb_pos[id_ket] + rn - orb_pos[id_bra]
+
+                # Check for equivalent terms
                 id_same, id_conj = \
                     core.find_equiv_hopping(hop_i, hop_j, id_bra, id_ket)
                 if id_same != -1:
+                    hop_v[id_same] = hop_energy
                     dr[id_same] = dr_i
                 elif id_conj != -1:
+                    hop_v[id_conj] = hop_energy.conjugate()
                     dr[id_conj] = -dr_i
                 else:
+                    hop_i_new.append(id_bra)
+                    hop_j_new.append(id_ket)
+                    hop_v_new.append(hop_energy)
                     dr_new.append(dr_i)
 
-            # Append additional hopping distances
+            # Append additional hopping terms
+            hop_i = np.append(hop_i, hop_i_new)
+            hop_j = np.append(hop_j, hop_j_new)
+            hop_v = np.append(hop_v, hop_v_new)
             if len(dr_new) != 0:
                 dr = np.vstack((dr, dr_new))
-        return dr
+        return hop_i, hop_j, hop_v, dr
 
     def get_lattice_area(self, direction: str = "c") -> float:
         """

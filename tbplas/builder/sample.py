@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from ..cython import sample as core
 from . import exceptions as exc
 from .base import InterHopping
-from .super import SuperCell
+from .super import hop_type, SuperCell
 from .visual import ModelViewer
 from ..diagonal import DiagSolver
 
@@ -56,60 +56,51 @@ class SCInterHopping(InterHopping):
         fp = (tuple(self.to_list()), self._sc_bra, self._sc_ket)
         return hash(fp)
 
-    def get_hop(self, check_dup: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_hop(self, check_dup: bool = False) -> hop_type:
         """
-        Get hopping indices and energies.
+        Get hopping indices, energies and distances.
+
+        If periodic conditions are enabled, orbital indices in hop_j may be
+        wrapped back if it falls out of the supercell. Nevertheless, the
+        distances in dr are still the ones before wrapping. This is essential
+        for adding magnetic field, calculating band structure and many
+        properties involving dx and dy.
 
         :param check_dup: whether to check for duplicate hopping terms in the
             results
-        :return: (hop_i, hop_j, hop_v)
+        :return: (hop_i, hop_j, hop_v, dr)
             hop_i: (num_hop,) int64 array
             row indices of hopping terms
             hop_j: (num_hop,) int64 array
             column indices of hopping terms
             hop_v: (num_hop,) complex128 array
             energies of hopping terms in accordance with hop_i and hop_j in eV
+            dr: (num_hop, 3) float64 array
+            distances of hopping terms in accordance with hop_i and hop_j in nm
         :raises InterHopVoidError: if no hopping terms have been added to the
             instance
         :raises ValueError: if duplicate terms have been detected
         """
         if self.num_hop == 0:
             raise exc.InterHopVoidError()
-        hop_ind, hop_eng = self.to_array(use_int64=True)
-        hop_i, hop_j = hop_ind[:, 3], hop_ind[:, 4]
-        hop_v = hop_eng
 
-        # Check for duplicate terms
+        # Build hop_*
+        hop_ind, hop_eng = self.to_array(use_int64=True)
+        hop_i, hop_j, hop_v = hop_ind[:, 3], hop_ind[:, 4], hop_eng
+
+        # Build dr
+        pos_bra = self._sc_bra.get_orb_pos()
+        pos_ket = self._sc_ket.get_orb_pos()
+        dr = core.build_inter_dr(hop_ind, pos_bra, pos_ket,
+                                 self._sc_ket.sc_lat_vec)
+
+        # Check for duplicate terms in hop_i and hop_j
         if check_dup:
             for ih in range(hop_i.shape[0]):
                 ii, jj = hop_i.item(ih), hop_j.item(ih)
                 if self.count_pair(ii, jj) > 1:
                     raise ValueError(f"Duplicate terms detected {ii} {jj}")
-        return hop_i, hop_j, hop_v
-
-    def get_dr(self) -> np.ndarray:
-        """
-        Get hopping distances.
-
-        NOTE: If periodic conditions are enabled, orbital indices in hop_j may
-        be wrapped back if it falls out of the supercell. Nevertheless, the
-        distances in dr are still the ones before wrapping. This is essential
-        for adding magnetic field, calculating band structure and many
-        properties involving dx and dy.
-
-        :return: (num_hop, 3) float64 array
-            distances of hopping terms in accordance with hop_i and hop_j in nm
-        :raises InterHopVoidError: if no hopping terms have been added to the
-            instance
-        """
-        if self.num_hop == 0:
-            raise exc.InterHopVoidError()
-        hop_ind, hop_eng = self.to_array(use_int64=True)
-        pos_bra = self._sc_bra.get_orb_pos()
-        pos_ket = self._sc_ket.get_orb_pos()
-        dr = core.build_inter_dr(hop_ind, pos_bra, pos_ket,
-                                 self._sc_ket.sc_lat_vec)
-        return dr
+        return hop_i, hop_j, hop_v, dr
 
     def plot(self, axes: plt.Axes,
              with_conj: bool = False,
@@ -138,8 +129,7 @@ class SCInterHopping(InterHopping):
         # Plot hopping terms
         orb_pos_bra = self._sc_bra.get_orb_pos()
         orb_pos_ket = self._sc_ket.get_orb_pos() if with_conj else None
-        hop_i, hop_j, hop_v = self.get_hop()
-        dr = self.get_dr()
+        hop_i, hop_j, hop_v, dr = self.get_hop()
         arrow_args = {"color": hop_color, "length_includes_head": True,
                       "width": 0.002, "head_width": 0.02, "fill": False}
         for i_h in range(hop_i.shape[0]):
@@ -302,7 +292,7 @@ class Sample:
 
     def init_hop(self, force_init: bool = False) -> None:
         """
-        Initialize hop_i, hop_j, hop_v and reset rescale on demand.
+        Initialize hop_i, hop_j, hop_v, dr and reset rescale on demand.
 
         If the arrays are None, build them from scratch. Otherwise, build them
         only when force_init is True.
@@ -315,56 +305,37 @@ class Sample:
             inter-hopping
         """
         if force_init or self.hop_i is None:
-            hop_i_tot, hop_j_tot, hop_v_tot = [], [], []
+            hop_i_tot, hop_j_tot, hop_v_tot, dr_tot = [], [], [], []
             ind_start = self._get_ind_start()
 
             # Collect hopping terms from each supercell
             for i_sc, sc in enumerate(self._sc_list):
-                hop_i, hop_j, hop_v = sc.get_hop()
+                hop_i, hop_j, hop_v, dr = sc.get_hop()
                 hop_i += ind_start[i_sc]
                 hop_j += ind_start[i_sc]
                 hop_i_tot.append(hop_i)
                 hop_j_tot.append(hop_j)
                 hop_v_tot.append(hop_v)
+                dr_tot.append(dr)
 
             # Collect hopping terms from each inter hopping set
             for hop in self._hop_list:
-                hop_i, hop_j, hop_v = hop.get_hop()
+                hop_i, hop_j, hop_v, dr = hop.get_hop()
                 hop_i += ind_start[self._sc_list.index(hop.sc_bra)]
                 hop_j += ind_start[self._sc_list.index(hop.sc_ket)]
                 hop_i_tot.append(hop_i)
                 hop_j_tot.append(hop_j)
                 hop_v_tot.append(hop_v)
+                dr_tot.append(dr)
 
             # Assemble hopping terms
             self.hop_i = np.concatenate(hop_i_tot)
             self.hop_j = np.concatenate(hop_j_tot)
             self.hop_v = np.concatenate(hop_v_tot)
+            self.dr = np.concatenate(dr_tot)
 
             # Reset scaling factor
             self._rescale = 1.0
-
-    def init_dr(self, force_init: bool = False) -> None:
-        """
-        Initialize self.dr on demand.
-
-        If self.dr is None, build it from scratch. Otherwise, build it only when
-        force_init is True.
-
-        :param force_init: whether to force initializing the array from scratch
-            even if it has already been initialized
-        :returns: None
-        :raises InterHopVoidError: if any inter-hopping set is empty
-        :raises ValueError: if duplicate terms have been detected in any
-            inter-hopping
-        """
-        if force_init or self.dr is None:
-            dr_tot = []
-            for sc in self._sc_list:
-                dr_tot.append(sc.get_dr())
-            for hop in self._hop_list:
-                dr_tot.append(hop.get_dr())
-            self.dr = np.concatenate(dr_tot)
 
     def reset_array(self) -> None:
         """
@@ -381,8 +352,6 @@ class Sample:
             self.init_orb_pos(force_init=True)
         if self.hop_i is not None:
             self.init_hop(force_init=True)
-        if self.dr is not None:
-            self.init_dr(force_init=True)
         for arg in self._sc_list:
             arg.lock(f"sample #{id(self)}")
         for arg in self._hop_list:
@@ -467,7 +436,6 @@ class Sample:
         """
         self.init_orb_pos()
         self.init_hop()
-        self.init_dr()
         if gauge not in (0, 1, 2):
             raise ValueError(f"Illegal gauge {gauge}")
         core.set_mag_field(self.hop_i, self.hop_j, self.hop_v, self.dr,
@@ -482,7 +450,6 @@ class Sample:
         :return: None
         """
         self.init_hop()
-        self.init_dr()
 
         # Convert k-point to Cartesian Coordinates
         sc_recip_vec = self.sc0.get_reciprocal_vectors()
@@ -526,7 +493,7 @@ class Sample:
         :raises ValueError: if duplicate terms have been detected in any
             inter-hopping
         """
-        self.init_dr()
+        self.init_hop()
         dx, dy = self.dr[:, 0], self.dr[:, 1]
         shape = (self.num_orb, self.num_orb)
         dx_csr = csr_matrix((dx, (self.hop_i, self.hop_j)), shape)
@@ -569,7 +536,6 @@ class Sample:
         self.init_orb_eng()
         self.init_orb_pos()
         self.init_hop()
-        self.init_dr()
         if algo == "fast":
             indptr, indices, hop, dx, dy = \
                 core.build_ham_dxy_fast(self.orb_eng, self.hop_i, self.hop_j,

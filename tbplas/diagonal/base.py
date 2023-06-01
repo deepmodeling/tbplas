@@ -134,7 +134,6 @@ class DiagSolver(MPIEnv):
             self.__model.init_orb_pos()
             self.__model.init_orb_eng()
             self.__model.init_hop()
-            self.__model.init_dr()
 
     @staticmethod
     def _calc_proj(orbital_indices: List[int],

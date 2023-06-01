@@ -695,14 +695,13 @@ cdef long _get_num_hop_sc(int [:,::1] pc_hop_ind,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
-              int [::1] dim, int [::1] pbc, int num_orb_pc,
-              int [:,::1] orb_id_pc, long [::1] vac_id_sc,
-              double [:,::1] sc_lattice, double [:,::1] sc_orb_pos,
-              int data_kind):
+def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
+                  int [::1] dim, int [::1] pbc, int num_orb_pc,
+                  int [:,::1] orb_id_pc, long [::1] vac_id_sc,
+                  double [:,::1] sc_lattice, double [:,::1] sc_orb_pos):
     """
     Build the arrays of hopping terms for constructing sparse Hamiltonian
-    and dr in CSR format.
+    and dr in CSR format in general cases.
 
     Parameters
     ----------
@@ -724,10 +723,6 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
         CARTESIAN lattice vectors of supercell in NM
     sc_orb_pos: (num_orb_sc, 3) float64 array
         CARTESIAN coordinates of orbitals of super cell in NM
-    data_kind: int32
-        which arrays to generate
-        0 - hop_i, hop_j, hop_v
-        1 - hop_i, hop_j, hop_v, dr
 
     Returns
     -------
@@ -773,8 +768,7 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     hop_i = np.zeros(num_hop_sc, dtype=np.int64)
     hop_j = np.zeros(num_hop_sc, dtype=np.int64)
     hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
-    if data_kind == 1:
-        dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
+    dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
 
     # Initialize variables
     num_orb_sc = orb_id_pc.shape[0]
@@ -816,32 +810,26 @@ def build_hop(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                         hop_i[ptr] = id_sc_i
                         hop_j[ptr] = id_sc_j
                         hop_v[ptr] = pc_hop_eng[ih]
-                        if data_kind == 1:
-                            na = _fast_div(ja0, dim[0])
-                            nb = _fast_div(jb0, dim[1])
-                            nc = _fast_div(jc0, dim[2])
-                            dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
-                                       - sc_orb_pos[id_sc_i, 0] \
-                                       + na * sc_lattice[0, 0] \
-                                       + nb * sc_lattice[1, 0] \
-                                       + nc * sc_lattice[2, 0]
-                            dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
-                                       - sc_orb_pos[id_sc_i, 1] \
-                                       + na * sc_lattice[0, 1] \
-                                       + nb * sc_lattice[1, 1] \
-                                       + nc * sc_lattice[2, 1]
-                            dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
-                                       - sc_orb_pos[id_sc_i, 2] \
-                                       + na * sc_lattice[0, 2] \
-                                       + nb * sc_lattice[1, 2] \
-                                       + nc * sc_lattice[2, 2]
+                        na = _fast_div(ja0, dim[0])
+                        nb = _fast_div(jb0, dim[1])
+                        nc = _fast_div(jc0, dim[2])
+                        dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
+                                   - sc_orb_pos[id_sc_i, 0] \
+                                   + na * sc_lattice[0, 0] \
+                                   + nb * sc_lattice[1, 0] \
+                                   + nc * sc_lattice[2, 0]
+                        dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
+                                   - sc_orb_pos[id_sc_i, 1] \
+                                   + na * sc_lattice[0, 1] \
+                                   + nb * sc_lattice[1, 1] \
+                                   + nc * sc_lattice[2, 1]
+                        dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
+                                   - sc_orb_pos[id_sc_i, 2] \
+                                   + na * sc_lattice[0, 2] \
+                                   + nb * sc_lattice[1, 2] \
+                                   + nc * sc_lattice[2, 2]
                         ptr += 1
-
-    # Conditional return
-    if data_kind == 0:
-        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v)
-    else:
-        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
+    return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
 
 
 @cython.boundscheck(False)
@@ -949,8 +937,7 @@ cdef int _zero_rn(int [:,::1] pc_hop_ind, int ih):
 @cython.wraparound(False)
 def build_hop_pbc(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                   int [::1] dim, int [::1] pbc, int num_orb_pc,
-                  double [:,::1] sc_lattice, double [:,::1] sc_orb_pos,
-                  int data_kind):
+                  double [:,::1] sc_lattice, double [:,::1] sc_orb_pos):
     """
     Build the arrays of hopping terms arising from periodic hopping terms in the
     primitive cell for constructing sparse Hamiltonian and dr in CSR format.
@@ -971,10 +958,6 @@ def build_hop_pbc(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
         CARTESIAN lattice vectors of supercell in NM
     sc_orb_pos: (num_orb_sc, 3) float64 array
         CARTESIAN coordinates of orbitals of super cell in NM
-    data_kind: int32
-        which arrays to generate
-        0 - hop_i, hop_j, hop_v
-        1 - hop_i, hop_j, hop_v, dr
 
     Returns
     -------
@@ -1015,8 +998,7 @@ def build_hop_pbc(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     hop_i = np.zeros(num_hop_sc, dtype=np.int64)
     hop_j = np.zeros(num_hop_sc, dtype=np.int64)
     hop_v = np.zeros(num_hop_sc, dtype=np.complex128)
-    if data_kind == 1:
-        dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
+    dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
 
     # Initialize variables
     offset_pc_i = np.zeros(4, dtype=np.int32)
@@ -1055,35 +1037,29 @@ def build_hop_pbc(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                     hop_i[ptr] = id_sc_i
                     hop_j[ptr] = id_sc_j
                     hop_v[ptr] = pc_hop_eng[ih]
-                    if data_kind == 1:
-                        if zero_rn == 1:
-                            na, nb, nc = 0, 0, 0
-                        else:
-                            na = _fast_div(ja0, dim[0])
-                            nb = _fast_div(jb0, dim[1])
-                            nc = _fast_div(jc0, dim[2])
-                        dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
-                                   - sc_orb_pos[id_sc_i, 0] \
-                                   + na * sc_lattice[0, 0] \
-                                   + nb * sc_lattice[1, 0] \
-                                   + nc * sc_lattice[2, 0]
-                        dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
-                                   - sc_orb_pos[id_sc_i, 1] \
-                                   + na * sc_lattice[0, 1] \
-                                   + nb * sc_lattice[1, 1] \
-                                   + nc * sc_lattice[2, 1]
-                        dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
-                                   - sc_orb_pos[id_sc_i, 2] \
-                                   + na * sc_lattice[0, 2] \
-                                   + nb * sc_lattice[1, 2] \
-                                   + nc * sc_lattice[2, 2]
+                    if zero_rn == 1:
+                        na, nb, nc = 0, 0, 0
+                    else:
+                        na = _fast_div(ja0, dim[0])
+                        nb = _fast_div(jb0, dim[1])
+                        nc = _fast_div(jc0, dim[2])
+                    dr[ptr, 0] = sc_orb_pos[id_sc_j, 0] \
+                               - sc_orb_pos[id_sc_i, 0] \
+                               + na * sc_lattice[0, 0] \
+                               + nb * sc_lattice[1, 0] \
+                               + nc * sc_lattice[2, 0]
+                    dr[ptr, 1] = sc_orb_pos[id_sc_j, 1] \
+                               - sc_orb_pos[id_sc_i, 1] \
+                               + na * sc_lattice[0, 1] \
+                               + nb * sc_lattice[1, 1] \
+                               + nc * sc_lattice[2, 1]
+                    dr[ptr, 2] = sc_orb_pos[id_sc_j, 2] \
+                               - sc_orb_pos[id_sc_i, 2] \
+                               + na * sc_lattice[0, 2] \
+                               + nb * sc_lattice[1, 2] \
+                               + nc * sc_lattice[2, 2]
                     ptr += 1
-
-    # Conditional return
-    if data_kind == 0:
-        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v)
-    else:
-        return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
+    return np.asarray(hop_i), np.asarray(hop_j), np.asarray(hop_v), np.asarray(dr)
 
 
 @cython.boundscheck(False)
