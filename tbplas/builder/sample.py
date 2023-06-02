@@ -1,5 +1,6 @@
 """Functions and classes for sample."""
 
+import os
 from typing import Union, Tuple, List
 
 import numpy as np
@@ -356,6 +357,50 @@ class Sample:
             arg.lock(f"sample #{id(self)}")
         for arg in self._hop_list:
             arg.lock(f"sample #{id(self)}")
+
+    def save_array(self, data_dir: str = "sample") -> None:
+        """
+        Save array attributes and scaling factor to disk.
+
+        :param data_dir: directory to which data will be saved
+        :return: None
+        """
+        if not os.path.exists(data_dir):
+            os.mkdir(data_dir)
+        if self.orb_eng is not None:
+            np.save(f"{data_dir}/orb_eng", self.orb_eng)
+        if self.orb_pos is not None:
+            np.save(f"{data_dir}/orb_pos", self.orb_pos)
+        if self.hop_i is not None:
+            np.save(f"{data_dir}/hop_i", self.hop_i)
+            np.save(f"{data_dir}/hop_j", self.hop_j)
+            np.save(f"{data_dir}/hop_v", self.hop_v)
+            np.save(f"{data_dir}/dr", self.dr)
+            np.save(f"{data_dir}/rescale", self._rescale)
+
+    def load_array(self, data_dir: str = "sample"):
+        """
+        Load array attributes from disk.
+
+        :param data_dir: directory in which data are saved
+        :return: None
+        """
+        try:
+            self.orb_eng = np.load(f"{data_dir}/orb_eng.npy")
+        except FileNotFoundError:
+            print(f"Ignoring {data_dir}/orb_eng.npy")
+        try:
+            self.orb_pos = np.load(f"{data_dir}/orb_pos.npy")
+        except FileNotFoundError:
+            print(f"Ignoring {data_dir}/orb_pos.npy")
+        try:
+            self.hop_i = np.load(f"{data_dir}/hop_i.npy")
+            self.hop_j = np.load(f"{data_dir}/hop_j.npy")
+            self.hop_v = np.load(f"{data_dir}/hop_v.npy")
+            self.dr = np.load(f"{data_dir}/dr.npy")
+            self._rescale = np.load(f"{data_dir}/rescale.npy").item()
+        except FileNotFoundError:
+            print(f"Ignoring {data_dir}/hop_i.npy")
 
     def rescale_ham(self, factor: float = None) -> None:
         """
