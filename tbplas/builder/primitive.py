@@ -705,16 +705,15 @@ class PrimitiveCell(Observable):
         """
         print("Lattice origin (nm):")
         for v in self._origin:
-            print("%10.5f" % v, end="")
+            print(f"{v:10.5f}", end="")
         print()
         print("Lattice vectors (nm):")
-        for vec in self._lat_vec:
-            vec_format = "%10.5f%10.5f%10.5f" % (vec[0], vec[1], vec[2])
-            print(vec_format)
+        for v in self._lat_vec:
+            print(f"{v[0]:10.5f}{v[1]:10.5f}{v[2]:10.5f}")
         print("Orbitals:")
         for orbital in self._orbital_list:
             pos = orbital.position
-            pos_fmt = "%10.5f%10.5f%10.5f" % (pos[0], pos[1], pos[2])
+            pos_fmt = f"{pos[0]:10.5f}, {pos[1]:10.5f}, {pos[2]:10.5f}"
             print(pos_fmt, orbital.energy)
         print("Hopping terms:")
         for rn, hop_rn in self.hoppings.items():

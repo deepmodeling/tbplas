@@ -1,5 +1,4 @@
 """Helper classes and functions used among the code."""
-
 import time
 import datetime
 import random
@@ -175,12 +174,12 @@ class TestHelper:
 
     Attributes
     ----------
-    _tester: unittest.TestCase
-        TestCase instance upon which tests are performed
+    _tester: 'unittest.TestCase' instance
+        testcase upon which tests are performed
     """
     def __init__(self, tester: unittest.TestCase) -> None:
         """
-        :param tester: instance of unittest.TestCase
+        :param tester: testcase upon which tests are performed
         """
         self._tester = tester
 

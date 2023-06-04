@@ -112,30 +112,29 @@ class Solver(MPIEnv):
         """
         # Set directory and prefix
         self.output["directory"] = directory
-        if prefix is not None:
-            self.output["prefix"] = prefix
-        else:
-            self.output["prefix"] = str(int(time.time()))
+        if prefix is None:
+            prefix = str(int(time.time()))
+        self.output["prefix"] = prefix
 
         # Create directory if not exits
         # NOTE: On some file systems, e.g. btrfs, creating directory may be
         # slow. Other processes may try to access the directory before it is
         # created and run into I/O errors. So we need to put a barrier here.
         if self.is_master:
-            if not os.path.exists(self.output["directory"]):
-                os.mkdir(self.output["directory"])
+            if not os.path.exists(directory):
+                os.mkdir(directory)
         self.barrier()
 
         # Determine file names
         for key in ("corr_DOS", "corr_LDOS", "corr_AC", "corr_dyn_pol",
                     "corr_DC", "hall_mu", "qe", "ldos_haydock", "psi_t"):
-            self.output[key] = "%s/%s.%s" % (self.output["directory"],
-                                             self.output["prefix"], key)
+            self.output[key] = f"{directory}/{prefix}.{key}"
 
         # Print output details
+        spaces = " " * 2
         self.print("Output details:")
-        self.print("%11s: %s" % ("Directory", self.output["directory"]))
-        self.print("%11s: %s" % ("Prefix", self.output["prefix"]))
+        self.print(f"{spaces}{'Directory':11s}: {directory}")
+        self.print(f"{spaces}{'Prefix':11s}: {prefix}")
         self.print()
 
         # Force saving config
@@ -149,9 +148,8 @@ class Solver(MPIEnv):
         :return: None
         """
         if self.is_master:
-            pickle_name = "%s/%s.%s" % (self.output["directory"],
-                                        self.output["prefix"], filename)
-            with open(pickle_name, 'wb') as f:
+            directory, prefix = self.output["directory"], self.output["prefix"]
+            with open(f"{directory}/{prefix}.{filename}", 'wb') as f:
                 pickle.dump(self.config, f, pickle.HIGHEST_PROTOCOL)
 
     def _dist_sample(self) -> int:
@@ -166,8 +164,8 @@ class Solver(MPIEnv):
             while num_sample_opt % self.size != 0:
                 num_sample_opt += 1
             if num_sample_opt != self.config.generic["nr_random_samples"]:
-                self.print("\nWARNING:\n  nr_random_samples adjusted to %d for"
-                           " optimal balance" % num_sample_opt)
+                self.print(f"\nWARNING:\n  nr_random_samples adjusted to "
+                           f"{num_sample_opt} for optimal balance")
                 self.config.generic["nr_random_samples"] = num_sample_opt
             num_sample = num_sample_opt // self.size
         else:
@@ -191,7 +189,7 @@ class Solver(MPIEnv):
         :return: None.
         """
         time_step_fs = time_step * H_BAR_EV * 1e15
-        self.print("Time step for propagation: %7.3f fs\n" % time_step_fs)
+        self.print(f"Time step for propagation: {time_step_fs:7.3f} fs\n")
 
     def _get_bessel_series(self, time_step: float) -> List[float]:
         """
