@@ -152,6 +152,12 @@ class OrbitalSet(Observable):
         if vacancies is not None:
             self.add_vacancies(vacancies)
 
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
+        fp = (self._prim_cell, tuple(self._dim), tuple(self._pbc),
+              tuple(self._vacancy_set))
+        return hash(fp)
+
     def _get_hash(self, attr: str) -> int:
         """
         Get hash of given attribute.

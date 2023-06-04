@@ -48,14 +48,9 @@ class SCInterHopping(InterHopping):
         :param sc_bra: the 'bra' supercell from which the hopping terms exist
         :param sc_ket: the 'ket' supercell to which the hopping terms exist
         """
-        super().__init__()
+        super().__init__(sc_bra, sc_ket)
         self._sc_bra = sc_bra
         self._sc_ket = sc_ket
-
-    def __hash__(self) -> int:
-        """Return the hash of this instance."""
-        fp = (tuple(self.to_list()), self._sc_bra, self._sc_ket)
-        return hash(fp)
 
     def get_hop(self, check_dup: bool = False) -> hop_type:
         """

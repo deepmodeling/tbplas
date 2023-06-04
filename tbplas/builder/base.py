@@ -488,10 +488,28 @@ class IntraHopping:
 class InterHopping(Observable, IntraHopping):
     """
     Container class for holding hopping terms between two models.
+
+    Attributes
+    ----------
+    __model_bra: Hashable
+        the 'bra' model from which the hopping terms exist
+    __model_ket: Hashable
+        the 'ket' model to which the hopping terms exist
     """
-    def __init__(self) -> None:
+    def __init__(self, model_bra: Hashable, model_ket: Hashable) -> None:
+        """
+        :param model_bra: the 'bra' model from which the hopping terms exist
+        :param model_ket: the 'ket' model to which the hopping terms exist
+        """
         Observable.__init__(self)
         IntraHopping.__init__(self)
+        self.__model_bra = model_bra
+        self.__model_ket = model_ket
+
+    def __hash__(self) -> int:
+        """Return the hash of this instance."""
+        fp = (tuple(self.to_list()), self.__model_bra, self.__model_ket)
+        return hash(fp)
 
     @staticmethod
     def _norm_keys(rn: rn_type,

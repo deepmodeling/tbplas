@@ -5,10 +5,10 @@ class CoordLenError(Exception):
     """Exception for coordinate of wrong length."""
     def __init__(self, coord):
         super().__init__()
-        self.coord = coord
+        self._coord = coord
 
     def __str__(self):
-        return f"length of coordinate {self.coord} not in (2, 3)"
+        return f"length of coordinate {self._coord} not in (2, 3)"
 
 
 class OrbPositionLenError(CoordLenError):
@@ -17,7 +17,7 @@ class OrbPositionLenError(CoordLenError):
         super().__init__(coord)
 
     def __str__(self):
-        return f"length of orbital position {self.coord} not in (2, 3)"
+        return f"length of orbital position {self._coord} not in (2, 3)"
 
 
 class CellIndexLenError(CoordLenError):
@@ -26,7 +26,7 @@ class CellIndexLenError(CoordLenError):
         super().__init__(coord)
 
     def __str__(self):
-        return f"length of cell index {self.coord} not in (2, 3)"
+        return f"length of cell index {self._coord} not in (2, 3)"
 
 
 class LatVecError(Exception):
@@ -42,52 +42,52 @@ class LockError(Exception):
     """Base class for all exceptions when modifying a locked object."""
     def __init__(self):
         super().__init__()
-        self.object_name = "object"
+        self._object_name = "object"
 
     def __str__(self):
-        return f"trying to modify a locked {self.object_name}"
+        return f"trying to modify a locked {self._object_name}"
 
 
 class PCOrbIndexError(Exception):
     """Exception for reading or modifying an orbital with wrong index."""
     def __init__(self, orb_i):
         super().__init__()
-        self.orb_i = orb_i
+        self._orb_i = orb_i
 
     def __str__(self):
-        return f"orbital index {self.orb_i} out of range"
+        return f"orbital index {self._orb_i} out of range"
 
 
 class PCHopDiagonalError(Exception):
     """Exception for treating a diagonal term as hopping term."""
     def __init__(self, rn, orb_i):
         super().__init__()
-        self.hop_ind = rn + (orb_i, orb_i)
+        self._hop_ind = rn + (orb_i, orb_i)
 
     def __str__(self):
-        return f"hopping term {self.hop_ind} is diagonal"
+        return f"hopping term {self._hop_ind} is diagonal"
 
 
 class PCHopNotFoundError(Exception):
     """Exception for a non-existing Hopping term."""
     def __init__(self, hop_ind):
         super().__init__()
-        self.hop_ind = hop_ind
+        self._hop_ind = hop_ind
 
     def __str__(self):
-        return f"hopping term {self.hop_ind} not found"
+        return f"hopping term {self._hop_ind} not found"
 
 
 class SCDimSizeError(Exception):
     """Exception for supercell dimension with wrong size."""
     def __init__(self, i_dim, dim_min):
         super().__init__()
-        self.i_dim = i_dim
-        self.dim_min = dim_min
+        self._i_dim = i_dim
+        self._dim_min = dim_min
 
     def __str__(self):
-        return f"dimension on direction {self.i_dim} " \
-               f"should be no less than {self.dim_min}"
+        return f"dimension on direction {self._i_dim} " \
+               f"should be no less than {self._dim_min}"
 
 
 class SCDimLenError(CoordLenError):
@@ -96,7 +96,7 @@ class SCDimLenError(CoordLenError):
         super().__init__(coord)
 
     def __str__(self):
-        return f"length of supercell dimension {self.coord} not in (2, 3)"
+        return f"length of supercell dimension {self._coord} not in (2, 3)"
 
 
 class PBCLenError(CoordLenError):
@@ -105,7 +105,7 @@ class PBCLenError(CoordLenError):
         super().__init__(coord)
 
     def __str__(self):
-        return f"length of pbc {self.coord} not in (2, 3)"
+        return f"length of pbc {self._coord} not in (2, 3)"
 
 
 class IDPCError(Exception):
@@ -115,22 +115,22 @@ class IDPCError(Exception):
     """
     def __init__(self, id_pc):
         super().__init__()
-        self.id_pc = id_pc
+        self._id_pc = id_pc
 
     def __str__(self):
-        return f"illegal id_pc {self.id_pc}"
+        return f"illegal id_pc {self._id_pc}"
 
 
 class IDPCIndexError(IDPCError):
     """Exception for out of range orbital index in PC representation."""
     def __init__(self, i_dim, id_pc):
         super().__init__(id_pc)
-        self.i_dim = i_dim
+        self._i_dim = i_dim
 
     def __str__(self):
-        index_type = "cell" if self.i_dim in range(3) else "orbital"
-        return f"{index_type} index {self.id_pc[self.i_dim]} of id_pc" \
-               f" {self.id_pc} out of range"
+        index_type = "cell" if self._i_dim in range(3) else "orbital"
+        return f"{index_type} index {self._id_pc[self._i_dim]} of id_pc" \
+               f" {self._id_pc} out of range"
 
 
 class IDPCLenError(IDPCError):
@@ -144,7 +144,7 @@ class IDPCLenError(IDPCError):
         super().__init__(id_pc)
 
     def __str__(self):
-        return f"length of id_pc {self.id_pc} is not 4"
+        return f"length of id_pc {self._id_pc} is not 4"
 
 
 class IDPCTypeError(IDPCError):
@@ -153,7 +153,7 @@ class IDPCTypeError(IDPCError):
         super().__init__(id_pc)
 
     def __str__(self):
-        return f"illegal type {type(self.id_pc)} of id_pc"
+        return f"illegal type {type(self._id_pc)} of id_pc"
 
 
 class IDPCVacError(IDPCError):
@@ -165,7 +165,7 @@ class IDPCVacError(IDPCError):
         super().__init__(id_pc)
 
     def __str__(self):
-        return f"orbital id_pc {self.id_pc} seems to be a vacancy"
+        return f"orbital id_pc {self._id_pc} seems to be a vacancy"
 
 
 class IDSCError(Exception):
@@ -175,10 +175,10 @@ class IDSCError(Exception):
     """
     def __init__(self, id_sc):
         super().__init__()
-        self.id_sc = id_sc
+        self._id_sc = id_sc
 
     def __str__(self):
-        return f"illegal id_sc {self.id_sc}"
+        return f"illegal id_sc {self._id_sc}"
 
 
 class IDSCIndexError(IDSCError):
@@ -187,27 +187,27 @@ class IDSCIndexError(IDSCError):
         super().__init__(id_sc)
 
     def __str__(self):
-        return f"id_sc {self.id_sc} out of range"
+        return f"id_sc {self._id_sc} out of range"
 
 
 class SCOrbIndexError(Exception):
     """Exception for reading or modifying an orbital with wrong index."""
     def __init__(self, orb_i):
         super().__init__()
-        self.orb_i = orb_i
+        self._orb_i = orb_i
 
     def __str__(self):
-        return f"orbital index {self.orb_i} out of range"
+        return f"orbital index {self._orb_i} out of range"
 
 
 class SCHopDiagonalError(Exception):
     """Exception for treating a diagonal term as hopping term."""
     def __init__(self, rn, orb_i):
         super().__init__()
-        self.hop_ind = rn + (orb_i, orb_i)
+        self._hop_ind = rn + (orb_i, orb_i)
 
     def __str__(self):
-        return f"hopping term {self.hop_ind} is diagonal"
+        return f"hopping term {self._hop_ind} is diagonal"
 
 
 class InterHopVoidError(Exception):
@@ -237,10 +237,10 @@ class SampleCompError(SampleError):
     """Exception for adding a component of wrong type to a Sample instance."""
     def __init__(self, i_comp):
         super().__init__()
-        self.i_comp = i_comp
+        self._i_comp = i_comp
 
     def __str__(self):
-        return f"component #{self.i_comp} should be instance" \
+        return f"component #{self._i_comp} should be instance" \
                f" of SuperCell or SCInterHopping"
 
 
@@ -251,9 +251,9 @@ class SampleClosureError(SampleError):
     """
     def __init__(self, i_comp, sc_name):
         super().__init__()
-        self.i_comp = i_comp
-        self.sc_name = sc_name
+        self._i_comp = i_comp
+        self._sc_name = sc_name
 
     def __str__(self):
-        return f"{self.sc_name} of inter_hop #{self.i_comp} not included" \
+        return f"{self._sc_name} of inter_hop #{self._i_comp} not included" \
                f" in sample"

@@ -317,14 +317,9 @@ class PCInterHopping(InterHopping):
         :param pc_bra: 'bra' primitive cell from which the hopping terms exist
         :param pc_ket: 'ket' primitive cell from which the hopping terms exist
         """
-        super().__init__()
+        super().__init__(pc_bra, pc_ket)
         self._pc_bra = pc_bra
         self._pc_ket = pc_ket
-
-    def __hash__(self) -> int:
-        """Return the hash of this instance."""
-        fp = (tuple(self.to_list()), self._pc_bra, self._pc_ket)
-        return hash(fp)
 
     @property
     def pc_bra(self) -> PrimitiveCell:
