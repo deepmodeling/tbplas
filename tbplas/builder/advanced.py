@@ -512,19 +512,20 @@ class SK:
     which is likely to happen as we have to repeat them many times.
     """
     def __init__(self) -> None:
-        self.s = "s"
-        self.px = "px"
-        self.py = "py"
-        self.pz = "pz"
-        self.dxy = "dxy"
-        self.dyz = "dyz"
-        self.dzx = "dzx"
-        self.dx2_y2 = "dx2-y2"
-        self.dz2 = "dz2"
-        self.p_labels = {self.px, self.py, self.pz}
-        self.d_labels = {self.dxy, self.dyz, self.dzx, self.dx2_y2, self.dz2}
-        self.sqrt3 = sqrt(3)
-        self.half_sqrt3 = self.sqrt3 * 0.5
+        self._s = "s"
+        self._px = "px"
+        self._py = "py"
+        self._pz = "pz"
+        self._dxy = "dxy"
+        self._dyz = "dyz"
+        self._dzx = "dzx"
+        self._dx2_y2 = "dx2-y2"
+        self._dz2 = "dz2"
+        self._p_labels = {self._px, self._py, self._pz}
+        self._d_labels = {self._dxy, self._dyz, self._dzx, self._dx2_y2,
+                          self._dz2}
+        self._sqrt3 = sqrt(3)
+        self._half_sqrt3 = self._sqrt3 * 0.5
 
     def _check_p_labels(self, *labels: str) -> None:
         """
@@ -535,7 +536,7 @@ class SK:
         :raises ValueError: if any label is not in self.p_labels
         """
         for label in labels:
-            if label not in self.p_labels:
+            if label not in self._p_labels:
                 raise ValueError(f"Illegal label: {label}")
 
     def _check_d_labels(self, *labels: str) -> None:
@@ -547,7 +548,7 @@ class SK:
         :raises ValueError: if any label is not in self.d_labels
         """
         for label in labels:
-            if label not in self.d_labels:
+            if label not in self._d_labels:
                 raise ValueError(f"Illegal label: {label}")
 
     @staticmethod
@@ -635,9 +636,9 @@ class SK:
         """
         self._check_p_labels(label_p)
         l, m, n = self._eval_dir_cos(r)
-        if label_p == self.px:
+        if label_p == self._px:
             t = l * v_sps
-        elif label_p == self.py:
+        elif label_p == self._py:
             t = m * v_sps
         else:
             t = n * v_sps
@@ -658,9 +659,9 @@ class SK:
         self._check_d_labels(label_d)
 
         # Permute the coordinates
-        if label_d == self.dyz:
+        if label_d == self._dyz:
             x_new = "y"
-        elif label_d == self.dzx:
+        elif label_d == self._dzx:
             x_new = "z"
         else:
             x_new = "x"
@@ -669,11 +670,11 @@ class SK:
 
         # Evaluate the hopping integral
         l, m, n = self._eval_dir_cos(r)
-        if label_d == self.dxy:
-            t = self.sqrt3 * l * m * v_sds
-        elif label_d == self.dx2_y2:
-            t = self.half_sqrt3 * (l ** 2 - m ** 2) * v_sds
-        elif label_d == self.dz2:
+        if label_d == self._dxy:
+            t = self._sqrt3 * l * m * v_sds
+        elif label_d == self._dx2_y2:
+            t = self._half_sqrt3 * (l ** 2 - m ** 2) * v_sds
+        elif label_d == self._dz2:
             t = (n ** 2 - 0.5 * (l ** 2 + m ** 2)) * v_sds
         else:
             raise ValueError(f"Undefined label pair s {label_d}")
@@ -705,14 +706,14 @@ class SK:
 
         # After permutation, label_i will always be px.
         # Otherwise, something must be wrong.
-        if label_i != self.px:
+        if label_i != self._px:
             raise ValueError(f"Undefined label pair {label_i} {label_j}")
 
         # The minimal hopping table in the reference.
         l, m, n = self._eval_dir_cos(r)
-        if label_j == self.px:
+        if label_j == self._px:
             t = l ** 2 * v_pps + (1 - l ** 2) * v_ppp
-        elif label_j == self.py:
+        elif label_j == self._py:
             t = l * m * (v_pps - v_ppp)
         else:
             t = l * n * (v_pps - v_ppp)
@@ -739,7 +740,7 @@ class SK:
         self._check_d_labels(label_d)
 
         # Permute coordinates
-        perm_labels = (self.dxy, self.dyz, self.dzx)
+        perm_labels = (self._dxy, self._dyz, self._dzx)
         if label_d in perm_labels:
             x_new = label_p[1]
             r = self._perm_vector(r, x_new)
@@ -751,31 +752,31 @@ class SK:
         l2, m2, n2 = l ** 2, m ** 2, n ** 2
         l2_p_m2 = l2 + m2
         l2_m_m2 = l2 - m2
-        sqrt3 = self.sqrt3
-        sqrt3_2 = self.half_sqrt3
+        sqrt3 = self._sqrt3
+        sqrt3_2 = self._half_sqrt3
 
-        if label_p == self.px:
-            if label_d == self.dxy:
+        if label_p == self._px:
+            if label_d == self._dxy:
                 t = sqrt3 * l2 * m * v_pds + m * (1 - 2 * l2) * v_pdp
-            elif label_d == self.dyz:
+            elif label_d == self._dyz:
                 t = l * m * n * (sqrt3 * v_pds - 2 * v_pdp)
-            elif label_d == self.dzx:
+            elif label_d == self._dzx:
                 t = sqrt3 * l2 * n * v_pds + n * (1 - 2 * l2) * v_pdp
-            elif label_d == self.dx2_y2:
+            elif label_d == self._dx2_y2:
                 t = sqrt3_2 * l * l2_m_m2 * v_pds + l * (1 - l2_m_m2) * v_pdp
             else:
                 t = l * (n2 - 0.5 * l2_p_m2) * v_pds - sqrt3 * l * n2 * v_pdp
-        elif label_p == self.py:
-            if label_d == self.dx2_y2:
+        elif label_p == self._py:
+            if label_d == self._dx2_y2:
                 t = sqrt3_2 * m * l2_m_m2 * v_pds - m * (1 + l2_m_m2) * v_pdp
-            elif label_d == self.dz2:
+            elif label_d == self._dz2:
                 t = m * (n2 - 0.5 * l2_p_m2) * v_pds - sqrt3 * m * n2 * v_pdp
             else:
                 raise ValueError(f"Undefined label pair {label_p} {label_d}")
         else:
-            if label_d == self.dx2_y2:
+            if label_d == self._dx2_y2:
                 t = sqrt3_2 * n * l2_m_m2 * v_pds - n * l2_m_m2 * v_pdp
-            elif label_d == self.dz2:
+            elif label_d == self._dz2:
                 t = n * (n2 - 0.5 * l2_p_m2) * v_pds + sqrt3 * n * l2_p_m2 * v_pdp
             else:
                 raise ValueError(f"Undefined label pair {label_p} {label_d}")
@@ -804,7 +805,7 @@ class SK:
         # Number the orbitals such that we can filter the diagonal terms
         # The order of the orbitals strictly follows the reference.
         # DO NOT CHANGE IT UNLESS YOU KNOW WHAT YOU ARE DOING!
-        d_labels = (self.dxy, self.dyz, self.dzx, self.dx2_y2, self.dz2)
+        d_labels = (self._dxy, self._dyz, self._dzx, self._dx2_y2, self._dz2)
         id_i = d_labels.index(label_i)
         id_j = d_labels.index(label_j)
 
@@ -813,9 +814,9 @@ class SK:
                         v_ddp=v_ddp, v_ddd=v_ddd).conjugate()
         else:
             # Permute the coordinates if essential
-            if label_i == self.dyz and label_j in (self.dyz, self.dzx):
+            if label_i == self._dyz and label_j in (self._dyz, self._dzx):
                 x_new = "y"
-            elif label_i == self.dzx and label_j == self.dzx:
+            elif label_i == self._dzx and label_j == self._dzx:
                 x_new = "z"
             else:
                 x_new = "x"
@@ -830,25 +831,25 @@ class SK:
             l2_m_m2 = l2 - m2
             lm, mn, nl = l * m, m * n, n * l
             l2m2 = l2 * m2
-            sqrt3 = self.sqrt3
+            sqrt3 = self._sqrt3
 
-            if label_i == self.dxy:
-                if label_j == self.dxy:
+            if label_i == self._dxy:
+                if label_j == self._dxy:
                     factor = 1.0
                     t1 = 3 * l2m2
                     t2 = l2_p_m2 - 4 * l2m2
                     t3 = n2 + l2m2
-                elif label_j == self.dyz:
+                elif label_j == self._dyz:
                     factor = nl
                     t1 = 3 * m2
                     t2 = 1 - 4 * m2
                     t3 = m2 - 1
-                elif label_j == self.dzx:
+                elif label_j == self._dzx:
                     factor = mn
                     t1 = 3 * l2
                     t2 = 1 - 4 * l2
                     t3 = l2 - 1
-                elif label_j == self.dx2_y2:
+                elif label_j == self._dx2_y2:
                     factor = lm * l2_m_m2
                     t1 = 1.5
                     t2 = -2
@@ -858,39 +859,39 @@ class SK:
                     t1 = n2 - 0.5 * l2_p_m2
                     t2 = -2 * n2
                     t3 = 0.5 * (1 + n2)
-            elif label_i == self.dyz:
-                if label_j == self.dx2_y2:
+            elif label_i == self._dyz:
+                if label_j == self._dx2_y2:
                     factor = mn
                     t1 = 1.5 * l2_m_m2
                     t2 = -(1 + 2 * l2_m_m2)
                     t3 = 1 + 0.5 * l2_m_m2
-                elif label_j == self.dz2:
+                elif label_j == self._dz2:
                     factor = sqrt3 * mn
                     t1 = n2 - 0.5 * l2_p_m2
                     t2 = l2_p_m2 - n2
                     t3 = -0.5 * l2_p_m2
                 else:
                     raise ValueError(f"Undefined label pair {label_i} {label_j}")
-            elif label_i == self.dzx:
-                if label_j == self.dx2_y2:
+            elif label_i == self._dzx:
+                if label_j == self._dx2_y2:
                     factor = nl
                     t1 = 1.5 * l2_m_m2
                     t2 = 1 - 2 * l2_m_m2
                     t3 = -1 * (1 - 0.5 * l2_m_m2)
-                elif label_j == self.dz2:
+                elif label_j == self._dz2:
                     factor = sqrt3 * nl
                     t1 = n2 - 0.5 * l2_p_m2
                     t2 = l2_p_m2 - n2
                     t3 = -0.5 * l2_p_m2
                 else:
                     raise ValueError(f"Undefined label pair {label_i} {label_j}")
-            elif label_i == self.dx2_y2:
-                if label_j == self.dx2_y2:
+            elif label_i == self._dx2_y2:
+                if label_j == self._dx2_y2:
                     factor = 1
                     t1 = 0.75 * l2_m_m2 ** 2
                     t2 = l2_p_m2 - l2_m_m2 ** 2
                     t3 = n2 + 0.25 * l2_m_m2 ** 2
-                elif label_j == self.dz2:
+                elif label_j == self._dz2:
                     factor = sqrt3 * l2_m_m2
                     t1 = 0.5 * (n2 - 0.5 * l2_p_m2)
                     t2 = -n2
@@ -898,7 +899,7 @@ class SK:
                 else:
                     raise ValueError(f"Undefined label pair {label_i} {label_j}")
             else:
-                if label_j == self.dz2:
+                if label_j == self._dz2:
                     factor = 1
                     t1 = (n2 - 0.5 * l2_p_m2) ** 2
                     t2 = 3 * n2 * l2_p_m2
@@ -982,26 +983,26 @@ class SK:
         :return: hopping integral
         :raises ValueError: if label_i or label_j is not in predefined labels
         """
-        if label_i == self.s:
-            if label_j == self.s:
+        if label_i == self._s:
+            if label_j == self._s:
                 t = self.ss(v_sss=v_sss)
-            elif label_j in self.p_labels:
+            elif label_j in self._p_labels:
                 t = self.sp(r=r, label_p=label_j, v_sps=v_sps)
             else:
                 t = self.sd(r=r, label_d=label_j, v_sds=v_sds)
-        elif label_i in self.p_labels:
-            if label_j == self.s:
+        elif label_i in self._p_labels:
+            if label_j == self._s:
                 t = self.ps(r=r, label_p=label_i, v_sps=v_sps)
-            elif label_j in self.p_labels:
+            elif label_j in self._p_labels:
                 t = self.pp(r=r, label_i=label_i, label_j=label_j,
                             v_pps=v_pps, v_ppp=v_ppp)
             else:
                 t = self.pd(r=r, label_p=label_i, label_d=label_j,
                             v_pds=v_pds, v_pdp=v_pdp)
         else:
-            if label_j == self.s:
+            if label_j == self._s:
                 t = self.ds(r=r, label_d=label_i, v_sds=v_sds)
-            elif label_j in self.p_labels:
+            elif label_j in self._p_labels:
                 t = self.dp(r=r, label_d=label_i, label_p=label_j,
                             v_pds=v_pds, v_pdp=v_pdp)
             else:
@@ -1016,34 +1017,34 @@ class AtomicOrbital:
 
     Attributes
     ----------
-    l_max: int
+    _l_max: int
         maximum angular quantum number l
-    coefficients: dict
+    _coeff: Dict[Tuple[int, int], complex]
         keys: (l, m), values: coefficients on |l,m>
-    allowed_keys: Set[Tuple[int, int]]
+    _allowed_lm: Set[Tuple[int, int]]
         set of allowed (l, m) pairs
     """
     def __init__(self, l_max: int = 2) -> None:
         """
         :param l_max: maximum angular quantum number l
         """
-        self.l_max = l_max
-        self.coefficients = self.init_coefficients()
-        self.allowed_keys = set(self.coefficients.keys())
+        self._l_max = l_max
+        self._coeff = self.init_coeff()
+        self._allowed_lm = set(self._coeff.keys())
 
-    def init_coefficients(self) -> Dict[Tuple[int, int], complex]:
+    def init_coeff(self) -> Dict[Tuple[int, int], complex]:
         """
         Build initial coefficients.
 
         :return: dictionary with keys being (l, m) and values being zero
         """
         coefficients = dict()
-        for l in range(self.l_max+1):
-            for m in range(-l, l+1):
-                coefficients[(l, m)] = 0.0j
+        for l_i in range(self._l_max + 1):
+            for m in range(-l_i, l_i+1):
+                coefficients[(l_i, m)] = 0.0j
         return coefficients
 
-    def set(self, l: int, m: int, c: complex = 1.0) -> None:
+    def set_coeff(self, l: int, m: int, c: complex = 1.0) -> None:
         """
         Set the coefficient on state |l,m>.
 
@@ -1053,9 +1054,9 @@ class AtomicOrbital:
         :return: None
         """
         key = (l, m)
-        if key not in self.allowed_keys:
+        if key not in self._allowed_lm:
             raise KeyError(f"Undefined key {key}")
-        self.coefficients[key] = c
+        self._coeff[key] = c
 
     def l_plus(self) -> None:
         """
@@ -1069,14 +1070,14 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self.init_coefficients()
-        for key, value in self.coefficients.items():
+        new_coefficients = self.init_coeff()
+        for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m+1)
-            if key_new in self.allowed_keys:
+            if key_new in self._allowed_lm:
                 factor = sqrt((l - m) * (l + m + 1))
                 new_coefficients[key_new] = value * factor
-        self.coefficients = new_coefficients
+        self._coeff = new_coefficients
 
     def l_minus(self) -> None:
         """
@@ -1090,14 +1091,14 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self.init_coefficients()
-        for key, value in self.coefficients.items():
+        new_coefficients = self.init_coeff()
+        for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m-1)
-            if key_new in self.allowed_keys:
+            if key_new in self._allowed_lm:
                 factor = sqrt((l + m) * (l - m + 1))
                 new_coefficients[key_new] = value * factor
-        self.coefficients = new_coefficients
+        self._coeff = new_coefficients
 
     def l_z(self) -> None:
         """
@@ -1111,9 +1112,9 @@ class AtomicOrbital:
 
         :return: None
         """
-        for key in self.coefficients.keys():
+        for key in self._coeff.keys():
             m = key[1]
-            self.coefficients[key] *= m
+            self._coeff[key] *= m
 
     def product(self, ket) -> complex:
         """
@@ -1123,8 +1124,8 @@ class AtomicOrbital:
         :return: the inner product
         """
         product = 0.0
-        for key, value in self.coefficients.items():
-            product += value.conjugate() * ket.coefficients[key]
+        for key, value in self._coeff.items():
+            product += value.conjugate() * ket._coeff[key]
         return product
 
     def mtxel_l_plus(self, ket) -> complex:
@@ -1160,6 +1161,15 @@ class AtomicOrbital:
         ket_copy.l_z()
         return self.product(ket_copy)
 
+    @property
+    def coeff(self) -> Dict[Tuple[int, int], complex]:
+        """
+        Interface for the '_coeff' attribute.
+
+        :return: the coefficients
+        """
+        return self._coeff
+
 
 class SOC:
     """
@@ -1167,15 +1177,15 @@ class SOC:
 
     Attributes
     ----------
-    pauli_matrices: Dict[str, np.ndarray]
+    _pauli_matrices: Dict[str, np.ndarray]
         Pauli matrices
-    spin_basis: Dict[str, np.ndarray]
+    _spin_basis: Dict[str, np.ndarray]
         eigenvectors of s_z
-    spin_labels: Tuple[str]
+    _spin_labels: Set[str]
         directions of spins
-    orbital_basis: Dict[str, AtomicOrbital]
+    _orbital_basis: Dict[str, AtomicOrbital]
         collection of atomic orbitals s, px, py, pz. etc
-    orbital_labels: Tuple[str]
+    _orbital_labels: Set[str]
         labels of atomic orbitals
     """
     def __init__(self) -> None:
@@ -1183,21 +1193,21 @@ class SOC:
         sigma_x = np.array([[0, 1], [1, 0]])
         sigma_y = np.array([[0, -1j], [1j, 0]])
         sigma_z = np.array([[1, 0], [0, -1]])
-        self.pauli_matrices = {"x": sigma_x, "y": sigma_y, "z": sigma_z}
+        self._pauli_matrices = {"x": sigma_x, "y": sigma_y, "z": sigma_z}
 
         # Spin basis set
         spin_up = np.array([1, 0])
         spin_down = np.array([0, 1])
-        self.spin_basis = {"up": spin_up, "down": spin_down}
-        self.spin_labels = self.spin_basis.keys()
+        self._spin_basis = {"up": spin_up, "down": spin_down}
+        self._spin_labels = set(self._spin_basis.keys())
 
         # Orbital basis set
-        self.orbital_basis = dict()
+        self._orbital_basis = dict()
         orbital_labels = ("s", "px", "py", "pz", "dxy", "dx2-y2", "dyz", "dzx",
                           "dz2")
         for label in orbital_labels:
-            self.orbital_basis[label] = AtomicOrbital(l_max=2)
-        self.orbital_labels = orbital_labels
+            self._orbital_basis[label] = AtomicOrbital(l_max=2)
+        self._orbital_labels = set(self._orbital_basis.keys())
 
         # Reference:
         # https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
@@ -1205,25 +1215,25 @@ class SOC:
         ci = c * 1j
 
         # s state
-        self.orbital_basis["s"].set(l=0, m=0, c=1.0)
+        self._orbital_basis["s"].set_coeff(l=0, m=0, c=1.0)
 
         # p states
-        self.orbital_basis["py"].set(l=1, m=-1, c=ci)
-        self.orbital_basis["py"].set(l=1, m=1, c=ci)
-        self.orbital_basis["pz"].set(l=1, m=0, c=1.0)
-        self.orbital_basis["px"].set(l=1, m=-1, c=c)
-        self.orbital_basis["px"].set(l=1, m=1, c=-c)
+        self._orbital_basis["py"].set_coeff(l=1, m=-1, c=ci)
+        self._orbital_basis["py"].set_coeff(l=1, m=1, c=ci)
+        self._orbital_basis["pz"].set_coeff(l=1, m=0, c=1.0)
+        self._orbital_basis["px"].set_coeff(l=1, m=-1, c=c)
+        self._orbital_basis["px"].set_coeff(l=1, m=1, c=-c)
 
         # d states
-        self.orbital_basis["dxy"].set(l=2, m=-2, c=ci)
-        self.orbital_basis["dxy"].set(l=2, m=2, c=-ci)
-        self.orbital_basis["dyz"].set(l=2, m=-1, c=ci)
-        self.orbital_basis["dyz"].set(l=2, m=1, c=ci)
-        self.orbital_basis["dz2"].set(l=2, m=0, c=1.0)
-        self.orbital_basis["dzx"].set(l=2, m=-1, c=c)
-        self.orbital_basis["dzx"].set(l=2, m=1, c=-c)
-        self.orbital_basis["dx2-y2"].set(l=2, m=-2, c=c)
-        self.orbital_basis["dx2-y2"].set(l=2, m=2, c=c)
+        self._orbital_basis["dxy"].set_coeff(l=2, m=-2, c=ci)
+        self._orbital_basis["dxy"].set_coeff(l=2, m=2, c=-ci)
+        self._orbital_basis["dyz"].set_coeff(l=2, m=-1, c=ci)
+        self._orbital_basis["dyz"].set_coeff(l=2, m=1, c=ci)
+        self._orbital_basis["dz2"].set_coeff(l=2, m=0, c=1.0)
+        self._orbital_basis["dzx"].set_coeff(l=2, m=-1, c=c)
+        self._orbital_basis["dzx"].set_coeff(l=2, m=1, c=-c)
+        self._orbital_basis["dx2-y2"].set_coeff(l=2, m=-2, c=c)
+        self._orbital_basis["dx2-y2"].set_coeff(l=2, m=2, c=c)
 
     def print_spin_table(self) -> None:
         """
@@ -1235,10 +1245,10 @@ class SOC:
         :return: None
         """
         print("Factor: h_bar / 2")
-        for spin_bra, bra in self.spin_basis.items():
-            for spin_ket, ket in self.spin_basis.items():
+        for spin_bra, bra in self._spin_basis.items():
+            for spin_ket, ket in self._spin_basis.items():
                 print(spin_bra, spin_ket)
-                for direction, matrix in self.pauli_matrices.items():
+                for direction, matrix in self._pauli_matrices.items():
                     product = np.matmul(bra, np.matmul(matrix, ket))
                     if abs(product) > 0.0:
                         print("\t", f"l{direction}", product)
@@ -1257,8 +1267,8 @@ class SOC:
         if operator not in ("lz", "l+", "l-"):
             raise ValueError(f"Illegal operator {operator}")
         print("Factor: h_bar")
-        for label_bra, bra in self.orbital_basis.items():
-            for label_ket, ket in self.orbital_basis.items():
+        for label_bra, bra in self._orbital_basis.items():
+            for label_ket, ket in self._orbital_basis.items():
                 if operator == "lz":
                     prod = bra.mtxel_l_z(ket)
                 elif operator == "l+":
@@ -1295,14 +1305,14 @@ class SOC:
         :raises ValueError: if orbital labels or spin directions are illegal
         """
         for label in (label_i, label_j):
-            if label not in self.orbital_labels:
+            if label not in self._orbital_labels:
                 raise ValueError(f"Illegal orbital label {label}")
         for spin in (spin_i, spin_j):
-            if spin not in self.spin_labels:
+            if spin not in self._spin_labels:
                 raise ValueError(f"Illegal spin direction {spin}")
 
-        bra = self.orbital_basis[label_i]
-        ket = self.orbital_basis[label_j]
+        bra = self._orbital_basis[label_i]
+        ket = self._orbital_basis[label_j]
         spin_idx = (spin_i, spin_j)
         if spin_idx == ("up", "up"):
             product = bra.mtxel_l_z(ket)
@@ -1323,19 +1333,19 @@ class SOCTable:
 
     Attributes
     ----------
-    l_z: Dict[[str, str], complex]
+    _l_z: Dict[[str, str], complex]
         soc terms for operator lz
-    l_plus: Dict[[str, str], complex]
+    _l_plus: Dict[[str, str], complex]
         soc terms for operator l+
-    l_minus: Dict[[str, str], complex]
+    _l_minus: Dict[[str, str], complex]
         soc terms for operator l-
-    spin_labels: Tuple[str]
+    _spin_labels: Set[str]
         directions of spins
-    orbital_labels: Tuple[str]
+    _orbital_labels: Set[str]
         labels of atomic orbitals
     """
     def __init__(self):
-        self.l_z = {
+        self._l_z = {
             ("px", "py"): -1.000000000000j,
             ("py", "px"):  1.000000000000j,
             ("dxy", "dx2-y2"): 2.000000000000j,
@@ -1343,7 +1353,7 @@ class SOCTable:
             ("dyz", "dzx"): 1.000000000000j,
             ("dzx", "dyz"): -1.000000000000j,
         }
-        self.l_plus = {
+        self._l_plus = {
             ("px", "pz"): -1.000000000000,
             ("py", "pz"): -1.000000000000j,
             ("pz", "px"): 1.000000000000,
@@ -1361,7 +1371,7 @@ class SOCTable:
             ("dz2", "dyz"): 1.732050807569j,
             ("dz2", "dzx"): 1.732050807569,
         }
-        self.l_minus = {
+        self._l_minus = {
             ("px", "pz"): 1.000000000000,
             ("py", "pz"): -1.000000000000j,
             ("pz", "px"): -1.000000000000,
@@ -1379,9 +1389,9 @@ class SOCTable:
             ("dz2", "dyz"): 1.732050807569j,
             ("dz2", "dzx"): -1.732050807569
         }
-        self.spin_labels = ("up", "down")
-        self.orbital_labels = ("s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
-                               "dzx", "dz2")
+        self._spin_labels = {"up", "down"}
+        self._orbital_labels = {"s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
+                                "dzx", "dz2"}
 
     def eval(self, label_i: str = "s",
              spin_i: str = "up",
@@ -1404,21 +1414,21 @@ class SOCTable:
         label_idx = (label_i, label_j)
         spin_idx = (spin_i, spin_j)
         for label in label_idx:
-            if label not in self.orbital_labels:
+            if label not in self._orbital_labels:
                 raise ValueError(f"Illegal orbital label {label}")
         for spin in spin_idx:
-            if spin not in self.spin_labels:
+            if spin not in self._spin_labels:
                 raise ValueError(f"Illegal spin direction {spin}")
 
         try:
             if spin_idx == ("up", "up"):
-                product = self.l_z[label_idx]
+                product = self._l_z[label_idx]
             elif spin_idx == ("up", "down"):
-                product = self.l_minus[label_idx]
+                product = self._l_minus[label_idx]
             elif spin_idx == ("down", "up"):
-                product = self.l_plus[label_idx]
+                product = self._l_plus[label_idx]
             else:
-                product = -1 * self.l_z[label_idx]
+                product = -1 * self._l_z[label_idx]
             product *= 0.5
         except KeyError:
             product = 0.0
@@ -1432,11 +1442,11 @@ class ParamFit(ABC):
 
     Attributes
     ----------
-    k_points: (num_kpt, 3) float64 array
+    _k_points: (num_kpt, 3) float64 array
         FRACTIONAL coordinates of the k-points corresponding to the band data
-    bands_ref: (num_kpt, num_orb) float64 array
+    _bands_ref: (num_kpt, num_orb) float64 array
         copy of reference band data
-    weights: (num_orb,) float64 array
+    _weights: (num_orb,) float64 array
         weights of each band during fitting process
     """
     def __init__(self, k_points: np.ndarray,
@@ -1448,17 +1458,17 @@ class ParamFit(ABC):
             weights of each band for fitting
         :raises ValueError: if length of weights does not match band data
         """
-        self.k_points = k_points
-        self.bands_ref = self.calc_bands_ref()
-        num_bands = self.bands_ref.shape[1]
+        self._k_points = k_points
+        self._bands_ref = self.calc_bands_ref()
+        num_bands = self._bands_ref.shape[1]
         if weights is None:
-            self.weights = np.ones(num_bands)
+            self._weights = np.ones(num_bands)
         else:
             if weights.shape[0] != num_bands:
                 raise ValueError(f"Length of weights should be {num_bands}")
             weights = np.abs(weights)
             weights /= weights.sum()
-            self.weights = weights
+            self._weights = weights
 
     @abstractmethod
     def calc_bands_ref(self) -> np.ndarray:
@@ -1490,8 +1500,8 @@ class ParamFit(ABC):
         :return: flattened difference between band data
         """
         bands_fit = self.calc_bands_fit(params)
-        bands_diff = self.bands_ref - bands_fit
-        for i, w in enumerate(self.weights):
+        bands_diff = self._bands_ref - bands_fit
+        for i, w in enumerate(self._weights):
             bands_diff[:, i] *= w
         return bands_diff.flatten()
 
