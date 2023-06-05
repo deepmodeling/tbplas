@@ -1,7 +1,7 @@
 """Base functions and classes used through the builder package."""
 
 from collections import namedtuple
-from typing import List, Tuple, Union, Dict, Hashable
+from typing import List, Tuple, Union, Dict, Any
 
 import numpy as np
 from scipy.sparse import coo_matrix
@@ -103,14 +103,14 @@ class Observable:
     ----------
     __locked: bool
         whether the object is locked
-    __subscribers: Dict[str, Hashable]
+    __subscribers: Dict[str, Any]
         names and subscribers to this object
     """
     def __init__(self) -> None:
         self.__locked = False
         self.__subscribers = dict()
 
-    def add_subscriber(self, sub_name: str, sub_obj: Hashable) -> None:
+    def add_subscriber(self, sub_name: str, sub_obj: Any) -> None:
         """
         Add a new subscriber.
 
@@ -120,7 +120,7 @@ class Observable:
         """
         self.__subscribers[sub_name] = sub_obj
 
-    def get_subscribers(self, recur_level: int = 0) -> Dict[Tuple[str, Hashable], int]:
+    def get_subscribers(self, recur_level: int = 0) -> Dict[Tuple[str, Any], int]:
         """
         Get all subscribers and their levels recursively.
 
@@ -491,12 +491,12 @@ class InterHopping(Observable, IntraHopping):
 
     Attributes
     ----------
-    __model_bra: Hashable
+    __model_bra: 'PrimitiveCell' or 'SuperCell' instance
         the 'bra' model from which the hopping terms exist
-    __model_ket: Hashable
+    __model_ket: 'PrimitiveCell' or 'SuperCell' instance
         the 'ket' model to which the hopping terms exist
     """
-    def __init__(self, model_bra: Hashable, model_ket: Hashable) -> None:
+    def __init__(self, model_bra: Any, model_ket: Any) -> None:
         """
         :param model_bra: the 'bra' model from which the hopping terms exist
         :param model_ket: the 'ket' model to which the hopping terms exist

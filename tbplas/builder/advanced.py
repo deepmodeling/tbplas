@@ -1024,10 +1024,33 @@ class AtomicOrbital:
         :param l_max: maximum angular quantum number l
         """
         self._l_max = l_max
-        self._coeff = self.init_coeff()
+        self._coeff = self._init_coeff()
         self._allowed_lm = set(self._coeff.keys())
 
-    def init_coeff(self) -> Dict[Tuple[int, int], complex]:
+    def __setitem__(self, key: Tuple[int, int], value: complex = 1.0) -> None:
+        """
+        Set the coefficient on state |l,m>.
+
+        :param key: (l, m) of the state
+        :param value: the new coefficient
+        :return: None
+        """
+        if key not in self._allowed_lm:
+            raise KeyError(f"Undefined key {key}")
+        self._coeff[key] = value
+
+    def __getitem__(self, key: Tuple[int, int]) -> complex:
+        """
+        Get the coefficient on state |l,m>.
+
+        :param key: (l, m) of the state
+        :return: the coefficient
+        """
+        if key not in self._allowed_lm:
+            raise KeyError(f"Undefined key {key}")
+        return self._coeff[key]
+
+    def _init_coeff(self) -> Dict[Tuple[int, int], complex]:
         """
         Build initial coefficients.
 
@@ -1038,20 +1061,6 @@ class AtomicOrbital:
             for m in range(-l_i, l_i+1):
                 coefficients[(l_i, m)] = 0.0j
         return coefficients
-
-    def set_coeff(self, l: int, m: int, c: complex = 1.0) -> None:
-        """
-        Set the coefficient on state |l,m>.
-
-        :param l: quantum number l of the state
-        :param m: quantum number m of the state
-        :param c: the new coefficient
-        :return: None
-        """
-        key = (l, m)
-        if key not in self._allowed_lm:
-            raise KeyError(f"Undefined key {key}")
-        self._coeff[key] = c
 
     def l_plus(self) -> None:
         """
@@ -1065,7 +1074,7 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self.init_coeff()
+        new_coefficients = self._init_coeff()
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m+1)
@@ -1086,7 +1095,7 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self.init_coeff()
+        new_coefficients = self._init_coeff()
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m-1)
@@ -1120,7 +1129,7 @@ class AtomicOrbital:
         """
         product = 0.0
         for key, value in self._coeff.items():
-            product += value.conjugate() * ket._coeff[key]
+            product += value.conjugate() * ket[key]
         return product
 
     def mtxel_l_plus(self, ket) -> complex:
@@ -1155,15 +1164,6 @@ class AtomicOrbital:
         ket_copy = deepcopy(ket)
         ket_copy.l_z()
         return self.product(ket_copy)
-
-    @property
-    def coeff(self) -> Dict[Tuple[int, int], complex]:
-        """
-        Interface for the '_coeff' attribute.
-
-        :return: the coefficients
-        """
-        return self._coeff
 
 
 class SOC:
@@ -1210,25 +1210,25 @@ class SOC:
         ci = c * 1j
 
         # s state
-        self._orbital_basis["s"].set_coeff(l=0, m=0, c=1.0)
+        self._orbital_basis["s"][(0, 0)] = 1.0
 
         # p states
-        self._orbital_basis["py"].set_coeff(l=1, m=-1, c=ci)
-        self._orbital_basis["py"].set_coeff(l=1, m=1, c=ci)
-        self._orbital_basis["pz"].set_coeff(l=1, m=0, c=1.0)
-        self._orbital_basis["px"].set_coeff(l=1, m=-1, c=c)
-        self._orbital_basis["px"].set_coeff(l=1, m=1, c=-c)
+        self._orbital_basis["py"][(1, -1)] = ci
+        self._orbital_basis["py"][(1, 1)] = ci
+        self._orbital_basis["pz"][(1, 0)] = 1.0
+        self._orbital_basis["px"][(1, -1)] = c
+        self._orbital_basis["px"][(1, 1)] = -c
 
         # d states
-        self._orbital_basis["dxy"].set_coeff(l=2, m=-2, c=ci)
-        self._orbital_basis["dxy"].set_coeff(l=2, m=2, c=-ci)
-        self._orbital_basis["dyz"].set_coeff(l=2, m=-1, c=ci)
-        self._orbital_basis["dyz"].set_coeff(l=2, m=1, c=ci)
-        self._orbital_basis["dz2"].set_coeff(l=2, m=0, c=1.0)
-        self._orbital_basis["dzx"].set_coeff(l=2, m=-1, c=c)
-        self._orbital_basis["dzx"].set_coeff(l=2, m=1, c=-c)
-        self._orbital_basis["dx2-y2"].set_coeff(l=2, m=-2, c=c)
-        self._orbital_basis["dx2-y2"].set_coeff(l=2, m=2, c=c)
+        self._orbital_basis["dxy"][(2, -2)] = ci
+        self._orbital_basis["dxy"][(2, 2)] = -ci
+        self._orbital_basis["dyz"][(2, -1)] = ci
+        self._orbital_basis["dyz"][(2, 1)] = ci
+        self._orbital_basis["dz2"][(2, 0)] = 1.0
+        self._orbital_basis["dzx"][(2, -1)] = c
+        self._orbital_basis["dzx"][(2, 1)] = -c
+        self._orbital_basis["dx2-y2"][(2, -2)] = c
+        self._orbital_basis["dx2-y2"][(2, 2)] = c
 
     def print_spin_table(self) -> None:
         """
