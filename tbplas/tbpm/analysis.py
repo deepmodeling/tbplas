@@ -57,11 +57,11 @@ class Analyzer(MPIEnv):
 
     Attributes
     ----------
-    sample: 'Sample' instance
+    _sample: 'Sample' instance
         sample for which TBPM calculations will be performed
-    config: 'Config' instance
+    _config: 'Config' instance
         parameters controlling TBPM calculation
-    dimension: int
+    _dimension: int
         dimension of the system
     """
     def __init__(self, sample: Sample,
@@ -79,12 +79,12 @@ class Analyzer(MPIEnv):
             parameters are detected in config
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
-        self.sample = sample
-        self.config = config
-        self.config.check_params()
+        self._sample = sample
+        self._config = config
+        self._config.check_params()
         if dimension not in (2, 3):
             raise ValueError(f"Unsupported dimension: {dimension}")
-        self.dimension = dimension
+        self._dimension = dimension
 
     def calc_dos(self, corr_dos: np.ndarray,
                  window: Callable = window_hanning) -> Tuple[np.ndarray, np.ndarray]:
@@ -108,8 +108,8 @@ class Analyzer(MPIEnv):
             DOS in 1/eV
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         en_step = 0.5 * en_range / tnr
 
         # Allocate working arrays
@@ -135,7 +135,7 @@ class Analyzer(MPIEnv):
 
             # Normalise and correct for spin
             dos = dos / (np.sum(dos) * en_step)
-            if self.config.generic['correct_spin']:
+            if self._config.generic['correct_spin']:
                 dos = 2. * dos
         else:
             pass
@@ -190,16 +190,16 @@ class Analyzer(MPIEnv):
             The unit is e^2/(h_bar*nm) in 3d case and e^2/h_bar in 2d case.
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         t_step = pi / en_range
-        beta = self.config.generic['beta']
-        if self.dimension == 2:
-            ac_prefactor = self.sample.nr_orbitals \
-                / (self.sample.area_unit_cell * self.sample.extended)
+        beta = self._config.generic['beta']
+        if self._dimension == 2:
+            ac_prefactor = self._sample.nr_orbitals \
+                / (self._sample.area_unit_cell * self._sample.extended)
         else:
-            ac_prefactor = self.sample.nr_orbitals \
-                / (self.sample.volume_unit_cell * self.sample.extended)
+            ac_prefactor = self._sample.nr_orbitals \
+                / (self._sample.volume_unit_cell * self._sample.extended)
 
         # Allocate working arrays
         omegas = np.array([i * en_range / tnr for i in range(tnr)],
@@ -235,7 +235,7 @@ class Analyzer(MPIEnv):
             ac_cond = ac_real + 1j * ac_imag
 
             # Correct for spin
-            if self.config.generic['correct_spin']:
+            if self._config.generic['correct_spin']:
                 ac_cond = 2. * ac_cond
         else:
             pass
@@ -270,16 +270,16 @@ class Analyzer(MPIEnv):
             The unit is 1/(eV*nm^2) or 1/(eV*nm^3) depending on the dimension.
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         t_step = pi / en_range
-        q_points = np.array(self.config.dyn_pol['q_points'], dtype=float)
-        if self.dimension == 2:
-            dyn_pol_prefactor = 2. * self.sample.nr_orbitals \
-                / (self.sample.area_unit_cell * self.sample.extended)
+        q_points = np.array(self._config.dyn_pol['q_points'], dtype=float)
+        if self._dimension == 2:
+            dyn_pol_prefactor = 2. * self._sample.nr_orbitals \
+                / (self._sample.area_unit_cell * self._sample.extended)
         else:
-            dyn_pol_prefactor = 2. * self.sample.nr_orbitals \
-                / (self.sample.volume_unit_cell * self.sample.extended)
+            dyn_pol_prefactor = 2. * self._sample.nr_orbitals \
+                / (self._sample.volume_unit_cell * self._sample.extended)
 
         # Allocate working arrays
         n_q_points = len(q_points)
@@ -300,7 +300,7 @@ class Analyzer(MPIEnv):
                     dyn_pol[i_q, i] = dyn_pol_prefactor * t_step * dpv
 
             # correct for spin
-            if self.config.generic['correct_spin']:
+            if self._config.generic['correct_spin']:
                 dyn_pol = 2. * dyn_pol
         else:
             pass
@@ -315,14 +315,14 @@ class Analyzer(MPIEnv):
             CARTESIAN coordinate of q-point in 1/NM
         :return: Coulomb interaction in momentum space in eV
         """
-        factor = self.config.dyn_pol['coulomb_constant']
-        back_epsilon = self.config.dyn_pol['background_dielectric_constant']
+        factor = self._config.dyn_pol['coulomb_constant']
+        back_epsilon = self._config.dyn_pol['background_dielectric_constant']
         factor /= (EPSILON0 * back_epsilon)
         q_norm = np.linalg.norm(q_point)
         if q_norm == 0.0:
             vq = 0.0
         else:
-            if self.dimension == 2:
+            if self._dimension == 2:
                 vq = factor * 2 * pi / q_norm
             else:
                 vq = factor * 4 * pi / q_norm**2
@@ -338,8 +338,8 @@ class Analyzer(MPIEnv):
             dielectric function
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        q_points = self.config.dyn_pol['q_points']
+        tnr = self._config.generic['nr_time_steps']
+        q_points = self._config.dyn_pol['q_points']
         n_q_points = len(q_points)
         n_omegas = tnr
         epsilon = np.zeros((n_q_points, n_omegas), dtype=complex)
@@ -401,20 +401,20 @@ class Analyzer(MPIEnv):
         dos = np.array(dos)
 
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         t_step = 2 * pi / en_range
-        en_limit = self.config.DC_conductivity['energy_limits']
+        en_limit = self._config.DC_conductivity['energy_limits']
         qe_indices = np.where((energies_dos >= en_limit[0]) &
                               (energies_dos <= en_limit[1]))[0]
         n_energies = len(qe_indices)
         energies = energies_dos[qe_indices]
-        if self.dimension == 2:
-            dc_prefactor = self.sample.nr_orbitals / \
-                self.sample.area_unit_cell
+        if self._dimension == 2:
+            dc_prefactor = self._sample.nr_orbitals / \
+                           self._sample.area_unit_cell
         else:
-            dc_prefactor = self.sample.nr_orbitals / \
-                self.sample.volume_unit_cell
+            dc_prefactor = self._sample.nr_orbitals / \
+                           self._sample.volume_unit_cell
         dc = np.zeros((2, n_energies))
 
         if self.is_master:
@@ -431,7 +431,7 @@ class Analyzer(MPIEnv):
                         dc_val += add_dcv
                     dc[i, j] = dc_prefactor * t_step * dos_val * dc_val
             # correct for spin
-            if self.config.generic['correct_spin']:
+            if self._config.generic['correct_spin']:
                 dc = 2. * dc
         else:
             pass
@@ -461,10 +461,10 @@ class Analyzer(MPIEnv):
             diffusion coefficient in nm^2/(h_bar/eV)
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         t_step = 2 * pi / en_range
-        en_limit = self.config.DC_conductivity['energy_limits']
+        en_limit = self._config.DC_conductivity['energy_limits']
         energies = np.array([0.5 * i * en_range / tnr - en_range / 2.
                              for i in range(tnr * 2)], dtype=float)
         qe_indices = np.where((energies >= en_limit[0]) &
@@ -525,28 +525,28 @@ class Analyzer(MPIEnv):
         """
         if unit not in ("h_bar", "h"):
             raise ValueError(f"Illegal unit {unit}")
-        energies = np.array(self.config.dckb['energies'])
+        energies = np.array(self._config.dckb['energies'])
         if self.is_master:
-            dckb_prefactor = 16 * self.sample.nr_orbitals / \
-                (pi * self.sample.energy_range**2)
-            if self.dimension == 2:
-                dckb_prefactor /= self.sample.area_unit_cell
+            dckb_prefactor = 16 * self._sample.nr_orbitals / \
+                             (pi * self._sample.energy_range ** 2)
+            if self._dimension == 2:
+                dckb_prefactor /= self._sample.area_unit_cell
             else:
-                dckb_prefactor /= self.sample.volume_unit_cell
+                dckb_prefactor /= self._sample.volume_unit_cell
             if unit == "h":
                 dckb_prefactor *= (2 * pi)
             conductivity = f2py.cond_from_trace(
                 mu_mn,
-                self.config.dckb['energies'],
-                self.sample.rescale,
-                self.config.generic['beta'],
-                self.config.dckb['ne_integral'],
-                self.config.generic['Fermi_cheb_precision'],
+                self._config.dckb['energies'],
+                self._sample.rescale,
+                self._config.generic['beta'],
+                self._config.dckb['ne_integral'],
+                self._config.generic['Fermi_cheb_precision'],
                 self.rank)
             conductivity *= dckb_prefactor
 
             # correct for spin
-            if self.config.generic['correct_spin']:
+            if self._config.generic['correct_spin']:
                 conductivity *= 2
         else:
             conductivity = np.zeros(len(energies), dtype=float)

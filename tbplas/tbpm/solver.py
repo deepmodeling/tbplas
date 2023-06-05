@@ -25,9 +25,9 @@ class Solver(MPIEnv):
 
     Attributes
     ----------
-    sample: 'Sample' instance
+    _sample: 'Sample' instance
         sample for which TBPM calculations will be performed
-    config: 'Config' instance
+    _config: 'Config' instance
         parameters controlling TBPM calculation
     output['directory']: str
         Output directory.
@@ -95,10 +95,10 @@ class Solver(MPIEnv):
         :raises ValueError: if illegal parameters are detected in config
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
-        self.sample = sample
-        self.config = config
-        self.config.check_params()
-        self.output = dict()
+        self._sample = sample
+        self._config = config
+        self._config.check_params()
+        self._output = dict()
         self.set_output(**kwargs)
 
     def set_output(self, directory: str = "sim_data",
@@ -111,10 +111,10 @@ class Solver(MPIEnv):
         :return: None
         """
         # Set directory and prefix
-        self.output["directory"] = directory
+        self._output["directory"] = directory
         if prefix is None:
             prefix = str(int(time.time()))
-        self.output["prefix"] = prefix
+        self._output["prefix"] = prefix
 
         # Create directory if not exits
         # NOTE: On some file systems, e.g. btrfs, creating directory may be
@@ -128,7 +128,7 @@ class Solver(MPIEnv):
         # Determine file names
         for key in ("corr_DOS", "corr_LDOS", "corr_AC", "corr_dyn_pol",
                     "corr_DC", "hall_mu", "qe", "ldos_haydock", "psi_t"):
-            self.output[key] = f"{directory}/{prefix}.{key}"
+            self._output[key] = f"{directory}/{prefix}.{key}"
 
         # Print output details
         spaces = " " * 2
@@ -148,9 +148,9 @@ class Solver(MPIEnv):
         :return: None
         """
         if self.is_master:
-            directory, prefix = self.output["directory"], self.output["prefix"]
+            directory, prefix = self._output["directory"], self._output["prefix"]
             with open(f"{directory}/{prefix}.{filename}", 'wb') as f:
-                pickle.dump(self.config, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self._config, f, pickle.HIGHEST_PROTOCOL)
 
     def _dist_sample(self) -> int:
         """
@@ -159,14 +159,14 @@ class Solver(MPIEnv):
         :return: number of random samples assigned to this process
             self.config.generic["nr_random_samples"] is updated.
         """
-        num_sample_opt = self.config.generic["nr_random_samples"]
+        num_sample_opt = self._config.generic["nr_random_samples"]
         if self.mpi_enabled:
             while num_sample_opt % self.size != 0:
                 num_sample_opt += 1
-            if num_sample_opt != self.config.generic["nr_random_samples"]:
+            if num_sample_opt != self._config.generic["nr_random_samples"]:
                 self.print(f"\nWARNING:\n  nr_random_samples adjusted to "
                            f"{num_sample_opt} for optimal balance")
-                self.config.generic["nr_random_samples"] = num_sample_opt
+                self._config.generic["nr_random_samples"] = num_sample_opt
             num_sample = num_sample_opt // self.size
         else:
             num_sample = num_sample_opt
@@ -179,7 +179,7 @@ class Solver(MPIEnv):
 
         :return: time step in h_bar/eV
         """
-        return 2 * math.pi / self.sample.energy_range
+        return 2 * math.pi / self._sample.energy_range
 
     def _echo_time_step_fs(self, time_step: float) -> None:
         """
@@ -199,9 +199,9 @@ class Solver(MPIEnv):
         :return: values of Bessel functions
         :raises ValueError: if self.config.generic["Bessel_max"] is too low
         """
-        bessel_max = self.config.generic["Bessel_max"]
-        bessel_precision = self.config.generic["Bessel_precision"]
-        time_scaled = time_step * self.sample.rescale
+        bessel_max = self._config.generic["Bessel_max"]
+        bessel_precision = self._config.generic["Bessel_precision"]
+        time_scaled = time_step * self._sample.rescale
 
         # Collect bessel function values
         bessel_series = []
@@ -229,8 +229,8 @@ class Solver(MPIEnv):
 
         :return: (beta_re, mu_re)
         """
-        beta_re = self.config.generic['beta'] * self.sample.rescale
-        mu_re = self.config.generic['mu'] / self.sample.rescale
+        beta_re = self._config.generic['beta'] * self._sample.rescale
+        mu_re = self._config.generic['mu'] / self._sample.rescale
         return beta_re, mu_re
 
     def _save_data(self, data: np.ndarray,
@@ -263,7 +263,7 @@ class Solver(MPIEnv):
         # Get parameters
         time_step = self._get_time_step()
         bessel_series = self._get_bessel_series(time_step)
-        ham_csr = self.sample.build_ham_csr()
+        ham_csr = self._sample.build_ham_csr()
         num_sample = self._dist_sample()
         self._echo_time_step_fs(time_step)
 
@@ -271,16 +271,16 @@ class Solver(MPIEnv):
         corr_dos = f2py.tbpm_dos(
             bessel_series,
             ham_csr.indptr, ham_csr.indices, ham_csr.data,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
-            self.output['corr_DOS'],
+            self._output['corr_DOS'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         corr_dos = self.all_average(corr_dos)
-        self._save_data(corr_dos, self.output["corr_DOS"])
+        self._save_data(corr_dos, self._output["corr_DOS"])
         return corr_dos
 
     def calc_corr_ldos(self) -> np.ndarray:
@@ -293,25 +293,25 @@ class Solver(MPIEnv):
         # Get parameters
         time_step = self._get_time_step()
         bessel_series = self._get_bessel_series(time_step)
-        ham_csr = self.sample.build_ham_csr()
+        ham_csr = self._sample.build_ham_csr()
         num_sample = self._dist_sample()
         self._echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
         corr_ldos = f2py.tbpm_ldos(
-            self.config.LDOS['site_indices'],
+            self._config.LDOS['site_indices'],
             bessel_series,
             ham_csr.indptr, ham_csr.indices, ham_csr.data,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
-            self.output['corr_LDOS'],
+            self._output['corr_LDOS'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         corr_ldos = self.all_average(corr_ldos)
-        self._save_data(corr_ldos, self.output["corr_LDOS"])
+        self._save_data(corr_ldos, self._output["corr_LDOS"])
         return corr_ldos
 
     def calc_corr_ac_cond(self) -> np.ndarray:
@@ -327,7 +327,7 @@ class Solver(MPIEnv):
         time_step = 0.5 * self._get_time_step()
         bessel_series = self._get_bessel_series(time_step)
         beta_re, mu_re = self._get_beta_mu_re()
-        indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
+        indptr, indices, hop, dx, dy = self._sample.build_ham_dxy()
         num_sample = self._dist_sample()
         self._echo_time_step_fs(time_step)
 
@@ -335,20 +335,20 @@ class Solver(MPIEnv):
         corr_ac = f2py.tbpm_accond(
             bessel_series, beta_re, mu_re,
             indptr, indices, hop,
-            self.sample.rescale,
+            self._sample.rescale,
             dx, dy,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
-            self.config.generic['nr_Fermi_fft_steps'],
-            self.config.generic['Fermi_cheb_precision'],
-            self.output['corr_AC'],
+            self._config.generic['nr_Fermi_fft_steps'],
+            self._config.generic['Fermi_cheb_precision'],
+            self._output['corr_AC'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         corr_ac = self.all_average(corr_ac)
-        self._save_data(corr_ac, self.output["corr_AC"])
+        self._save_data(corr_ac, self._output["corr_AC"])
         return corr_ac
 
     def calc_corr_dyn_pol(self) -> np.ndarray:
@@ -362,10 +362,10 @@ class Solver(MPIEnv):
         time_step = 0.5 * self._get_time_step()
         bessel_series = self._get_bessel_series(time_step)
         beta_re, mu_re = self._get_beta_mu_re()
-        indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
-        site_x = self.sample.orb_pos[:, 0]
-        site_y = self.sample.orb_pos[:, 1]
-        site_z = self.sample.orb_pos[:, 2]
+        indptr, indices, hop, dx, dy = self._sample.build_ham_dxy()
+        site_x = self._sample.orb_pos[:, 0]
+        site_y = self._sample.orb_pos[:, 1]
+        site_z = self._sample.orb_pos[:, 2]
         num_sample = self._dist_sample()
         self._echo_time_step_fs(time_step)
 
@@ -373,21 +373,21 @@ class Solver(MPIEnv):
         corr_dyn_pol = f2py.tbpm_dyn_pol(
             bessel_series, beta_re, mu_re,
             indptr, indices, hop,
-            self.sample.rescale,
+            self._sample.rescale,
             dx, dy, site_x, site_y, site_z,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
-            self.config.generic['nr_Fermi_fft_steps'],
-            self.config.generic['Fermi_cheb_precision'],
-            self.config.dyn_pol['q_points'],
-            self.output['corr_dyn_pol'],
+            self._config.generic['nr_Fermi_fft_steps'],
+            self._config.generic['Fermi_cheb_precision'],
+            self._config.dyn_pol['q_points'],
+            self._output['corr_dyn_pol'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         corr_dyn_pol = self.all_average(corr_dyn_pol)
-        self._save_data(corr_dyn_pol, self.output["corr_dyn_pol"])
+        self._save_data(corr_dyn_pol, self._output["corr_dyn_pol"])
         return corr_dyn_pol
 
     def calc_corr_dc_cond(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -401,12 +401,12 @@ class Solver(MPIEnv):
             DC conductivity correlation function in e^2/h_bar^2 * (eV)^2 * nm^2
         """
         # Get parameters
-        tnr = self.config.generic['nr_time_steps']
-        en_range = self.sample.energy_range
+        tnr = self._config.generic['nr_time_steps']
+        en_range = self._sample.energy_range
         energies_dos = np.array([0.5 * i * en_range / tnr - en_range / 2.
                                  for i in range(tnr * 2)])
 
-        en_limit = self.config.DC_conductivity['energy_limits']
+        en_limit = self._config.DC_conductivity['energy_limits']
         qe_indices = np.where((energies_dos >= en_limit[0]) &
                               (energies_dos <= en_limit[1]))[0]
 
@@ -414,7 +414,7 @@ class Solver(MPIEnv):
 
         time_step = self._get_time_step()
         bessel_series = self._get_bessel_series(time_step)
-        indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
+        indptr, indices, hop, dx, dy = self._sample.build_ham_dxy()
         num_sample = self._dist_sample()
         self._echo_time_step_fs(time_step)
 
@@ -422,22 +422,22 @@ class Solver(MPIEnv):
         corr_dos, corr_dc = f2py.tbpm_dccond(
             bessel_series, beta_re, mu_re,
             indptr, indices, hop,
-            self.sample.rescale,
+            self._sample.rescale,
             dx, dy,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
             time_step, energies_dos, qe_indices,
-            self.output['corr_DOS'],
-            self.output['corr_DC'],
+            self._output['corr_DOS'],
+            self._output['corr_DC'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         corr_dos = self.all_average(corr_dos)
         corr_dc = self.all_average(corr_dc)
-        self._save_data(corr_dos, self.output["corr_DOS"])
-        self._save_data(corr_dc, self.output["corr_DC"])
+        self._save_data(corr_dos, self._output["corr_DOS"])
+        self._save_data(corr_dc, self._output["corr_DC"])
         return corr_dos, corr_dc
 
     def calc_hall_mu(self) -> np.ndarray:
@@ -454,19 +454,19 @@ class Solver(MPIEnv):
             n_kernel = self.config.dckb["n_kernel"]
             Unit is nm^2/h_bar^2 * (eV)^2.
         """
-        indptr, indices, hop, dx, dy = self.sample.build_ham_dxy()
+        indptr, indices, hop, dx, dy = self._sample.build_ham_dxy()
         num_sample = self._dist_sample()
         mu_mn = f2py.tbpm_kbdc(
-            self.config.generic['seed'],
+            self._config.generic['seed'],
             indptr, indices, hop,
-            self.sample.rescale,
+            self._sample.rescale,
             dx, dy,
             num_sample,
-            self.config.dckb['n_kernel'],
-            self.config.dckb['direction'],
+            self._config.dckb['n_kernel'],
+            self._config.dckb['direction'],
             self.rank)
         mu_mn = self.all_average(mu_mn)
-        self._save_data(mu_mn, self.output['hall_mu'])
+        self._save_data(mu_mn, self._output['hall_mu'])
         return mu_mn
 
     def calc_quasi_eigenstates(self, save_data: bool = False) -> np.ndarray:
@@ -486,22 +486,22 @@ class Solver(MPIEnv):
         self._echo_time_step_fs(time_step)
 
         # Call FORTRAN subroutine
-        ham_csr = self.sample.build_ham_csr()
+        ham_csr = self._sample.build_ham_csr()
         states = f2py.tbpm_eigenstates(
             bessel_series,
             ham_csr.indptr, ham_csr.indices, ham_csr.data,
-            self.config.generic['seed'],
-            self.config.generic['nr_time_steps'],
+            self._config.generic['seed'],
+            self._config.generic['nr_time_steps'],
             num_sample,
             time_step,
-            self.config.quasi_eigenstates['energies'],
+            self._config.quasi_eigenstates['energies'],
             self.rank,
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         states = self.all_average(states)
         if save_data:
-            self._save_data(states, self.output['qe'])
+            self._save_data(states, self._output['qe'])
         return states
 
     def calc_ldos_haydock(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -525,19 +525,19 @@ class Solver(MPIEnv):
             raise RuntimeError("Using more than 1 mpi process is not allowed"
                                " for ldos_haydock")
 
-        ham_csr = self.sample.build_ham_csr()
+        ham_csr = self._sample.build_ham_csr()
         energies, ldos = f2py.ldos_haydock(
-            self.config.LDOS['site_indices'],
-            self.config.LDOS['delta'],
-            self.sample.energy_range,
+            self._config.LDOS['site_indices'],
+            self._config.LDOS['delta'],
+            self._sample.energy_range,
             ham_csr.indptr, ham_csr.indices, ham_csr.data,
-            self.sample.rescale,
-            self.config.generic['seed'],
-            self.config.LDOS['recursion_depth'],
-            self.config.generic['nr_time_steps'],
-            self.config.generic['nr_random_samples'],
-            self.output['ldos_haydock'])
-        self._save_data(ldos, self.output["ldos_haydock"])
+            self._sample.rescale,
+            self._config.generic['seed'],
+            self._config.LDOS['recursion_depth'],
+            self._config.generic['nr_time_steps'],
+            self._config.generic['nr_random_samples'],
+            self._output['ldos_haydock'])
+        self._save_data(ldos, self._output["ldos_haydock"])
         return energies, ldos
 
     def calc_psi_t(self,
@@ -576,13 +576,13 @@ class Solver(MPIEnv):
         time_log = np.array(list(set(time_log)), dtype=np.int64)
         time_log.sort()
         for it in time_log:
-            if it not in range(self.config.generic['nr_time_steps']+1):
+            if it not in range(self._config.generic['nr_time_steps'] + 1):
                 raise ValueError(f"time {it} out of range")
 
         # Get quantities for propagation
         time_step = self._get_time_step() * dt_scale
         bessel_series = self._get_bessel_series(time_step)
-        ham_csr = self.sample.build_ham_csr()
+        ham_csr = self._sample.build_ham_csr()
         self._echo_time_step_fs(time_step)
 
         # Propagate the wave function
@@ -590,11 +590,11 @@ class Solver(MPIEnv):
             bessel_series,
             ham_csr.indptr, ham_csr.indices, ham_csr.data,
             psi_0, time_log,
-            self.config.generic['nr_time_steps'],
-            self.config.generic['wfn_check_steps'],
-            self.config.generic['wfn_check_thr']
+            self._config.generic['nr_time_steps'],
+            self._config.generic['wfn_check_steps'],
+            self._config.generic['wfn_check_thr']
         )
         psi_t = psi_t.T
         if save_data:
-            self._save_data(psi_t, self.output['psi_t'])
+            self._save_data(psi_t, self._output['psi_t'])
         return psi_t

@@ -18,19 +18,19 @@ class ModelViewer:
 
     Attributes
     ----------
-    axes: matplotlib 'axes' instance
+    _axes: matplotlib 'axes' instance
         axes on which to plot the model
-    lat_vec: (3, 3) float64 array
+    _lat_vec: (3, 3) float64 array
         Cartesian coordinates of model lattice vectors
-    origin: (3,) float64 array
+    _origin: (3,) float64 array
         Cartesian coordinate of model lattice origin
-    view: str
+    _view: str
        kind of view, should be in 'ab', 'bc', 'ca', 'ba', 'cb' and 'ac'
-    dim_x, dim_y, dim_z: int
+    _dim_x, _dim_y, _dim_z: int
         column indices of x, y, z components of current view for projection
-    hop_lc: List[Tuple[np.ndarray, np.ndarray]]
+    _hop_lc: List[Tuple[np.ndarray, np.ndarray]]
         line collection for hopping terms
-    cell_lc: List[Tuple[np.ndarray, np.ndarray]]
+    _cell_lc: List[Tuple[np.ndarray, np.ndarray]]
         line collections for cells
     """
     def __init__(self, axes: plt.axes,
@@ -47,17 +47,17 @@ class ModelViewer:
             and 'ac'
         :raises ValueError: if view is illegal
         """
-        self.axes = axes
-        self.lat_vec = lat_vec
-        self.origin = origin
+        self._axes = axes
+        self._lat_vec = lat_vec
+        self._origin = origin
         if view not in ('ab', 'bc', 'ca', 'ba', 'cb', 'ac'):
             raise ValueError(f"Illegal view {view}")
-        self.view = view
+        self._view = view
         dim_dict = {'a': 0, 'b': 1, 'c': 2}
-        self.dim_x, self.dim_y = dim_dict[view[0]], dim_dict[view[1]]
-        self.dim_z = list({0, 1, 2}.difference({self.dim_x, self.dim_y}))[0]
-        self.hop_lc = []
-        self.cell_lc = []
+        self._dim_x, self._dim_y = dim_dict[view[0]], dim_dict[view[1]]
+        self._dim_z = list({0, 1, 2}.difference({self._dim_x, self._dim_y}))[0]
+        self._hop_lc = []
+        self._cell_lc = []
 
     def _proj_coord(self, coord: np.ndarray) -> np.ndarray:
         """
@@ -69,9 +69,9 @@ class ModelViewer:
             projected coordinates
         """
         if len(coord.shape) == 1:
-            projected_coord = coord[[self.dim_x, self.dim_y]]
+            projected_coord = coord[[self._dim_x, self._dim_y]]
         else:
-            projected_coord = coord[:, [self.dim_x, self.dim_y]]
+            projected_coord = coord[:, [self._dim_x, self._dim_y]]
         return projected_coord
 
     def _restore_coord(self, a: Union[int, float],
@@ -83,9 +83,9 @@ class ModelViewer:
         :param b: 1st component of the coordinate
         :return: restored coordinate
         """
-        if self.dim_z == 0:
+        if self._dim_z == 0:
             return 0, a, b
-        elif self.dim_z == 1:
+        elif self._dim_z == 1:
             return a, 0, b
         else:
             return a, b, 0
@@ -100,7 +100,7 @@ class ModelViewer:
         :return: None
         """
         coord = self._proj_coord(coord)
-        self.axes.scatter(coord[:, 0], coord[:, 1], **kwargs)
+        self._axes.scatter(coord[:, 0], coord[:, 1], **kwargs)
 
     def plot_arrow(self, coord_i: np.ndarray,
                    coord_j: np.ndarray,
@@ -118,7 +118,7 @@ class ModelViewer:
         coord_i = self._proj_coord(coord_i)
         coord_j = self._proj_coord(coord_j)
         diff = coord_j - coord_i
-        self.axes.arrow(coord_i[0], coord_i[1], diff[0], diff[1], **kwargs)
+        self._axes.arrow(coord_i[0], coord_i[1], diff[0], diff[1], **kwargs)
 
     def add_line(self, coord_i: np.ndarray, coord_j: np.ndarray) -> None:
         """
@@ -132,7 +132,7 @@ class ModelViewer:
         """
         coord_i = self._proj_coord(coord_i)
         coord_j = self._proj_coord(coord_j)
-        self.hop_lc.append((coord_i, coord_j))
+        self._hop_lc.append((coord_i, coord_j))
 
     def plot_line(self, **kwargs) -> None:
         """
@@ -141,7 +141,7 @@ class ModelViewer:
         :param kwargs: keyword arguments for mc.LineCollection()
         :return: None
         """
-        self.axes.add_collection(mc.LineCollection(self.hop_lc, **kwargs))
+        self._axes.add_collection(mc.LineCollection(self._hop_lc, **kwargs))
 
     def add_grid(self, a_min: int, a_max: int, b_min: int, b_max: int) -> None:
         """
@@ -156,15 +156,15 @@ class ModelViewer:
         for ia in range(a_min, a_max + 1):
             x0 = self._restore_coord(ia, b_min)
             x1 = self._restore_coord(ia, b_max)
-            x0 = self._proj_coord(np.matmul(x0, self.lat_vec) + self.origin)
-            x1 = self._proj_coord(np.matmul(x1, self.lat_vec) + self.origin)
-            self.cell_lc.append((x0, x1))
+            x0 = self._proj_coord(np.matmul(x0, self._lat_vec) + self._origin)
+            x1 = self._proj_coord(np.matmul(x1, self._lat_vec) + self._origin)
+            self._cell_lc.append((x0, x1))
         for ib in range(b_min, b_max + 1):
             x0 = self._restore_coord(a_min, ib)
             x1 = self._restore_coord(a_max, ib)
-            x0 = self._proj_coord(np.matmul(x0, self.lat_vec) + self.origin)
-            x1 = self._proj_coord(np.matmul(x1, self.lat_vec) + self.origin)
-            self.cell_lc.append((x0, x1))
+            x0 = self._proj_coord(np.matmul(x0, self._lat_vec) + self._origin)
+            x1 = self._proj_coord(np.matmul(x1, self._lat_vec) + self._origin)
+            self._cell_lc.append((x0, x1))
 
     def plot_grid(self, **kwargs) -> None:
         """
@@ -173,7 +173,7 @@ class ModelViewer:
         :param kwargs: keyword arguments for mc.LineCollection()
         :return:
         """
-        self.axes.add_collection(mc.LineCollection(self.cell_lc, **kwargs))
+        self._axes.add_collection(mc.LineCollection(self._cell_lc, **kwargs))
 
     def plot_lat_vec(self, **kwargs) -> None:
         """
@@ -182,9 +182,9 @@ class ModelViewer:
         :param kwargs: keyword arguments for axes.arrow()
         :return: None
         """
-        x0 = self._proj_coord(self.origin)
+        x0 = self._proj_coord(self._origin)
         for x1 in ((0, 1), (1, 0)):
             x1 = self._restore_coord(x1[0], x1[1])
-            x1 = self._proj_coord(np.matmul(x1, self.lat_vec) + self.origin)
+            x1 = self._proj_coord(np.matmul(x1, self._lat_vec) + self._origin)
             diff = x1 - x0
-            self.axes.arrow(x0[0], x0[1], diff[0], diff[1], **kwargs)
+            self._axes.arrow(x0[0], x0[1], diff[0], diff[1], **kwargs)
