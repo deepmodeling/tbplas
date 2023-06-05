@@ -120,12 +120,8 @@ class Config:
                      'ne_integral': 2048}
 
         # Set legal parameter names
-        self._legal_params = {
-            'generic': set(self.generic.keys()),
-            'LDOS': set(self.LDOS.keys()),
-            'dyn_pol': set(self.dyn_pol.keys()),
-            'dckb': set(self.dckb.keys())
-        }
+        self._legal_params = dict()
+        self.set_legal_params()
 
     def set_temperature(self, temperature: float = 300.0) -> None:
         """
@@ -134,6 +130,19 @@ class Config:
         :param temperature: temperature in Kelvin
         """
         self.generic['beta'] = 1.0 / (KB * temperature)
+
+    def set_legal_params(self) -> None:
+        """
+        Set up self._legal_params.
+
+        :return: None
+        """
+        self._legal_params = {
+            'generic': set(self.generic.keys()),
+            'LDOS': set(self.LDOS.keys()),
+            'dyn_pol': set(self.dyn_pol.keys()),
+            'dckb': set(self.dckb.keys())
+        }
 
     def check_params(self) -> None:
         """
@@ -172,4 +181,5 @@ def read_config(filename: str) -> Config:
     config.DC_conductivity = config_dict.DC_conductivity
     config.dckb = config_dict.dckb
     config.quasi_eigenstates = config_dict.quasi_eigenstates
+    config.set_legal_params()
     return config
