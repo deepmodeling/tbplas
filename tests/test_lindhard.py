@@ -34,8 +34,8 @@ class TestLindhard(unittest.TestCase):
         kmesh_grid = np.array([
             (0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (0, 2, 0), (0, 2, 1),
             (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1), (1, 2, 0), (1, 2, 1)])
-        th.test_equal_array(omegas, lindhard.omegas)
-        th.test_equal_array(kmesh_grid, lindhard.kmesh_grid)
+        th.test_equal_array(omegas, lindhard._omegas)
+        th.test_equal_array(kmesh_grid, lindhard._kmesh_grid)
 
     def test_grid_conversion(self):
         """
@@ -122,8 +122,8 @@ class TestLindhard(unittest.TestCase):
 
         th = TestHelper(self)
         q_point = np.array([3, 1, 2], dtype=np.int64)
-        kq_map_test = core.build_kq_map(lindhard.kmesh_size,
-                                        lindhard.kmesh_grid, q_point)
+        kq_map_test = core.build_kq_map(lindhard._kmesh_size,
+                                        lindhard._kmesh_grid, q_point)
 
         # Hand-crafted reference
         kq_map_ref = np.array([8, 9, 10, 11, 6, 7, 2, 3, 4, 5, 0, 1])
@@ -131,7 +131,7 @@ class TestLindhard(unittest.TestCase):
 
         # Auto-generated reference
         kq_map_ref = []
-        k_mesh_grid = [tuple(row) for row in lindhard.kmesh_grid]
+        k_mesh_grid = [tuple(row) for row in lindhard._kmesh_grid]
         for k_point in k_mesh_grid:
             kq_a = (k_point[0] + q_point[0]) % kmesh_size[0]
             kq_b = (k_point[1] + q_point[1]) % kmesh_size[1]
@@ -154,7 +154,7 @@ class TestLindhard(unittest.TestCase):
 
         # Get k-grid and k+q grid
         q_point = np.array([2, 3, 0], dtype=np.int64)
-        k_grid = lindhard.kmesh_grid
+        k_grid = lindhard._kmesh_grid
         kq_grid = q_point + k_grid
         k_frac = lindhard.grid2frac(k_grid)
         kq_frac = lindhard.grid2frac(kq_grid)
@@ -164,7 +164,7 @@ class TestLindhard(unittest.TestCase):
         band_kq, states_kq = lindhard.calc_states(kq_frac, convention=2)
 
         # Compare results
-        kq_map = core.build_kq_map(lindhard.kmesh_size, lindhard.kmesh_grid,
+        kq_map = core.build_kq_map(lindhard._kmesh_size, lindhard._kmesh_grid,
                                    q_point)
         th = TestHelper(self)
         th.test_equal_array(bands_k[kq_map], band_kq, almost=True)

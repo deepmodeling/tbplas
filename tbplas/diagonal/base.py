@@ -76,7 +76,7 @@ class DiagSolver(MPIEnv):
         self.__model = model
         self.__hk_dense = hk_dense
         self.__hk_csr = hk_csr
-        self.update_model()
+        self._update_model()
 
     @property
     def model_is_pc(self) -> bool:
@@ -122,7 +122,7 @@ class DiagSolver(MPIEnv):
         else:
             return self.__model.sc0.get_reciprocal_vectors()
 
-    def update_model(self) -> None:
+    def _update_model(self) -> None:
         """
         Update the essential arrays of the model.
 
@@ -154,9 +154,9 @@ class DiagSolver(MPIEnv):
                 proj_k[i_b] += abs(eigenstates.item(i_b, i_o))**2
         return proj_k
 
-    def set_ham_dense(self, k_point: np.ndarray,
-                      ham_dense: np.ndarray,
-                      convention: int = 1) -> None:
+    def _set_ham_dense(self, k_point: np.ndarray,
+                       ham_dense: np.ndarray,
+                       convention: int = 1) -> None:
         """
         Set up dense Hamiltonian for given k-point.
 
@@ -173,8 +173,8 @@ class DiagSolver(MPIEnv):
         else:
             self.__model.set_ham_dense(k_point, ham_dense, convention)
 
-    def set_ham_csr(self, k_point: np.ndarray,
-                    convention: int = 1) -> csr_matrix:
+    def _set_ham_csr(self, k_point: np.ndarray,
+                     convention: int = 1) -> csr_matrix:
         """
         Set up sparse Hamiltonian in csr format for given k-point.
 
@@ -245,10 +245,10 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                self.set_ham_dense(kpt_i, ham_dense, convention)
+                self._set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                ham_csr = self.set_ham_csr(kpt_i, convention)
+                ham_csr = self._set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
 
             # Sort eigenvalues
@@ -389,10 +389,10 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                self.set_ham_dense(kpt_i, ham_dense, convention)
+                self._set_ham_dense(kpt_i, ham_dense, convention)
                 eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
             else:
-                ham_csr = self.set_ham_csr(kpt_i, convention)
+                ham_csr = self._set_ham_csr(kpt_i, convention)
                 eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T

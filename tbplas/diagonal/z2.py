@@ -21,13 +21,13 @@ class Z2(DiagSolver):
 
     Attributes
     ----------
-    num_occ: int
+    _num_occ: int
         number of occupied bands of the primitive cell
-    h_mat: (num_orb, num_orb) complex128 array
+    _h_mat: (num_orb, num_orb) complex128 array
         Hamiltonian matrix for single k-point
-    d_mat: (num_occ, num_occ) complex128 array
+    _d_mat: (num_occ, num_occ) complex128 array
         D matrix for single k-point in the reference
-    f_mat: (num_occ, num_occ) complex128 array
+    _f_mat: (num_occ, num_occ) complex128 array
         F matrix for (ka_i, ka_i+1)
     """
     def __init__(self, cell: Any, num_occ: int, **kwargs) -> None:
@@ -47,12 +47,12 @@ class Z2(DiagSolver):
             raise ValueError(f"num_occ {num_occ} should be in [1, {num_orb}]")
         # if num_occ % 2 != 0:
         #     raise ValueError(f"num_occ {num_occ} is not a even number")
-        self.num_occ = num_occ
+        self._num_occ = num_occ
 
         # Initialize working arrays
-        self.h_mat = np.zeros((num_orb, num_orb), dtype=np.complex128)
-        self.d_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
-        self.f_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
+        self._h_mat = np.zeros((num_orb, num_orb), dtype=np.complex128)
+        self._d_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
+        self._f_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
 
     def _get_h_eigenstates(self, kpt: np.ndarray) -> np.ndarray:
         """
@@ -63,9 +63,9 @@ class Z2(DiagSolver):
         :return: (num_orb, num_orb) complex128 array
             eigenstates of the given k-point
         """
-        self.h_mat *= 0.0
-        self.set_ham_dense(kpt, self.h_mat)
-        eigenvalues, eigenstates, info = spla.zheev(self.h_mat)
+        self._h_mat *= 0.0
+        self._set_ham_dense(kpt, self._h_mat)
+        eigenvalues, eigenstates, info = spla.zheev(self._h_mat)
         idx = eigenvalues.argsort()
         return eigenstates[:, idx]
 
@@ -76,7 +76,7 @@ class Z2(DiagSolver):
         :return: (num_occ,) complex128 array
             eigenvalues of the D matrix
         """
-        eigenvalues, l_eigenstates, r_eigenstates, info = spla.zgeev(self.d_mat)
+        eigenvalues, l_eigenstates, r_eigenstates, info = spla.zgeev(self._d_mat)
         idx = eigenvalues.argsort()
         return eigenvalues[idx]
 
@@ -91,10 +91,10 @@ class Z2(DiagSolver):
             eigenvectors at kb_i+1
         :return: None.
         """
-        self.f_mat *= 0.0
-        for i in range(self.num_occ):
-            for j in range(self.num_occ):
-                self.f_mat[i, j] = np.vdot(vec0[:, i], vec1[:, j])
+        self._f_mat *= 0.0
+        for i in range(self._num_occ):
+            for j in range(self._num_occ):
+                self._f_mat[i, j] = np.vdot(vec0[:, i], vec1[:, j])
 
     @staticmethod
     def _eval_phase(z: np.ndarray) -> np.ndarray:
@@ -153,7 +153,7 @@ class Z2(DiagSolver):
             kb_array = np.linspace(0.0, 0.5, 100)
         num_ka = ka_array.shape[0]
         num_kb = kb_array.shape[0]
-        phases = np.zeros((num_kb, self.num_occ), dtype=np.float64)
+        phases = np.zeros((num_kb, self._num_occ), dtype=np.float64)
 
         # Distribute kb_array among processes
         k_index = self.dist_range(num_kb)
@@ -163,7 +163,7 @@ class Z2(DiagSolver):
             kb = kb_array.item(ib)
             # As the D matrix is evaluated through iterative matrix
             # multiplication, it should be initialized as an eye matrix.
-            self.d_mat = np.eye(self.num_occ, dtype=np.complex128)
+            self._d_mat = np.eye(self._num_occ, dtype=np.complex128)
 
             # Get and backup the eigenvectors of Hamiltonian at ka_0
             kpt0 = np.array([ka_array.item(0), kb, kc])
@@ -175,12 +175,12 @@ class Z2(DiagSolver):
                 kpt1 = np.array([ka_array.item(ia), kb, kc])
                 vec1 = self._get_h_eigenstates(kpt1)
                 self._eval_f_mat(vec0, vec1)
-                self.d_mat = np.matmul(self.d_mat, self.f_mat)
+                self._d_mat = np.matmul(self._d_mat, self._f_mat)
                 vec0 = vec1
 
             # Special treatment for the last ka
             self._eval_f_mat(vec0, vec0_bak)
-            self.d_mat = np.matmul(self.d_mat, self.f_mat)
+            self._d_mat = np.matmul(self._d_mat, self._f_mat)
 
             # Diagonalize the D matrix and evaluate phases
             eigenvalues = self._get_d_eigenvalues()
@@ -216,7 +216,7 @@ class Z2(DiagSolver):
             phase_i0 = phases[ib]
             phase_i1 = phases[ib + 1]
             phase_i1_cp = phase_i1.copy()
-            for j in range(self.num_occ):
+            for j in range(self._num_occ):
                 phase_j0 = phase_i0.item(j)
                 phase_j1 = phase_i1.item(j)
 
@@ -247,7 +247,7 @@ class Z2(DiagSolver):
                 phase_i0 = phases[ib]
                 phase_i1 = phases[ib + 1]
                 phase_i2_cp = phases[ib + 2].copy()
-                for j in range(self.num_occ):
+                for j in range(self._num_occ):
                     phase_j0 = phase_i0.item(j)
                     phase_j1 = phase_i1.item(j)
 
@@ -302,3 +302,12 @@ class Z2(DiagSolver):
                 if d1 * d2 < 0.0:
                     num_crossing += 1
         return num_crossing
+
+    @property
+    def num_occ(self) -> int:
+        """
+        Interface for the _num_occ attribute.
+
+        :return: number of occupied bands
+        """
+        return self._num_occ

@@ -17,11 +17,11 @@ class SpinTexture(DiagSolver):
 
     Attributes
     ----------
-    k_grid: (num_kpt, 3) float64 array
+    _k_grid: (num_kpt, 3) float64 array
         FRACTIONAL coordinates of k-points
-    spin_major: bool
+    _spin_major: bool
         whether the orbitals are stored in spin-major order
-    states: (num_kpt, num_orb) complex128 array
+    _states: (num_kpt, num_orb) complex128 array
         cache of wave functions
     """
     def __init__(self, cell: Any,
@@ -35,9 +35,9 @@ class SpinTexture(DiagSolver):
         :param kwargs: parallelization arguments for DiagSolver.__init__
         """
         super().__init__(cell, **kwargs)
-        self.k_grid = k_grid
-        self.spin_major = spin_major
-        self.states = None
+        self._k_grid = k_grid
+        self._spin_major = spin_major
+        self._states = None
 
     def update_states(self) -> None:
         """
@@ -45,7 +45,7 @@ class SpinTexture(DiagSolver):
 
         :return: None
         """
-        self.states = self.calc_states(self.k_grid, all_reduce=False)[1]
+        self._states = self.calc_states(self._k_grid, all_reduce=False)[1]
 
     def split_spin(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -67,7 +67,7 @@ class SpinTexture(DiagSolver):
             spin-up and spin-down components of the wave function
         """
         num_orb = self.num_orb // 2
-        if self.spin_major:
+        if self._spin_major:
             u, d = state[:num_orb], state[num_orb:]
         else:
             u, d = state[0::2], state[1::2]
@@ -82,17 +82,17 @@ class SpinTexture(DiagSolver):
             expectation of Pauli matrix
         """
         # Get eigenstates
-        if self.states is None:
+        if self._states is None:
             self.update_states()
 
         # Evaluate spin texture
-        num_kpt = self.k_grid.shape[0]
+        num_kpt = self._k_grid.shape[0]
         num_orb = self.num_orb
         expectation = np.zeros((num_kpt, num_orb), dtype=np.float64)
         k_index = self.dist_range(num_kpt)
         for i_k in k_index:
             for i_b in range(num_orb):
-                state = self.states[i_k, i_b]
+                state = self._states[i_k, i_b]
                 u, d = self.split_spin(state)
                 if component == "x":
                     expect = np.vdot(u, d) + np.vdot(d, u)
@@ -107,11 +107,32 @@ class SpinTexture(DiagSolver):
         return expectation
 
     @property
+    def k_grid(self) -> np.ndarray:
+        """
+        Interface for the _k_grid attribute.
+
+        :return: (num_kpt, 3) float64 array
+            Fractional coordinates of k-grid
+        """
+        return self._k_grid
+
+    @k_grid.setter
+    def k_grid(self, k_grid: np.ndarray) -> None:
+        """
+        Interface for the _k_grid attribute.
+
+        :param k_grid: (num_kpt, 3) float64 array
+            new Fractional coordinates of k-grid
+        :return: None
+        """
+        self._k_grid = k_grid
+
+    @property
     def k_cart(self) -> np.ndarray:
         """
         Get CARTESIAN coordinates of k-grid.
 
-        :return: (3, 3) float64 array
+        :return: (num_kpt, 3) float64 array
             Cartesian coordinates of k-grid in 1/nm.
         """
-        return frac2cart(self.recip_lat_vec, self.k_grid)
+        return frac2cart(self.recip_lat_vec, self._k_grid)
