@@ -1248,7 +1248,8 @@ class SOC:
                     if abs(product) > 0.0:
                         print("\t", f"l{direction}", product)
 
-    def print_orbital_table(self, operator: str = "lz", formatted=True) -> None:
+    def print_orbital_table(self, operator: str = "lz",
+                            formatted: bool = True) -> None:
         """
         Print the matrix elements of lz/l+/l- between orbital basis functions.
 
@@ -1500,7 +1501,7 @@ class ParamFit(ABC):
             bands_diff[:, i] *= w
         return bands_diff.flatten()
 
-    def fit(self, params0: np.ndarray, **kwargs: dict) -> np.ndarray:
+    def fit(self, params0: np.ndarray, **kwargs) -> np.ndarray:
         """
         Fit the parameters to reference band data.
 

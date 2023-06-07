@@ -1,7 +1,7 @@
 """Base functions and classes used through the builder package."""
 
 from collections import namedtuple
-from typing import List, Tuple, Union, Dict, Any
+from typing import List, Tuple, Union, Dict, Any, Iterable
 
 import numpy as np
 from scipy.sparse import coo_matrix
@@ -73,7 +73,7 @@ def check_pbc(coord: pbc_type,
     return coord, legal
 
 
-def invert_rn(rn: Tuple[int, int, int], i: int = 0) -> bool:
+def invert_rn(rn: rn3_type, i: int = 0) -> bool:
     """
     Check if the cell index should be inverted.
 
@@ -228,7 +228,7 @@ class IntraHopping:
     @staticmethod
     def _norm_keys(rn: rn_type,
                    orb_i: int,
-                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
+                   orb_j: int) -> Tuple[rn3_type, pair_type, bool]:
         """
         Normalize cell index and orbital pair into permitted keys.
 
@@ -340,7 +340,7 @@ class IntraHopping:
         """
         self.remove_orbitals([orb_i], purge=purge)
 
-    def remove_orbitals(self, indices: Union[List[int], np.ndarray],
+    def remove_orbitals(self, indices: Union[Iterable[int], np.ndarray],
                         purge: bool = True) -> None:
         """
         Remove the hopping terms corresponding to a list of orbitals and update
@@ -441,24 +441,8 @@ class IntraHopping:
         hop_eng = np.array(hop_eng, dtype=np.complex128)
         return hop_ind, hop_eng
 
-    def count_pair(self, orb_i: int, orb_j: int) -> int:
-        """
-        Count the hopping terms with given orbital index.
-
-        :param orb_i: orbital index of bra
-        :param orb_j: orbital index of ket
-        :return: number of hopping terms with given orbital index
-        """
-        self.purge()
-        count = 0
-        pair = (orb_i, orb_j)
-        for rn, hop_rn in self.__hoppings.items():
-            if pair in hop_rn.keys():
-                count += 1
-        return count
-
     @property
-    def hoppings(self) -> Dict[Tuple[int, int, int], Dict[Tuple[int, int], complex]]:
+    def hoppings(self) -> Dict[rn3_type, Dict[rn2_type, complex]]:
         """Interface for the '__hoppings' attribute."""
         return self.__hoppings
 
@@ -514,7 +498,7 @@ class InterHopping(Observable, IntraHopping):
     @staticmethod
     def _norm_keys(rn: rn_type,
                    orb_i: int,
-                   orb_j: int) -> Tuple[rn3_type, pair_type, complex]:
+                   orb_j: int) -> Tuple[rn3_type, pair_type, bool]:
         """
         Normalize cell index and orbital pair into permitted keys.
 

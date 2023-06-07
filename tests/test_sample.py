@@ -107,7 +107,7 @@ class TestSample(unittest.TestCase):
             inter_hop2.add_hopping(rn=(0, 0, 0), orb_i=0, orb_j=1, energy=-1.2)
             inter_hop2.add_hopping(rn=(1, 0, 0), orb_i=0, orb_j=1, energy=-1.2)
             inter_hop2.get_hop(check_dup=True)
-        th.test_raise(_test, ValueError, r"Duplicate terms detected 0 1")
+        th.test_raise(_test, ValueError, r"Duplicate terms detected \(0, 1\)")
 
         # Normal case
         inter_hop = SCInterHopping(sc_bra=sc1, sc_ket=sc2)

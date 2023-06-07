@@ -18,6 +18,9 @@ from ..diagonal import DiagSolver
 __all__ = ["SCInterHopping", "Sample"]
 
 
+ham_dxy_type = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+
+
 class SCInterHopping(InterHopping):
     """
     Container class for hopping terms between different supercells within the
@@ -90,12 +93,19 @@ class SCInterHopping(InterHopping):
         dr = core.build_inter_dr(hop_ind, pos_bra, pos_ket,
                                  self._sc_ket.sc_lat_vec)
 
-        # Check for duplicate terms in hop_i and hop_j
+        # Check for duplicate hopping terms
         if check_dup:
-            for ih in range(hop_i.shape[0]):
-                ii, jj = hop_i.item(ih), hop_j.item(ih)
-                if self.count_pair(ii, jj) > 1:
-                    raise ValueError(f"Duplicate terms detected {ii} {jj}")
+            self.purge()
+            pair_count = dict()
+            for rn, hop_rn in self.hoppings.items():
+                for pair, energy in hop_rn.items():
+                    try:
+                        pair_count[pair] += 1
+                    except KeyError:
+                        pair_count[pair] = 1
+            for pair, count in pair_count.items():
+                if count > 1:
+                    raise ValueError(f"Duplicate terms detected {pair}")
         return hop_i, hop_j, hop_v, dr
 
     def plot(self, axes: plt.Axes,
@@ -373,7 +383,7 @@ class Sample:
             np.save(f"{data_dir}/dr", self.dr)
             np.save(f"{data_dir}/rescale", self._rescale)
 
-    def load_array(self, data_dir: str = "sample"):
+    def load_array(self, data_dir: str = "sample") -> None:
         """
         Load array attributes from disk.
 
@@ -544,7 +554,7 @@ class Sample:
 
     def build_ham_dxy(self, orb_eng_cutoff: float = 1.0e-5,
                       algo: str = "fast",
-                      sort_col: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                      sort_col: bool = False) -> ham_dxy_type:
         """
         Build the arrays for conductivity calculations using TBPM.
 

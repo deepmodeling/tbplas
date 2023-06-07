@@ -1,7 +1,7 @@
 """Fundamentals of Solvers based on exact diagonalization."""
 
 import math
-from typing import Any, List, Tuple, Callable
+from typing import Any, Tuple, Callable, Union, Iterable
 from collections import namedtuple
 
 import numpy as np
@@ -136,7 +136,7 @@ class DiagSolver(MPIEnv):
             self.__model.init_hop()
 
     @staticmethod
-    def _calc_proj(orbital_indices: List[int],
+    def _calc_proj(orbital_indices: Union[Iterable[int], np.ndarray],
                    eigenstates: np.ndarray) -> np.ndarray:
         """
         Calculate the projection of eigenstates on given orbitals.
@@ -192,7 +192,7 @@ class DiagSolver(MPIEnv):
 
     def calc_bands(self, k_points: np.ndarray,
                    convention: int = 1,
-                   orbital_indices: List[int] = None,
+                   orbital_indices: Union[Iterable[int], np.ndarray] = None,
                    solver: str = "lapack",
                    num_bands: int = None,
                    **kwargs) -> namedtuple:

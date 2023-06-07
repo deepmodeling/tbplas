@@ -1,6 +1,6 @@
 """Functions and classes for supercell."""
 
-from typing import Callable, List, Tuple, Union, Set
+from typing import Callable, Iterable, Tuple, Union, Set
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -99,7 +99,7 @@ class OrbitalSet(Observable):
     def __init__(self, prim_cell: PrimitiveCell,
                  dim: rn_type,
                  pbc: pbc_type = (False, False, False),
-                 vacancies: Union[List[id_pc_type], np.ndarray] = None) -> None:
+                 vacancies: Union[Iterable[id_pc_type], np.ndarray] = None) -> None:
         """
         :param prim_cell: primitive cell from which the supercell is constructed
         :param dim: dimension of the supercell along a, b and c directions
@@ -242,7 +242,7 @@ class OrbitalSet(Observable):
         self.check_lock()
         self.add_vacancies([vacancy])
 
-    def add_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray]) -> None:
+    def add_vacancies(self, vacancies: Union[Iterable[id_pc_type], np.ndarray]) -> None:
         """
         Add a list of vacancies to the orbital set.
 
@@ -261,7 +261,7 @@ class OrbitalSet(Observable):
             self._check_id_pc(vacancy)
             self._vacancy_set.add(vacancy)
 
-    def set_vacancies(self, vacancies: Union[List[id_pc_type], np.ndarray] = None) -> None:
+    def set_vacancies(self, vacancies: Union[Iterable[id_pc_type], np.ndarray] = None) -> None:
         """
         Reset the set of vacancies.
 
@@ -467,7 +467,7 @@ class SuperCell(OrbitalSet):
     def __init__(self, prim_cell: PrimitiveCell,
                  dim: rn_type,
                  pbc: pbc_type = (False, False, False),
-                 vacancies: Union[List[id_pc_type], np.ndarray] = None,
+                 vacancies: Union[Iterable[id_pc_type], np.ndarray] = None,
                  orb_pos_modifier: Callable[[np.ndarray], None] = None) -> None:
         """
         :param prim_cell: primitive cell from which the supercell is constructed

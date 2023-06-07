@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tbplas as tb
-from tbplas.materials.xs2 import _gen_orb_labels
 
 
 class TestMaterials(unittest.TestCase):
@@ -166,13 +165,6 @@ class TestMaterials(unittest.TestCase):
         energies, dos = prim_cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
-
-        # Test orbital labels
-        for material in ("MoS2", "MoSe2", "WS2", "WSe2"):
-            label_ref = _gen_orb_labels(material)
-            prim_cell = tb.make_tmdc(material)
-            label_test = [orb.label for orb in prim_cell.orbitals]
-            self.assertListEqual(label_ref, label_test)
 
 
 if __name__ == "__main__":

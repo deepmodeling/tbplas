@@ -19,14 +19,14 @@ from ..builder import PrimitiveCell, HopDict
 __all__ = ["make_tmdc"]
 
 
-_STRUCT_CONSTS = {
+STRUCT_CONSTS = {
     'MoS2': (0.316, 0.317, 1.229 / 2),
     'MoSe2': (0.329, 0.333, 1.290 / 2),
     'WS2': (0.315, 0.314, 1.232 / 2),
     'WSe2': (0.328, 0.334, 1.296 / 2)
 }
 
-_HOP_CONSTS = {
+HOP_CONSTS = {
     'MoS2': (1.0688, 1.0688, -0.7755, -1.2902, -1.2902,
              -0.1380, 0.0874, 0.0874, -2.8949, -1.9065,
              -1.9065, -0.2069, 0.0323, -0.1739, 0.8651,
@@ -65,8 +65,8 @@ _HOP_CONSTS = {
              -0.0676, -0.1608, -0.2618, -0.2424)}
 
 
-def _gen_lattice(material: str = "MoS2",
-                 c: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+def gen_lattice(material: str = "MoS2",
+                c: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate coordinates of lattice vectors and orbitals.
 
@@ -84,7 +84,7 @@ def _gen_lattice(material: str = "MoS2",
     # d_xx: closest distance between S and S in the Z direction
     # z: interlayer distance in nm
     try:
-        a, d_xx, z = _STRUCT_CONSTS[material]
+        a, d_xx, z = STRUCT_CONSTS[material]
     except KeyError as err:
         raise NotImplementedError(f"{material} not implemented yet") from err
 
@@ -102,7 +102,7 @@ def _gen_lattice(material: str = "MoS2",
     return vectors, orbital_coords
 
 
-def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
+def gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
     """
     Generate hopping dictionary and on-site energies.
 
@@ -125,7 +125,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
     hop_mat5 = np.zeros((11, 11))
     hop_mat6 = np.zeros((11, 11))
     try:
-        hop_data = _HOP_CONSTS[material]
+        hop_data = HOP_CONSTS[material]
     except KeyError as err:
         raise NotImplementedError(f"{material} not implemented yet") from err
     else:
@@ -366,7 +366,7 @@ def _gen_hop_dict(material: str = "MoS2") -> Tuple[HopDict, List[float]]:
     return hop_dict, on_site
 
 
-def _gen_orb_labels(material: str = "MoS2") -> List[str]:
+def gen_orb_labels(material: str = "MoS2") -> List[str]:
     """
     Generate orbital labels.
 
@@ -405,10 +405,10 @@ def make_tmdc(material: str = "MoS2") -> PrimitiveCell:
     :return: TMDC primitive cell
     :raises NotImplementedError: if material has not been implemented
     """
-    vectors, orbital_coords = _gen_lattice(material)
-    hop_dict, on_site = _gen_hop_dict(material)
+    vectors, orbital_coords = gen_lattice(material)
+    hop_dict, on_site = gen_hop_dict(material)
     orbital_coords = cart2frac(vectors, orbital_coords)
-    orbital_labels = _gen_orb_labels(material)
+    orbital_labels = gen_orb_labels(material)
     cell = PrimitiveCell(vectors, unit=NM)
     for i_o, coord in enumerate(orbital_coords):
         cell.add_orbital(coord, on_site[i_o], orbital_labels[i_o])

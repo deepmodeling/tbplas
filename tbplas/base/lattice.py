@@ -54,7 +54,7 @@ def gen_reciprocal_vectors(lattice_vectors: np.ndarray) -> np.ndarray:
     """
     Generate reciprocal lattice vectors from real-space lattice vectors.
 
-    NOTE: Here we evaluate reciprocal lattice vectors via
+    Here we evaluate reciprocal lattice vectors via
         dot_product(a_i, b_j) = 2 * pi * delta_{ij}
     The formulae based on cross-products are not robust in some cases.
 

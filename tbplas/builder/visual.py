@@ -9,9 +9,6 @@ import matplotlib.collections as mc
 from .base import rn3_type, pos3_type
 
 
-__all__ = ["ModelViewer"]
-
-
 class ModelViewer:
     """
     Class for plotting the model.

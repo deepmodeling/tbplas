@@ -1,6 +1,6 @@
 """Functions and classes for manipulating the primitive cell."""
 
-from typing import List, Tuple, Dict, Hashable
+from typing import List, Tuple, Dict, Hashable, Union, Iterable
 import math
 
 import numpy as np
@@ -305,7 +305,7 @@ class PrimitiveCell(Observable):
         self.check_lock()
         self.remove_orbitals([orb_i])
 
-    def remove_orbitals(self, indices: List[int]) -> None:
+    def remove_orbitals(self, indices: Union[Iterable[int], np.ndarray]) -> None:
         """
         Remove given orbitals and associated hopping terms, then update
         remaining hopping terms.
@@ -545,7 +545,7 @@ class PrimitiveCell(Observable):
                 print("INFO: no need to update pc orbital arrays")
 
     def sync_hop(self, verbose: bool = False,
-                 force_sync: bool = False):
+                 force_sync: bool = False) -> None:
         """
         Synchronize hop_ind and hop_eng according to the hopping terms.
 

@@ -3,7 +3,7 @@ Functions and classes for converting tight-binding models from Wannier90.
 """
 
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import numpy as np
 
@@ -13,6 +13,10 @@ from ..cython import primitive as core
 
 
 __all__ = ["wan2pc"]
+
+
+rn5_type = Tuple[int, int, int, int, int]
+rn3_type = Tuple[int, int, int]
 
 
 def read_lat_vec(seed_name: str = "wannier90") -> np.ndarray:
@@ -60,11 +64,12 @@ def read_orb_pos(seed_name: str = "wannier90") -> np.ndarray:
     """
     Read orbital positions from seed_name_centres.xyz.
 
+    Reference: https://en.wikipedia.org/wiki/XYZ_file_format
+
     :param seed_name: seed_name of Wannier90 output files
     :return: (num_wan, 3) float64 array
         Cartesian coordinates of orbitals in Angstrom
     """
-    # Reference: https://en.wikipedia.org/wiki/XYZ_file_format
     with open(f"{seed_name}_centres.xyz", "r") as centre_file:
         centre_content = centre_file.readlines()
     orb_pos = []
@@ -76,7 +81,7 @@ def read_orb_pos(seed_name: str = "wannier90") -> np.ndarray:
     return orb_coord
 
 
-def read_hop(seed_name: str = "wannier90") -> Tuple[List[Tuple[int, ...]], List[complex]]:
+def read_hop(seed_name: str = "wannier90") -> Tuple[List[rn5_type], List[complex]]:
     """
     Read hopping terms from seed_name_hr.dat.
 
@@ -100,7 +105,7 @@ def read_hop(seed_name: str = "wannier90") -> Tuple[List[Tuple[int, ...]], List[
     return hop_ind, hop_eng
 
 
-def read_wsvec(seed_name: str = "wannier90") -> dict:
+def read_wsvec(seed_name: str = "wannier90") -> Dict[rn5_type, List[rn3_type]]:
     """
     Read correction terms from seed_name_wsvec.dat.
 
@@ -132,7 +137,7 @@ def read_wsvec(seed_name: str = "wannier90") -> dict:
 
 
 def apply_wsvec(wsvec: dict,
-                hop_ind: List[Tuple[int, ...]],
+                hop_ind: List[rn5_type],
                 hop_eng: List[complex]) -> None:
     """
     Correct hopping terms using data from read_wsvec.
@@ -200,8 +205,6 @@ def wan2pc(seed_name: str = "wannier90",
                                                 orb_pos.shape[0])
 
     # Create the primitive cell
-    # Here we manipulate the attributes of prim_cell directly
-    # since it is much faster.
     prim_cell = PrimitiveCell(lat_vec)
     for i_o, pos in enumerate(orb_pos):
         prim_cell.add_orbital(tuple(pos), orb_eng.item(i_o))
