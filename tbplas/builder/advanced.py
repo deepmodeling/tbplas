@@ -271,9 +271,14 @@ def spiral_prim_cell(prim_cell: PrimitiveCell,
     orb_pos = cart2frac(lat_vec, orb_pos, origin)
     for i, pos in enumerate(orb_pos):
         prim_cell.set_orbital(i, position=tuple(pos))
+
     # # Or alternatively, working with Cartesian coordinates
     # for i, pos in enumerate(orb_pos):
     #     prim_cell.set_orbital_cart(i, position=tuple(pos), unit=consts.NM)
+
+    # # Or alternatively, shift the origin instead of orbitals
+    # origin = end_points[0] + np.array([0, 0, shift])
+    # prim_cell.reset_lattice(lat_vec, origin, unit=consts.NM, fix_orb=False)
 
 
 def make_hetero_layer(prim_cell: PrimitiveCell,
