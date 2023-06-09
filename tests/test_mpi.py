@@ -131,7 +131,6 @@ def test_spin_texture(plot=True):
     # Evaluate spin_texture
     k_grid = 2 * tb.gen_kmesh((48, 48, 1)) - 1
     spin_texture.k_grid = k_grid
-    spin_texture.update_states()
     k_cart = spin_texture.k_cart
     sx = spin_texture.eval("x")
     sy = spin_texture.eval("y")

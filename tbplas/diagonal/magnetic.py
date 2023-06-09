@@ -23,6 +23,8 @@ class SpinTexture(DiagSolver):
         whether the orbitals are stored in spin-major order
     _states: (num_kpt, num_orb) complex128 array
         cache of wave functions
+    _hash_k: int
+        hash of k-grid
     """
     def __init__(self, cell: Any,
                  k_grid: np.ndarray,
@@ -38,6 +40,7 @@ class SpinTexture(DiagSolver):
         self._k_grid = k_grid
         self._spin_major = spin_major
         self._states = None
+        self._hash_k = None
 
     def update_states(self) -> None:
         """
@@ -45,7 +48,10 @@ class SpinTexture(DiagSolver):
 
         :return: None
         """
-        self._states = self.calc_states(self._k_grid, all_reduce=False)[1]
+        hash_new = hash(tuple([tuple(_) for _ in self._k_grid]))
+        if self._hash_k != hash_new:
+            self._hash_k = hash_new
+            self._states = self.calc_states(self._k_grid, all_reduce=False)[1]
 
     def split_spin(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -82,8 +88,7 @@ class SpinTexture(DiagSolver):
             expectation of Pauli matrix
         """
         # Get eigenstates
-        if self._states is None:
-            self.update_states()
+        self.update_states()
 
         # Evaluate spin texture
         num_kpt = self._k_grid.shape[0]
