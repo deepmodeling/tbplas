@@ -1,10 +1,90 @@
 Release Notes
 =============
 
+v1.4 | 2023-06-08
+-----------------
+
+New features
+^^^^^^^^^^^^
+
+.. rubric:: Modeling tools
+
+* The :class:`.PrimitiveCell` class gets a new attribute ``origin`` for representing the origin
+  of lattice vectors and a new method ``reset_lattice`` to reset the lattice vectors. Setting up
+  complex models is much easier and more flexible.
+* The :class:`.PrimitiveCell` class gets a new method ``print_hk`` for printing the analytical
+  Hamiltonian of the model.
+* New :class:`.SOCTable` class for boosting the evaluation of intra-atom spin-orbital coupling terms.
+* New :func:`.make_graphene_soc` function for getting the graphene model with Rashba and Kane-Mele
+  spin-orbital coupling.
+* Models built from the :class:`.Sample` class can be saved to and loaded from files with the
+  ``save_array`` and ``load_array`` methods.
+* The k-point of Hamiltonian of models of :class:`.Sample` class can be set up with the
+  ``set_k_point`` method.
+* The :class:`.Visualizer` class can plot scalar and vector fields with the ``plot_scalar`` and
+  ``plot_vector`` methods, which are particularly useful for visualizing spin textures.
+
+.. rubric:: Property calculators
+
+* New :class:`.SpinTexture` class for calculating spin texture.
+* New :class:`.DiagSolver` class for calculating energies, wavefunctions and density of states, which
+  supports analytical Hamiltonian.
+
+Improvments
+^^^^^^^^^^^
+
+* Legacy :class:`.HopDict` class has been refactored to support dictionary-like operations.
+* New algorithm for building the hopping terms of :class:`.SuperCell` in general cases (100 times faster).
+* The ``plot`` method of :class:`.Sample` class can plot conjugate hopping terms as well.
+* Timestep for the ``calc_psi_t`` method of :class:`.Solver` class can be specified through the
+  ``dt_scale`` argument.
+* The ``plot_wfc`` method of :class:`.Visualizer` class can show the model alongside the wavefunction.
+
+Changes
+^^^^^^^
+
+* ``get_dr`` methods of :class:`.SuperCell` and :class:`.SCInterHopping` classes have beem merged into
+  ``get_hop`` method.
+* ``init_dr`` method of :class:`.Sample` class has been merged into ``init_hop`` method accordingly.
+
+Bugs fixed
+^^^^^^^^^^
+
+* ``read_config`` does not back up the names of legal parameters.
+
+Examples
+^^^^^^^^
+
+* All examples have been reviewed and updated to the latest API.
+* New example for calculating spin texture of graphene with Rashba and Kane-Mele SOC.
+* New example for calculating quasi_eigenstates.
+
+For developers
+^^^^^^^^^^^^^^
+
+* Added type hints for all the classes and functions.
+* Implemented observer pattern for keeping data consistency. The original top-down approach has also been
+  reviewed and improved.
+* Redesigned the interfaces of all the classes, with instance attributes made private whenever possible.
+  Now the attributes should accessed via the ``get_*`` methods or as properties.
+* The ``get_*`` methods and properties of :class:`.PrimitiveCell` and :class:`.SuperCell` call ``sync_array``
+  automatically. No need to call ``sync_array`` manually any more.
+* Reorganized package structure
+
+  * Physical constants, lattice and k-point utilities have been moved to the ``base`` package.
+  * Interfaces to other codes have been moved to the ``adapter`` package.
+  * Cython extension has been broken into smaller parts and moved to the ``Cython`` package.
+  * Exact diagonalization modules have been moved to the ``diaognal`` package.
+  * TBPM modules have been moved to the ``tbpm`` package.
+
+* All methods involving exact diagonalization are now based the :class:`.DiagSolver` class. User-defined
+  calculators should be derived from this class.
+
 v1.3 | 2022-12-01
 -----------------
 
-.. rubric:: New features
+New features
+^^^^^^^^^^^^
 
 * Added :class:`.SK` class for setting hopping integrals with Slater-Koster formulation
 * Added :class:`.ParamFit` class for fitting on-site energies and hopping integrals
@@ -14,7 +94,8 @@ v1.3 | 2022-12-01
 * New algorithm for building the hopping terms of :class:`.SuperCell` (50 times faster)
 * :class:`.Visualizer` gets a new ``plot_phases`` method to plot the topological phases from Z2
 
-.. rubric:: Improvments
+Improvments
+^^^^^^^^^^^
 
 * Redesigned :class:`.Z2` for calculating and analyzing the Z2 topological invariant
 * Updated the tutorials with a lot of new examples demonstrating the new features
@@ -22,24 +103,28 @@ v1.3 | 2022-12-01
 v1.2 | 2022-09-02
 -----------------
 
-.. rubric:: New features
+New features
+^^^^^^^^^^^^
 
 * Added example for calculating Z2 topological invariant
 * Added ``log`` method to :class:`.Lindhard`, :class:`.Solver` and :class:`.Analyzer`
   for reporting time and date
 
-.. rubric:: Improvments
+Improvments
+^^^^^^^^^^^
 
 * Removed unnecessary MPI_Allreduce calls in :class:`.Lindhard`
 
-.. rubric:: Changes
+Changes
+^^^^^^^
 
 * Legacy :class:`.HopDict` class no longer handles conjugate terms automatically.
 
 v1.1 | 2022-08-13
 -----------------
 
-.. rubric:: New features
+New features
+^^^^^^^^^^^^
 
 * New :class:`.Lindhard` class for evaluating response properties using Lindhard function.
 * Implemented LDOS calculation based exact diagonalization.
@@ -48,7 +133,8 @@ v1.1 | 2022-08-13
 * Added MPI support for band structure and DOS calculation.
 * Added support for 64-bit array indices (samples can be much larger).
 
-.. rubric:: Improvments
+Improvments
+^^^^^^^^^^^
 
 * A lot of classes have been refactored for simplicity, maintainability and efficiency.
 * The default values of common parameters and the units of outputs have been unified for exact
@@ -59,7 +145,8 @@ v1.1 | 2022-08-13
   inter-cell hopping terms.
 * DC conductivity subroutine is refactored and much faster.
 
-.. rubric:: Changes
+Changes
+^^^^^^^
 
 * The ``IntraHopping`` class has beem removed. Modifications to hopping terms are now handled
   by the supercell itself.
@@ -69,14 +156,16 @@ v1.1 | 2022-08-13
 * The output unit of AC conductivity from TBPM has been changed from e^2/(4*h_bar) to e^2/h_bar,
   for consistency with the :class:`.Lindhard` class.
 
-.. rubric:: Bugs fixed
+Bugs fixed
+^^^^^^^^^^
 
 * :func:`merge_prim_cell` does not set the ``extend`` attribute properly.
 * ``reset_array`` method of :class:`.Sample` class does not reset the ``rescale`` attribute.
 * The FORTRAN subroutine ``norm`` produces L^1 norm instead of L^2 for complex vectors.
 * The FORTRAN subroutine ``tbpm_ldos`` does not set initial state properly.
 
-.. rubric:: Misc.
+Misc.
+^^^^^
 
 * Updated documentation, examples and configuration files.
 * Added more examples.
@@ -86,7 +175,8 @@ v1.0 | 2022-02-18
 
 First public release of TBPLaS.
 
-.. rubric:: New features
+New features
+^^^^^^^^^^^^
 
 * The ``builder`` module is rewritten from scratch. Now it is much easier to use and
   orders of magnitudes faster.
@@ -94,7 +184,8 @@ First public release of TBPLaS.
 * Added options to specify the timestep and thresthold for checking wavefunction norm
   during tbpm calculation.
 
-.. rubric:: Changes
+Changes
+^^^^^^^
 
 * Refactored existing code into :class:`.Solver`, :class:`.Analyzer` and :class:`.Visualizer`
   classes.
@@ -104,7 +195,8 @@ First public release of TBPLaS.
   like this feature.
 * Many bug fixes, efficiency improvments and security enhancements.
 
-.. rubric:: Bugs fixed
+Bugs fixed
+^^^^^^^^^^
 
 * csr.F90:
   
@@ -123,7 +215,8 @@ First public release of TBPLaS.
 v0.9.8 | 2021-06-06
 -------------------
 
-.. rubric:: New features
+New features
+^^^^^^^^^^^^
 
 * Most of the subroutines involving wave function propagation will check the
   norm of wave function after 128 steps of propagation. The program will abort
@@ -142,7 +235,8 @@ v0.9.8 | 2021-06-06
   profiling, progress reporting, random number seeds generating, message
   printing, etc.
 
-.. rubric:: Changes
+Changes
+^^^^^^^
 
 * setup.cfg:
 
@@ -162,7 +256,8 @@ v0.9.8 | 2021-06-06
   have been changed from row-major to column-major, which may boosts the
   calculation by approximately 12%.
 
-.. rubric:: Bugs fixed
+Bugs fixed
+^^^^^^^^^^
 
 * analysis.f90:
 

@@ -6,50 +6,61 @@ API Reference
 .. autosummary::
     :toctree: _api
 
-    .. Primitive cell classes and functions
-    PrimitiveCell
+    .. generated using get_api.py
+
+    Analyzer
+    Config
+    DiagSolver
     HopDict
+    Lindhard
+    MPIEnv
     PCInterHopping
+    ParamFit
+    PrimitiveCell
+    ProgressBar
+    SCInterHopping
     SK
     SOC
-    ParamFit
-    DiagSolver
-    Lindhard
-    Z2
+    SOCTable
+    Sample
+    Solver
     SpinTexture
-    gen_lattice_vectors
+    SuperCell
+    TestHelper
+    Timer
+    Visualizer
+    Z2
     cart2frac
+    extend_prim_cell
+    find_neighbors
     frac2cart
-    rotate_coord
-    gen_kpath
     gen_kdist
     gen_kmesh
-    extend_prim_cell
-    reshape_prim_cell
-    spiral_prim_cell
-    make_hetero_layer
-    find_neighbors
-    merge_prim_cell
+    gen_kpath
+    gen_lattice_vectors
+    gen_reciprocal_vectors
+    gen_seeds
+    get_datetime
+    get_lattice_area
+    get_lattice_volume
     make_antimonene
+    make_black_phosphorus
     make_graphene_diamond
     make_graphene_rect
-    make_graphene_sp
     make_graphene_soc
-    make_black_phosphorus
+    make_graphene_sp
+    make_hetero_layer
     make_tmdc
-    wan2pc
-
-    .. Sample classes and functions
-    SuperCell
-    SCInterHopping
-    Sample
-
-    .. TBPM classes and functions
-    Config
-    Solver
-    Analyzer
-    Visualizer
+    merge_prim_cell
+    print_banner_block
+    print_banner_line
     read_config
+    reshape_prim_cell
+    rotate_coord
+    spiral_prim_cell
+    split_list
+    split_range
+    wan2pc
     window_exp
     window_exp_ten
     window_hanning

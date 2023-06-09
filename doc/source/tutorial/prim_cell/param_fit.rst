@@ -115,10 +115,10 @@ the reference and fitted band data, respectively. We define a ``MyFit`` class as
             """
             Get reference band data for fitting.
 
-            :return: band structure on self.k_points
+            :return: band structure on self._k_points
             """
             cell = tb.wan2pc("graphene")
-            k_len, bands = cell.calc_bands(self.k_points)
+            k_len, bands = cell.calc_bands(self._k_points)
             return bands
 
         def calc_bands_fit(self, sk_params: np.ndarray) -> np.ndarray:
@@ -126,10 +126,10 @@ the reference and fitted band data, respectively. We define a ``MyFit`` class as
             Get band data of the model from given parameters.
 
             :param sk_params: array containing SK parameters
-            :return: band structure on self.k_points
+            :return: band structure on self._k_points
             """
             cell = make_cell(sk_params)
-            k_len, bands = cell.calc_bands(self.k_points, echo_details=False)
+            k_len, bands = cell.calc_bands(self._k_points, echo_details=False)
             return bands
 
 In ``calc_bands_ref``, we import the primitive cell with the Wannier90 interface :func:`.wan2pc`,

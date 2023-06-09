@@ -98,14 +98,13 @@ In addition to the orbital position modifier, we also need to update hopping int
         :return: None.
         """
         sample.init_hop()
-        sample.init_dr()
         for i, rij in enumerate(sample.dr):
             sample.hop_v[i] = calc_hop(rij)
 
-As we will make use of the hopping terms and vectors, we should call the ``init_hop`` and
-``init_dr`` methods to initialize the attributes. Similar rule holds for the on-site
-energies and orbital positions. Then we loop over the hopping terms to update the integrals in
-``hop_v`` according to the vectors in ``dr`` with the ``calc_hop`` function, which is defined as:
+As we will make use of the hopping terms and vectors, we should call the ``init_hop`` method to initialize the
+attributes. Similar rule holds for the on-site energies and orbital positions. Then we loop over the hopping
+terms to update the integrals in ``hop_v`` according to the vectors in ``dr`` with the ``calc_hop`` function,
+which is defined as:
 
 .. code-block:: python
     :linenos:

@@ -15,3 +15,4 @@ PrimitiveCell
     Parameters fitting <param_fit.rst>
     Response functions <lindhard.rst>
     Z2 topological invariant <z2.rst>
+    Spin texture <spin_texture.rst>

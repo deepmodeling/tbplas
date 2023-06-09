@@ -10,4 +10,5 @@ Advanced
     Quasi-crystal <quasi_crystal.rst>
     Fractal <fractal.rst>
     Strain and external fields <strain_fields.rst>
+    Quasi-eigenstates <quasi_eigen.rst>
     Parallelization <parallel.rst>

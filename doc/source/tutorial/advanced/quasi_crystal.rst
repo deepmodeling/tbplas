@@ -34,6 +34,7 @@ center by:
 .. code-block:: python
 
     # Get the Cartesian coordinate of twisting center
+    prim_cell = tb.make_graphene_diamond()
     center = np.array([dim[0]//2, dim[1]//2, 0]) + center
     center = np.matmul(center, prim_cell.lat_vec)
 
@@ -44,7 +45,6 @@ center in line 2-3. Then we build the fixed and twisted layers by:
 .. code-block:: python
 
     # Build fixed and twisted layers
-    prim_cell = tb.make_graphene_diamond()
     layer_fixed = tb.extend_prim_cell(prim_cell, dim=dim)
     layer_twisted = tb.extend_prim_cell(prim_cell, dim=dim)
 

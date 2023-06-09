@@ -24,7 +24,7 @@ def test(cell: tb.PrimitiveCell, ib: int = 0, spin_major: bool = True) -> None:
     k_cart = spin_texture.k_cart
     sx = spin_texture.eval("x")
     sy = spin_texture.eval("y")
-    vis.plot_vector(x=k_cart[:, 0], y=k_cart[:, 1], u=sx[:, ib], v=sy[:, ib])
+    vis.plot_vector(x=k_cart[:, 0], y=k_cart[:, 1], u=sx[:, ib], v=sy[:, ib], cmap="jet")
 
 
 def main():
