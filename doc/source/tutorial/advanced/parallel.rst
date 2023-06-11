@@ -201,7 +201,7 @@ mode:
 Topological invariant from Z2
 -----------------------------
 
-The evaluation of phases :math:`\theta_m^D`` can be paralleled in the same approach as response
+The evaluation of phases :math:`\theta_m^D` can be paralleled in the same approach as response
 functions:
 
 .. code-block:: python

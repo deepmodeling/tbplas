@@ -68,7 +68,7 @@ The output is shown in the left panel of the figure:
 
 .. figure:: images/model/graph_vac.png
     :align: center
-    :scale: 50%
+    :scale: 45%
 
     Graphene samples without and with vacancies and after trimming dangling terms. Cells are labeled
     with blue texts. Removed and dangling orbitals are indicated with blue and green circles, respectively.

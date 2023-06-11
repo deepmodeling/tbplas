@@ -21,7 +21,7 @@ propagation method (TBPM), you may have a look at the following papers:
 3. `Modeling Klein tunneling and caustics of electron waves in graphene <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.91.045420>`_
     R. Logemann, K. J. A. Reijnders, T. Tudorovskiy, M. I. Katsnelson, S. Yuan, Phys. Rev. B 91, 045420 (2015)
 4. `TBPLaS: a Tight-Binding Package for Large-scale Simulation <https://www.sciencedirect.com/science/article/abs/pii/S0010465522003514>`_
-    Y. Li, Z. Zhan, X. Kuang, Y. Li and S. Yuan, `arXiv:2209.00806v2 <https://arxiv.org/abs/2209.00806v2>`_
+    Y. Li, Z. Zhan, X. Kuang, Y. Li and S. Yuan, Comput. Phys. Commun. 285, 108632 (2023)
 
 Implementation
 --------------

@@ -18,12 +18,13 @@ The main features of TBPLaS include:
         * Shipped with materials database (Graphene, phosphorene, antimonene, TMDC)
         * Interfaces to Wannier90 and LAMMPS
         * Tools for fitting on-site energies and hopping integrals
+        * Support for analytical Hamiltonian
     * Fields and strains
         * Homogeneous magnetic field via Peierls substitution
         * User-defined electric field
         * Arbitary deformation with strain and/or stress
     * Exact-diagonalization
-        * Band structure, density of states (DOS), wave functions, topological invariants
+        * Band structure, density of states (DOS), wave functions, topological invariants, spin textures
         * Polarizability, dielectric function, optical (AC) conductivity
     * Tight-binding propagation method (TBPM)
         * DOS, LDOS and carrier density
@@ -44,19 +45,22 @@ The main features of TBPLaS include:
     * Sparse matrices for reducing memory cost
     * Lazy-evaluation techniques to reduce unnecessary operations
     * Interfaced to Intel MKL (Math Kernel Library)
-* Easiness
-    * Intuitive object-oriented user APIs (Application Programming Interface) in Python
+* User friendliness
+    * Intuitive object-oriented user APIs (Application Programming Interface) in Python with type hints
     * Simple workflow with a lot of handy tools
     * Transparent code architecture with detailed documentation
 * Security
-    * Automatic detection of illegal input
-    * Data inconsistency prevented via locking mechanism
+    * Detailed checking procedures on input arguments
     * Carefully designed exception handling with precise error message
+    * Top-down and bottom-up (observer pattern) techniques for keeping data consistency
 
 .. _gallery:
 
 Gallery
 -------
+
+Modeling
+^^^^^^^^
 
 .. figure:: images/fractal.png
     :alt: sierpinski carpet
@@ -85,6 +89,37 @@ Gallery
     :scale: 45%
 
     Arbitrary Deformation
+
+Properties
+^^^^^^^^^^
+
+.. figure:: images/param_fit.png
+    :alt: param_fit
+    :align: center
+    :scale: 25%
+
+    Fitting of on-site energies and hopping terms
+
+.. figure:: images/z2.png
+    :alt: z2
+    :align: center
+    :scale: 25%
+
+    :math:`\mathbb{Z}_2` topological invariant
+
+.. figure:: images/spin_texture.png
+    :alt: spin_texture
+    :align: center
+    :scale: 35%
+
+    Spin texture
+
+.. figure:: ../tutorial/advanced/images/strain_fields/wfc.png
+    :alt: wfc
+    :align: center
+    :scale: 20%
+
+    Wave function propagation
 
 Citation
 --------
