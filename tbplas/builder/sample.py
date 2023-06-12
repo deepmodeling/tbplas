@@ -95,7 +95,6 @@ class SCInterHopping(InterHopping):
 
         # Check for duplicate hopping terms
         if check_dup:
-            self.purge()
             pair_count = dict()
             for rn, hop_rn in self.hoppings.items():
                 for pair, energy in hop_rn.items():

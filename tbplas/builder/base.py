@@ -308,15 +308,13 @@ class IntraHopping:
 
     def remove_hopping(self, rn: rn_type,
                        orb_i: int,
-                       orb_j: int,
-                       purge: bool = False) -> bool:
+                       orb_j: int) -> bool:
         """
         Remove an existing hopping term.
 
         :param rn: (r_a, r_b, r_c), cell index
         :param orb_i: orbital index or bra
         :param orb_j: orbital index of ket
-        :param purge: whether to call 'purge' to remove empty cell indices
         :return: where the hopping term is removed, False if not found
         """
         rn, pair, conj = self._norm_keys(rn, orb_i, orb_j)
@@ -325,32 +323,27 @@ class IntraHopping:
             status = True
         except KeyError:
             status = False
-        if purge:
-            self.purge()
         return status
 
-    def remove_orbital(self, orb_i: int, purge: bool = False) -> None:
+    def remove_orbital(self, orb_i: int) -> None:
         """
         Wrapper over 'remove_orbitals' to remove a single orbital.
 
         :param orb_i: orbital index to remove
-        :param purge: whether to call 'purge' to remove empty cell indices
         :return: None
         :raises LockError: if the object is locked
         """
-        self.remove_orbitals([orb_i], purge=purge)
+        self.remove_orbitals([orb_i])
 
-    def remove_orbitals(self, indices: Union[Iterable[int], np.ndarray],
-                        purge: bool = True) -> None:
+    def remove_orbitals(self, indices: Union[Iterable[int], np.ndarray]) -> None:
         """
         Remove the hopping terms corresponding to a list of orbitals and update
         remaining hopping terms.
 
         :param indices: indices of orbitals to remove
-        :param purge: whether to call 'clean' to remove empty cell indices
         :return: None
         """
-        indices = sorted(indices)
+        indices = sorted(set(indices))
         idx_remap = dict()
 
         def _remap(orb_i):
@@ -376,9 +369,6 @@ class IntraHopping:
                     new_hop_rn[(ii, jj)] = hop_rn[pair]
             self.__hoppings[rn] = new_hop_rn
 
-        if purge:
-            self.purge()
-
     def remove_rn(self, rn: rn_type) -> bool:
         """
         Remove all the hopping terms of given cell index.
@@ -401,7 +391,7 @@ class IntraHopping:
         :return: None
         """
         for rn in list(self.__hoppings.keys()):
-            if self.__hoppings[rn] == {}:
+            if len(self.__hoppings[rn]) == 0:
                 self.__hoppings.pop(rn)
 
     def to_list(self) -> List[Tuple[int, int, int, int, int, complex]]:
@@ -462,7 +452,6 @@ class IntraHopping:
 
         :return: number of hopping terms
         """
-        self.purge()
         num_hop = 0
         for rn, hop_rn in self.__hoppings.items():
             num_hop += len(hop_rn)

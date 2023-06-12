@@ -319,7 +319,7 @@ class PrimitiveCell(Observable):
         self.check_lock()
 
         # Delete the orbitals
-        indices = sorted(indices)
+        indices = sorted(set(indices))
         for i, orb_i in enumerate(indices):
             try:
                 self._orbital_list.pop(orb_i - i)
