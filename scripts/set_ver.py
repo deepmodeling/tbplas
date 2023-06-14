@@ -20,7 +20,7 @@ def main():
 
     # Update setup.py
     patterns = [r"^[\t ]*'version'"]
-    new_lines = [f"{'':4}'version': '{new_version}',\n"]
+    new_lines = [f"{'':4}'version': '{new_release}',\n"]
     replace("setup.py", patterns, new_lines)
 
     # Update setup.py

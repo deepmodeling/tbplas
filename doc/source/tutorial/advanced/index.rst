@@ -11,4 +11,5 @@ Advanced
     Fractal <fractal.rst>
     Strain and external fields <strain_fields.rst>
     Quasi-eigenstates <quasi_eigen.rst>
+    Analytical Hamiltonian <analy_ham.rst>
     Parallelization <parallel.rst>

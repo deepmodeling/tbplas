@@ -1,6 +1,31 @@
 Release Notes
 =============
 
+v1.4.1 | 2023-06-14
+-------------------
+
+Improvements
+^^^^^^^^^^^^
+
+* Simplified ``sync_array`` methods of :class:`.PrimitiveCell` and :class:`.SuperCell`.
+* :class:`.PrimitiveCell` and relevant modeling tools are more robust for empty primitive cells.
+
+Changes
+^^^^^^^
+
+* Array attributes of :class:`.PrimitiveCell` and :class:`.SuperCell` are initialized as empty
+  arrays rather than None.
+
+Bugs fixed
+^^^^^^^^^^
+
+* Diagonal terms in output of ``print_hk`` of :class:`.PrimitiveCell` is incorrect.
+
+Examples
+^^^^^^^^
+
+* Add example for analytical Hamiltonian.
+
 v1.4 | 2023-06-08
 -----------------
 
