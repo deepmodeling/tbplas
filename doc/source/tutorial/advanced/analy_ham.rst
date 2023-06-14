@@ -88,6 +88,15 @@ We define the following functions from the analytical Hamiltonians in previous s
 .. code-block:: python
     :linenos:
 
+    def exp_i(x: float) -> complex:
+        """
+        Evaluate exp(i*2pi*x) using Euler formula.
+
+        :param x: incoming x
+        :return: exp(i*2pi*x)
+        """
+        return cos(2 * pi * x) + 1j * sin(2 * pi * x)
+
     def hk1(kpt: np.ndarray, ham: np.ndarray) -> None:
         """
         Analytical Hamiltonian modifying ham in-place following convention 1.
