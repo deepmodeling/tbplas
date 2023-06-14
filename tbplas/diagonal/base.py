@@ -130,8 +130,6 @@ class DiagSolver(MPIEnv):
         """
         if self.model_is_pc:
             self.__model.sync_array()
-            self.__model.verify_orbitals()
-            self.__model.verify_hoppings()
         else:
             self.__model.init_orb_pos()
             self.__model.init_orb_eng()

@@ -672,6 +672,16 @@ class MyTest(unittest.TestCase):
         th.test_equal_array(ham1, ham1_csr.todense(), almost=True)
         th.test_equal_array(ham2, ham2_csr.todense(), almost=True)
 
+        # Void cases
+        def _test():
+            cell.set_ham_dense(kpt, ham1, convention=1)
+        cell = make_cell_orb()
+        th.test_raise(_test, exc.PCHopEmptyError,
+                      r"primitive cell has no hopping terms")
+        cell = make_cell_empty()
+        th.test_raise(_test, exc.PCOrbEmptyError,
+                      r"primitive cell has no orbitals")
+
     def test_calc_bands_dos(self):
         """
         Test band structure and dos calculation.

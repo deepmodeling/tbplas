@@ -785,8 +785,7 @@ class PrimitiveCell(Observable):
         Set up dense Hamiltonian for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'sync_array' method and check
-        if the primitive cell has enough orbitals and hopping terms.
+        callers are responsible to call the 'sync_array' method.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
@@ -795,9 +794,13 @@ class PrimitiveCell(Observable):
         :param convention: convention for setting up the Hamiltonian
         :return: None
         :raises ValueError: if convention not in (1, 2)
+        :raises PCOrbEmptyError: if cell does not contain orbitals
+        :raises PCHopEmptyError: if cell does not contain hopping terms
         """
         if convention not in (1, 2):
             raise ValueError(f"Illegal convention {convention}")
+        self.verify_orbitals()
+        self.verify_hoppings()
         ham_dense *= 0.0
         core.set_ham(self._orb_pos, self._orb_eng, self._hop_ind, self._hop_eng,
                      convention, k_point, ham_dense)
@@ -808,17 +811,20 @@ class PrimitiveCell(Observable):
         Set up sparse Hamiltonian in csr format for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'sync_array' method and check
-        if the primitive cell has enough orbitals and hopping terms.
+        callers are responsible to call the 'sync_array' method.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
         :param convention: convention for setting up the Hamiltonian
         :return: sparse Hamiltonian
         :raises ValueError: if convention not in (1, 2)
+        :raises PCOrbEmptyError: if cell does not contain orbitals
+        :raises PCHopEmptyError: if cell does not contain hopping terms
         """
         if convention not in (1, 2):
             raise ValueError(f"Illegal convention {convention}")
+        self.verify_orbitals()
+        self.verify_hoppings()
 
         # Diagonal terms
         ham_shape = (self.num_orb, self.num_orb)
