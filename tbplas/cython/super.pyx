@@ -159,7 +159,7 @@ def id_pc2sc(int [::1] dim, int num_orb_pc, int [::1] id_pc,
 
     See the documentation of these functions for more details.
     """
-    if vac_id_sc is None:
+    if vac_id_sc.shape[0] == 0:
         return _id_pc2sc(dim, num_orb_pc, id_pc)
     else:
         return _id_pc2sc_vac2(dim, num_orb_pc, id_pc, vac_id_sc)
@@ -233,6 +233,7 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
     cdef int i_dim
     cdef int [::1] dim_ext
     cdef int [::1] status
+    cdef int num_vac
 
     # Extend dim by adding num_orb_pc as the 3rd dimension
     dim_ext = np.zeros(4, dtype=np.int32)
@@ -242,6 +243,7 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
 
     status = np.zeros(3, dtype=np.int32)
     num_orb = id_pc_array.shape[0]
+    num_vac = vac_id_sc.shape[0]
     for io in range(num_orb):
         # Check for IDPCIndexError
         for i_dim in range(4):
@@ -254,7 +256,7 @@ def check_id_pc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
         if status[0] == -2:
             break
         else:
-            if vac_id_sc is None:
+            if num_vac == 0:
                 pass
             else:
                 if _id_pc2sc_vac2(dim, num_orb_pc, id_pc_array[io],
@@ -333,7 +335,7 @@ def id_pc2sc_array(int [::1] dim, int num_orb_pc, int [:,::1] id_pc_array,
     id_sc_array = np.zeros(num_orb, dtype=np.int64)
 
     # Convert orbital indices from pc to sc representation
-    if vac_id_sc is None:
+    if vac_id_sc.shape[0] == 0:
         for io in range(num_orb):
             id_sc_array[io] = _id_pc2sc(dim, num_orb_pc, id_pc_array[io])
     else:
@@ -401,7 +403,7 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, long [::1] vac_id_sc):
     cdef int [::1] id_work
     cdef int [:,::1] orb_id_pc
 
-    if vac_id_sc is None:
+    if vac_id_sc.shape[0] == 0:
         num_orb_sc = np.prod(dim) * num_orb_pc
     else:
         num_orb_sc = np.prod(dim) * num_orb_pc - vac_id_sc.shape[0]
@@ -409,7 +411,7 @@ def build_orb_id_pc(int [::1] dim, int num_orb_pc, long [::1] vac_id_sc):
     orb_id_pc = np.zeros((num_orb_sc, 4), dtype=np.int32)
     ptr = 0
 
-    if vac_id_sc is None:
+    if vac_id_sc.shape[0] == 0:
         for ia in range(dim[0]):
             for ib in range(dim[1]):
                 for ic in range(dim[2]):
@@ -690,6 +692,7 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     # Loop counters and bounds
     cdef long num_orb_sc, io
     cdef int num_hop_pc, ih
+    cdef int num_vec
 
     # Cell and orbital IDs
     cdef int ja0, jb0, jc0
@@ -713,6 +716,7 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
     dr = np.zeros((num_hop_sc, 3), dtype=np.float64)
 
     # Initialize variables
+    num_vac = vac_id_sc.shape[0]
     num_orb_sc = orb_id_pc.shape[0]
     id_pc_j = np.zeros(4, dtype=np.int32)
     ptr = 0
@@ -740,14 +744,14 @@ def build_hop_gen(int [:,::1] pc_hop_ind, double complex [::1] pc_hop_eng,
                     id_pc_j[1] = jb
                     id_pc_j[2] = jc
                     id_pc_j[3] = pc_hop_ind[ih, 4]
-                    if vac_id_sc is None:
+                    if num_vac == 0:
                         id_sc_j = _id_pc2sc(dim, num_orb_pc, id_pc_j)
                     else:
                         id_sc_j = _id_pc2sc_vac2(dim, num_orb_pc, id_pc_j,
                                                  vac_id_sc)
 
                     # Check if id_sc_j corresponds to a vacancy
-                    if vac_id_sc is None or id_sc_j != -1:
+                    if num_vac == 0 or id_sc_j != -1:
                         hop_i[ptr] = id_sc_i
                         hop_j[ptr] = id_sc_j
                         hop_v[ptr] = pc_hop_eng[ih]

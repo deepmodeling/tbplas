@@ -130,6 +130,8 @@ class DiagSolver(MPIEnv):
         """
         if self.model_is_pc:
             self.__model.sync_array()
+            self.__model.verify_orbitals()
+            self.__model.verify_hoppings()
         else:
             self.__model.init_orb_pos()
             self.__model.init_orb_eng()
@@ -216,6 +218,8 @@ class DiagSolver(MPIEnv):
         :return: k_len, band structure and projection packed in named tuple
         :raises ValueError: if solver is neither lapack nor arpack
         """
+        self._update_model()
+
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]
         num_orb = self.num_orb
@@ -363,6 +367,8 @@ class DiagSolver(MPIEnv):
             function
         :raises ValueError: if solver is neither lapack nor arpack
         """
+        self._update_model()
+
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]
         num_orb = self.num_orb

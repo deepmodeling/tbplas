@@ -10,12 +10,7 @@ from tbplas.cython import lindhard as core
 from tbplas import TestHelper
 
 
-class TestLindhard(unittest.TestCase):
-    def setUp(self) -> None:
-        return super().setUp()
-
-    def tearDown(self) -> None:
-        return super().tearDown()
+class MyTest(unittest.TestCase):
 
     def test_init(self):
         """
@@ -45,6 +40,9 @@ class TestLindhard(unittest.TestCase):
         """
         lattice = tb.gen_lattice_vectors(a=10, b=8, c=6)
         prim_cell = tb.PrimitiveCell(lattice, unit=tb.ANG)
+        prim_cell.add_orbital((0, 0))
+        prim_cell.add_orbital((0.5, 0.5))
+        prim_cell.add_hopping((0, 0), 0, 1, 1.0)
         kmesh_size = (5, 3, 2)
         lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
                                kmesh_size=kmesh_size)
@@ -85,6 +83,9 @@ class TestLindhard(unittest.TestCase):
         """
         lattice = tb.gen_lattice_vectors(a=10, b=8, c=6)
         prim_cell = tb.PrimitiveCell(lattice, unit=tb.ANG)
+        prim_cell.add_orbital((0, 0))
+        prim_cell.add_orbital((0.5, 0.5))
+        prim_cell.add_hopping((0, 0), 0, 1, 1.0)
         kmesh_size = (5, 3, 2)
         lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
                                kmesh_size=kmesh_size)
@@ -116,6 +117,9 @@ class TestLindhard(unittest.TestCase):
         """
         lattice = tb.gen_lattice_vectors(a=10, b=10, c=10)
         prim_cell = tb.PrimitiveCell(lattice, unit=tb.ANG)
+        prim_cell.add_orbital((0, 0))
+        prim_cell.add_orbital((0.5, 0.5))
+        prim_cell.add_hopping((0, 0), 0, 1, 1.0)
         kmesh_size = (2, 3, 2)
         lindhard = tb.Lindhard(prim_cell, energy_max=10.0, energy_step=10,
                                kmesh_size=kmesh_size)

@@ -210,30 +210,31 @@ def reshape_prim_cell(prim_cell: PrimitiveCell,
                                              prim_cell.orbitals[i_o].label)
 
     # Add hopping terms
-    hop_ind = prim_cell.hop_ind
-    hop_eng = prim_cell.hop_eng
-    kd_tree = KDTree(res_cell.orb_pos)
-    for id_sc_i in range(res_cell.num_orb):
-        id_pc_i = orb_map.sc2pc(id_sc_i)
-        for i_h, hop in enumerate(hop_ind):
-            if id_pc_i[3] == hop.item(3):
-                # Get cell index of id_sc_j in reshaped cell
-                rn = id_pc_i[:3] + hop[:3]
-                pos = prim_cell.orb_pos[hop.item(4)]
-                res_pos = np.matmul(rn + pos, conv_mat)
-                res_rn = _get_cell_index(res_pos + delta)
+    if prim_cell.num_hop > 0:
+        hop_ind = prim_cell.hop_ind
+        hop_eng = prim_cell.hop_eng
+        kd_tree = KDTree(res_cell.orb_pos)
+        for id_sc_i in range(res_cell.num_orb):
+            id_pc_i = orb_map.sc2pc(id_sc_i)
+            for i_h, hop in enumerate(hop_ind):
+                if id_pc_i[3] == hop.item(3):
+                    # Get cell index of id_sc_j in reshaped cell
+                    rn = id_pc_i[:3] + hop[:3]
+                    pos = orb_pos[hop.item(4)]
+                    res_pos = np.matmul(rn + pos, conv_mat)
+                    res_rn = _get_cell_index(res_pos + delta)
 
-                # Wrap fractional coordinate of id_sc_j back into the (0, 0, 0)
-                # reshaped cell
-                res_pos -= res_rn
+                    # Wrap fractional coordinate of id_sc_j back into the
+                    # (0, 0, 0) reshaped cell
+                    res_pos -= res_rn
 
-                # Determine corresponding id_sc_j
-                candidates = kd_tree.query_ball_point(res_pos, r=pos_tol)
-                for id_sc_j in candidates:
-                    id_pc_j = orb_map.sc2pc(id_sc_j)
-                    if id_pc_j[3] == hop.item(4):
-                        res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
-                                             hop_eng.item(i_h))
+                    # Determine corresponding id_sc_j
+                    candidates = kd_tree.query_ball_point(res_pos, r=pos_tol)
+                    for id_sc_j in candidates:
+                        id_pc_j = orb_map.sc2pc(id_sc_j)
+                        if id_pc_j[3] == hop.item(4):
+                            res_cell.add_hopping(res_rn, id_sc_i, id_sc_j,
+                                                 hop_eng.item(i_h))
 
     return res_cell
 
@@ -459,9 +460,15 @@ def find_neighbors(cell_bra: Union[PrimitiveCell, SuperCell],
     :param c_max: upper bound of range on c-axis
     :param max_distance: cutoff distance in NM
     :return: list of neighbors as named tuples
+    :raise PCOrbEmptyError: if cell_bra or cell_ket does not contain orbitals
     """
     if cell_ket is None:
         cell_ket = cell_bra
+
+    # Check for number of orbitals
+    if isinstance(cell_bra, PrimitiveCell):
+        cell_bra.verify_orbitals()
+        cell_ket.verify_orbitals()
 
     # Get orbital positions
     if isinstance(cell_bra, PrimitiveCell):

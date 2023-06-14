@@ -40,12 +40,7 @@ def calc_hetero_lattice(i, prim_cell_fixed: tb.PrimitiveCell):
     return hetero_lattice
 
 
-class TestHetero(unittest.TestCase):
-    def setUp(self) -> None:
-        return super().setUp()
-
-    def tearDown(self) -> None:
-        return super().tearDown()
+class MyTest(unittest.TestCase):
 
     def test_inter_hop_dict(self):
         """

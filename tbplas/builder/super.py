@@ -113,6 +113,8 @@ class OrbitalSet(Observable):
         :raises IDPCLenError: if any vacancy does not have right length
         :raises IDPCIndexError: if cell or orbital index of any vacancy is
             out of range
+        :raises PCOrbEmptyError: if primitive cell does not contain orbitals
+        :raises PCHopEmptyError: if primitive cell does not contain hopping terms
         """
         super().__init__()
 
@@ -120,6 +122,8 @@ class OrbitalSet(Observable):
         self._prim_cell = prim_cell
         self._prim_cell.add_subscriber(f"supercell #{id(self)}", self)
         self._prim_cell.lock(f"supercell #{id(self)}")
+        self._prim_cell.verify_orbitals()
+        self._prim_cell.verify_hoppings()
 
         # Check and set dimension
         dim, legal = check_rn(dim, complete_item=1)
@@ -144,7 +148,7 @@ class OrbitalSet(Observable):
         self._vacancy_set = set()
         self._hash_dict = {'pc': self._get_hash('pc'),
                            'vac': self._get_hash('vac')}
-        self._vac_id_sc = None
+        self._vac_id_sc = np.array([], dtype=np.int64)
         self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                self._vac_id_sc)
 
@@ -277,8 +281,7 @@ class OrbitalSet(Observable):
         self._vacancy_set = set()
         self.add_vacancies(vacancies)
 
-    def sync_array(self, verbose: bool = False,
-                   force_sync: bool = False) -> None:
+    def sync_array(self, force_sync: bool = False) -> None:
         """
         Synchronize vac_id_sc and orb_id_pc according to primitive cell and
         vacancies.
@@ -287,35 +290,41 @@ class OrbitalSet(Observable):
         in increasing order. Otherwise, it won't work properly! So we must sort
         it here.
 
-        :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if
             primitive cell and vacancy_set did not change
         :return: None
+        :raises PCOrbEmptyError: if cell does not contain orbitals
+        :raises PCHopEmptyError: if cell does not contain hopping terms
         """
-        to_update = self._update_hash("pc") or self._update_hash("vac")
-        if force_sync or to_update:
-            if verbose:
-                print("INFO: updating sc vacancy and orbital arrays")
+        self._prim_cell.verify_orbitals()
+        self._prim_cell.verify_hoppings()
 
-            # If vacancy set is not empty, update arrays as usual.
-            if len(self._vacancy_set) != 0:
+        # Get update flags
+        update_pc = self._update_hash("pc")
+        update_vac = self._update_hash("vac")
+        to_update = update_pc or update_vac
+
+        if force_sync or to_update:
+            # Update self._vac_id_sc
+            if self.num_vac == 0:
+                self._vac_id_sc = np.array([], dtype=np.int64)
+            else:
+                # Check for invalid vacancies if primitive cell changes
+                if update_pc:
+                    for vac in self._vacancy_set:
+                        self._check_id_pc(vac)
                 vac_id_pc = np.array(sorted(self._vacancy_set), dtype=np.int32)
                 vac_id_sc = core.build_vac_id_sc(self._dim, self.num_orb_pc,
                                                  vac_id_pc)
                 sorted_idx = np.argsort(vac_id_sc, axis=0)
                 self._vac_id_sc = vac_id_sc[sorted_idx]
-                self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
-                                                       self._vac_id_sc)
 
-            # Otherwise, restore to default settings as in __init__.
-            else:
-                self._vac_id_sc = None
-                self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
-                                                       self._vac_id_sc)
+            # Update self._orb_id_pc
+            self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
+                                                   self._vac_id_sc)
+
+            # Re-lock primitive cell
             self._prim_cell.lock(f"supercell #{id(self)}")
-        else:
-            if verbose:
-                print("INFO: no need to update sc vacancy and orbital arrays")
 
     def orb_id_sc2pc(self, id_sc: int) -> np.ndarray:
         """
@@ -434,8 +443,17 @@ class OrbitalSet(Observable):
         :return: number of orbitals in supercell
         """
         num_orb_sc = self.num_orb_pc * np.prod(self._dim).item()
-        num_orb_sc -= len(self._vacancy_set)
+        num_orb_sc -= self.num_vac
         return num_orb_sc
+
+    @property
+    def num_vac(self) -> int:
+        """
+        Get the number of vacancies of supercell.
+
+        :return: number of vacancies in supercell
+        """
+        return len(self._vacancy_set)
 
 
 class SuperCell(OrbitalSet):
@@ -743,8 +761,7 @@ class SuperCell(OrbitalSet):
         orb_pos = self.get_orb_pos()
 
         # Get initial hopping terms
-        use_fast = (len(self._vacancy_set) == 0)
-        if use_fast:
+        if self.num_vac == 0:
             hop_i, hop_j, hop_v, dr = self._init_hop_fast(orb_pos)
         else:
             hop_i, hop_j, hop_v, dr = self._init_hop_gen(orb_pos)

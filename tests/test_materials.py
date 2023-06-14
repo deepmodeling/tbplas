@@ -8,14 +8,9 @@ import matplotlib.pyplot as plt
 import tbplas as tb
 
 
-class TestMaterials(unittest.TestCase):
-    def setUp(self) -> None:
-        pass
+class MyTest(unittest.TestCase):
 
-    def tearDown(self) -> None:
-        pass
-
-    def test00_graphene(self):
+    def test_graphene(self):
         """
         Test utilities for building graphene sample.
 
@@ -63,7 +58,7 @@ class TestMaterials(unittest.TestCase):
         label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
-    def test01_black_phosphorus(self):
+    def test_black_phosphorus(self):
         """
         Test utilities for constructing black phosphorus sample.
 
@@ -101,7 +96,7 @@ class TestMaterials(unittest.TestCase):
         label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
-    def test02_antimonene(self):
+    def test_antimonene(self):
         """
         Test utilities for constructing antimonene.
 
@@ -140,7 +135,7 @@ class TestMaterials(unittest.TestCase):
         label_test = [orb.label for orb in prim_cell.orbitals]
         self.assertListEqual(label_ref, label_test)
 
-    def test03_tmdc(self):
+    def test_tmdc(self):
         """
         Test utilities for constructing TMDC.
 

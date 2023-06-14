@@ -1,6 +1,12 @@
 """Exception classes used through the builder package."""
 
 
+class LockError(Exception):
+    """Exception for modifying a locked object."""
+    def __str__(self):
+        return f"trying to modify a locked object"
+
+
 class CoordLenError(Exception):
     """Exception for coordinate of wrong length."""
     def __init__(self, coord):
@@ -38,16 +44,6 @@ class LatVecError(Exception):
         return "illegal lattice vectors"
 
 
-class LockError(Exception):
-    """Base class for all exceptions when modifying a locked object."""
-    def __init__(self):
-        super().__init__()
-        self._object_name = "object"
-
-    def __str__(self):
-        return f"trying to modify a locked {self._object_name}"
-
-
 class PCOrbIndexError(Exception):
     """Exception for reading or modifying an orbital with wrong index."""
     def __init__(self, orb_i):
@@ -76,6 +72,18 @@ class PCHopNotFoundError(Exception):
 
     def __str__(self):
         return f"hopping term {self._hop_ind} not found"
+
+
+class PCOrbEmptyError(Exception):
+    """Exception for primitive cell without orbitals."""
+    def __str__(self):
+        return "primitive cell has no orbitals"
+
+
+class PCHopEmptyError(Exception):
+    """Exception for primitive cell without hopping terms."""
+    def __str__(self):
+        return "primitive cell has no hopping terms"
 
 
 class SCDimSizeError(Exception):

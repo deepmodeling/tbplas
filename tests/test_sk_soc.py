@@ -121,7 +121,8 @@ def calc_hop_bp(sk, rij, label_i, label_j):
                    v_pps=v_pps, v_ppp=v_ppp)
 
 
-class TestSK(unittest.TestCase):
+class MyTest(unittest.TestCase):
+
     def test_eval(self):
         """Test if the common interface 'eval' works as expected."""
         sk = tb.SK()

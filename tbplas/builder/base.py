@@ -649,8 +649,8 @@ class HopDict:
 
     @property
     def num_orb(self) -> int:
-        """Interface for the 'num_orb' attribute."""
-        return self.num_orb
+        """Interface for the '_num_orb' attribute."""
+        return self._num_orb
 
     @num_orb.setter
     def num_orb(self, num_orb) -> None:

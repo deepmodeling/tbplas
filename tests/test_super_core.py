@@ -9,7 +9,8 @@ from tbplas.cython import super as core
 from tbplas.builder.super import OrbitalSet
 
 
-class TestCore(unittest.TestCase):
+class MyTest(unittest.TestCase):
+
     def setUp(self) -> None:
         vectors = gen_lattice_vectors(a=2.46, b=2.46, gamma=60)
         self.cell = PrimitiveCell(vectors)
@@ -28,7 +29,7 @@ class TestCore(unittest.TestCase):
     def tearDown(self) -> None:
         self.timer.report_time()
 
-    def test00_acc_sps(self):
+    def test_acc_sps(self):
         """
         Test the accuracy of core functions id_sc -> id_pc -> id_sc.
 
@@ -43,7 +44,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test01_acc_psp(self):
+    def test_acc_psp(self):
         """
         Test the accuracy of core functions id_pc -> id_sc -> id_pc.
 
@@ -58,7 +59,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test02_acc_sps_vac(self):
+    def test_acc_sps_vac(self):
         """
         Test the accuracy of core functions id_sc -> id_pc -> id_sc
         in presence of vacancies.
@@ -77,7 +78,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test03_acc_psp_vac(self):
+    def test_acc_psp_vac(self):
         """
         Test the accuracy of core functions id_pc -> id_sc -> id_pc
         in presence of vacancies.
@@ -96,7 +97,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test04_speed_pc2sc(self):
+    def test_speed_pc2sc(self):
         """
         Test the efficiency of core function id_pc2sc.
 
@@ -110,7 +111,7 @@ class TestCore(unittest.TestCase):
                               orb_set._orb_id_pc)
         self.timer.toc(record)
 
-    def test05_speed_pc2sc_vac(self):
+    def test_speed_pc2sc_vac(self):
         """
         Test the efficiency of core function id_pc2sc in presence of
         vacancies.
@@ -128,7 +129,7 @@ class TestCore(unittest.TestCase):
                                   orb_set._vac_id_sc)
         self.timer.toc(record)
 
-    def test06_speed_sc2pc(self):
+    def test_speed_sc2pc(self):
         """
         Test the efficiency of core function id_sc2pc.
 
@@ -140,7 +141,7 @@ class TestCore(unittest.TestCase):
         core.test_speed_sc2pc(orb_set._orb_id_pc)
         self.timer.toc(record)
 
-    def test07_acc_py(self):
+    def test_acc_py(self):
         """
         Test the accuracy of Python interfaces to core functions.
 
@@ -169,7 +170,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test08_acc_vac_py(self):
+    def test_acc_vac_py(self):
         """
         Test the accuracy of Python interfaces to core functions in presence
         of vacancies.
@@ -200,7 +201,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test09_speed_pc2sc_py(self):
+    def test_speed_pc2sc_py(self):
         """
         Test the efficiency of Python interface orb_id_pc2sc.
 
@@ -213,7 +214,7 @@ class TestCore(unittest.TestCase):
             orb_set.orb_id_pc2sc(pc)
         self.timer.toc(record)
 
-    def test10_speed_pc2sc_vac_py(self):
+    def test_speed_pc2sc_vac_py(self):
         """
         Test the efficiency of Python interface orb_id_pc2sc in presence
         of vacancies.
@@ -229,7 +230,7 @@ class TestCore(unittest.TestCase):
             orb_set.orb_id_pc2sc(pc)
         self.timer.toc(record)
 
-    def test11_speed_sc2pc_py(self):
+    def test_speed_sc2pc_py(self):
         """
         Test the efficiency of Python interface orb_id_sc2pc.
 
@@ -242,7 +243,7 @@ class TestCore(unittest.TestCase):
             orb_set.orb_id_sc2pc(sc)
         self.timer.toc(record)
 
-    def test12_acc_pc2sc_array(self):
+    def test_acc_pc2sc_array(self):
         """
         Test the accuracy of Python interface orb_id_pc2sc_array.
 
@@ -269,7 +270,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         th.test_equal_array(sc_test, sc_ref)
 
-    def test13_acc_sc2pc_array(self):
+    def test_acc_sc2pc_array(self):
         """
         Test the accuracy of Python interface orb_id_sc2pc_array.
 
@@ -296,7 +297,7 @@ class TestCore(unittest.TestCase):
         self.timer.toc(record)
         th.test_equal_array(pc, orb_set._orb_id_pc)
 
-    def test14_speed_pc2sc_array(self):
+    def test_speed_pc2sc_array(self):
         """
         Test the efficiency of Python interface orb_id_pc2sc_array.
 
@@ -316,7 +317,7 @@ class TestCore(unittest.TestCase):
         orb_set.orb_id_pc2sc_array(orb_set._orb_id_pc)
         self.timer.toc(record)
 
-    def test15_speed_sc2pc_array(self):
+    def test_speed_sc2pc_array(self):
         """
         Test the efficiency of Python interface orb_id_sc2pc_array.
 

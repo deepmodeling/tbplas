@@ -38,7 +38,7 @@ class PrimitiveCell(Observable):
         Only half of the hopping terms are stored. Conjugate terms are added
         automatically when constructing the Hamiltonian.
     _hash_dict: Dict[str, int]
-        hashes of attributes to be used by 'sync_array' to update the arrays
+        hashes of attributes to be used by 'sync_*' methods to update the arrays
     _orb_pos: (num_orb, 3) float64 array
         FRACTIONAL positions of all orbitals
     _orb_eng: (num_orb,) float64 array
@@ -91,10 +91,10 @@ class PrimitiveCell(Observable):
                            'hop': self._get_hash('hop')}
 
         # Setup arrays.
-        self._orb_pos = None
-        self._orb_eng = None
-        self._hop_ind = None
-        self._hop_eng = None
+        self._orb_pos = np.array([], dtype=np.float64)
+        self._orb_eng = np.array([], dtype=np.float64)
+        self._hop_ind = np.array([], dtype=np.int32)
+        self._hop_eng = np.array([], dtype=np.complex128)
 
         # Setup misc. attributes.
         self.extended = 1.0
@@ -514,64 +514,34 @@ class PrimitiveCell(Observable):
         self._lat_vec = lat_vec
         self._origin = origin
 
-    def sync_orb(self, verbose: bool = False,
-                 force_sync: bool = False) -> None:
+    def sync_orb(self, force_sync: bool = False) -> None:
         """
         Synchronize orb_pos and orb_eng according to the orbitals.
 
-        :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if the
             orbitals did not change
         :return: None
         """
         to_update = self._update_hash('orb')
         if force_sync or to_update:
-            if verbose:
-                print("INFO: updating pc orbital arrays")
+            self._orb_pos = np.array(
+                [orb.position for orb in self._orbital_list], dtype=np.float64)
+            self._orb_eng = np.array(
+                [orb.energy for orb in self._orbital_list], dtype=np.float64)
 
-            # If orbital list is not empty, update as usual.
-            if len(self._orbital_list) != 0:
-                self._orb_pos = np.array(
-                    [orb.position for orb in self._orbital_list], dtype=np.float64)
-                self._orb_eng = np.array(
-                    [orb.energy for orb in self._orbital_list], dtype=np.float64)
-
-            # Otherwise, restore to default settings as in __init__.
-            else:
-                self._orb_pos = None
-                self._orb_eng = None
-        else:
-            if verbose:
-                print("INFO: no need to update pc orbital arrays")
-
-    def sync_hop(self, verbose: bool = False,
-                 force_sync: bool = False) -> None:
+    def sync_hop(self, force_sync: bool = False) -> None:
         """
         Synchronize hop_ind and hop_eng according to the hopping terms.
 
-        :param verbose: whether to output additional debugging information
         :param force_sync: whether to force synchronizing the arrays even if the
             hopping terms did not change
         :return: None
         """
         to_update = self._update_hash('hop')
         if force_sync or to_update:
-            if verbose:
-                print("INFO: updating pc hopping arrays")
-
-            # If hopping_dict is not empty, update as usual.
-            if self._hopping_dict.num_hop != 0:
-                hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
-                self._hop_ind = hop_ind
-                self._hop_eng = hop_eng
-
-            # Otherwise, restore to default settings as in __init__.
-            else:
-                self._hop_ind = None
-                self._hop_eng = None
-        else:
-            if verbose:
-                print("INFO: no need to update pc hopping arrays")
+            hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
+            self._hop_ind = hop_ind
+            self._hop_eng = hop_eng
 
     def sync_array(self, **kwargs) -> None:
         """
@@ -583,6 +553,26 @@ class PrimitiveCell(Observable):
         """
         self.sync_orb(**kwargs)
         self.sync_hop(**kwargs)
+
+    def verify_orbitals(self) -> None:
+        """
+        Check if the primitive cell has orbitals.
+
+        :return: None
+        :raises PCOrbEmptyError: if num_orb == 0
+        """
+        if self.num_orb == 0:
+            raise exc.PCOrbEmptyError()
+
+    def verify_hoppings(self) -> None:
+        """
+        Check if the primitive cell has hopping terms.
+
+        :return: None
+        :raises PCHopEmptyError: if num_hop == 0
+        """
+        if self.num_hop == 0:
+            raise exc.PCHopEmptyError()
 
     def plot(self, fig_name: str = None,
              fig_size: Tuple[float, float] = None,
@@ -637,40 +627,42 @@ class PrimitiveCell(Observable):
 
         # Plot orbitals
         orb_pos = self.orb_pos_nm
-        if with_orbitals:
-            for i_a in range(ra_min, ra_max+1):
-                for i_b in range(rb_min, rb_max+1):
-                    for i_c in range(rc_min, rc_max+1):
-                        center = np.matmul((i_a, i_b, i_c), self._lat_vec)
-                        pos_rn = orb_pos + center
-                        viewer.scatter(pos_rn, s=100, c=self._orb_eng)
+        if self.num_orb > 0:
+            if with_orbitals:
+                for i_a in range(ra_min, ra_max+1):
+                    for i_b in range(rb_min, rb_max+1):
+                        for i_c in range(rc_min, rc_max+1):
+                            center = np.matmul((i_a, i_b, i_c), self._lat_vec)
+                            pos_rn = orb_pos + center
+                            viewer.scatter(pos_rn, s=100, c=self._orb_eng)
 
         # Plot hopping terms
-        hop_i = self._hop_ind[:, 3]
-        hop_j = self._hop_ind[:, 4]
-        hop_v = self._hop_eng
-        dr = self.dr_nm
-        arrow_args = {"color": "r", "length_includes_head": True,
-                      "width": 0.002, "head_width": 0.02, "fill": False}
-        for i_h in range(hop_i.shape[0]):
-            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
-                # Original term
-                pos_i = orb_pos[hop_i.item(i_h)]
-                pos_j = pos_i + dr[i_h]
-                if hop_as_arrows:
-                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
-                else:
-                    viewer.add_line(pos_i, pos_j)
-                # Conjugate term
-                if with_conj:
-                    pos_j = orb_pos[hop_j.item(i_h)]
-                    pos_i = pos_j - dr[i_h]
+        if self.num_hop > 0:
+            hop_i = self._hop_ind[:, 3]
+            hop_j = self._hop_ind[:, 4]
+            hop_v = self._hop_eng
+            dr = self.dr_nm
+            arrow_args = {"color": "r", "length_includes_head": True,
+                          "width": 0.002, "head_width": 0.02, "fill": False}
+            for i_h in range(hop_i.shape[0]):
+                if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
+                    # Original term
+                    pos_i = orb_pos[hop_i.item(i_h)]
+                    pos_j = pos_i + dr[i_h]
                     if hop_as_arrows:
-                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                        viewer.plot_arrow(pos_i, pos_j, **arrow_args)
                     else:
-                        viewer.add_line(pos_j, pos_i)
-        if not hop_as_arrows:
-            viewer.plot_line(color="r")
+                        viewer.add_line(pos_i, pos_j)
+                    # Conjugate term
+                    if with_conj:
+                        pos_j = orb_pos[hop_j.item(i_h)]
+                        pos_i = pos_j - dr[i_h]
+                        if hop_as_arrows:
+                            viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                        else:
+                            viewer.add_line(pos_j, pos_i)
+            if not hop_as_arrows:
+                viewer.plot_line(color="r")
 
         # Plot cells
         if with_cells:
@@ -720,69 +712,70 @@ class PrimitiveCell(Observable):
             for pair, energy in hop_rn.items():
                 print(" ", rn, pair, energy)
 
-    def print_hk(self) -> None:
+    def print_hk(self, convention: int = 1) -> None:
         """
         Print analytical Hamiltonian as the function of k-point.
 
+        :param convention: convention for setting up the Hamiltonian
         :return: None
+        :raises ValueError: if convention not in (1, 2)
+        :raises PCOrbEmptyError: if cell does not contain orbitals
+        :raises PCHopEmptyError: if cell does not contain hopping terms
         """
         self.sync_array()
+        self.verify_orbitals()
+        self.verify_hoppings()
+        if convention not in (1, 2):
+            raise ValueError(f"Illegal convention {convention}")
+
+        # Function for processing formula
+        def _strip(_s):
+            return _s.lstrip().lstrip("+").lstrip().rstrip()
+
+        # Function for evaluating k_dot_r in fractional coordinates
+        def _k_dot_r(_dr):
+            s, k_labels = "", ("ka", "kb", "kc")
+            for i_dim in range(3):
+                r_dim = _dr.item(i_dim)
+                k_dim = k_labels[i_dim]
+                if abs(r_dim) > 1.0e-5:
+                    s += f" + {r_dim} * {k_dim}"
+            s = _strip(s) if s != "" else "0"
+            return s
+
+        # Function to add a hopping term to the Hamiltonian
+        def _add_term(_pair, _energy, _kdr):
+            term = f"{_energy} * exp_i({_kdr})\n"
+            try:
+                hk[_pair] += f" + {term}"
+            except KeyError:
+                hk[_pair] = term
 
         # Collect on-site energies
         hk = dict()
         for i, energy in enumerate(self._orb_eng):
             hk[(i, i)] = str(energy)
 
-        # Function for processing formula
-        def _strip(x):
-            x.lstrip()
-            x.rstrip()
-            if x[0] == "+":
-                x = x[1:]
-            x.lstrip()
-            x.rstrip()
-            return x
-
-        # Function to add a hopping term to the Hamiltonian
-        def _add_term(_pair, _energy, _dr):
-            # Evaluate k_dot_r with fractional coordinates
-            k_dot_r = ""
-            k_labels = ("ka", "kb", "kc")
-            for i_dim in range(3):
-                r_dim = _dr.item(i_dim)
-                k_dim = k_labels[i_dim]
-                if abs(r_dim) > 1.0e-5:
-                    k_dot_r += f"+ {r_dim} * {k_dim} "
-            k_dot_r = _strip(k_dot_r)
-
-            # Add the hopping term
-            term = f"{_energy} * exp_i({k_dot_r})\n"
-            try:
-                hk[_pair] += f" + {term}"
-            except KeyError:
-                hk[_pair] = term
-
         # Collect hopping terms
-        dr = self.dr
+        dr = self.dr if convention == 1 else self._hop_ind[:, :3]
         for ih, hop in enumerate(self._hop_ind):
             pair = (hop.item(3), hop.item(4))
             energy = self._hop_eng.item(ih)
-            _add_term(pair, energy, dr[ih])
-            if pair[0] != pair[1]:
-                pair = (pair[1], pair[0])
-                energy = energy.conjugate()
-                _add_term(pair, energy, -dr[ih])
+            _add_term(pair, energy, _k_dot_r(dr[ih]))
+            pair = (pair[1], pair[0])
+            energy = energy.conjugate()
+            _add_term(pair, energy, _k_dot_r(-dr[ih]))
 
         # Print formulae
-        reduced_pairs = [pair for pair in hk.keys() if pair[0] <= pair[1]]
+        reduced_pairs = [p for p in hk.keys() if p[0] <= p[1]]
         for pair in reduced_pairs:
             ham_ij = f"ham[{pair[0]}, {pair[1]}]"
             formula = _strip(hk[pair])
-            print(f"{ham_ij} = {formula}\n")
+            print(f"{ham_ij} = ({formula})")
             if pair[0] != pair[1]:
                 ham_ji = f"ham[{pair[1]}, {pair[0]}]"
                 formula = f"{ham_ij}.conjugate()"
-                print(f"{ham_ji} = {formula}\n")
+                print(f"{ham_ji} = {formula}")
         print("with exp_i(x) := cos(2 * pi * x) + 1j * sin(2 * pi * x)")
 
     def set_ham_dense(self, k_point: np.ndarray,
@@ -792,7 +785,8 @@ class PrimitiveCell(Observable):
         Set up dense Hamiltonian for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'sync_array' method.
+        callers are responsible to call the 'sync_array' method and check
+        if the primitive cell has enough orbitals and hopping terms.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
@@ -814,7 +808,8 @@ class PrimitiveCell(Observable):
         Set up sparse Hamiltonian in csr format for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'sync_array' method.
+        callers are responsible to call the 'sync_array' method and check
+        if the primitive cell has enough orbitals and hopping terms.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point

@@ -31,14 +31,9 @@ def make_sample_new(shape, enable_pbc=True):
     return sample
 
 
-class TestGraphene(unittest.TestCase):
-    def setUp(self) -> None:
-        return super().setUp()
+class MyTest(unittest.TestCase):
 
-    def tearDown(self) -> None:
-        return super().tearDown()
-
-    def test01_tbpm(self):
+    def test_tbpm(self):
         """
         Test the new builder with real-case calculations.
 
