@@ -97,6 +97,7 @@ We define the following functions from the analytical Hamiltonians in previous s
         """
         return cos(2 * pi * x) + 1j * sin(2 * pi * x)
 
+
     def hk1(kpt: np.ndarray, ham: np.ndarray) -> None:
         """
         Analytical Hamiltonian modifying ham in-place following convention 1.
