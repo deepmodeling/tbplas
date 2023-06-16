@@ -146,8 +146,8 @@ class OrbitalSet(Observable):
 
         # Initialize arrays assuming no vacancies
         self._vacancy_set = set()
-        self._hash_dict = {'pc': self._get_hash('pc'),
-                           'vac': self._get_hash('vac')}
+        self._hash_dict = {'pc': self._get_attr_hash('pc'),
+                           'vac': self._get_attr_hash('vac')}
         self._vac_id_sc = np.array([], dtype=np.int64)
         self._orb_id_pc = core.build_orb_id_pc(self._dim, self.num_orb_pc,
                                                self._vac_id_sc)
@@ -162,7 +162,7 @@ class OrbitalSet(Observable):
               tuple(self._vacancy_set))
         return hash(fp)
 
-    def _get_hash(self, attr: str) -> int:
+    def _get_attr_hash(self, attr: str) -> int:
         """
         Get hash of given attribute.
 
@@ -182,7 +182,7 @@ class OrbitalSet(Observable):
             raise ValueError(f"Illegal attribute name {attr}")
         return new_hash
 
-    def _update_hash(self, attr: str) -> bool:
+    def _update_attr_hash(self, attr: str) -> bool:
         """
         Compare and update hash of given attribute.
 
@@ -190,7 +190,7 @@ class OrbitalSet(Observable):
         :return: whether the hash has been updated
         :raises ValueError: if attr is illegal
         """
-        new_hash = self._get_hash(attr)
+        new_hash = self._get_attr_hash(attr)
         if self._hash_dict[attr] != new_hash:
             self._hash_dict[attr] = new_hash
             status = True
@@ -300,8 +300,8 @@ class OrbitalSet(Observable):
         self._prim_cell.verify_hoppings()
 
         # Get update flags
-        update_pc = self._update_hash("pc")
-        update_vac = self._update_hash("vac")
+        update_pc = self._update_attr_hash("pc")
+        update_vac = self._update_attr_hash("vac")
         to_update = update_pc or update_vac
 
         if force_sync or to_update:

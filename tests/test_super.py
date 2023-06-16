@@ -460,7 +460,7 @@ class MyTest(unittest.TestCase):
                       r"primitive cell has no orbitals")
 
         def _test():
-            prim_cell.notify()
+            prim_cell.update()
         th.test_raise(_test, exc.PCOrbEmptyError,
                       r"primitive cell has no orbitals")
 

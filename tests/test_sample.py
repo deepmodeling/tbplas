@@ -724,7 +724,7 @@ class MyTest(unittest.TestCase):
         # Change primitive cell and update in bottom-up approach
         prim_cell.unlock()
         prim_cell.remove_orbital(2)
-        prim_cell.notify(recursive=True)
+        prim_cell.update()
         self.assertEqual(prim_cell.num_orb, 2)
         self.assertEqual(prim_cell._orb_eng.shape[0], 2)
         self.assertEqual(prim_cell._orb_pos.shape[0], 2)
@@ -748,7 +748,7 @@ class MyTest(unittest.TestCase):
         # Change supercell and update in bottom-up approach
         super_cell.unlock()
         super_cell.add_vacancy((0, 1, 0, 1))
-        super_cell.notify(recursive=False)
+        super_cell.update()
         self.assertEqual(prim_cell.num_orb, 2)
         self.assertEqual(prim_cell._orb_eng.shape[0], 2)
         self.assertEqual(prim_cell._orb_pos.shape[0], 2)

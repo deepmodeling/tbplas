@@ -120,21 +120,6 @@ class Observable:
         """
         self.__subscribers[sub_name] = sub_obj
 
-    def get_subscribers(self, recur_level: int = 0) -> Dict[Tuple[str, Any], int]:
-        """
-        Get all subscribers and their levels recursively.
-
-        :param recur_level: recursion level
-        :return: dictionary with keys being (sub_name, sub_obj) and values being
-            levels
-        """
-        subscribers = {(_k, _v): recur_level
-                       for _k, _v in self.__subscribers.items()}
-        for sub_name, sub_obj in self.__subscribers.items():
-            if hasattr(sub_obj, "get_subscribers"):
-                subscribers.update(sub_obj.get_subscribers(recur_level+1))
-        return subscribers
-
     def lock(self, sub_name: str) -> None:
         """
         Lock the object. Modifications are not allowed then unless the 'unlock'
@@ -166,37 +151,20 @@ class Observable:
         if self.__locked:
             raise exc.LockError()
 
-    def notify(self, recursive: bool = True) -> None:
-        """
-        Notify all subscribers.
+    def sync_array(self, **kwargs) -> None:
+        """Abstract interface for 'sync_array' method of derived classes."""
+        pass
 
-        :param recursive: whether to notify the subscribers recursively
+    def update(self) -> None:
+        """
+        Update all subscribers.
+
         :return: None
         """
-        if recursive:  # Elegant, transparent but superfluous
-            for sub_name, sub_obj in self.__subscribers.items():
-                print(f"Updating {sub_name}")
-                if hasattr(sub_obj, "sync_array"):
-                    sub_obj.sync_array(force_sync=True)
-                elif hasattr(sub_obj, "reset_array"):
-                    sub_obj.reset_array()
-                else:
-                    pass
-                if hasattr(sub_obj, "notify"):
-                    sub_obj.notify()
-        else:  # Fast, streamlined but ugly
-            full_subs = self.get_subscribers()
-            full_subs = [(_k, _v) for _k, _v in full_subs.items()]
-            full_subs = sorted(full_subs, key=lambda x: x[1], reverse=True)
-            for item in full_subs:
-                sub_name, sub_obj = item[0]
-                print(f"Updating {sub_name}")
-                if hasattr(sub_obj, "sync_array"):
-                    sub_obj.sync_array(force_sync=True)
-                elif hasattr(sub_obj, "reset_array"):
-                    sub_obj.reset_array()
-                else:
-                    pass
+        self.sync_array()
+        for sub_name, sub_obj in self.__subscribers.items():
+            print(f"Updating {sub_name}")
+            sub_obj.update()
 
 
 class IntraHopping:

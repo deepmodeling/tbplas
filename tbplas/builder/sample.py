@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from ..cython import sample as core
 from . import exceptions as exc
-from .base import InterHopping
+from .base import InterHopping, Observable
 from .super import hop_type, SuperCell
 from .visual import ModelViewer
 from ..diagonal import DiagSolver
@@ -168,7 +168,7 @@ class SCInterHopping(InterHopping):
         return self._sc_ket
 
 
-class Sample:
+class Sample(Observable):
     """
     Interface class to FORTRAN backend.
 
@@ -211,6 +211,8 @@ class Sample:
         :raises SampleClosureError: if any 'SCInterHopping' instance has
             supercells not included in the sample
         """
+        super().__init__()
+
         # Check arguments
         if len(args) == 0:
             raise exc.SampleVoidError()
@@ -405,6 +407,14 @@ class Sample:
             self._rescale = np.load(f"{data_dir}/rescale.npy").item()
         except FileNotFoundError:
             print(f"Ignoring {data_dir}/hop_i.npy")
+
+    def update(self) -> None:
+        """
+        Interface for keeping data consistency in observer pattern.
+
+        :return: None
+        """
+        self.reset_array()
 
     def rescale_ham(self, factor: float = None) -> None:
         """

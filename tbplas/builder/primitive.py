@@ -87,8 +87,8 @@ class PrimitiveCell(Observable):
         self._hopping_dict = IntraHopping()
 
         # Setup hash values
-        self._hash_dict = {'orb': self._get_hash('orb'),
-                           'hop': self._get_hash('hop')}
+        self._hash_dict = {'orb': self._get_attr_hash('orb'),
+                           'hop': self._get_attr_hash('hop')}
 
         # Setup arrays.
         self._orb_pos = np.array([], dtype=np.float64)
@@ -106,7 +106,7 @@ class PrimitiveCell(Observable):
               self._hopping_dict, self.extended)
         return hash(fp)
 
-    def _get_hash(self, attr: str) -> int:
+    def _get_attr_hash(self, attr: str) -> int:
         """
         Get the hash of given attribute.
 
@@ -122,7 +122,7 @@ class PrimitiveCell(Observable):
             raise ValueError(f"Illegal attribute name {attr}")
         return new_hash
 
-    def _update_hash(self, attr: str) -> bool:
+    def _update_attr_hash(self, attr: str) -> bool:
         """
         Compare and update the hash of given attribute.
 
@@ -130,7 +130,7 @@ class PrimitiveCell(Observable):
         :return: whether the hash has been updated.
         :raises ValueError: if attr is illegal
         """
-        new_hash = self._get_hash(attr)
+        new_hash = self._get_attr_hash(attr)
         if self._hash_dict[attr] != new_hash:
             self._hash_dict[attr] = new_hash
             status = True
@@ -522,7 +522,7 @@ class PrimitiveCell(Observable):
             orbitals did not change
         :return: None
         """
-        to_update = self._update_hash('orb')
+        to_update = self._update_attr_hash('orb')
         if force_sync or to_update:
             self._orb_pos = np.array(
                 [orb.position for orb in self._orbital_list], dtype=np.float64)
@@ -537,7 +537,7 @@ class PrimitiveCell(Observable):
             hopping terms did not change
         :return: None
         """
-        to_update = self._update_hash('hop')
+        to_update = self._update_attr_hash('hop')
         if force_sync or to_update:
             hop_ind, hop_eng = self._hopping_dict.to_array(use_int64=False)
             self._hop_ind = hop_ind
