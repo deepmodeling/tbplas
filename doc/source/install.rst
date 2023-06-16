@@ -310,6 +310,6 @@ Testing
 -------
 
 There are some testing scripts under the ``tests`` directory of source code. You can test your compilation and
-installation by invoking these scripts, e.g., ``python test_core.py``. Some output will be printed to the screen and
+installation by invoking these scripts, e.g., ``python test_base.py``. Some output will be printed to the screen and
 some figures will be saved to disk. If everything goes well, a notice will be raised saying all the tests have been
 passed by the end of each script.
