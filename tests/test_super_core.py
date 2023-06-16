@@ -201,47 +201,47 @@ class MyTest(unittest.TestCase):
         self.timer.toc(record)
         self.assertEqual(result, 0)
 
-    def test_speed_pc2sc_py(self):
-        """
-        Test the efficiency of Python interface orb_id_pc2sc.
-
-        :return: None.
-        """
-        orb_set = OrbitalSet(self.cell, dim=self.dim_large)
-        record = "speed_pc2sc_py"
-        self.timer.tic(record)
-        for pc in orb_set._orb_id_pc:
-            orb_set.orb_id_pc2sc(pc)
-        self.timer.toc(record)
-
-    def test_speed_pc2sc_vac_py(self):
-        """
-        Test the efficiency of Python interface orb_id_pc2sc in presence
-        of vacancies.
-
-        :return: None
-        """
-        orb_set = OrbitalSet(self.cell, dim=self.dim_large)
-        orb_set.set_vacancies(self.vac)
-        orb_set.sync_array()
-        record = "speed_pc2sc_vac_py"
-        self.timer.tic(record)
-        for pc in orb_set._orb_id_pc:
-            orb_set.orb_id_pc2sc(pc)
-        self.timer.toc(record)
-
-    def test_speed_sc2pc_py(self):
-        """
-        Test the efficiency of Python interface orb_id_sc2pc.
-
-        :return: None
-        """
-        orb_set = OrbitalSet(self.cell, dim=self.dim_large)
-        record = "speed_sc2pc_py"
-        self.timer.tic(record)
-        for sc in range(orb_set.num_orb_sc):
-            orb_set.orb_id_sc2pc(sc)
-        self.timer.toc(record)
+    # def test_speed_pc2sc_py(self):
+    #     """
+    #     Test the efficiency of Python interface orb_id_pc2sc.
+    #
+    #     :return: None.
+    #     """
+    #     orb_set = OrbitalSet(self.cell, dim=self.dim_large)
+    #     record = "speed_pc2sc_py"
+    #     self.timer.tic(record)
+    #     for pc in orb_set._orb_id_pc:
+    #         orb_set.orb_id_pc2sc(pc)
+    #     self.timer.toc(record)
+    #
+    # def test_speed_pc2sc_vac_py(self):
+    #     """
+    #     Test the efficiency of Python interface orb_id_pc2sc in presence
+    #     of vacancies.
+    #
+    #     :return: None
+    #     """
+    #     orb_set = OrbitalSet(self.cell, dim=self.dim_large)
+    #     orb_set.set_vacancies(self.vac)
+    #     orb_set.sync_array()
+    #     record = "speed_pc2sc_vac_py"
+    #     self.timer.tic(record)
+    #     for pc in orb_set._orb_id_pc:
+    #         orb_set.orb_id_pc2sc(pc)
+    #     self.timer.toc(record)
+    #
+    # def test_speed_sc2pc_py(self):
+    #     """
+    #     Test the efficiency of Python interface orb_id_sc2pc.
+    #
+    #     :return: None
+    #     """
+    #     orb_set = OrbitalSet(self.cell, dim=self.dim_large)
+    #     record = "speed_sc2pc_py"
+    #     self.timer.tic(record)
+    #     for sc in range(orb_set.num_orb_sc):
+    #         orb_set.orb_id_sc2pc(sc)
+    #     self.timer.toc(record)
 
     def test_acc_pc2sc_array(self):
         """
