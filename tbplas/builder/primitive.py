@@ -20,6 +20,35 @@ from ..diagonal import DiagSolver
 __all__ = ["PrimitiveCell"]
 
 
+def f_dot_s(f: np.ndarray, s: List[str], eps: float = 1.0e-5) -> str:
+    """
+    Calculate the inner product between a real vector and a list of symbols.
+
+    :param f: real vector
+    :param s: list of symbols
+    :param eps: threshold for comparing floats
+    :return: the symbolic inner product
+    """
+    result = ""
+    for i, fi in enumerate(f):
+        f_abs, si = abs(fi), s[i]
+        if f_abs > eps:
+            # Get term without sign
+            if abs(f_abs - 1) <= eps:
+                term = f"{si}"
+            else:
+                term = f"{f_abs} * {si}"
+
+            # Add sign depending on position
+            sign = "-" if fi < 0 else "+"
+            if result == "":
+                result += f"{sign}{term}"
+            else:
+                result += f" {sign} {term}"
+    result = result.lstrip().lstrip("+").lstrip()
+    return result
+
+
 class PrimitiveCell(Observable):
     """
     Class for representing the primitive cell.
@@ -728,24 +757,12 @@ class PrimitiveCell(Observable):
         if convention not in (1, 2):
             raise ValueError(f"Illegal convention {convention}")
 
-        # Function for processing formula
-        def _strip(_s):
-            return _s.lstrip().lstrip("+").lstrip().rstrip()
-
-        # Function for evaluating k_dot_r in fractional coordinates
-        def _k_dot_r(_dr):
-            s, k_labels = "", ("ka", "kb", "kc")
-            for i_dim in range(3):
-                r_dim = _dr.item(i_dim)
-                k_dim = k_labels[i_dim]
-                if abs(r_dim) > 1.0e-5:
-                    s += f" + {r_dim} * {k_dim}"
-            s = _strip(s) if s != "" else "0"
-            return s
-
         # Function to add a hopping term to the Hamiltonian
-        def _add_term(_pair, _energy, _kdr):
-            term = f"{_energy} * exp_i({_kdr})\n"
+        def _add_hop(_pair, _energy, _kdr):
+            if _kdr == "":
+                term = f"{_energy} * 1\n"
+            else:
+                term = f"{_energy} * exp_i({_kdr})\n"
             try:
                 hk[_pair] += f" + {term}"
             except KeyError:
@@ -758,21 +775,24 @@ class PrimitiveCell(Observable):
 
         # Collect hopping terms
         dr = self.dr if convention == 1 else self._hop_ind[:, :3]
+        k_labels = ["ka", "kb", "kc"]
         for ih, hop in enumerate(self._hop_ind):
             pair = (hop.item(3), hop.item(4))
             energy = self._hop_eng.item(ih)
-            _add_term(pair, energy, _k_dot_r(dr[ih]))
+            _add_hop(pair, energy, f_dot_s(dr[ih], k_labels))
             pair = (pair[1], pair[0])
             energy = energy.conjugate()
-            _add_term(pair, energy, _k_dot_r(-dr[ih]))
+            _add_hop(pair, energy, f_dot_s(-dr[ih], k_labels))
 
         # Print formulae
         reduced_pairs = [p for p in hk.keys() if p[0] <= p[1]]
         for pair in reduced_pairs:
             ham_ij = f"ham[{pair[0]}, {pair[1]}]"
-            formula = _strip(hk[pair])
+            formula = hk[pair].rstrip("\n")
             print(f"{ham_ij} = ({formula})")
+        for pair in reduced_pairs:
             if pair[0] != pair[1]:
+                ham_ij = f"ham[{pair[0]}, {pair[1]}]"
                 ham_ji = f"ham[{pair[1]}, {pair[0]}]"
                 formula = f"{ham_ij}.conjugate()"
                 print(f"{ham_ji} = {formula}")

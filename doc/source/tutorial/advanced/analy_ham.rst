@@ -51,8 +51,8 @@ The output for convention 1 should look like
     ham[0, 0] = (0.0)
     ham[1, 1] = (0.0)
     ham[0, 1] = ((-2.7+0j) * exp_i(0.3333333333333333 * ka + 0.3333333333333333 * kb)
-    + (-2.7-0j) * exp_i(-0.6666666666666667 * ka + 0.3333333333333333 * kb)
-    + (-2.7-0j) * exp_i(0.3333333333333333 * ka + -0.6666666666666667 * kb))
+     + (-2.7-0j) * exp_i(-0.6666666666666667 * ka + 0.3333333333333333 * kb)
+     + (-2.7-0j) * exp_i(0.3333333333333333 * ka - 0.6666666666666667 * kb))
     ham[1, 0] = ham[0, 1].conjugate()
     with exp_i(x) := cos(2 * pi * x) + 1j * sin(2 * pi * x)
 
@@ -63,9 +63,9 @@ and for convention 2
 
     ham[0, 0] = (0.0)
     ham[1, 1] = (0.0)
-    ham[0, 1] = ((-2.7+0j) * exp_i(0)
-    + (-2.7-0j) * exp_i(-1 * ka)
-    + (-2.7-0j) * exp_i(-1 * kb))
+    ham[0, 1] = ((-2.7+0j) * 1
+     + (-2.7-0j) * exp_i(-ka)
+     + (-2.7-0j) * exp_i(-kb))
     ham[1, 0] = ham[0, 1].conjugate()
     with exp_i(x) := cos(2 * pi * x) + 1j * sin(2 * pi * x)
 
