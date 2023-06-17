@@ -1,6 +1,6 @@
 """Functions and classes for manipulating the primitive cell."""
 
-from typing import List, Tuple, Dict, Hashable, Union, Iterable
+from typing import List, Tuple, Dict, Hashable, Union, Iterable, Callable
 import math
 
 import numpy as np
@@ -609,8 +609,10 @@ class PrimitiveCell(Observable):
              with_orbitals: bool = True,
              with_cells: bool = True,
              with_conj: bool = True,
+             orb_color: Callable[[List[Orbital]], List[str]] = None,
              hop_as_arrows: bool = True,
              hop_eng_cutoff: float = 1e-5,
+             hop_color: str = "r",
              view: str = "ab") -> None:
         """
         Plot lattice vectors, orbitals, and hopping terms.
@@ -624,11 +626,13 @@ class PrimitiveCell(Observable):
         :param with_orbitals: whether to plot orbitals as filled circles
         :param with_cells: whether to plot borders of primitive cells
         :param with_conj: whether to plot conjugate hopping terms as well
+        :param orb_color: function for coloring the orbitals
         :param hop_as_arrows: whether to plot hopping terms as arrows
             If true, hopping terms will be plotted as arrows using axes.arrow()
             method. Otherwise, they will be plotted as lines using
             LineCollection. The former is more intuitive but much slower.
         :param hop_eng_cutoff: cutoff for showing hopping terms
+        :param hop_color: color of hopping terms
         :param view: kind of view point
         :returns: None
         :raises ValueError: if view is illegal
@@ -656,6 +660,10 @@ class PrimitiveCell(Observable):
 
         # Plot orbitals
         orb_pos = self.orb_pos_nm
+        if orb_color is None:
+            scatter_color = self._orb_eng
+        else:
+            scatter_color = orb_color(self._orbital_list)
         if self.num_orb > 0:
             if with_orbitals:
                 for i_a in range(ra_min, ra_max+1):
@@ -663,7 +671,7 @@ class PrimitiveCell(Observable):
                         for i_c in range(rc_min, rc_max+1):
                             center = np.matmul((i_a, i_b, i_c), self._lat_vec)
                             pos_rn = orb_pos + center
-                            viewer.scatter(pos_rn, s=100, c=self._orb_eng)
+                            viewer.scatter(pos_rn, s=100, c=scatter_color)
 
         # Plot hopping terms
         if self.num_hop > 0:
@@ -671,7 +679,7 @@ class PrimitiveCell(Observable):
             hop_j = self._hop_ind[:, 4]
             hop_v = self._hop_eng
             dr = self.dr_nm
-            arrow_args = {"color": "r", "length_includes_head": True,
+            arrow_args = {"color": hop_color, "length_includes_head": True,
                           "width": 0.002, "head_width": 0.02, "fill": False}
             for i_h in range(hop_i.shape[0]):
                 if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
@@ -691,7 +699,7 @@ class PrimitiveCell(Observable):
                         else:
                             viewer.add_line(pos_j, pos_i)
             if not hop_as_arrows:
-                viewer.plot_line(color="r")
+                viewer.plot_line(color=hop_color)
 
         # Plot cells
         if with_cells:

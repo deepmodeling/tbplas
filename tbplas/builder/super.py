@@ -1,6 +1,6 @@
 """Functions and classes for supercell."""
 
-from typing import Callable, Iterable, Tuple, Union, Set
+from typing import Callable, Iterable, Tuple, Union, Set, List
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -586,6 +586,7 @@ class SuperCell(OrbitalSet):
              with_orbitals: bool = True,
              with_cells: bool = True,
              with_conj: bool = False,
+             orb_color: Callable[[np.ndarray], List[str]] = None,
              hop_as_arrows: bool = True,
              hop_eng_cutoff: float = 1e-5,
              hop_color: str = "r",
@@ -597,6 +598,7 @@ class SuperCell(OrbitalSet):
         :param with_orbitals: whether to plot orbitals as filled circles
         :param with_cells: whether to plot borders of primitive cells
         :param with_conj: whether to plot conjugate hopping terms as well
+        :param orb_color: function for coloring the orbitals
         :param hop_as_arrows: whether to plot hopping terms as arrows
         :param hop_eng_cutoff: cutoff for showing hopping terms
         :param hop_color: color of hopping terms
@@ -614,8 +616,12 @@ class SuperCell(OrbitalSet):
         # Plot orbitals
         orb_pos = self.get_orb_pos()
         orb_eng = self.get_orb_eng()
+        if orb_color is None:
+            scatter_color = orb_eng
+        else:
+            scatter_color = orb_color(self._orb_id_pc)
         if with_orbitals:
-            viewer.scatter(orb_pos, c=orb_eng)
+            viewer.scatter(orb_pos, c=scatter_color)
 
         # Plot hopping terms
         hop_i, hop_j, hop_v, dr = self.get_hop()

@@ -1,7 +1,7 @@
 """Functions and classes for sample."""
 
 import os
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Callable
 
 import numpy as np
 from scipy.sparse import dia_matrix, csr_matrix
@@ -19,6 +19,7 @@ __all__ = ["SCInterHopping", "Sample"]
 
 
 ham_dxy_type = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+orb_color_type = Callable[[np.ndarray], List[str]]
 
 
 class SCInterHopping(InterHopping):
@@ -610,8 +611,9 @@ class Sample(Observable):
     def plot(self, fig_name: str = None,
              fig_size: Tuple[float, float] = None,
              fig_dpi: int = 300,
-             sc_colors: List[str] = None,
-             hop_colors: List[str] = None,
+             sc_orb_colors: List[orb_color_type] = None,
+             sc_hop_colors: List[str] = None,
+             inter_hop_colors: List[str] = None,
              **kwargs) -> None:
         """
         Plot lattice vectors, orbitals, and hopping terms.
@@ -622,8 +624,9 @@ class Sample(Observable):
         :param fig_name: file name to which the figure will be saved
         :param fig_size: size of the figure
         :param fig_dpi: resolution of the figure file
-        :param sc_colors: colors for the hopping terms of each supercell
-        :param hop_colors: colors for the hopping terms each inter-hopping
+        :param sc_orb_colors:
+        :param sc_hop_colors: colors for the hopping terms of each supercell
+        :param inter_hop_colors: colors for the hopping terms each inter-hopping
             container
         :param kwargs: arguments for the 'plot' method of 'Super' and
             'SCInterHopping' classes
@@ -636,19 +639,22 @@ class Sample(Observable):
         fig, axes = plt.subplots(figsize=fig_size)
         axes.set_aspect('equal')
 
-        if sc_colors is None:
-            sc_colors = ['r' for _ in range(len(self._sc_list))]
-        if hop_colors is None:
-            hop_colors = ['r' for _ in range(len(self._hop_list))]
+        if sc_orb_colors is None:
+            sc_orb_colors = [None for _ in range(len(self._sc_list))]
+        if sc_hop_colors is None:
+            sc_hop_colors = ['r' for _ in range(len(self._sc_list))]
+        if inter_hop_colors is None:
+            inter_hop_colors = ['r' for _ in range(len(self._hop_list))]
 
         # Plot supercells and hopping terms
         for i, sc in enumerate(self._sc_list):
-            sc.plot(axes, hop_color=sc_colors[i], **kwargs)
+            sc.plot(axes, orb_color=sc_orb_colors[i],
+                    hop_color=sc_hop_colors[i], **kwargs)
         for arg in ("with_orbitals", "with_cells"):
             if arg in kwargs.keys():
                 kwargs.pop(arg)
         for i, hop in enumerate(self._hop_list):
-            hop.plot(axes, hop_color=hop_colors[i], **kwargs)
+            hop.plot(axes, hop_color=inter_hop_colors[i], **kwargs)
 
         # Hide spines and ticks.
         for key in ("top", "bottom", "left", "right"):

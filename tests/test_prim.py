@@ -614,6 +614,15 @@ class MyTest(unittest.TestCase):
         cell = make_cell_empty()
         cell.plot()
 
+        # User-defined orbital colors
+        def orb_color(orbital_list):
+            scatter_color = ["r" if i % 2 == 0 else "b"
+                             for i in range(len(orbital_list))]
+            return scatter_color
+
+        cell = make_cell()
+        cell.plot(orb_color=orb_color, hop_color="gray")
+
     def test_print(self):
         """
         Test printing attributes.

@@ -224,7 +224,7 @@ def make_tbg_sample():
     # Create the sample
     sample = tb.Sample(sc_fixed, sc_twisted, inter_hop)
     sample.plot(with_orbitals=False, hop_as_arrows=False,
-                hop_eng_cutoff=0.3, sc_colors=['r', 'b'], hop_colors=['g'])
+                hop_eng_cutoff=0.3, sc_hop_colors=['r', 'b'], inter_hop_colors=['g'])
 
 
 if __name__ == "__main__":

@@ -496,7 +496,23 @@ class MyTest(unittest.TestCase):
                               orb_i=sc1.orb_id_pc2sc((2, 0, 0, 0)),
                               orb_j=sc2.orb_id_pc2sc((0, 2, 0, 1)))
         sample = Sample(sc1, sc2, inter_hop)
-        sample.plot(sc_colors=["r", "b"], hop_colors=["g"])
+        sample.plot(sc_hop_colors=["r", "b"], inter_hop_colors=["g"])
+
+        print("User defined orbital colors")
+
+        def orb_color1(orb_id_pc):
+            scatter_color = ["r" if i % 2 == 0 else "b"
+                             for i in range(len(orb_id_pc))]
+            return scatter_color
+
+        def orb_color2(orb_id_pc):
+            scatter_color = ["m" if i % 2 == 0 else "g"
+                             for i in range(len(orb_id_pc))]
+            return scatter_color
+
+        sample = Sample(sc1, sc2)
+        sample.plot(sc_orb_colors=[orb_color1, orb_color2],
+                    sc_hop_colors=["gray", "gray"])
 
     def test_plot_advanced(self):
         """

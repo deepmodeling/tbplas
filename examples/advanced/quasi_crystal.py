@@ -245,7 +245,7 @@ def main():
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_diamond")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=["r", "b"], hop_colors=["g"], hop_eng_cutoff=0.3)
+                sc_hop_colors=["r", "b"], inter_hop_colors=["g"], hop_eng_cutoff=0.3)
 
     pc_fixed = tb.make_graphene_rect()
     pc_twisted = tb.make_graphene_rect()
@@ -255,7 +255,7 @@ def main():
     sample = make_quasi_crystal_sample(pc_fixed, pc_twisted, dim, angle, center)
     timer.toc("sample_rect")
     sample.plot(with_cells=False, with_orbitals=False, hop_as_arrows=False,
-                sc_colors=["b", "r"], hop_colors=["g"], hop_eng_cutoff=0.3)
+                sc_hop_colors=["b", "r"], inter_hop_colors=["g"], hop_eng_cutoff=0.3)
 
     timer.report_total_time()
 
