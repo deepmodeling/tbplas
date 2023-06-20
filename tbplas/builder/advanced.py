@@ -1028,7 +1028,7 @@ class AtomicOrbital:
         maximum angular quantum number l
     _coeff: Dict[Tuple[int, int], complex]
         keys: (l, m), values: coefficients on |l,m>
-    _allowed_lm: Set[Tuple[int, int]]
+    _allowed_qn: Set[Tuple[int, int]]
         set of allowed (l, m) pairs
     """
     def __init__(self, l_max: int = 2) -> None:
@@ -1037,7 +1037,7 @@ class AtomicOrbital:
         """
         self._l_max = l_max
         self._coeff = self._init_coeff()
-        self._allowed_lm = set(self._coeff.keys())
+        self._allowed_qn = set(self._coeff.keys())
 
     def __setitem__(self, key: Tuple[int, int], value: complex = 1.0) -> None:
         """
@@ -1047,7 +1047,7 @@ class AtomicOrbital:
         :param value: the new coefficient
         :return: None
         """
-        if key not in self._allowed_lm:
+        if key not in self._allowed_qn:
             raise KeyError(f"Undefined key {key}")
         self._coeff[key] = value
 
@@ -1058,7 +1058,7 @@ class AtomicOrbital:
         :param key: (l, m) of the state
         :return: the coefficient
         """
-        if key not in self._allowed_lm:
+        if key not in self._allowed_qn:
             raise KeyError(f"Undefined key {key}")
         return self._coeff[key]
 
@@ -1071,18 +1071,16 @@ class AtomicOrbital:
         coefficients = dict()
         for l_i in range(self._l_max + 1):
             for m in range(-l_i, l_i+1):
-                coefficients[(l_i, m)] = 0.0j
+                coefficients[(l_i, m)] = 0.0
         return coefficients
 
     def l_plus(self) -> None:
         """
-        Apply the operator l+ as l+|self>.
+        Apply the l+ operator on the atomic orbital.
 
-        NOTE: As the formula is
+        As the formula is
             l+|l,m> = sqrt((l - m) * (l + m + 1)) * h_bar * |l,m+1>
         the actual coefficient should be multiplied by a factor of h_bar.
-        For simplicity, we will not consider it here. It will take effect
-        in the 'mtxel_l_plus' method.
 
         :return: None
         """
@@ -1090,20 +1088,18 @@ class AtomicOrbital:
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m+1)
-            if key_new in self._allowed_lm:
+            if key_new in self._allowed_qn:
                 factor = sqrt((l - m) * (l + m + 1))
                 new_coefficients[key_new] = value * factor
         self._coeff = new_coefficients
 
     def l_minus(self) -> None:
         """
-        Apply the operator l- as l-|self>.
+        Apply the l- operator on the atomic orbital.
 
-        NOTE: As the formula is
+        As the formula is
             l-|l,m> = sqrt((l + m) * (l - m + 1)) * h_bar * |l,m-1>.
-        the actual coefficient should be multiplied by a factor of h_b`ar.
-        For simplicity, we will not consider it here. It will take effect
-        in the 'mtxel_l_minus' method.
+        the actual coefficient should be multiplied by a factor of h_bar.
 
         :return: None
         """
@@ -1111,20 +1107,18 @@ class AtomicOrbital:
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m-1)
-            if key_new in self._allowed_lm:
+            if key_new in self._allowed_qn:
                 factor = sqrt((l + m) * (l - m + 1))
                 new_coefficients[key_new] = value * factor
         self._coeff = new_coefficients
 
     def l_z(self) -> None:
         """
-        Apply the operator lz as lz|self>.
+        Apply the lz operator on the atomic orbital.
 
-        NOTE: As the formula is
+        As the formula is
             lz|l,m> = m * h_bar * |l,m>
         the actual coefficient should be multiplied by a factor of h_bar.
-        For simplicity, we will not consider it here. It will take effect
-        in the 'mtxel_l_z' method.
 
         :return: None
         """
@@ -1144,37 +1138,24 @@ class AtomicOrbital:
             product += value.conjugate() * ket[key]
         return product
 
-    def mtxel_l_plus(self, ket) -> complex:
+    def mtxel(self, ket, operator: str) -> complex:
         """
-        Evaluate the matrix element <self|l+|ket>.
+        Evaluate the matrix element <self|operator|ket>.
 
         :param ket: the ket vector
-        :return: matrix element in h_bar
+        :param operator: the operator
+        :return: the matrix element
+        :raises ValueError: if the operator is not in l+, l-, lz
         """
         ket_copy = deepcopy(ket)
-        ket_copy.l_plus()
-        return self.product(ket_copy)
-
-    def mtxel_l_minus(self, ket) -> complex:
-        """
-        Evaluate the matrix element <self|l-|ket>.
-
-        :param ket: the ket vector
-        :return: matrix element in h_bar
-        """
-        ket_copy = deepcopy(ket)
-        ket_copy.l_minus()
-        return self.product(ket_copy)
-
-    def mtxel_l_z(self, ket) -> complex:
-        """
-        Evaluate the matrix element <self|lz|ket>.
-
-        :param ket: the ket vector
-        :return: matrix element in h_bar
-        """
-        ket_copy = deepcopy(ket)
-        ket_copy.l_z()
+        if operator == "l+":
+            ket_copy.l_plus()
+        elif operator == "l-":
+            ket_copy.l_minus()
+        elif operator == "lz":
+            ket_copy.l_z()
+        else:
+            raise ValueError(f"Illegal operator {operator}")
         return self.product(ket_copy)
 
 
@@ -1184,37 +1165,21 @@ class SOC:
 
     Attributes
     ----------
-    _pauli_matrices: Dict[str, np.ndarray]
-        Pauli matrices
-    _spin_basis: Dict[str, np.ndarray]
-        eigenvectors of s_z
-    _spin_labels: Set[str]
-        directions of spins
     _orbital_basis: Dict[str, AtomicOrbital]
         collection of atomic orbitals s, px, py, pz. etc
     _orbital_labels: Set[str]
         labels of atomic orbitals
+    _spin_labels: Set[str]
+        directions of spins
     """
     def __init__(self) -> None:
-        # Pauli matrices
-        sigma_x = np.array([[0, 1], [1, 0]])
-        sigma_y = np.array([[0, -1j], [1j, 0]])
-        sigma_z = np.array([[1, 0], [0, -1]])
-        self._pauli_matrices = {"x": sigma_x, "y": sigma_y, "z": sigma_z}
-
-        # Spin basis set
-        spin_up = np.array([1, 0])
-        spin_down = np.array([0, 1])
-        self._spin_basis = {"up": spin_up, "down": spin_down}
-        self._spin_labels = set(self._spin_basis.keys())
-
-        # Orbital basis set
         self._orbital_basis = dict()
         orbital_labels = ("s", "px", "py", "pz", "dxy", "dx2-y2", "dyz", "dzx",
                           "dz2")
         for label in orbital_labels:
             self._orbital_basis[label] = AtomicOrbital(l_max=2)
         self._orbital_labels = set(self._orbital_basis.keys())
+        self._spin_labels = {"up", "down"}
 
         # Reference:
         # https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
@@ -1242,57 +1207,59 @@ class SOC:
         self._orbital_basis["dx2-y2"][(2, -2)] = c
         self._orbital_basis["dx2-y2"][(2, 2)] = c
 
-    def print_spin_table(self) -> None:
+    @staticmethod
+    def _eval_soc(bra: AtomicOrbital,
+                  ket: AtomicOrbital,
+                  spin_bra: str,
+                  spin_ket: str) -> complex:
         """
-        Print the matrix elements of l_dot_s between spin basis functions.
+        Evaluate the matrix element <bra|l*s|ket>.
 
-        NOTE: since we use Pauli matrices instead of spin operators in the
-        calculation, the results get a factor of h_bar / 2.
+        The SOC term is evaluated as 0.5 * h_bar * <bra|A|ket>, where A is
+        either lz, l-, l+ and -lz depending on the spins of atomic orbitals.
 
+        The result has a factor of 0.5 * h_bar from the spin part, and a factor
+        of h_bar from the orbital part. Since we further multiply the result by
+        0.5, the final factor becomes h_bar**2
+
+        :param bra: left operand atomic orbital
+        :param ket: right operand atomic orbital
+        :param spin_bra: spin of bra
+        :param spin_ket: spin of ket
+        :return: soc term in h_bar**2
+        """
+        spin_idx = (spin_bra, spin_ket)
+        if spin_idx == ("up", "up"):
+            soc = 0.5 * bra.mtxel(ket, "lz")
+        elif spin_idx == ("up", "down"):
+            soc = 0.5 * bra.mtxel(ket, "l-")
+        elif spin_idx == ("down", "up"):
+            soc = 0.5 * bra.mtxel(ket, "l+")
+        else:
+            soc = -0.5 * bra.mtxel(ket, "lz")
+        return soc
+
+    def print_soc_table(self, spin_i: str = "up", spin_j: str = "up") -> None:
+        """
+        Print SOC terms between orbital basis functions, for generating the
+        coefficients in 'SOCTable' class.
+
+        :param spin_i: spin direction of bra
+        :param spin_j: spin direction kf ket
         :return: None
+        :raises ValueError: if spin directions are illegal
         """
-        print("Factor: h_bar / 2")
-        for spin_bra, bra in self._spin_basis.items():
-            for spin_ket, ket in self._spin_basis.items():
-                print(spin_bra, spin_ket)
-                for direction, matrix in self._pauli_matrices.items():
-                    product = np.matmul(bra, np.matmul(matrix, ket))
-                    if abs(product) > 0.0:
-                        print("\t", f"l{direction}", product)
-
-    def print_orbital_table(self, operator: str = "lz",
-                            formatted: bool = True) -> None:
-        """
-        Print the matrix elements of lz/l+/l- between orbital basis functions.
-
-        NOTE: the results get a factor of h_bar from the operator.
-
-        :param operator: operator to evaluate
-        :param formatted: whether to format output
-        :return: None
-        :raises ValueError: if operator is not in "lz", "l+", "l-"
-        """
-        if operator not in ("lz", "l+", "l-"):
-            raise ValueError(f"Illegal operator {operator}")
-        print("Factor: h_bar")
+        for spin in (spin_i, spin_j):
+            if spin not in self._spin_labels:
+                raise ValueError(f"Illegal spin direction {spin}")
+        soc_table = dict()
         for label_bra, bra in self._orbital_basis.items():
             for label_ket, ket in self._orbital_basis.items():
-                if operator == "lz":
-                    prod = bra.mtxel_l_z(ket)
-                elif operator == "l+":
-                    prod = bra.mtxel_l_plus(ket)
-                else:
-                    prod = bra.mtxel_l_minus(ket)
-                if abs(prod) >= 1.0e-15:
-                    if formatted:
-                        result = f"{label_bra:8s} {label_ket:8s}"
-                    else:
-                        result = f"(\"{label_bra}\", \"{label_ket}\"):"
-                    if abs(prod.real) >= 1.0e-15:
-                        result += f"{prod.real:16.12f}"
-                    if abs(prod.imag) >= 1.0e-15:
-                        result += f"{prod.imag:16.12f}j"
-                    print(result)
+                soc = self._eval_soc(bra, ket, spin_i, spin_j)
+                if abs(soc) > 1.0e-5:
+                    soc_table[(label_bra, label_ket)] = soc
+        print("Factor: h_bar**2")
+        print(soc_table)
 
     def eval(self, label_i: str = "s",
              spin_i: str = "up",
@@ -1301,14 +1268,10 @@ class SOC:
         """
         Evaluate the matrix element <i,s_i|l*s|j,s_j>.
 
-        NOTE: the result has a factor of h_bar / 2 from the spin part, and a
-        factor of h_bar from the orbital part. Since we further divide the
-        result by 2, the final factor becomes h_bar**2
-
         :param label_i: orbital label of bra
         :param spin_i: spin direction of bra
         :param label_j: orbital label of ket
-        :param spin_j: spin direction kf ket
+        :param spin_j: spin direction of ket
         :return: matrix element in h_bar**2
         :raises ValueError: if orbital labels or spin directions are illegal
         """
@@ -1318,88 +1281,72 @@ class SOC:
         for spin in (spin_i, spin_j):
             if spin not in self._spin_labels:
                 raise ValueError(f"Illegal spin direction {spin}")
-
         bra = self._orbital_basis[label_i]
         ket = self._orbital_basis[label_j]
-        spin_idx = (spin_i, spin_j)
-        if spin_idx == ("up", "up"):
-            product = bra.mtxel_l_z(ket)
-        elif spin_idx == ("up", "down"):
-            product = bra.mtxel_l_minus(ket)
-        elif spin_idx == ("down", "up"):
-            product = bra.mtxel_l_plus(ket)
-        else:
-            product = -1 * bra.mtxel_l_z(ket)
-        product *= 0.5
-        return product
+        soc = self._eval_soc(bra, ket, spin_i, spin_j)
+        return soc
 
 
 class SOCTable:
     """
     Hard-coded spin-orbital coupling term table, generated using the
-    'print_orbital_table' method of 'SOC' class with formatted = False.
+    'print_soc_table' method of 'SOC' class.
 
     Attributes
     ----------
-    _l_z: Dict[[str, str], complex]
-        soc terms for operator lz
-    _l_plus: Dict[[str, str], complex]
-        soc terms for operator l+
-    _l_minus: Dict[[str, str], complex]
-        soc terms for operator l-
-    _spin_labels: Set[str]
-        directions of spins
+    _up_up: Dict[[str, str], complex]
+        soc terms for up-up spin chanel
+    _up_down: Dict[[str, str], complex]
+        soc terms for up-down spin chanel
+    _down_up: Dict[[str, str], complex]
+        soc terms for down-up spin chanel
     _orbital_labels: Set[str]
         labels of atomic orbitals
+    _spin_labels: Set[str]
+        directions of spins
     """
     def __init__(self):
-        self._l_z = {
-            ("px", "py"): -1.000000000000j,
-            ("py", "px"):  1.000000000000j,
-            ("dxy", "dx2-y2"): 2.000000000000j,
-            ("dx2-y2", "dxy"): -2.000000000000j,
-            ("dyz", "dzx"): 1.000000000000j,
-            ("dzx", "dyz"): -1.000000000000j,
-        }
-        self._l_plus = {
-            ("px", "pz"): -1.000000000000,
-            ("py", "pz"): -1.000000000000j,
-            ("pz", "px"): 1.000000000000,
-            ("pz", "py"): 1.000000000000j,
-            ("dxy", "dyz"): -1.000000000000,
-            ("dxy", "dzx"): -1.000000000000j,
-            ("dx2-y2", "dyz"): 1.000000000000j,
-            ("dx2-y2", "dzx"): -1.000000000000,
-            ("dyz", "dxy"): 1.000000000000,
-            ("dyz", "dx2-y2"): -1.000000000000j,
-            ("dyz", "dz2"): -1.732050807569j,
-            ("dzx", "dxy"): 1.000000000000j,
-            ("dzx", "dx2-y2"): 1.000000000000,
-            ("dzx", "dz2"): -1.732050807569,
-            ("dz2", "dyz"): 1.732050807569j,
-            ("dz2", "dzx"): 1.732050807569,
-        }
-        self._l_minus = {
-            ("px", "pz"): 1.000000000000,
-            ("py", "pz"): -1.000000000000j,
-            ("pz", "px"): -1.000000000000,
-            ("pz", "py"): 1.000000000000j,
-            ("dxy", "dyz"): 1.000000000000,
-            ("dxy", "dzx"): -1.000000000000j,
-            ("dx2-y2", "dyz"): 1.000000000000j,
-            ("dx2-y2", "dzx"): 1.000000000000,
-            ("dyz", "dxy"): -1.000000000000,
-            ("dyz", "dx2-y2"): -1.000000000000j,
-            ("dyz", "dz2"): -1.732050807569j,
-            ("dzx", "dxy"): 1.000000000000j,
-            ("dzx", "dx2-y2"): -1.000000000000,
-            ("dzx", "dz2"): 1.732050807569,
-            ("dz2", "dyz"): 1.732050807569j,
-            ("dz2", "dzx"): -1.732050807569
-        }
-        self._spin_labels = {"up", "down"}
+        self._up_up = {('px', 'py'): -0.5000000000000001j,
+                       ('py', 'px'): 0.5000000000000001j,
+                       ('dxy', 'dx2-y2'): 1.0000000000000002j,
+                       ('dx2-y2', 'dxy'): -1.0000000000000002j,
+                       ('dyz', 'dzx'): 0.5000000000000001j,
+                       ('dzx', 'dyz'): -0.5000000000000001j}
+        self._up_down = {('px', 'pz'): 0.5000000000000001,
+                         ('py', 'pz'): -0.5000000000000001j,
+                         ('pz', 'px'): -0.5000000000000001,
+                         ('pz', 'py'): 0.5000000000000001j,
+                         ('dxy', 'dyz'): (0.5000000000000001+0j),
+                         ('dxy', 'dzx'): -0.5000000000000001j,
+                         ('dx2-y2', 'dyz'): 0.5000000000000001j,
+                         ('dx2-y2', 'dzx'): 0.5000000000000001,
+                         ('dyz', 'dxy'): (-0.5000000000000001+0j),
+                         ('dyz', 'dx2-y2'): -0.5000000000000001j,
+                         ('dyz', 'dz2'): -0.8660254037844386j,
+                         ('dzx', 'dxy'): 0.5000000000000001j,
+                         ('dzx', 'dx2-y2'): -0.5000000000000001,
+                         ('dzx', 'dz2'): 0.8660254037844386,
+                         ('dz2', 'dyz'): 0.8660254037844386j,
+                         ('dz2', 'dzx'): -0.8660254037844386}
+        self._down_up = {('px', 'pz'): -0.5000000000000001,
+                         ('py', 'pz'): -0.5000000000000001j,
+                         ('pz', 'px'): 0.5000000000000001,
+                         ('pz', 'py'): 0.5000000000000001j,
+                         ('dxy', 'dyz'): (-0.5000000000000001+0j),
+                         ('dxy', 'dzx'): -0.5000000000000001j,
+                         ('dx2-y2', 'dyz'): 0.5000000000000001j,
+                         ('dx2-y2', 'dzx'): -0.5000000000000001,
+                         ('dyz', 'dxy'): (0.5000000000000001+0j),
+                         ('dyz', 'dx2-y2'): -0.5000000000000001j,
+                         ('dyz', 'dz2'): -0.8660254037844386j,
+                         ('dzx', 'dxy'): 0.5000000000000001j,
+                         ('dzx', 'dx2-y2'): 0.5000000000000001,
+                         ('dzx', 'dz2'): -0.8660254037844386,
+                         ('dz2', 'dyz'): 0.8660254037844386j,
+                         ('dz2', 'dzx'): 0.8660254037844386}
         self._orbital_labels = {"s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
                                 "dzx", "dz2"}
+        self._spin_labels = {"up", "down"}
 
     def eval(self, label_i: str = "s",
              spin_i: str = "up",
@@ -1408,14 +1355,10 @@ class SOCTable:
         """
         Evaluate the matrix element <i,s_i|l*s|j,s_j>.
 
-        NOTE: the result has a factor of h_bar / 2 from the spin part, and a
-        factor of h_bar from the orbital part. Since we further divide the
-        result by 2, the final factor becomes h_bar**2
-
         :param label_i: orbital label of bra
         :param spin_i: spin direction of bra
         :param label_j: orbital label of ket
-        :param spin_j: spin direction kf ket
+        :param spin_j: spin direction of ket
         :return: matrix element in h_bar**2
         :raises ValueError: if orbital labels or spin directions are illegal
         """
@@ -1427,17 +1370,15 @@ class SOCTable:
         for spin in spin_idx:
             if spin not in self._spin_labels:
                 raise ValueError(f"Illegal spin direction {spin}")
-
         try:
             if spin_idx == ("up", "up"):
-                product = self._l_z[label_idx]
+                product = self._up_up[label_idx]
             elif spin_idx == ("up", "down"):
-                product = self._l_minus[label_idx]
+                product = self._up_down[label_idx]
             elif spin_idx == ("down", "up"):
-                product = self._l_plus[label_idx]
+                product = self._down_up[label_idx]
             else:
-                product = -1 * self._l_z[label_idx]
-            product *= 0.5
+                product = -1 * self._up_up[label_idx]
         except KeyError:
             product = 0.0
         return product
