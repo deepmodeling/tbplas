@@ -12,11 +12,12 @@ from typing import Tuple, List
 
 import numpy as np
 
-from ..base import cart2frac, NM
-from ..builder import PrimitiveCell, HopDict
+from ..base import cart2frac, NM, ANG
+from ..builder import (PrimitiveCell, HopDict, find_neighbors, SK, SOC,
+                       merge_prim_cell, PCHopNotFoundError)
 
 
-__all__ = ["make_tmdc"]
+__all__ = ["make_tmdc", "make_mos2_soc"]
 
 
 STRUCT_CONSTS = {
@@ -413,4 +414,107 @@ def make_tmdc(material: str = "MoS2") -> PrimitiveCell:
     for i_o, coord in enumerate(orbital_coords):
         cell.add_orbital(coord, on_site[i_o], orbital_labels[i_o])
     cell.add_hopping_dict(hop_dict)
+    return cell
+
+
+def make_mos2_soc() -> PrimitiveCell:
+    """
+    Make MoS2 primitive cell with SOC.
+
+    Reference:
+    https://iopscience.iop.org/article/10.1088/2053-1583/1/3/034003/meta
+
+    :return: MoS2 primitive cell
+    """
+    # Lattice vectors
+    vectors = np.array([
+        [3.1600000, 0.000000000, 0.000000000],
+        [-1.579999, 2.736640276, 0.000000000],
+        [0.000000000, 0.000000000, 3.1720000000],
+    ])
+
+    # Orbital coordinates
+    coord_mo = [0.666670000, 0.333330000, 0.5]
+    coord_s1 = [0.000000000, -0.000000000, 0.0]
+    coord_s2 = [0.000000000, -0.000000000, 1]
+    orbital_coord = [coord_mo for _ in range(5)]
+    orbital_coord.extend([coord_s1 for _ in range(3)])
+    orbital_coord.extend([coord_s2 for _ in range(3)])
+    orbital_coord = np.array(orbital_coord)
+
+    # Orbital labels
+    mo_orbitals = ("Mo:dz2", "Mo:dzx", "Mo:dyz", "Mo:dx2-y2", "Mo:dxy")
+    s1_orbitals = ("S1:px", "S1:py", "S1:pz")
+    s2_orbitals = ("S2:px", "S2:py", "S2:pz")
+    orbital_label = mo_orbitals + s1_orbitals + s2_orbitals
+
+    # Orbital energies
+    orbital_energy = {"dz2": -1.512, "dzx": 0.419, "dyz": 0.419,
+                      "dx2-y2": -3.025, "dxy": -3.025,
+                      "px": -1.276, "py": -1.276, "pz": -8.236}
+
+    # Slater-Koster Parameters
+    v_pps, v_ppp = 0.696, 0.278
+    v_pds, v_pdp = -2.619, -1.396
+    v_dds, v_ddp, v_ddd = -0.933, -0.478, -0.442
+
+    # SOC terms
+    soc_lambda = {"Mo": 0.075, "S1": 0.052, "S2": 0.052}
+
+    # Create the primitive cell and add orbitals
+    cell = PrimitiveCell(lat_vec=vectors, unit=ANG)
+    for i, label in enumerate(orbital_label):
+        coord = orbital_coord[i]
+        energy = orbital_energy[label.split(":")[1]]
+        cell.add_orbital(coord, energy=energy, label=label)
+
+    # Get hopping terms in the nearest approximation
+    neighbors = find_neighbors(cell, a_max=2, b_max=2, max_distance=0.32)
+
+    # Add hopping terms
+    sk = SK()
+    for term in neighbors:
+        i, j = term.pair
+        label_i = cell.get_orbital(i).label
+        label_j = cell.get_orbital(j).label
+        lm_i = label_i.split(":")[1]
+        lm_j = label_j.split(":")[1]
+        hop = sk.eval(r=term.rij, label_i=lm_i, label_j=lm_j,
+                      v_pps=v_pps, v_ppp=v_ppp,
+                      v_pds=v_pds, v_pdp=v_pdp,
+                      v_dds=v_dds, v_ddp=v_ddp, v_ddd=v_ddd)
+        cell.add_hopping(term.rn, i, j, hop)
+
+    # Double the orbitals and hopping terms
+    cell = merge_prim_cell(cell, cell)
+
+    # Add spin notations to the orbitals
+    num_orb_half = cell.num_orb // 2
+    num_orb_total = cell.num_orb
+    for i in range(num_orb_half):
+        label = cell.get_orbital(i).label
+        cell.set_orbital(i, label=f"{label}:up")
+    for i in range(num_orb_half, num_orb_total):
+        label = cell.get_orbital(i).label
+        cell.set_orbital(i, label=f"{label}:down")
+
+    # Add SOC terms
+    soc = SOC()
+    for i in range(num_orb_total):
+        label_i = cell.get_orbital(i).label.split(":")
+        atom_i, lm_i, spin_i = label_i
+        for j in range(i+1, num_orb_total):
+            label_j = cell.get_orbital(j).label.split(":")
+            atom_j, lm_j, spin_j = label_j
+            if atom_j == atom_i:
+                soc_intensity = soc.eval(label_i=lm_i, spin_i=spin_i,
+                                         label_j=lm_j, spin_j=spin_j)
+                soc_intensity *= soc_lambda[atom_j]
+                if abs(soc_intensity) >= 1.0e-15:
+                    try:
+                        energy = cell.get_hopping((0, 0, 0), i, j)
+                    except PCHopNotFoundError:
+                        energy = 0.0
+                    energy += soc_intensity
+                    cell.add_hopping((0, 0, 0), i, j, soc_intensity)
     return cell
