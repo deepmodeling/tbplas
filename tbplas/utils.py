@@ -19,94 +19,97 @@ __all__ = ["Timer", "ProgressBar", "TestHelper", "gen_seeds", "split_list",
 
 class Timer:
     """
-    Class for recording the time usage of function calls within programs.
+    Class for measuring the time usage of function calls within programs.
 
     Attributes
     ----------
     _start_time: Dict[str, float]
-        time of last self.tic() call
-    _end_time: Dict[str, float]
-        time of last self.toc() call
-    _total_time: Dict[str, float]
+        time of last tic call
+    _track_status: Dict[str, bool]
+        whether the slots are being tracked for measuring time usage
+    _time_usage: Dict[str, float]
+        time usage between tic/toc calls
+    _total_time_usage: Dict[str, float]
         overall time usage
     """
     def __init__(self) -> None:
         self._start_time = {}
-        self._end_time = {}
-        self._total_time = defaultdict(float)
+        self._track_status = {}
+        self._time_usage = {}
+        self._total_time_usage = defaultdict(float)
 
     def tic(self, slot: str) -> None:
         """
-        Begin tracking time usage and store it in a slot.
+        Begin tracking time usage for given slot.
 
         :param slot: name of the slot
         :return: None
         """
         self._start_time[slot] = time.time()
+        self._track_status[slot] = True
 
     def toc(self, slot: str) -> None:
         """
-        Stop tracking time usage store it in a slot.
+        Stop tracking time usage for given slot.
 
         :param slot: name of the slot
         :return: None
+        :raises RuntimeError: if tracking for slot has not started
         """
         try:
-            start_time = self._start_time[slot]
+            status = self._track_status[slot]
         except KeyError:
+            status = False
+        if not status:
             raise RuntimeError(f"Record for slot '{slot}' not started")
         else:
-            end_time = time.time()
-            self._end_time[slot] = end_time
-            self._total_time[slot] += (end_time - start_time)
+            time_usage = time.time() - self._start_time[slot]
+            self._track_status[slot] = False
+            self._time_usage[slot] = time_usage
+            self._total_time_usage[slot] += time_usage
 
     def report_time(self) -> None:
         """
-        Report time usage between two self.tic() and self.toc() calls and reset
-        self.start_time and self.end_time.
+        Report time usage between tic/toc calls.
 
         :return: None
+        :raises RuntimeError: if tracking for any slot has not ended
         """
-        max_len = max([len(slot) for slot in self._start_time.keys()])
-        for slot, start_time in self._start_time.items():
-            try:
-                end_time = self._end_time[slot]
-            except KeyError:
-                raise RuntimeError(f"Record for slot '{slot}' not ended")
-            else:
-                duration = end_time - start_time
-                print("\t", f"{slot:<{max_len}} : {duration:10.5f}")
-        self.reset()
+        if len(self._start_time) != 0:
+            max_len = max([len(_) for _ in self._start_time.keys()])
+            for slot in self._start_time.keys():
+                if self._track_status[slot]:
+                    raise RuntimeError(f"Record for slot '{slot}' not ended")
+                else:
+                    time_usage = self._time_usage[slot]
+                    print("\t", f"{slot:<{max_len}} : {time_usage:10.5f}")
 
     def report_total_time(self) -> None:
         """
         Report overall time usage.
 
         :return: None
+        :raises RuntimeError: if tracking for any slot has not ended
         """
-        max_len = max([len(slot) for slot in self._start_time.keys()])
-        for slot, duration in self._total_time.items():
-            print("\t", f"{slot:<{max_len}} : {duration:10.5f}")
-        self.reset_total()
+        if len(self._start_time) != 0:
+            max_len = max([len(_) for _ in self._start_time.keys()])
+            for slot in self._start_time.keys():
+                if self._track_status[slot]:
+                    raise RuntimeError(f"Record for slot '{slot}' not ended")
+                else:
+                    time_usage = self._total_time_usage[slot]
+                    print("\t", f"{slot:<{max_len}} : {time_usage:10.5f}")
 
     def reset(self) -> None:
         """
-        Reset self._start_time and self._end_time for next measurement.
+        Reset start time, track status and time usages.
 
         :return: None
         """
         self._start_time = {}
-        self._end_time = {}
-
-    def reset_total(self) -> None:
-        """
-        Same as reset(), also resets self._total_time.
-
-        :return: None
-        """
-        self._start_time = {}
-        self._end_time = {}
-        self._total_time = defaultdict(float)
+        self._track_status = {}
+        self._time_usage = {}
+        self._total_time_usage = defaultdict(float)
 
 
 class ProgressBar:
