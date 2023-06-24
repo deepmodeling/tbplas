@@ -134,7 +134,7 @@ class ProgressBar:
         If counter exceeds next_scale, then we can know one part of the task
         finish. See the schematic plot for demonstration.
     _counter: int
-        counter for statistics
+        number of finished jobs
 
     NOTES
     -----
@@ -142,8 +142,8 @@ class ProgressBar:
         num_tasks:  50
         num_scales: 10
         scale_unit: 5
-        scales:     0----|----|----|----|----|----|----|----|----|----|
-        next_scale: ....................* -> * -> * -> * -> * -> * -> *
+        scales:     0----5----10----15----20----25----30----35----40----45----50
+        next_scale: ......................* ->  * ->  * ->  * ->  * ->  * ->  *
         counter:    ................^
     """
     def __init__(self, num_tasks: int, num_scales: int = 10) -> None:
@@ -153,7 +153,7 @@ class ProgressBar:
         """
         self._num_tasks = num_tasks
         self._num_scales = num_scales
-        self._scale_unit = self._num_tasks / self._num_scales
+        self._scale_unit = self._num_tasks // self._num_scales
         self._next_scale = self._scale_unit
         self._counter = 0
 
