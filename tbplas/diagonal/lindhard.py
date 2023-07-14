@@ -149,9 +149,10 @@ class Lindhard(DiagSolver):
     be a remaining unit of nm.
     """
     def __init__(self, cell: Any,
-                 energy_max: float,
-                 energy_step: int,
                  kmesh_size: Tuple[int, int, int],
+                 energy_min: float = 0.0,
+                 energy_max: float = 10.0,
+                 energy_step: int = 1000,
                  mu: float = 0.0,
                  temperature: float = 300.0,
                  g_s: int = 1,
@@ -161,10 +162,12 @@ class Lindhard(DiagSolver):
                  **kwargs) -> None:
         """
         :param cell: primitive cell for which properties will be evaluated
+        :param kmesh_size: dimension of mesh grid in 1st Brillouin zone
+        :param energy_min: low bound of energy grid for evaluating response
+            properties
         :param energy_max: upper bound of energy grid for evaluating response
             properties
         :param energy_step: resolution of energy grid
-        :param kmesh_size: dimension of mesh grid in 1st Brillouin zone
         :param mu: chemical potential of the cell in eV
         :param temperature: temperature in Kelvin
         :param g_s: spin degeneracy
@@ -176,7 +179,7 @@ class Lindhard(DiagSolver):
         """
         super().__init__(cell, **kwargs)
         self._cell = cell
-        self._omegas = np.linspace(0, energy_max, energy_step + 1)
+        self._omegas = np.linspace(energy_min, energy_max, energy_step + 1)
         if len(kmesh_size) != 3:
             raise ValueError("Length of kmesh_size should be 3")
         self._kmesh_size = np.array(kmesh_size, dtype=np.int64)
