@@ -353,6 +353,25 @@ class Analyzer(MPIEnv):
         self.bcast(epsilon)
         return epsilon
 
+    def calc_epsilon_q0(self, omegas: np.ndarray,
+                        ac_cond: np.ndarray) -> np.ndarray:
+        """
+        Calculate dielectric function from AC conductivity for q=0.
+
+        :param omegas: (nr_time_steps,) float64 array
+            energies in eV
+        :param ac_cond: (4, nr_time_steps) complex128 array
+            AC conductivity in e**2/(h_bar*nm) in 3d case
+        :return: (4, nr_time_steps,) complex128 array
+            relative dielectric function
+        :raises ValueError: if dimension is not 3
+        """
+        if self._dimension != 3:
+            raise ValueError(f"Unsupported dimension: {self._dimension}")
+        back_epsilon = self._config.dyn_pol['background_dielectric_constant']
+        prefactor = 4 * pi / (back_epsilon * EPSILON0)
+        return 1 + 1j * prefactor * ac_cond / omegas
+
     def calc_dc_cond(self, corr_dos: np.ndarray,
                      corr_dc: np.ndarray,
                      window_dos: Callable = window_hanning,

@@ -118,6 +118,35 @@ class Lindhard(DiagSolver):
         V(q) = 2 * pi * e**2 / (epsilon_0 * epsilon_r * q) (2d)
     the influence of system dimension is q-dependent. Setting supercell lengths
     to 1 nm will NOT produce the same result as the second approach.
+
+    5. Dielectric function for q = 0
+
+    The dielectric function for q = 0 cannot be evaluated from dynamic
+    polarizability as v(q) diverges. Instead, we calculate it from ac
+    conductivity. We have two formulae. The first one is eqn. (63)
+        epsilon = 1 + 1j * 4 * pi / omega * sigma
+    in https://www.openmx-square.org/tech_notes/Dielectric_Function_YTL.pdf,
+    while the second one is eqn. (1.10)
+        epsilon = 1 + 1j / (epsilon_0 * omega) * sigma
+    in Plasmonics: Fundamentals and Applications by Stefan A. Maier. The former
+    is in Gaussian units, while the latter is in SI units. Unfortunately, we
+    cannot apply them directly.
+
+    As we take the Coulomb potential to be
+            V(r) = 1 / epsilon * e**2 / r
+                 = 1 / (epsilon_0 * epsilon_r) * e**2 / r
+    there should be a 4pi factor as in Gaussian units. However, epsilon_0 is not
+    1 as we are not using cm/g/s as the fundamental units. The actual formula is
+        epsilon = 1 + 1j * 4 * pi / (epsilon_0 * omega) * sigma
+    which can be regarded as a mixture of the formulae in Gaussian and SI units.
+
+    The unit of epsilon follows:
+        [epsilon] = [sigma] / [epsilon_0 * omega]
+                  = e**2/(h_bar*nm) / [e**2/(eV*nm) * eV/h_bar]
+                  = e**2/(h_bar*nm) / [e**2/(h_bar*nm)]
+                  = 1
+    However, this equation holds for 3d systems only. For 2d systems there will
+    be a remaining unit of nm.
     """
     def __init__(self, cell: Any,
                  energy_max: float,
@@ -612,3 +641,21 @@ class Lindhard(DiagSolver):
         ac_cond *= prefactor
         ac_cond /= self._cell.extended
         return self._omegas, ac_cond
+
+    def calc_epsilon_q0(self, omegas: np.ndarray,
+                        ac_cond: np.ndarray) -> np.ndarray:
+        """
+        Calculate dielectric function from AC conductivity for q=0.
+
+        :param omegas: (num_omega,) float64 array
+            energies in eV
+        :param ac_cond: (num_omega,) complex128 array
+            AC conductivity in e**2/(h_bar*nm) in 3d case
+        :return: (num_omega,) complex128 array
+            relative dielectric function
+        :raises ValueError: if dimension is not 3
+        """
+        if self._dimension != 3:
+            raise ValueError(f"Unsupported dimension: {self._dimension}")
+        prefactor = 4 * math.pi / (self._back_epsilon * EPSILON0)
+        return 1 + 1j * prefactor * ac_cond / omegas
