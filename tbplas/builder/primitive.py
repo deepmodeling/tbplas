@@ -12,12 +12,13 @@ from ..base import lattice as lat
 from ..cython import primitive as core
 from . import exceptions as exc
 from .base import (check_rn, check_pos, Orbital, Observable, IntraHopping,
-                   HopDict, pair_type, rn_type, rn3_type, pos_type, pos3_type)
+                   InterHopping, HopDict, pair_type, rn_type, rn3_type,
+                   pos_type, pos3_type)
 from .visual import ModelViewer
 from ..diagonal import DiagSolver
 
 
-__all__ = ["PrimitiveCell"]
+__all__ = ["PrimitiveCell", "PCInterHopping"]
 
 
 def f_dot_s(f: np.ndarray, s: List[str], eps: float = 1.0e-5) -> str:
@@ -1109,3 +1110,41 @@ class PrimitiveCell(Observable):
             hopping distances in ANGSTROM
         """
         return self.dr_nm * 10
+
+
+class PCInterHopping(InterHopping):
+    """
+    Class for holding hopping terms between different primitive cells
+    in hetero-structure.
+
+    Attributes
+    ----------
+    _pc_bra: 'PrimitiveCell' instance
+        the 'bra' primitive cell from which the hopping terms exist
+    _pc_ket: 'PrimitiveCell' instance
+        the 'ket' primitive cell from which the hopping terms exist
+
+    NOTES
+    -----
+    We assume hopping terms to be from (0, 0, 0) cell of pc_bra to any cell of
+    pc_ket. The counterparts can be restored via the conjugate relation:
+        <pc_bra, R0, i|H|pc_ket, Rn, j> = <pc_ket, R0, j|H|pc_bra, -Rn, i>*
+    """
+    def __init__(self, pc_bra: PrimitiveCell, pc_ket: PrimitiveCell) -> None:
+        """
+        :param pc_bra: 'bra' primitive cell from which the hopping terms exist
+        :param pc_ket: 'ket' primitive cell from which the hopping terms exist
+        """
+        super().__init__(pc_bra, pc_ket)
+        self._pc_bra = pc_bra
+        self._pc_ket = pc_ket
+
+    @property
+    def pc_bra(self) -> PrimitiveCell:
+        """Interface for the '_pc_bra' attribute."""
+        return self._pc_bra
+
+    @property
+    def pc_ket(self) -> PrimitiveCell:
+        """Interface for the '_pc_ket' attribute."""
+        return self._pc_ket

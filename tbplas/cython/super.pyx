@@ -1081,6 +1081,64 @@ def get_orb_id_trim(int [:,::1] orb_id_pc, long [::1] hop_i, long [::1] hop_j):
 
 
 #-------------------------------------------------------------------------------
+#             Functions for building arrays for SCInterHopping class
+#-------------------------------------------------------------------------------
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def build_inter_dr(long [:,::1] hop_ind,
+                   double [:,::1] pos_bra, double [:,::1] pos_ket,
+                   double [:, ::1] sc_lat_ket):
+    """
+    Build the array of hopping distances for an 'SCInterHopping' instance.
+
+    Parameters
+    ----------
+    hop_ind: (num_hop, 5) int64 array
+        hopping indices
+    pos_bra: (num_hop, 3) float64 array
+        Cartesian coordinates of orbitals of the 'bra' super cell in nm
+    pos_ket: (num_hop, 3) float64 array
+        Cartesian coordinates of orbitals of the 'ket' super cell in nm
+    sc_lat_ket: (3, 3) float64 array
+        Cartesian coordinates of 'ket' super cell lattice vectors in nm
+
+    Returns
+    -------
+    dr: (num_hop, 3) float64 array
+        hopping distances in nm
+    """
+    cdef long num_hop, ih
+    cdef long id_bra, id_ket
+    cdef long na, nb, nc
+    cdef double [:,::1] dr
+
+    num_hop = hop_ind.shape[0]
+    dr = np.zeros((num_hop, 3), dtype=np.float64)
+    for ih in range(num_hop):
+        id_bra = hop_ind[ih, 3]
+        id_ket = hop_ind[ih, 4]
+        na = hop_ind[ih, 0]
+        nb = hop_ind[ih, 1]
+        nc = hop_ind[ih, 2]
+        dr[ih, 0] = pos_ket[id_ket, 0] \
+                  - pos_bra[id_bra, 0] \
+                  + na * sc_lat_ket[0, 0] \
+                  + nb * sc_lat_ket[1, 0] \
+                  + nc * sc_lat_ket[2, 0]
+        dr[ih, 1] = pos_ket[id_ket, 1] \
+                  - pos_bra[id_bra, 1] \
+                  + na * sc_lat_ket[0, 1] \
+                  + nb * sc_lat_ket[1, 1] \
+                  + nc * sc_lat_ket[2, 1]
+        dr[ih, 2] = pos_ket[id_ket, 2] \
+                  - pos_bra[id_bra, 2] \
+                  + na * sc_lat_ket[0, 2] \
+                  + nb * sc_lat_ket[1, 2] \
+                  + nc * sc_lat_ket[2, 2]
+    return np.asarray(dr)
+
+
+#-------------------------------------------------------------------------------
 #                        Functions for testing purposes
 #-------------------------------------------------------------------------------
 @cython.boundscheck(False)

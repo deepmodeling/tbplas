@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from ..base import lattice as lat
 from ..cython import super as core
 from . import exceptions as exc
-from .base import (check_rn, check_pbc, Observable, IntraHopping, rn_type,
-                   pbc_type, id_pc_type)
+from .base import (check_rn, check_pbc, Observable, IntraHopping, InterHopping,
+                   rn_type, pbc_type, id_pc_type)
 from .primitive import PrimitiveCell
 from .visual import ModelViewer
 
@@ -916,3 +916,150 @@ class SuperCell(OrbitalSet):
             hopping energies of primitive cell in eV
         """
         return self._prim_cell.hop_eng
+
+
+class SCInterHopping(InterHopping):
+    """
+    Container class for hopping terms between different supercells within the
+    sample.
+
+    Attributes
+    ----------
+    _sc_bra: 'SuperCell' instance
+        the 'bra' supercell from which the hopping terms exist
+    _sc_ket: 'SuperCell' instance
+        the 'ket' supercell to which the hopping terms exist
+
+    NOTES
+    -----
+    1. Reduction
+
+    Since inter-hopping terms exist within different super-cells, there is no
+    need to reduce them according to the conjugate relation.
+
+    2. Rules
+
+    We restrict hopping terms to be from the (0, 0, 0) 'bra' supercell to any
+    'ket' supercell. The counterparts are restored via the conjugate relation:
+        <bra, R0, i|H|ket, Rn, j> = <ket, R0, j|H|bra, -Rn, i>*
+    """
+    def __init__(self, sc_bra: SuperCell, sc_ket: SuperCell) -> None:
+        """
+        :param sc_bra: the 'bra' supercell from which the hopping terms exist
+        :param sc_ket: the 'ket' supercell to which the hopping terms exist
+        """
+        super().__init__(sc_bra, sc_ket)
+        self._sc_bra = sc_bra
+        self._sc_ket = sc_ket
+
+    def get_hop(self, check_dup: bool = False) -> hop_type:
+        """
+        Get hopping indices, energies and distances.
+
+        If periodic conditions are enabled, orbital indices in hop_j may be
+        wrapped back if it falls out of the supercell. Nevertheless, the
+        distances in dr are still the ones before wrapping. This is essential
+        for adding magnetic field, calculating band structure and many
+        properties involving dx and dy.
+
+        :param check_dup: whether to check for duplicate hopping terms in the
+            results
+        :return: (hop_i, hop_j, hop_v, dr)
+            hop_i: (num_hop,) int64 array
+            row indices of hopping terms
+            hop_j: (num_hop,) int64 array
+            column indices of hopping terms
+            hop_v: (num_hop,) complex128 array
+            energies of hopping terms in accordance with hop_i and hop_j in eV
+            dr: (num_hop, 3) float64 array
+            distances of hopping terms in accordance with hop_i and hop_j in nm
+        :raises InterHopVoidError: if no hopping terms have been added to the
+            instance
+        :raises ValueError: if duplicate terms have been detected
+        """
+        if self.num_hop == 0:
+            raise exc.InterHopVoidError()
+
+        # Build hop_*
+        hop_ind, hop_eng = self.to_array(use_int64=True)
+        hop_i, hop_j, hop_v = hop_ind[:, 3], hop_ind[:, 4], hop_eng
+
+        # Build dr
+        pos_bra = self._sc_bra.get_orb_pos()
+        pos_ket = self._sc_ket.get_orb_pos()
+        dr = core.build_inter_dr(hop_ind, pos_bra, pos_ket,
+                                 self._sc_ket.sc_lat_vec)
+
+        # Check for duplicate hopping terms
+        if check_dup:
+            pair_count = dict()
+            for rn, hop_rn in self.hoppings.items():
+                for pair, energy in hop_rn.items():
+                    try:
+                        pair_count[pair] += 1
+                    except KeyError:
+                        pair_count[pair] = 1
+            for pair, count in pair_count.items():
+                if count > 1:
+                    raise ValueError(f"Duplicate terms detected {pair}")
+        return hop_i, hop_j, hop_v, dr
+
+    def plot(self, axes: plt.Axes,
+             with_conj: bool = False,
+             hop_as_arrows: bool = True,
+             hop_eng_cutoff: float = 1e-5,
+             hop_color: str = "r",
+             view: str = "ab") -> None:
+        """
+        Plot hopping terms to axes.
+
+        :param axes: axes on which the figure will be plotted
+        :param with_conj: whether to plot conjugate hopping terms as well
+        :param hop_as_arrows: whether to plot hopping terms as arrows
+        :param hop_eng_cutoff: cutoff for showing hopping terms.
+        :param hop_color: color of hopping terms
+        :param view: kind of view point, should be in 'ab', 'bc', 'ca', 'ba',
+            'cb', 'ac'
+        :return: None
+        :raises InterHopVoidError: if no hopping terms have been added to the
+            instance
+        :raises ValueError: if view is illegal
+        """
+        viewer = ModelViewer(axes, self._sc_bra.pc_lat_vec,
+                             self._sc_bra.pc_origin, view)
+
+        # Plot hopping terms
+        orb_pos_bra = self._sc_bra.get_orb_pos()
+        orb_pos_ket = self._sc_ket.get_orb_pos() if with_conj else None
+        hop_i, hop_j, hop_v, dr = self.get_hop()
+        arrow_args = {"color": hop_color, "length_includes_head": True,
+                      "width": 0.002, "head_width": 0.02, "fill": False}
+        for i_h in range(hop_i.shape[0]):
+            if abs(hop_v.item(i_h)) >= hop_eng_cutoff:
+                # Original term
+                pos_i = orb_pos_bra[hop_i.item(i_h)]
+                pos_j = pos_i + dr[i_h]
+                if hop_as_arrows:
+                    viewer.plot_arrow(pos_i, pos_j, **arrow_args)
+                else:
+                    viewer.add_line(pos_i, pos_j)
+                # Conjugate term
+                if with_conj:
+                    pos_j = orb_pos_ket[hop_j.item(i_h)]
+                    pos_i = pos_j - dr[i_h]
+                    if hop_as_arrows:
+                        viewer.plot_arrow(pos_j, pos_i, **arrow_args)
+                    else:
+                        viewer.add_line(pos_j, pos_i)
+        if not hop_as_arrows:
+            viewer.plot_line(color=hop_color)
+
+    @property
+    def sc_bra(self) -> SuperCell:
+        """Interface for the '_sc_bra' attribute."""
+        return self._sc_bra
+
+    @property
+    def sc_ket(self) -> SuperCell:
+        """Interface for the '_sc_ket' attribute."""
+        return self._sc_ket

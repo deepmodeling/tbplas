@@ -4,4 +4,4 @@ from .base import HopDict
 from .exceptions import *
 from .primitive import *
 from .sample import *
-from .super import SuperCell
+from .super import SuperCell, SCInterHopping

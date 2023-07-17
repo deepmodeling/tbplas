@@ -13,14 +13,14 @@ from scipy.optimize import leastsq
 from ..base import cart2frac, rotate_coord
 from ..base import constants as consts
 from . import exceptions as exc
-from .base import check_rn, InterHopping, rn_type, id_pc_type
-from .primitive import PrimitiveCell
+from .base import check_rn, rn_type, id_pc_type
+from .primitive import PrimitiveCell, PCInterHopping
 from .super import SuperCell
 
 
 __all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
-           "make_hetero_layer", "PCInterHopping", "merge_prim_cell",
-           "find_neighbors", "SK", "SOC", "SOCTable", "ParamFit"]
+           "make_hetero_layer", "merge_prim_cell", "find_neighbors",
+           "SK", "SOC", "SOCTable", "ParamFit"]
 
 
 class OrbitalMap:
@@ -298,44 +298,6 @@ def make_hetero_layer(prim_cell: PrimitiveCell,
     hetero_lattice_frac = cart2frac(prim_cell.lat_vec, hetero_lattice)
     hetero_layer = reshape_prim_cell(prim_cell, hetero_lattice_frac, **kwargs)
     return hetero_layer
-
-
-class PCInterHopping(InterHopping):
-    """
-    Class for holding hopping terms between different primitive cells
-    in hetero-structure.
-
-    Attributes
-    ----------
-    _pc_bra: 'PrimitiveCell' instance
-        the 'bra' primitive cell from which the hopping terms exist
-    _pc_ket: 'PrimitiveCell' instance
-        the 'ket' primitive cell from which the hopping terms exist
-
-    NOTES
-    -----
-    We assume hopping terms to be from (0, 0, 0) cell of pc_bra to any cell of
-    pc_ket. The counterparts can be restored via the conjugate relation:
-        <pc_bra, R0, i|H|pc_ket, Rn, j> = <pc_ket, R0, j|H|pc_bra, -Rn, i>*
-    """
-    def __init__(self, pc_bra: PrimitiveCell, pc_ket: PrimitiveCell) -> None:
-        """
-        :param pc_bra: 'bra' primitive cell from which the hopping terms exist
-        :param pc_ket: 'ket' primitive cell from which the hopping terms exist
-        """
-        super().__init__(pc_bra, pc_ket)
-        self._pc_bra = pc_bra
-        self._pc_ket = pc_ket
-
-    @property
-    def pc_bra(self) -> PrimitiveCell:
-        """Interface for the '_pc_bra' attribute."""
-        return self._pc_bra
-
-    @property
-    def pc_ket(self) -> PrimitiveCell:
-        """Interface for the '_pc_ket' attribute."""
-        return self._pc_ket
 
 
 def merge_prim_cell(*args: Union[PrimitiveCell, PCInterHopping]) -> PrimitiveCell:
