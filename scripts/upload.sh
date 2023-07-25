@@ -32,5 +32,6 @@ msg "Uploading source code"
 cd $top_dir
 ./scripts/pack.sh
 scp tbplas.tar.* aliyun:$nginx_dir/attachments
+ssh aliyun "cd $nginx_dir/attachments; md5sum tbplas.tar.* >> version"
 rm tbplas.tar.*
 msg "Done uploading"

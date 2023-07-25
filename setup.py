@@ -5,7 +5,7 @@ import os
 # Shared package information by FORTRAN and C extensions
 pkg_info = {
     'name': 'tbplas',
-    'version': '1.4.1',
+    'version': '1.4.2',
     'description': 'Tight-binding Package for Large-scale Simulation',
     'long_description': 'TBPLaS is a tight-binding package for large scale '
                         'simulation, which implements featuring exact '

@@ -1,6 +1,39 @@
 Release Notes
 =============
 
+v1.4.2 | 2023-07-25
+-------------------
+
+New features
+^^^^^^^^^^^^
+
+* Orbitals can be colored using user-defined coloring function via the ``orb_color`` argument
+  for the ``plot`` method of :class:`.PrimitiveCell` and :class:`.Sample` classes.
+* New :func:`.make_mos2_soc` function for making MoS2 primitive cell with SOC.
+* :class:`.Lindhard` and :class:`.Analyzer` classes have a new ``calc_epsilon_q0`` method to
+  calculate epsilon from AC conductivity for q=0.
+* :class:`.Lindhard` gets a new ``energy_min`` argument for setting the lower bound of energy
+  grid during initialization.
+
+Improvements
+^^^^^^^^^^^^
+
+* Improved output of ``print`` and ``print_hk`` methods of :class:`.PrimitiveCell` class.
+* Simplified :class:`.SOC` and :class:`.SOCTable` classes.
+* Improved the observer pattern for keeping data consistency.
+
+Changes
+^^^^^^^
+
+* :class:`.PCInterHopping` and :class:`.SCInterHopping` classes moved to ``primitive`` and
+  ``super`` modules.
+
+Bugs fixed
+^^^^^^^^^^
+
+* Hamiltonian from ``set_ham_dense`` and ``set_ham_csr`` methods of :class:`.Sample` class
+  does not consider the rescaling factor.
+
 v1.4.1 | 2023-06-14
 -------------------
 
