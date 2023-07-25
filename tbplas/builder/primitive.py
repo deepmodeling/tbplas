@@ -743,8 +743,9 @@ class PrimitiveCell(Observable):
         print("Orbitals:")
         for orbital in self._orbital_list:
             pos = orbital.position
-            pos_fmt = f"{pos[0]:10.5f}, {pos[1]:10.5f}, {pos[2]:10.5f}"
-            print(pos_fmt, orbital.energy)
+            output = f"{pos[0]:10.5f}{pos[1]:10.5f}{pos[2]:10.5f}"
+            output += f"{orbital.energy:10.5f}"
+            print(output)
         print("Hopping terms:")
         for rn, hop_rn in self.hoppings.items():
             for pair, energy in hop_rn.items():
