@@ -294,8 +294,8 @@ class Sample(Observable):
         if factor is None:
             factor = core.get_rescale(self.orb_eng, self.hop_i, self.hop_j,
                                       self.hop_v)
-        self.orb_eng /= (factor / self._rescale)
-        self.hop_v /= (factor / self._rescale)
+        self.orb_eng *= (self._rescale / factor)
+        self.hop_v *= (self._rescale / factor)
         self._rescale = factor
 
     def set_magnetic_field(self, intensity: float, gauge: int = 0) -> None:
@@ -546,10 +546,13 @@ class Sample(Observable):
         k_point = np.matmul(k_point, sc_recip_vec)
 
         # Set up the Hamiltonian
+        # NOTE: DO NOT pass self_rescale to build_hop_k. Otherwise, the scaling
+        # factor for self.orb_eng will be missing!
         ham_dense *= 0.0
         hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
         core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
         core.fill_ham(self.orb_eng, self.hop_i, self.hop_j, hop_k, ham_dense)
+        ham_dense *= self._rescale
 
     def set_ham_csr(self, k_point: np.ndarray,
                     convention: int = 1) -> csr_matrix:
@@ -577,6 +580,8 @@ class Sample(Observable):
         ham_dia = dia_matrix((self.orb_eng, 0), shape=ham_shape)
 
         # Off-diagonal terms
+        # NOTE: DO NOT pass self_rescale to build_hop_k. Otherwise, the scaling
+        # factor for self.orb_eng will be missing!
         hop_k = np.zeros(self.hop_v.shape, dtype=np.complex128)
         core.build_hop_k(self.hop_v, self.dr, k_point, hop_k)
         ham_half = csr_matrix((hop_k, (self.hop_i, self.hop_j)),
@@ -584,6 +589,7 @@ class Sample(Observable):
 
         # Sum up the terms
         ham_csr = ham_dia + ham_half + ham_half.getH()
+        ham_csr *= self._rescale
         return ham_csr
 
     def calc_bands(self, k_points: np.ndarray,
