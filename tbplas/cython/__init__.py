@@ -1,1 +1,1 @@
-__all__ = ['primitive', 'super', 'sample', 'lindhard']
+__all__ = ['primitive', 'super', 'sample', 'lindhard', 'atom']

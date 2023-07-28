@@ -70,7 +70,7 @@ def c_setup():
         os.environ['LDSHARED'] = 'icc -shared'
 
     # Define the extensions
-    ext_names = ['primitive', 'super', 'sample', 'lindhard']
+    ext_names = ['primitive', 'super', 'sample', 'lindhard', 'atom']
     c_extensions = [
         Extension(name=f"tbplas.cython.{name}",
                   sources=[f"tbplas/cython/{name}.pyx"],
