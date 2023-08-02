@@ -34,9 +34,9 @@ class SpinTexture(DiagSolver):
         :param cell: primitive cell for which properties will be evaluated
         :param k_grid: FRACTIONAL coordinates of k-points
         :param spin_major: whether the orbitals are stored in spin-major order
-        :param kwargs: parallelization arguments for DiagSolver.__init__
+        :param kwargs: arguments for DiagSolver.__init__
         """
-        super().__init__(cell, **kwargs)
+        super().__init__(model=cell, **kwargs)
         self._k_grid = k_grid
         self._spin_major = spin_major
         self._states = None

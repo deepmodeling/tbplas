@@ -6,7 +6,7 @@ from math import cos, sin, sqrt, pi
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh, DiagSolver,
+from tbplas import (gen_lattice_vectors, gen_kpath, gen_kmesh,
                     PrimitiveCell, ANG, NM, frac2cart, TestHelper,
                     extend_prim_cell, reshape_prim_cell, Visualizer)
 import tbplas.builder.exceptions as exc
@@ -717,45 +717,6 @@ class MyTest(unittest.TestCase):
         energies, dos = cell.calc_dos(k_points)
         plt.plot(energies, dos)
         plt.show()
-
-        # Calculate band structure from user-defined analytical Hamiltonian
-        def _exp(x):
-            return cos(x) + 1j * sin(x)
-
-        def _exp2(x):
-            return cos(2 * pi * x) + 1j * sin(2 * pi * x)
-
-        def _hk1(kpt, ham):
-            # Working in Cartesian coordinates
-            a, t, sqrt3 = 0.246, 2.7, sqrt(3.0)
-            recip_lat = cell.get_reciprocal_vectors()
-            ka = np.matmul(kpt, recip_lat) * a
-            kxa, kya = ka.item(0), ka.item(1)
-            fk = _exp(kya / sqrt3) + 2 * _exp(-kya / 2 / sqrt3) * cos(kxa / 2)
-            ham[0, 1] = t * fk
-            ham[1, 0] = t * fk.conjugate()
-
-        def _hk2(kpt, ham):
-            # Working in fractional coordinates, convention 1
-            ka, kb = kpt.item(0), kpt.item(1)
-            ham[0, 1] = 2.7 * (_exp2(1./3 * ka + 1./3 * kb) +
-                               _exp2(-2./3 * ka + 1./3 * kb) +
-                               _exp2(1./3 * ka - 2./3 * kb))
-            ham[1, 0] = ham[0, 1].conjugate()
-
-        def _hk3(kpt, ham):
-            # Working in fractional coordinates, convention 2
-            ka, kb = kpt.item(0), kpt.item(1)
-            ham[0, 1] = 2.7 * (1 + _exp2(-ka) + _exp2(-kb))
-            ham[1, 0] = ham[0, 1].conjugate()
-
-        for _hk in (_hk1, _hk2, _hk3):
-            solver = DiagSolver(cell, hk_dense=_hk)
-            k_len, bands = solver.calc_bands(k_path)[:2]
-            num_bands = bands.shape[1]
-            for i in range(num_bands):
-                plt.plot(k_len, bands[:, i], color="red", linewidth=1.0)
-            plt.show()
 
     def test_orb_pos_cart(self):
         """

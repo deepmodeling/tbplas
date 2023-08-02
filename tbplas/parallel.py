@@ -28,14 +28,9 @@ class MPIEnv:
     __size: integer
         number of processes in mpi communicator
     """
-    def __init__(self, enable_mpi: bool = True,
+    def __init__(self, enable_mpi: bool = False,
                  echo_details: bool = False) -> None:
         """
-        This class has two usages: as a developer class for parallel jobs
-        or as a user class for detecting the master process. For the latter
-        purpose, the default value of enable_mpi should be True while
-        echo_details should be False. DO NOT change them.
-
         :param enable_mpi: whether to enable parallelization using MPI
         :param echo_details: whether to report parallelization details
         :return: None
@@ -68,16 +63,6 @@ class MPIEnv:
                     env_value = "n/a"
                 self.print(f"{spaces}{env_name:16s} : {env_value:<6s}")
             self.print()
-
-    @property
-    def mpi_enabled(self) -> bool:
-        """Determine whether MPI is enabled."""
-        return self.__comm is not None
-
-    @property
-    def is_master(self) -> bool:
-        """Determine whether this is the master process."""
-        return self.__rank == 0
 
     @staticmethod
     def __get_array_order(array: np.ndarray) -> str:
@@ -242,6 +227,16 @@ class MPIEnv:
         if self.is_master:
             date_time = get_datetime(fmt=fmt)
             print(f"{event} at {date_time}", flush=True)
+
+    @property
+    def mpi_enabled(self) -> bool:
+        """Determine whether MPI is enabled."""
+        return self.__comm is not None
+
+    @property
+    def is_master(self) -> bool:
+        """Determine whether this is the master process."""
+        return self.__rank == 0
 
     @property
     def rank(self) -> int:

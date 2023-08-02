@@ -23,8 +23,6 @@ class Z2(DiagSolver):
     ----------
     _num_occ: int
         number of occupied bands of the primitive cell
-    _h_mat: (num_orb, num_orb) complex128 array
-        Hamiltonian matrix for single k-point
     _d_mat: (num_occ, num_occ) complex128 array
         D matrix for single k-point in the reference
     _f_mat: (num_occ, num_occ) complex128 array
@@ -34,12 +32,12 @@ class Z2(DiagSolver):
         """
         :param cell: primitive cell under investigation
         :param num_occ: number of occupied bands of the primitive cell
-        :param kwargs: parallelization arguments for DiagSolver.__init__
+        :param kwargs: arguments for DiagSolver.__init__
         :raises ValueError: if num_occ is larger than num_orb of the
             primitive cell
         """
         # Initialize parallel environment
-        super().__init__(cell, **kwargs)
+        super().__init__(model=cell, **kwargs)
 
         # Check and set num_occ
         num_orb = self.num_orb
@@ -50,7 +48,6 @@ class Z2(DiagSolver):
         self._num_occ = num_occ
 
         # Initialize working arrays
-        self._h_mat = np.zeros((num_orb, num_orb), dtype=np.complex128)
         self._d_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
         self._f_mat = np.zeros((num_occ, num_occ), dtype=np.complex128)
 
@@ -63,9 +60,7 @@ class Z2(DiagSolver):
         :return: (num_orb, num_orb) complex128 array
             eigenstates of the given k-point
         """
-        self._h_mat *= 0.0
-        self._set_ham_dense(kpt, self._h_mat)
-        eigenvalues, eigenstates, info = spla.zheev(self._h_mat)
+        eigenvalues, eigenstates = self._diag_ham_dense(kpt)
         idx = eigenvalues.argsort()
         return eigenstates[:, idx]
 

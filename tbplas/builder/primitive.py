@@ -815,7 +815,8 @@ class PrimitiveCell(Observable):
         Set up dense Hamiltonian for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'sync_array' method.
+        callers are responsible to call the 'sync_array' method and initialize
+        ham_dense as a zero matrix.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
@@ -831,7 +832,6 @@ class PrimitiveCell(Observable):
             raise ValueError(f"Illegal convention {convention}")
         self.verify_orbitals()
         self.verify_hoppings()
-        ham_dense *= 0.0
         core.set_ham(self._orb_pos, self._orb_eng, self._hop_ind, self._hop_eng,
                      convention, k_point, ham_dense)
 

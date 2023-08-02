@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import numpy as np
 import scipy.linalg.lapack as lapack
-from scipy.sparse.linalg import eigsh
+from scipy.sparse.linalg import eigsh, lobpcg
 from scipy.sparse import csr_matrix
 
 from ..base import kpoints as kpt
@@ -61,14 +61,23 @@ class DiagSolver(MPIEnv):
     __hk_csr: Callable[[np.ndarray], csr_matrix]
         user-defined function to return the sparse Hamiltonian from the
         fractional coordinate of k-point as the 1st argument
+    __h_mat: (num_orb, num_orb) complex128 array
+        dense Hamiltonian matrix
+    __s_mat: (num_orb, num_orb) complex128 array
+        overlap matrix for the general eigenvalue problem
     """
     def __init__(self, model: Any,
                  hk_dense: Callable[[np.ndarray, np.ndarray], None] = None,
                  hk_csr: Callable[[np.ndarray], csr_matrix] = None,
+                 s_mat: np.ndarray = None,
                  enable_mpi: bool = False,
                  echo_details: bool = True) -> None:
         """
         :param model: primitive cell or sample under study
+        :param hk_dense: user-defined function for setting up dense Hamiltonian
+        :param hk_csr: user-defined function for setting up sparse Hamiltonian
+        :param s_mat: (num_orb, num_orb) complex128 array
+            overlap matrix for the general eigenvalue problem
         :param enable_mpi: whether to enable MPI-based parallelization
         :param echo_details: whether to output parallelization details
         """
@@ -76,6 +85,8 @@ class DiagSolver(MPIEnv):
         self.__model = model
         self.__hk_dense = hk_dense
         self.__hk_csr = hk_csr
+        self.__h_mat = None
+        self.__s_mat = s_mat
         self._update_model()
 
     @property
@@ -154,47 +165,81 @@ class DiagSolver(MPIEnv):
                 proj_k[i_b] += abs(eigenstates.item(i_b, i_o))**2
         return proj_k
 
-    def _set_ham_dense(self, k_point: np.ndarray,
-                       ham_dense: np.ndarray,
-                       convention: int = 1) -> None:
+    def _diag_ham_dense(self, k_point: np.ndarray,
+                        convention: int = 1) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Set up dense Hamiltonian for given k-point.
+        Set up and diagonalize the dense Hamiltonian for given k-point.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
-        :param ham_dense: (num_orb, num_orb) complex128 array
-            incoming Hamiltonian
         :param convention: convention for setting up the Hamiltonian
-        :return: None
+        :return: (eigenvalues, eigenvectors)
+            eigenvalues: (num_orb,) float64 array
+            eigenvectors: (num_orb, num_orb) complex128 array, with each column
+            being an eigenvector
         :raises ValueError: if convention not in (1, 2)
+        :raises RuntimeError: if diagonalization failed
         """
-        if self.__hk_dense is not None:
-            self.__hk_dense(k_point, ham_dense)
+        # Set up the Hamiltonian
+        if self.__h_mat is None:
+            self.__h_mat = np.zeros((self.num_orb, self.num_orb),
+                                    dtype=np.complex128)
         else:
-            self.__model.set_ham_dense(k_point, ham_dense, convention)
+            self.__h_mat *= 0.0
+        if self.__hk_dense is not None:
+            self.__hk_dense(k_point, self.__h_mat)
+        else:
+            self.__model.set_ham_dense(k_point, self.__h_mat, convention)
 
-    def _set_ham_csr(self, k_point: np.ndarray,
-                     convention: int = 1) -> csr_matrix:
+        # Diagonalization
+        if self.__s_mat is None:
+            eigenvalues, eigenstates, info = lapack.zheev(self.__h_mat)
+        else:
+            eigenvalues, eigenstates, info = \
+                lapack.zhegv(self.__h_mat, self.__s_mat)
+        if info != 0:
+            raise RuntimeError("Diagonalization failed")
+        return eigenvalues, eigenstates
+
+    def _diag_ham_csr(self, k_point: np.ndarray,
+                      convention: int = 1,
+                      **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Set up sparse Hamiltonian in csr format for given k-point.
+        Set up and diagonalize the sparse Hamiltonian in csr format for given
+        k-point.
 
         :param k_point: (3,) float64 array
             FRACTIONAL coordinate of the k-point
         :param convention: convention for setting up the Hamiltonian
-        :return: sparse Hamiltonian
+        :param kwargs: arguments for the arpack solver 'eigsh' or 'logpcg'
+        :return: (eigenvalues, eigenvectors)
+            eigenvalues: (num_bands,) float64 array
+            eigenvectors: (num_orb, num_bands) complex128 array, with each
+            column being an eigenvector
         :raises ValueError: if convention not in (1, 2)
         """
+        # Set up the Hamiltonian
         if self.__hk_csr is not None:
             ham_csr = self.__hk_csr(k_point)
         else:
             ham_csr = self.__model.set_ham_csr(k_point, convention)
-        return ham_csr
+
+        # Diagonalization
+        if self.__s_mat is None:
+            eigenvalues, eigenstates = eigsh(ham_csr, **kwargs)
+        else:
+            rng = np.random.default_rng()
+            x = rng.normal(size=(self.num_orb, kwargs["k"]))
+            # Pop arguments not acceptable to lobpcg
+            kwargs.pop("k")
+            eigenvalues, eigenstates = \
+                lobpcg(ham_csr, x, self.__s_mat, **kwargs)
+        return eigenvalues, eigenstates
 
     def calc_bands(self, k_points: np.ndarray,
                    convention: int = 1,
-                   orbital_indices: Union[Iterable[int], np.ndarray] = None,
                    solver: str = "lapack",
-                   num_bands: int = None,
+                   orbital_indices: Union[Iterable[int], np.ndarray] = None,
                    **kwargs) -> namedtuple:
         """
         Calculate band structure along given k_path.
@@ -208,10 +253,9 @@ class DiagSolver(MPIEnv):
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of the k-points
         :param convention: convention for setting up the Hamiltonian
+        :param solver: solver type, should be "lapack" or "arpack"
         :param orbital_indices: indices of orbitals for evaluating projection,
             take all orbitals into consideration if no orbitals are specified
-        :param solver: solver type, should be "lapack" or "arpack"
-        :param num_bands: number of bands for arpack solver
         :param kwargs: arguments for the arpack solver
         :return: k_len, band structure and projection packed in named tuple
         :raises ValueError: if solver is neither lapack nor arpack
@@ -224,8 +268,11 @@ class DiagSolver(MPIEnv):
         if solver == "lapack":
             num_bands = num_orb
         elif solver == "arpack":
-            if num_bands is None:
+            try:
+                num_bands = kwargs["k"]
+            except KeyError:
                 num_bands = int(num_orb * 0.6)
+                kwargs["k"] = num_bands
         else:
             raise ValueError(f"Illegal solver {solver}")
 
@@ -235,10 +282,6 @@ class DiagSolver(MPIEnv):
             proj = np.zeros((num_kpt, num_bands), dtype=np.float64)
         else:
             proj = np.ones((num_kpt, num_bands), dtype=np.float64)
-        if solver == "lapack":
-            ham_dense = np.zeros((num_orb, num_orb), dtype=np.complex128)
-        else:
-            ham_dense = None
 
         # Distribute k-points over processes
         k_index = self.dist_range(num_kpt)
@@ -247,11 +290,11 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                self._set_ham_dense(kpt_i, ham_dense, convention)
-                eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
+                eigenvalues, eigenstates = \
+                    self._diag_ham_dense(kpt_i, convention)
             else:
-                ham_csr = self._set_ham_csr(kpt_i, convention)
-                eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
+                eigenvalues, eigenstates = \
+                    self._diag_ham_csr(kpt_i, convention, **kwargs)
 
             # Sort eigenvalues
             idx = eigenvalues.argsort()[::-1]
@@ -342,9 +385,8 @@ class DiagSolver(MPIEnv):
 
     def calc_states(self, k_points: np.ndarray,
                     convention: int = 1,
-                    all_reduce: bool = True,
                     solver: str = "lapack",
-                    num_bands: int = None,
+                    all_reduce: bool = True,
                     **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Calculate energies and wave functions on k-points.
@@ -352,10 +394,9 @@ class DiagSolver(MPIEnv):
         :param k_points: (num_kpt, 3) float64 array
             FRACTIONAL coordinates of the k-points
         :param convention: convention for setting up the Hamiltonian
+        :param solver: solver type, should be "lapack" or "arpack"
         :param all_reduce: whether to call MPI_Allreduce to synchronize the
             results on each process
-        :param solver: solver type, should be "lapack" or "arpack"
-        :param num_bands: number of bands for arpack solver
         :param kwargs: arguments for the arpack solver
         :return: (bands, states)
             bands: (num_kpt, num_bands) float64 array
@@ -373,18 +414,17 @@ class DiagSolver(MPIEnv):
         if solver == "lapack":
             num_bands = num_orb
         elif solver == "arpack":
-            if num_bands is None:
+            try:
+                num_bands = kwargs["k"]
+            except KeyError:
                 num_bands = int(num_orb * 0.6)
+                kwargs["k"] = num_bands
         else:
-            raise ValueError(solver)
+            raise ValueError(f"Illegal solver {solver}")
 
         # Initialize working arrays
         bands = np.zeros((num_kpt, num_bands), dtype=np.float64)
         states = np.zeros((num_kpt, num_bands, num_orb), dtype=np.complex128)
-        if solver == "lapack":
-            ham_dense = np.zeros((num_orb, num_orb), dtype=np.complex128)
-        else:
-            ham_dense = None
 
         # Distribute k-points over processes
         k_index = self.dist_range(num_kpt)
@@ -393,11 +433,11 @@ class DiagSolver(MPIEnv):
         for i_k in k_index:
             kpt_i = k_points[i_k]
             if solver == "lapack":
-                self._set_ham_dense(kpt_i, ham_dense, convention)
-                eigenvalues, eigenstates, info = lapack.zheev(ham_dense)
+                eigenvalues, eigenstates = \
+                    self._diag_ham_dense(kpt_i, convention)
             else:
-                ham_csr = self._set_ham_csr(kpt_i, convention)
-                eigenvalues, eigenstates = eigsh(ham_csr, num_bands, **kwargs)
+                eigenvalues, eigenstates = \
+                    self._diag_ham_csr(kpt_i, convention, **kwargs)
             bands[i_k] = eigenvalues
             states[i_k] = eigenstates.T
 

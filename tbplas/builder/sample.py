@@ -528,7 +528,8 @@ class Sample(Observable):
         Set up Hamiltonian for given k-point.
 
         This is the interface to be called by external exact solvers. The
-        callers are responsible to call the 'init_*' method.
+        callers are responsible to call the 'init_*' methods and initialize
+        ham_dense as a zero matrix.
 
         :param k_point: (3,) float64 array
             Fractional coordinate of the k-point

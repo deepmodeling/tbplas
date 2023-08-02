@@ -174,10 +174,10 @@ class Lindhard(DiagSolver):
         :param back_epsilon: relative background dielectric constant
         :param dimension: dimension of the system
         :param delta: broadening parameter in eV
-        :param kwargs: parallelization arguments for DiagSolver.__init__
+        :param kwargs: arguments for DiagSolver.__init__
         :raises ValueError: if kmesh_size and dimension are not properly set
         """
-        super().__init__(cell, **kwargs)
+        super().__init__(model=cell, **kwargs)
         self._cell = cell
         self._omegas = np.linspace(energy_min, energy_max, energy_step + 1)
         if len(kmesh_size) != 3:

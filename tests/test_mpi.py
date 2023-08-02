@@ -21,7 +21,7 @@ def make_cell():
 def test_band(plot=True):
     cell = make_cell()
     cell = tb.extend_prim_cell(cell, dim=(12, 12, 1))
-    solver = tb.DiagSolver(cell, enable_mpi=True)
+    # solver = tb.DiagSolver(cell, enable_mpi=True)
     vis = tb.Visualizer(enable_mpi=True)
     timer = tb.Timer()
 
@@ -33,7 +33,8 @@ def test_band(plot=True):
         ])
     k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
     timer.tic("band")
-    k_len, bands = solver.calc_bands(k_path)[:2]
+    # k_len, bands = solver.calc_bands(k_path)[:2]
+    k_len, bands = cell.calc_bands(k_path)
     timer.toc("band")
     timer.report_total_time()
     if plot:
@@ -43,13 +44,14 @@ def test_band(plot=True):
 def test_dos(plot=True):
     cell = make_cell()
     cell = tb.extend_prim_cell(cell, dim=(12, 12, 1))
-    solver = tb.DiagSolver(cell, enable_mpi=True)
+    # solver = tb.DiagSolver(cell, enable_mpi=True)
     vis = tb.Visualizer(enable_mpi=True)
     timer = tb.Timer()
 
     k_points = tb.gen_kmesh((20, 20, 1))
     timer.tic("dos")
-    energies, dos = solver.calc_dos(k_points)
+    # energies, dos = solver.calc_dos(k_points)
+    energies, dos = cell.calc_dos(k_points, enable_mpi=True)
     timer.toc("dos")
     timer.report_total_time()
     if plot:
