@@ -8,8 +8,7 @@ from typing import List, Tuple, Dict
 import numpy as np
 
 from ..base import BOHR2ANG, cart2frac
-from ..builder import PrimitiveCell
-from ..cython import primitive as core
+from ..builder import PrimitiveCell, PCHopDiagonalError
 
 
 __all__ = ["wan2pc"]
@@ -197,19 +196,16 @@ def wan2pc(seed_name: str = "wannier90",
         else:
             raise FileNotFoundError(f"{seed_name}_wsvec.dat not found")
 
-    # Reduce hopping terms
-    hop_ind = np.array(hop_ind, dtype=np.int32)
-    hop_eng = np.array(hop_eng, dtype=np.complex128)
-    orb_eng, hop_ind, hop_eng = core.reduce_hop(hop_ind, hop_eng,
-                                                hop_eng_cutoff,
-                                                orb_pos.shape[0])
-
     # Create the primitive cell
     prim_cell = PrimitiveCell(lat_vec)
     for i_o, pos in enumerate(orb_pos):
-        prim_cell.add_orbital(tuple(pos), orb_eng.item(i_o))
+        prim_cell.add_orbital(tuple(pos))
     for i_h, hop in enumerate(hop_ind):
-        ind, orb_i, orb_j = hop[:3], hop.item(3), hop.item(4)
-        prim_cell.add_hopping(tuple(ind), orb_i, orb_j, hop_eng.item(i_h))
-
+        ind, orb_i, orb_j = hop[:3], hop[3], hop[4]
+        energy = hop_eng[i_h]
+        if abs(energy) >= hop_eng_cutoff:
+            try:
+                prim_cell.add_hopping(tuple(ind), orb_i, orb_j, energy)
+            except PCHopDiagonalError:
+                prim_cell.set_orbital(orb_i, energy=energy.real)
     return prim_cell
