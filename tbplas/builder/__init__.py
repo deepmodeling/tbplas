@@ -2,6 +2,7 @@
 from .advanced import *
 from .base import HopDict
 from .exceptions import *
+from .overlap import *
 from .primitive import *
 from .sample import *
 from .super import SuperCell, SCInterHopping

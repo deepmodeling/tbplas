@@ -1,7 +1,7 @@
 """Functions and classes for manipulating the primitive cell."""
 
-from typing import List, Tuple, Dict, Hashable, Union, Iterable, Callable
 import math
+from typing import List, Tuple, Dict, Hashable, Union, Iterable, Callable
 
 import numpy as np
 from scipy.sparse import dia_matrix, dok_matrix, csr_matrix

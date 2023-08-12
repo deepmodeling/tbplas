@@ -18,40 +18,21 @@ def exp_i(x: float) -> complex:
     return cos(2 * pi * x) + 1j * sin(2 * pi * x)
 
 
-def hk1(kpt: np.ndarray, ham: np.ndarray) -> None:
-    """
-    Analytical Hamiltonian modifying ham in-place.
-
-    :param kpt: (3,) float64 array
-        fractional coordinate of k-points
-    :param ham: (num_orb, num_orb) complex128 array
-        Hamiltonian matrix
-    :return: None
-    """
-    ka, kb = kpt.item(0), kpt.item(1)
-    ham[0, 0] = 0.0
-    ham[1, 1] = 0.0
-    ham[0, 1] = -2.7 * (exp_i(1. / 3 * ka + 1. / 3 * kb) +
-                        exp_i(-2. / 3 * ka + 1. / 3 * kb) +
-                        exp_i(1. / 3 * ka - 2. / 3 * kb))
-    ham[1, 0] = ham[0, 1].conjugate()
-
-
-def hk2(kpt: np.ndarray, ham: np.ndarray) -> None:
-    """
-    Analytical Hamiltonian modifying ham in-place.
-
-    :param kpt: (3,) float64 array
-        fractional coordinate of k-points
-    :param ham: (num_orb, num_orb) complex128 array
-        Hamiltonian matrix
-    :return: None
-    """
-    ka, kb = kpt.item(0), kpt.item(1)
-    ham[0, 0] = 0.0
-    ham[1, 1] = 0.0
-    ham[0, 1] = -2.7 * (1.0 + exp_i(-ka) + exp_i(-kb))
-    ham[1, 0] = ham[0, 1].conjugate()
+class FakePC(tb.FakePC):
+    def set_ham_dense(self, kpt: np.ndarray,
+                      ham: np.ndarray,
+                      convention: int = 1) -> None:
+        ka, kb = kpt.item(0), kpt.item(1)
+        ham[0, 0] = 0.0
+        ham[1, 1] = 0.0
+        if convention == 1:
+            ham[0, 1] = -2.7 * (exp_i(1. / 3 * ka + 1. / 3 * kb) +
+                                exp_i(-2. / 3 * ka + 1. / 3 * kb) +
+                                exp_i(1. / 3 * ka - 2. / 3 * kb))
+            ham[1, 0] = ham[0, 1].conjugate()
+        else:
+            ham[0, 1] = -2.7 * (1.0 + exp_i(-ka) + exp_i(-kb))
+            ham[1, 0] = ham[0, 1].conjugate()
 
 
 def main():
@@ -62,11 +43,10 @@ def main():
     print("---- convention 2 ----")
     cell.print_hk(convention=2)
 
-    # Create a cell without hopping terms
+    # Create fake primitive cell and solver
     vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
-    cell = tb.PrimitiveCell(vectors, unit=tb.NM)
-    cell.add_orbital((0.0, 0.0), label="C_pz")
-    cell.add_orbital((1/3., 1/3.), label="C_pz")
+    cell = FakePC(num_orb=2, lat_vec=vectors, unit=tb.NM)
+    solver = tb.DiagSolver(cell)
 
     # Usage of analytical Hamiltonian
     k_points = np.array([
@@ -77,17 +57,15 @@ def main():
     ])
     k_label = ["G", "M", "K", "G"]
     k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
-    for hk in (hk1, hk2):
-        solver = tb.DiagSolver(cell, hk_dense=hk)
-        k_len, bands = solver.calc_bands(k_path)[:2]
+    for convention in (1, 2):
+        k_len, bands = solver.calc_bands(k_path, convention)[:2]
         vis = tb.Visualizer()
         vis.plot_bands(k_len, bands, k_idx, k_label)
 
     # Evaluation of DOS
     k_mesh = tb.gen_kmesh((120, 120, 1))
-    for hk in (hk1, hk2):
-        solver = tb.DiagSolver(cell, hk_dense=hk)
-        energies, dos = solver.calc_dos(k_mesh)
+    for convention in (1, 2):
+        energies, dos = solver.calc_dos(k_mesh, convention=convention)
         vis = tb.Visualizer()
         vis.plot_dos(energies, dos)
 

@@ -1,19 +1,20 @@
 """Fundamentals of Solvers based on exact diagonalization."""
 
 import math
-from typing import Any, Tuple, Callable, Union, Iterable
+from typing import Any, Tuple, Union, Iterable
 from collections import namedtuple
 
 import numpy as np
 import scipy.linalg.lapack as lapack
 from scipy.sparse.linalg import eigsh, lobpcg
-from scipy.sparse import csr_matrix
 
+from ..base import constants as consts
+from ..base import lattice as lat
 from ..base import kpoints as kpt
 from ..parallel import MPIEnv
 
 
-__all__ = ["DiagSolver"]
+__all__ = ["FakePC", "DiagSolver"]
 
 
 def gaussian(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
@@ -44,49 +45,92 @@ def lorentzian(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
     return part_a * part_b
 
 
+class FakePC:
+    """
+    Fake primitive cell for holding analytical Hamiltonian.
+
+    Attributes
+    ----------
+    _num_orb: int
+        number of orbitals
+    _lat_vec: (3, 3) float64 array
+        Cartesian coordinates of lattice vectors in NANO METER
+        Each ROW corresponds to one lattice vector.
+    """
+    def __init__(self, num_orb: int,
+                 lat_vec: np.ndarray = np.eye(3, dtype=np.float64),
+                 unit: float = consts.ANG) -> None:
+        """
+        :param num_orb: number of orbitals
+        :param lat_vec: (3, 3) float64 array
+            Cartesian coordinates of lattice vectors in arbitrary unit
+        :param unit: conversion coefficient from arbitrary unit to NM
+        :return: None
+        :raise ValueError: if shape of lat_vec is not (3, 3)
+        """
+        self._num_orb = num_orb
+        lat_vec = np.array(lat_vec, dtype=np.float64)
+        if lat_vec.shape != (3, 3):
+            raise ValueError(f"Shape of origin is not (3, 3)")
+        self._lat_vec = lat_vec * unit
+
+    def get_reciprocal_vectors(self) -> np.ndarray:
+        """
+        Get the Cartesian coordinates of reciprocal lattice vectors in 1/NM.
+
+        :return: (3, 3) float64 array
+            reciprocal vectors in 1/NM.
+        """
+        return lat.gen_reciprocal_vectors(self._lat_vec)
+
+    def sync_array(self) -> None:
+        pass
+
+    @property
+    def num_orb(self) -> int:
+        """Interface for the '_num_orb' attribute."""
+        return self._num_orb
+
+    @property
+    def lat_vec(self) -> np.ndarray:
+        """Interface for the '_lat_vec' attribute."""
+        return self._lat_vec
+
+
 class DiagSolver(MPIEnv):
     """
     Base class for solvers based on exact diagonalization.
 
-    NOTE: we declare the type of 'model' to be 'Any' for duck typing.
+    NOTE: we declare the type of 'model' and 'overlap' to be 'Any' for duck
+    typing.
 
     Attributes
     ----------
     __model: 'PrimitiveCell' or 'Sample' instance
         model for which properties will be calculated
-    __hk_dense: Callable[[np.ndarray, np.ndarray], None]
-        user-defined function to set up the dense Hamiltonian in place, with the
-        1st argument being the fractional coordinate of k-point and the 2nd
-        argument being the Hamiltonian
-    __hk_csr: Callable[[np.ndarray], csr_matrix]
-        user-defined function to return the sparse Hamiltonian from the
-        fractional coordinate of k-point as the 1st argument
+    __overlap: 'Overlap' instance
+        container for holding overlaps for primitive cells with non-orthogonal
+        orbitals
     __h_mat: (num_orb, num_orb) complex128 array
         dense Hamiltonian matrix
     __s_mat: (num_orb, num_orb) complex128 array
-        overlap matrix for the general eigenvalue problem
+        dense overlap matrix for the general eigenvalue problem
     """
     def __init__(self, model: Any,
-                 hk_dense: Callable[[np.ndarray, np.ndarray], None] = None,
-                 hk_csr: Callable[[np.ndarray], csr_matrix] = None,
-                 s_mat: np.ndarray = None,
+                 overlap: Any = None,
                  enable_mpi: bool = False,
                  echo_details: bool = True) -> None:
         """
         :param model: primitive cell or sample under study
-        :param hk_dense: user-defined function for setting up dense Hamiltonian
-        :param hk_csr: user-defined function for setting up sparse Hamiltonian
-        :param s_mat: (num_orb, num_orb) complex128 array
-            overlap matrix for the general eigenvalue problem
+        :param overlap: container for overlaps between orbitals
         :param enable_mpi: whether to enable MPI-based parallelization
         :param echo_details: whether to output parallelization details
         """
         super().__init__(enable_mpi=enable_mpi, echo_details=echo_details)
         self.__model = model
-        self.__hk_dense = hk_dense
-        self.__hk_csr = hk_csr
+        self.__overlap = overlap
         self.__h_mat = None
-        self.__s_mat = s_mat
+        self.__s_mat = None
         self._update_model()
 
     @property
@@ -96,7 +140,7 @@ class DiagSolver(MPIEnv):
 
         :return: whether the model is a primitive cell
         """
-        return hasattr(self.__model, "_orbital_list")
+        return hasattr(self.__model, "_lat_vec")
 
     @property
     def num_orb(self) -> int:
@@ -186,13 +230,19 @@ class DiagSolver(MPIEnv):
                                     dtype=np.complex128)
         else:
             self.__h_mat *= 0.0
-        if self.__hk_dense is not None:
-            self.__hk_dense(k_point, self.__h_mat)
-        else:
-            self.__model.set_ham_dense(k_point, self.__h_mat, convention)
+        self.__model.set_ham_dense(k_point, self.__h_mat, convention)
+
+        # Set up the overlap matrix
+        if self.__overlap is not None:
+            if self.__s_mat is None:
+                self.__s_mat = np.zeros((self.num_orb, self.num_orb),
+                                        dtype=np.complex128)
+            else:
+                self.__s_mat *= 0.0
+            self.__overlap.set_overlap_dense(k_point, self.__s_mat, convention)
 
         # Diagonalization
-        if self.__s_mat is None:
+        if self.__overlap is None:
             eigenvalues, eigenstates, info = lapack.zheev(self.__h_mat)
         else:
             eigenvalues, eigenstates, info = \
@@ -219,13 +269,16 @@ class DiagSolver(MPIEnv):
         :raises ValueError: if convention not in (1, 2)
         """
         # Set up the Hamiltonian
-        if self.__hk_csr is not None:
-            ham_csr = self.__hk_csr(k_point)
+        ham_csr = self.__model.set_ham_csr(k_point, convention)
+
+        # Set up the overlap matrix
+        if self.__overlap is not None:
+            overlap_csr = self.__overlap.set_overlap_csr(k_point, convention)
         else:
-            ham_csr = self.__model.set_ham_csr(k_point, convention)
+            overlap_csr = None
 
         # Diagonalization
-        if self.__s_mat is None:
+        if self.__overlap is None:
             eigenvalues, eigenstates = eigsh(ham_csr, **kwargs)
         else:
             rng = np.random.default_rng()
@@ -233,7 +286,7 @@ class DiagSolver(MPIEnv):
             # Pop arguments not acceptable to lobpcg
             kwargs.pop("k")
             eigenvalues, eigenstates = \
-                lobpcg(ham_csr, x, self.__s_mat, **kwargs)
+                lobpcg(ham_csr, x, overlap_csr, **kwargs)
         return eigenvalues, eigenstates
 
     def calc_bands(self, k_points: np.ndarray,
