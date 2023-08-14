@@ -58,6 +58,9 @@ class FakeOverlap:
                         convention: int = 1) -> csr_matrix:
         return csr_matrix(np.eye(self._num_orb))
 
+    def sync_array(self) -> None:
+        pass
+
 
 class MyTest(unittest.TestCase):
 
@@ -121,30 +124,73 @@ class MyTest(unittest.TestCase):
                                         which="LA")
         vis.plot_dos(energies, dos)
 
+    def test_overlap(self):
+        """Test the Overlap class."""
+        cell = tb.make_graphene_diamond()
+        cell.sync_array()
+        th = tb.TestHelper(self)
+
+        overlap = tb.Overlap(cell)
+        overlap.set_onsite(0, 0.0)
+        overlap.set_onsite(1, 0.0)
+        overlap.add_offsite((0, 0), 0, 1, -2.7)
+        overlap.add_offsite((1, 0), 1, 0, -2.7)
+        overlap.add_offsite((0, 1), 1, 0, -2.7)
+        overlap.sync_array()
+
+        # Dense
+        kpt = np.array([0.5, 0.3, 0.0])
+        h1 = np.zeros((2, 2), dtype=np.complex)
+        h2 = np.zeros((2, 2), dtype=np.complex)
+        cell.set_ham_dense(kpt, h1)
+        overlap.set_overlap_dense(kpt, h2)
+        th.test_equal_array(h1, h2)
+        h1 *= 0.0
+        h2 *= 0.0
+        cell.set_ham_dense(kpt, h1, convention=2)
+        overlap.set_overlap_dense(kpt, h2, convention=2)
+        th.test_equal_array(h1, h2)
+
+        # Sparse
+        csr1 = cell.set_ham_csr(kpt)
+        csr2 = overlap.set_overlap_csr(kpt)
+        th.test_equal_array(csr1, csr2)
+        csr1 = cell.set_ham_csr(kpt, convention=2)
+        csr2 = overlap.set_overlap_csr(kpt, convention=2)
+        th.test_equal_array(csr1, csr2)
+
     def test_dense_overlap(self):
         """
         Test non-orthogonal basis with overlap matrix for dense Hamiltonian.
         """
         cell = tb.make_graphene_diamond()
-        overlap = FakeOverlap(cell.num_orb)
-        solver = tb.DiagSolver(cell, overlap)
-        vis = tb.Visualizer()
 
-        # Bands
+        # Prepare overlaps
+        overlaps = [FakeOverlap(cell.num_orb)]
+        real_overlap = tb.Overlap(cell)
+        real_overlap.add_offsite((0, 0), 0, 1, 1.0e-2)
+        real_overlap.add_offsite((1, 0), 1, 0, 1.0e-2)
+        real_overlap.add_offsite((0, 1), 1, 0, 1.0e-2)
+        overlaps.append(real_overlap)
+
+        # K-points and mesh
         k_points = np.array([
             [0.0, 0.0, 0.0],
-            [2./3, 1./3, 0.0],
-            [1./2, 0.0, 0.0],
+            [2. / 3, 1. / 3, 0.0],
+            [1. / 2, 0.0, 0.0],
             [0.0, 0.0, 0.0],
         ])
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
-        k_len, bands = solver.calc_bands(k_path)[:2]
-        vis.plot_bands(k_len, bands, k_idx, k_label=["G", "K", "M", "G"])
-
-        # DOS
+        k_label = ["G", "K", "M", "G"]
         k_mesh = tb.gen_kmesh((120, 120, 1))
-        energies, dos = solver.calc_dos(k_mesh)
-        vis.plot_dos(energies, dos)
+
+        vis = tb.Visualizer()
+        for overlap in overlaps:
+            solver = tb.DiagSolver(cell, overlap)
+            k_len, bands = solver.calc_bands(k_path)[:2]
+            vis.plot_bands(k_len, bands, k_idx, k_label)
+            energies, dos = solver.calc_dos(k_mesh)
+            vis.plot_dos(energies, dos)
 
     def test_sparse_overlap(self):
         """
@@ -152,11 +198,16 @@ class MyTest(unittest.TestCase):
         """
         cell = tb.make_graphene_diamond()
         cell = tb.extend_prim_cell(cell, dim=(5, 5, 1))
-        overlap = FakeOverlap(cell.num_orb)
-        solver = tb.DiagSolver(cell, overlap)
-        vis = tb.Visualizer()
 
-        # Bands
+        # Prepare overlaps
+        overlaps = [FakeOverlap(cell.num_orb)]
+        real_overlap = tb.Overlap(cell)
+        for rn, hop_rn in cell.hoppings.items():
+            for pair, energy in hop_rn.items():
+                real_overlap.add_offsite(rn, pair[0], pair[1], 1.0e-2)
+        overlaps.append(real_overlap)
+
+        # K-points and mesh
         k_points = np.array([
             [0.0, 0.0, 0.0],
             [2./3, 1./3, 0.0],
@@ -165,13 +216,15 @@ class MyTest(unittest.TestCase):
         ])
         k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
         k_label = ["G", "K", "M", "G"]
-        k_len, bands = solver.calc_bands(k_path, solver="arpack", k=50)[:2]
-        vis.plot_bands(k_len, bands, k_idx, k_label)
-
-        # DOS
         k_mesh = tb.gen_kmesh((24, 24, 1))
-        energies, dos = solver.calc_dos(k_mesh, solver="arpack", k=50)
-        vis.plot_dos(energies, dos)
+
+        vis = tb.Visualizer()
+        for overlap in overlaps:
+            solver = tb.DiagSolver(cell, overlap)
+            k_len, bands = solver.calc_bands(k_path, solver="arpack", k=50)[:2]
+            vis.plot_bands(k_len, bands, k_idx, k_label)
+            energies, dos = solver.calc_dos(k_mesh, solver="arpack", k=50)
+            vis.plot_dos(energies, dos)
 
     def test_derived_overlap(self):
         """Test derived classes of DiagSolver with overlap."""

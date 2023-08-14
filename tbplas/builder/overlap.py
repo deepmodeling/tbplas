@@ -47,7 +47,7 @@ class Overlap:
         self._offsite = IntraHopping()
         self._hash_dict = {'ons': self._get_attr_hash('ons'),
                            'off': self._get_attr_hash('off')}
-        self._ons_val = np.array([], dtype=np.float64)
+        self._ons_val = np.array(self._onsite, dtype=np.float64)
         self._off_ind = np.array([], dtype=np.int32)
         self._off_val = np.array([], dtype=np.complex128)
 
@@ -109,12 +109,26 @@ class Overlap:
             raise exc.PCHopDiagonalError(rn, orb_i)
         return rn, orb_i, orb_j
 
-    def add_overlap(self, rn: rn_type,
+    def set_onsite(self, orb_i: int, overlap: float) -> None:
+        """
+        Set the on-site overlap term.
+
+        :param orb_i: index of orbital
+        :param overlap: the overlap
+        :return: None
+        :raises PCOrbIndexError: if orb_i falls out of range
+        """
+        try:
+            self._onsite[orb_i] = overlap
+        except IndexError as err:
+            raise exc.PCOrbIndexError(orb_i) from err
+
+    def add_offsite(self, rn: rn_type,
                     orb_i: int,
                     orb_j: int,
                     overlap: complex) -> None:
         """
-        Add a new overlap term or update an existing one.
+        Add a new off-site overlap term or update an existing one.
 
         :param rn: cell index of the overlap term, i.e. R
         :param orb_i: index of orbital i in <i,0|j,R>
@@ -125,12 +139,8 @@ class Overlap:
         :raises PCHopDiagonalError: if rn == (0, 0, 0) and orb_i == orb_j
         :raises CellIndexLenError: if len(rn) != 2 or 3
         """
-        try:
-            rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
-        except exc.PCHopDiagonalError:
-            self._onsite[orb_i] = orb_i
-        else:
-            self._offsite.add_hopping(rn, orb_i, orb_j, overlap)
+        rn, orb_i, orb_j = self._check_hop_index(rn, orb_i, orb_j)
+        self._offsite.add_hopping(rn, orb_i, orb_j, overlap)
 
     def sync_array(self, force_sync: bool = False) -> None:
         """

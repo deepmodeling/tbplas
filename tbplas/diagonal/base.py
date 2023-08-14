@@ -131,7 +131,7 @@ class DiagSolver(MPIEnv):
         self.__overlap = overlap
         self.__h_mat = None
         self.__s_mat = None
-        self._update_model()
+        self._update_array()
 
     @property
     def model_is_pc(self) -> bool:
@@ -177,9 +177,9 @@ class DiagSolver(MPIEnv):
         else:
             return self.__model.sc0.get_reciprocal_vectors()
 
-    def _update_model(self) -> None:
+    def _update_array(self) -> None:
         """
-        Update the essential arrays of the model.
+        Update the essential arrays of the model and overlap.
 
         :return: None
         """
@@ -189,6 +189,8 @@ class DiagSolver(MPIEnv):
             self.__model.init_orb_pos()
             self.__model.init_orb_eng()
             self.__model.init_hop()
+        if self.__overlap is not None:
+            self.__overlap.sync_array()
 
     @staticmethod
     def _calc_proj(orbital_indices: Union[Iterable[int], np.ndarray],
@@ -313,7 +315,7 @@ class DiagSolver(MPIEnv):
         :return: k_len, band structure and projection packed in named tuple
         :raises ValueError: if solver is neither lapack nor arpack
         """
-        self._update_model()
+        self._update_array()
 
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]
@@ -459,7 +461,7 @@ class DiagSolver(MPIEnv):
             function
         :raises ValueError: if solver is neither lapack nor arpack
         """
-        self._update_model()
+        self._update_array()
 
         # Determine the shapes of arrays
         num_kpt = k_points.shape[0]

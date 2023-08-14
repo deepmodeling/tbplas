@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import unittest
-from math import cos, sin, sqrt, pi
 
 import numpy as np
 import matplotlib.pyplot as plt
