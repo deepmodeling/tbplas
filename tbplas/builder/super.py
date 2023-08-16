@@ -133,7 +133,7 @@ class OrbitalSet(Observable):
         for i in range(3):
             rn_min = hop_ind[:, i].min()
             rn_max = hop_ind[:, i].max()
-            dim_min = max(abs(rn_min), abs(rn_max))
+            dim_min = 2 * max(abs(rn_min), abs(rn_max)) + 1
             if dim[i] < dim_min:
                 raise exc.SCDimSizeError(i, dim_min)
         self._dim = np.array(dim, dtype=np.int32)
