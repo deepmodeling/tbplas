@@ -77,13 +77,14 @@ the next section.
 Usage of Hamiltonian
 --------------------
 
-The :class:`.DiagSolver` class accepts two optional arguments: ``hk_dense`` and ``hk_csr``, which are
-functions for setting up the analytical Hamiltonian. The ``hk_dense`` function should accept the
-fractional coordinate of k-point and the Hamiltonian matrix as input, and modifies the Hamiltonian
-in-place. On the contrary, the ``hk_csr`` function accepts only the fractional coordinate of k-point
-as input, and returns a new Hamiltonian matrix in CSR format.
+TBPLaS provides the :class:`.FakePC` class for holding the analytical Hamiltonian. Users should derive
+their own class from this class and implement the analytical Hamiltonian in the ``set_ham_dense`` and
+``set_ham_csr`` methods. The ``set_ham_dense`` method should accept the fractional coordinate of k-point
+and the Hamiltonian matrix as input, and modifies the Hamiltonian in-place. On the contrary, the
+``set_ham_csr`` function accepts only the fractional coordinate of k-point as input, and returns a new
+Hamiltonian matrix in CSR format.
 
-We define the following functions from the analytical Hamiltonians in previous section
+We define the following function and class from the analytical Hamiltonians in previous section
 
 .. code-block:: python
     :linenos:
@@ -98,61 +99,43 @@ We define the following functions from the analytical Hamiltonians in previous s
         return cos(2 * pi * x) + 1j * sin(2 * pi * x)
 
 
-    def hk1(kpt: np.ndarray, ham: np.ndarray) -> None:
-        """
-        Analytical Hamiltonian modifying ham in-place following convention 1.
-
-        :param kpt: (3,) float64 array
-            fractional coordinate of k-points
-        :param ham: (num_orb, num_orb) complex128 array
-            Hamiltonian matrix
-        :return: None
-        """
-        ka, kb = kpt.item(0), kpt.item(1)
-        ham[0, 0] = 0.0
-        ham[1, 1] = 0.0
-        ham[0, 1] = -2.7 * (exp_i(1. / 3 * ka + 1. / 3 * kb) +
-                            exp_i(-2. / 3 * ka + 1. / 3 * kb) +
-                            exp_i(1. / 3 * ka - 2. / 3 * kb))
-        ham[1, 0] = ham[0, 1].conjugate()
+    class FakePC(tb.FakePC):
+        def set_ham_dense(self, kpt: np.ndarray,
+                          ham: np.ndarray,
+                          convention: int = 1) -> None:
+            ka, kb = kpt.item(0), kpt.item(1)
+            ham[0, 0] = 0.0
+            ham[1, 1] = 0.0
+            if convention == 1:
+                ham[0, 1] = -2.7 * (exp_i(1. / 3 * ka + 1. / 3 * kb) +
+                                    exp_i(-2. / 3 * ka + 1. / 3 * kb) +
+                                    exp_i(1. / 3 * ka - 2. / 3 * kb))
+                ham[1, 0] = ham[0, 1].conjugate()
+            else:
+                ham[0, 1] = -2.7 * (1.0 + exp_i(-ka) + exp_i(-kb))
+                ham[1, 0] = ham[0, 1].conjugate()
 
 
-    def hk2(kpt: np.ndarray, ham: np.ndarray) -> None:
-        """
-        Analytical Hamiltonian modifying ham in-place following convention 2.
-
-        :param kpt: (3,) float64 array
-            fractional coordinate of k-points
-        :param ham: (num_orb, num_orb) complex128 array
-            Hamiltonian matrix
-        :return: None
-        """
-        ka, kb = kpt.item(0), kpt.item(1)
-        ham[0, 0] = 0.0
-        ham[1, 1] = 0.0
-        ham[0, 1] = -2.7 * (1.0 + exp_i(-ka) + exp_i(-kb))
-        ham[1, 0] = ham[0, 1].conjugate()
-
-To demonstrate the usage of analytical Hamiltonian, we create a graphene primitive cell with 2
-orbitals
+To demonstrate the usage of analytical Hamiltonian, we create a fake graphene primitive cell with 2
+orbitals. Then we create a ``solver`` from the :class:`.DiagSolver` class using the fake primitive cell
+with analytical Hamiltonian
 
 .. code-block:: python
     :linenos:
 
-    # Create a cell without hopping terms
+    # Create fake primitive cell, solver and visualizer
     vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
-    cell = tb.PrimitiveCell(vectors, unit=tb.NM)
-    cell.add_orbital((0.0, 0.0), label="C_pz")
-    cell.add_orbital((1/3., 1/3.), label="C_pz")
+    cell = FakePC(num_orb=2, lat_vec=vectors, unit=tb.NM)
+    solver = tb.DiagSolver(cell)
+    vis = tb.Visualizer()
 
-The hopping terms are not essential since the Hamiltonian matrix will be setup by the analyical
-function. However, the orbitals should still be added to the primitive cell. Then we get the
-k-path for calculating band structure
+The band structure from the analytical Hamiltonian can be obtained by calling the ``calc_bands``
+method of the :class:`.DiagSolver` class
 
 .. code-block:: python
     :linenos:
 
-    # Generate k-path
+    # Evaluation of band structure
     k_points = np.array([
         [0.0, 0.0, 0.0],
         [2. / 3, 1. / 3, 0.0],
@@ -161,33 +144,19 @@ k-path for calculating band structure
     ])
     k_label = ["G", "M", "K", "G"]
     k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
-
-The band structure from the analytical Hamiltonian can be obtained as
-
-.. code-block:: python
-    :linenos:
-
-    # Usage of analytical Hamiltonian
-    for hk in (hk1, hk2):
-        solver = tb.DiagSolver(cell, hk_dense=hk)
-        k_len, bands = solver.calc_bands(k_path)[:2]
-        vis = tb.Visualizer()
+    for convention in (1, 2):
+        k_len, bands = solver.calc_bands(k_path, convention)[:2]
         vis.plot_bands(k_len, bands, k_idx, k_label)
 
-In line 3 we create a ``solver`` from the :class:`.DiagSolver` class using the primitive cell and
-the analytical Hamiltonian. Then in line 4 we get the band structure by calling the ``calc_bands``
-method. In line 5-6 we create a visualizer and plot the band structure. The evaluation of DOS is
-similar
+The evaluation of DOS is similar
 
 .. code-block:: python
     :linenos:
 
     # Evaluation of DOS
     k_mesh = tb.gen_kmesh((120, 120, 1))
-    for hk in (hk1, hk2):
-        solver = tb.DiagSolver(cell, hk_dense=hk)
-        energies, dos = solver.calc_dos(k_mesh)
-        vis = tb.Visualizer()
+    for convention in (1, 2):
+        energies, dos = solver.calc_dos(k_mesh, convention=convention)
         vis.plot_dos(energies, dos)
 
-Both ``hk1`` and ``hk2`` produce the same band structure and DOS as in :ref:`prim_bands`.
+Both conventions produce the same band structure and DOS as in :ref:`prim_bands`.

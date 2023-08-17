@@ -1,6 +1,34 @@
 Release Notes
 =============
 
+v1.5 | 2023-08-17
+-----------------
+
+New features
+^^^^^^^^^^^^
+
+* :class:`.Visualizer` get as new method ``plot_wfc3d`` to plot three-dimensional wavefunctions
+  as Gaussian cubes.
+* All exact-diagonalization methods support non-orthogonal basis sets with the help of new
+  :class:`.Overlap` class.
+* Added interface for reading Hamiltonian and overlap from the output of DeepH. See
+  ``examples/interface/deeph`` for more details.
+
+Improvements
+^^^^^^^^^^^^
+
+* Efficiency of :func:`.wan2pc` significantly enhanced.
+
+Changes
+^^^^^^^
+
+* Analytical Hamiltonian now should be implemented using the :class:`.FakePC` class.
+
+Bugs fixed
+^^^^^^^^^^
+
+* Fixed incorrect restriction on the dimension of supercell.
+
 v1.4.2 | 2023-07-25
 -------------------
 

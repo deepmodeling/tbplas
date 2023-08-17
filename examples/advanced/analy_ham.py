@@ -43,10 +43,11 @@ def main():
     print("---- convention 2 ----")
     cell.print_hk(convention=2)
 
-    # Create fake primitive cell and solver
+    # Create fake primitive cell, solver and visualizer
     vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, c=1.0, gamma=60)
     cell = FakePC(num_orb=2, lat_vec=vectors, unit=tb.NM)
     solver = tb.DiagSolver(cell)
+    vis = tb.Visualizer()
 
     # Usage of analytical Hamiltonian
     k_points = np.array([
@@ -59,14 +60,12 @@ def main():
     k_path, k_idx = tb.gen_kpath(k_points, [40, 40, 40])
     for convention in (1, 2):
         k_len, bands = solver.calc_bands(k_path, convention)[:2]
-        vis = tb.Visualizer()
         vis.plot_bands(k_len, bands, k_idx, k_label)
 
     # Evaluation of DOS
     k_mesh = tb.gen_kmesh((120, 120, 1))
     for convention in (1, 2):
         energies, dos = solver.calc_dos(k_mesh, convention=convention)
-        vis = tb.Visualizer()
         vis.plot_dos(energies, dos)
 
 

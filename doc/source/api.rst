@@ -11,9 +11,12 @@ API Reference
     Analyzer
     Config
     DiagSolver
+    FakeOverlap
+    FakePC
     HopDict
     Lindhard
     MPIEnv
+    Overlap
     PCInterHopping
     ParamFit
     PrimitiveCell
@@ -50,6 +53,7 @@ API Reference
     make_graphene_soc
     make_graphene_sp
     make_hetero_layer
+    make_mos2_soc
     make_tmdc
     merge_prim_cell
     print_banner_block
