@@ -14,7 +14,7 @@ from ..base import kpoints as kpt
 from ..parallel import MPIEnv
 
 
-__all__ = ["FakePC", "DiagSolver"]
+__all__ = ["FakePC", "FakeOverlap", "DiagSolver"]
 
 
 def gaussian(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
@@ -47,7 +47,7 @@ def lorentzian(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
 
 class FakePC:
     """
-    Fake primitive cell for holding analytical Hamiltonian.
+    Base class for fake primitive cell holding the analytical Hamiltonian.
 
     Attributes
     ----------
@@ -84,6 +84,7 @@ class FakePC:
         return lat.gen_reciprocal_vectors(self._lat_vec)
 
     def sync_array(self) -> None:
+        """Reserved for duck typing. Actually does nothing."""
         pass
 
     @property
@@ -95,6 +96,23 @@ class FakePC:
     def lat_vec(self) -> np.ndarray:
         """Interface for the '_lat_vec' attribute."""
         return self._lat_vec
+
+
+class FakeOverlap:
+    """
+    Base class for fake overlap holding the analytical overlap matrix.
+
+    Attributes
+    ----------
+    _num_orb: int
+        number of orbitals
+    """
+    def __init__(self, num_orb: int) -> None:
+        self._num_orb = num_orb
+
+    def sync_array(self) -> None:
+        """Reserved for duck typing. Actually does nothing."""
+        pass
 
 
 class DiagSolver(MPIEnv):

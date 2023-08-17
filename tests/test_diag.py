@@ -44,9 +44,7 @@ class FakePC(tb.FakePC):
             ham[1, 0] = ham[0, 1].conjugate()
 
 
-class FakeOverlap:
-    def __init__(self, num_orb: int) -> None:
-        self._num_orb = num_orb
+class FakeOverlap(tb.FakeOverlap):
 
     def set_overlap_dense(self, k_point: np.ndarray,
                           overlap_dense: np.ndarray,
@@ -57,9 +55,6 @@ class FakeOverlap:
     def set_overlap_csr(self, k_point: np.ndarray,
                         convention: int = 1) -> csr_matrix:
         return csr_matrix(np.eye(self._num_orb))
-
-    def sync_array(self) -> None:
-        pass
 
 
 class MyTest(unittest.TestCase):
