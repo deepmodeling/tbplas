@@ -130,8 +130,8 @@ def extend_prim_cell(prim_cell: PrimitiveCell,
                     jc, nc = _wrap_pbc(id_pc_i[2] + rn[2], dim[2])
                     id_pc_j = (ja, jb, jc, pair[1])
                     id_sc_j = orb_map.pc2sc(id_pc_j)
-                    rn = (na, nb, nc)
-                    extend_cell.add_hopping(rn, id_sc_i, id_sc_j, energy)
+                    ext_rn = (na, nb, nc)
+                    extend_cell.add_hopping(ext_rn, id_sc_i, id_sc_j, energy)
 
     return extend_cell
 
