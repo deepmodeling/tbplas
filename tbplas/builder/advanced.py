@@ -30,7 +30,7 @@ class OrbitalMap:
 
     NOTE: this class is intended to be utilized by 'extend_prim_cell' and
     'reshape_prim_cell' functions only. The orbital indices passed to 'add'
-    method must be non-redundant. Otherwise, bugs will be definitely raised.
+    method must not be duplicate. Otherwise, bugs will be definitely raised.
 
     Attributes
     ----------
