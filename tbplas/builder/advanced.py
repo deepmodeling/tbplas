@@ -28,6 +28,10 @@ class OrbitalMap:
     Helper class for converting orbital indices between pc and sc
     representations, inspired by the 'OrbitalSet' class in super.py.
 
+    NOTE: this class is intended to be utilized by 'extend_prim_cell' and
+    'reshape_prim_cell' functions only. The orbital indices passed to 'add'
+    method must be non-redundant. Otherwise, bugs will be definitely raised.
+
     Attributes
     ----------
     _id_pc: List[Tuple[int, int, int, int]]
