@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 import tbplas as tb
-from tbplas.builder.base import (check_rn, check_pos, check_pbc, invert_rn,
+from tbplas.builder.base import (check_rn, check_pos, check_pbc, check_conj,
                                  IntraHopping, InterHopping)
 import tbplas.builder.exceptions as exc
 
@@ -89,12 +89,13 @@ class MyTest(unittest.TestCase):
         """
         # Accuracy
         test_dict = {
-            (1, -1, 2): False, (-1, -1, 2): True,
-            (0, 1, 2): False, (0, -1, 2): True,
-            (0, 0, 1): False, (0, 0, 0): False, (0, 0, -1): True
+            (1, -1, 2, 0, 2): False, (-1, -1, 2, 0, 2): True,
+            (0, 1, 2, 0, 1): False, (0, -1, 2, 0, 1): True,
+            (0, 0, 1, 1, 0): False, (0, 0, -1, 1, 0): True,
+            (0, 0, 0, 0, 1): False, (0, 0, 0, 1, 0): True,
         }
         for key, value in test_dict.items():
-            self.assertEqual(invert_rn(key), value)
+            self.assertEqual(check_conj(key), value)
 
         # Speed
         timer = tb.Timer()
@@ -102,7 +103,7 @@ class MyTest(unittest.TestCase):
         for i in range(-100, 100):
             for j in range(-100, 100):
                 for k in range(-100, 100):
-                    invert_rn((i, j, k))
+                    check_conj((i, j, k, 0, 1))
         timer.toc("invert_rn")
         timer.report_total_time()
 

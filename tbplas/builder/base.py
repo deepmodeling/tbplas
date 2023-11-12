@@ -73,23 +73,23 @@ def check_pbc(coord: pbc_type,
     return coord, legal
 
 
-def invert_rn(rn: rn3_type, i: int = 0) -> bool:
+def check_conj(hop_ind: Tuple[int, ...], i: int = 0) -> bool:
     """
-    Check if the cell index should be inverted.
+    Check whether to take the conjugate part of the hopping term.
 
-    :param rn: (r_a, r_b, r_c), cell index
+    :param hop_ind: (r_a, r_b, r_c, orb_i, orb_j), hopping index
     :param i: component index
-    :return: whether to invert the cell index
+    :return: whether to take conjugate
     """
-    if rn[i] > 0:
+    if hop_ind[i] > 0:
         return False
-    elif rn[i] < 0:
+    elif hop_ind[i] < 0:
         return True
     else:
         if i < 2:
-            return invert_rn(rn, i+1)
+            return check_conj(hop_ind, i+1)
         else:
-            return False
+            return hop_ind[3] > hop_ind[4]
 
 
 Orbital = namedtuple("Orbital", ["position", "energy", "label"])
@@ -211,18 +211,11 @@ class IntraHopping:
             pair is the normalized orbital pair,
             conj is the flag of whether to take the conjugate of hopping energy
         """
-        if invert_rn(rn):
+        pair = (orb_i, orb_j)
+        conj = check_conj(rn + pair)
+        if conj:
             rn = (-rn[0], -rn[1], -rn[2])
             pair = (orb_j, orb_i)
-            conj = True
-        elif rn == (0, 0, 0) and orb_i > orb_j:
-            rn = rn
-            pair = (orb_j, orb_i)
-            conj = True
-        else:
-            rn = rn
-            pair = (orb_i, orb_j)
-            conj = False
         return rn, pair, conj
 
     def add_hopping(self, rn: rn_type,
