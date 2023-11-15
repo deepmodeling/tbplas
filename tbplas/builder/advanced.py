@@ -20,7 +20,7 @@ from .super import SuperCell
 
 __all__ = ["extend_prim_cell", "reshape_prim_cell", "spiral_prim_cell",
            "make_hetero_layer", "merge_prim_cell", "find_neighbors",
-           "SK", "SOC", "SOCTable", "ParamFit"]
+           "SK", "SOC", "SOCTable", "SOCTable2", "ParamFit"]
 
 
 class OrbitalMap:
@@ -1348,6 +1348,75 @@ class SOCTable:
         except KeyError:
             product = 0.0
         return product
+
+
+class SOCTable2:
+    """
+    Hard-coded spin-orbital coupling term table, taking from
+    https://journals.aps.org/prb/abstract/10.1103/PhysRevB.82.245412
+
+    Attributes
+    ----------
+    _data: Dict[Tuple[str, str], np.ndarray]
+        soc coupling matrices
+    _orbital_labels: Set[str]
+        labels of atomic orbitals
+    _spin_labels: Set[str]
+        directions of spins
+    """
+    def __init__(self):
+        s_x = 0.5 * np.array([[0, 1], [1, 0]])
+        s_y = 0.5 * np.array([[0, -1j], [1j, 0]])
+        s_z = 0.5 * np.array([[1, 0], [0, -1]])
+        self._data = {
+            ('px', 'py'): -1j * s_z,
+            ('px', 'pz'): 1j * s_y,
+            ('py', 'pz'): -1j * s_x,
+            ('dxy', 'dx2-y2'): 2 * 1j * s_z,
+            ('dxy', 'dzx'): -1j * s_x,
+            ('dxy', 'dyz'): 1j * s_y,
+            ('dx2-y2', 'dzx'): 1j * s_y,
+            ('dx2-y2', 'dyz'): 1j * s_x,
+            ('dzx', 'dyz'): -1j * s_z,
+            ('dzx', 'dz2'): 1j * sqrt(3) * s_y,
+            ('dyz', 'dz2'): -1j * sqrt(3) * s_x,
+        }
+        self._orbital_labels = {"s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
+                                "dzx", "dz2"}
+        self._spin_labels = {"up", "down"}
+
+    def eval(self, label_i: str = "s",
+             spin_i: str = "up",
+             label_j: str = "s",
+             spin_j: str = "down") -> complex:
+        """
+        Evaluate the matrix element <i,s_i|l*s|j,s_j>.
+
+        :param label_i: orbital label of bra
+        :param spin_i: spin direction of bra
+        :param label_j: orbital label of ket
+        :param spin_j: spin direction of ket
+        :return: matrix element in h_bar**2
+        :raises ValueError: if orbital labels or spin directions are illegal
+        """
+        label_idx = (label_i, label_j)
+        spin_idx = (spin_i, spin_j)
+        for label in label_idx:
+            if label not in self._orbital_labels:
+                raise ValueError(f"Illegal orbital label {label}")
+        for spin in spin_idx:
+            if spin not in self._spin_labels:
+                raise ValueError(f"Illegal spin direction {spin}")
+        try:
+            soc_mat = self._data[label_idx]
+        except KeyError:
+            try:
+                soc_mat = -self._data[(label_j, label_i)]
+            except KeyError:
+                soc_mat = np.zeros((2, 2))
+        s_i = 0 if spin_i == "up" else 1
+        s_j = 0 if spin_j == "up" else 1
+        return soc_mat[s_i, s_j]
 
 
 class ParamFit(ABC):
