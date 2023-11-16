@@ -315,6 +315,25 @@ class MyTest(unittest.TestCase):
         k_len, bands = cell.calc_bands(k_path)
         tb.Visualizer().plot_bands(k_len, bands, k_idx, k_label)
 
+    def test_soc_table(self):
+        """Test SOC, SOCTable and SOCTable2."""
+        soc1 = tb.SOC()
+        soc2 = tb.SOCTable()
+        soc3 = tb.SOCTable2()
+        orbital_labels = ("s", "px", "py", "pz",
+                          "dxy", "dx2-y2", "dyz", "dzx", "dz2")
+        spin_labels = ("up", "down")
+        for o1 in orbital_labels:
+            for s1 in spin_labels:
+                for o2 in orbital_labels:
+                    for s2 in spin_labels:
+                        v1 = soc1.eval(o1, s1, o2, s2)
+                        v2 = soc2.eval(o1, s1, o2, s2)
+                        v3 = soc3.eval(o1, s1, o2, s2)
+                        self.assertAlmostEqual(v1, v2)
+                        self.assertAlmostEqual(v2, v3)
+                        self.assertAlmostEqual(v3, v1)
+
 
 if __name__ == "__main__":
     unittest.main()

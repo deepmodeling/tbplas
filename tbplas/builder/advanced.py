@@ -2,7 +2,7 @@
 
 from math import floor, ceil, sqrt
 from typing import Union, List, Tuple, Dict
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from copy import deepcopy
 from abc import ABC, abstractmethod
 
@@ -990,20 +990,11 @@ class AtomicOrbital:
 
     Attributes
     ----------
-    _l_max: int
-        maximum angular quantum number l
     _coeff: Dict[Tuple[int, int], complex]
         keys: (l, m), values: coefficients on |l,m>
-    _allowed_qn: Set[Tuple[int, int]]
-        set of allowed (l, m) pairs
     """
-    def __init__(self, l_max: int = 2) -> None:
-        """
-        :param l_max: maximum angular quantum number l
-        """
-        self._l_max = l_max
-        self._coeff = self._init_coeff()
-        self._allowed_qn = set(self._coeff.keys())
+    def __init__(self) -> None:
+        self._coeff = defaultdict(complex)
 
     def __setitem__(self, key: Tuple[int, int], value: complex = 1.0) -> None:
         """
@@ -1013,8 +1004,7 @@ class AtomicOrbital:
         :param value: the new coefficient
         :return: None
         """
-        if key not in self._allowed_qn:
-            raise KeyError(f"Undefined key {key}")
+        self._check_qn(key)
         self._coeff[key] = value
 
     def __getitem__(self, key: Tuple[int, int]) -> complex:
@@ -1024,21 +1014,21 @@ class AtomicOrbital:
         :param key: (l, m) of the state
         :return: the coefficient
         """
-        if key not in self._allowed_qn:
-            raise KeyError(f"Undefined key {key}")
+        self._check_qn(key)
         return self._coeff[key]
 
-    def _init_coeff(self) -> Dict[Tuple[int, int], complex]:
+    @staticmethod
+    def _check_qn(key: Tuple[int, int]) -> None:
         """
-        Build initial coefficients.
+        Check if the combination of (l, m) is legal.
 
-        :return: dictionary with keys being (l, m) and values being zero
+        :param key: (l, m) of the state
+        :return: None
+        :raises ValueError: if the quantum numbers are illegal
         """
-        coefficients = dict()
-        for l_i in range(self._l_max + 1):
-            for m in range(-l_i, l_i+1):
-                coefficients[(l_i, m)] = 0.0
-        return coefficients
+        l, m = key
+        if not -l <= m <= l:
+            raise ValueError(f"Illegal quantum number {key}")
 
     def l_plus(self) -> None:
         """
@@ -1050,11 +1040,15 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self._init_coeff()
+        new_coefficients = defaultdict(complex)
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m+1)
-            if key_new in self._allowed_qn:
+            try:
+                self._check_qn(key_new)
+            except ValueError:
+                pass
+            else:
                 factor = sqrt((l - m) * (l + m + 1))
                 new_coefficients[key_new] = value * factor
         self._coeff = new_coefficients
@@ -1069,11 +1063,15 @@ class AtomicOrbital:
 
         :return: None
         """
-        new_coefficients = self._init_coeff()
+        new_coefficients = defaultdict(complex)
         for key, value in self._coeff.items():
             l, m = key
             key_new = (l, m-1)
-            if key_new in self._allowed_qn:
+            try:
+                self._check_qn(key_new)
+            except ValueError:
+                pass
+            else:
                 factor = sqrt((l + m) * (l - m + 1))
                 new_coefficients[key_new] = value * factor
         self._coeff = new_coefficients
@@ -1131,21 +1129,20 @@ class SOC:
 
     Attributes
     ----------
-    _orbital_basis: Dict[str, AtomicOrbital]
-        collection of atomic orbitals s, px, py, pz. etc
     _orbital_labels: Set[str]
         labels of atomic orbitals
     _spin_labels: Set[str]
         directions of spins
+    _orbital_basis: Dict[str, AtomicOrbital]
+        collection of atomic orbitals s, px, py, pz. etc
     """
     def __init__(self) -> None:
         self._orbital_basis = dict()
-        orbital_labels = ("s", "px", "py", "pz", "dxy", "dx2-y2", "dyz", "dzx",
-                          "dz2")
-        for label in orbital_labels:
-            self._orbital_basis[label] = AtomicOrbital(l_max=2)
-        self._orbital_labels = set(self._orbital_basis.keys())
+        self._orbital_labels = {"s", "px", "py", "pz",
+                                "dxy", "dx2-y2", "dyz", "dzx", "dz2"}
         self._spin_labels = {"up", "down"}
+        for label in self._orbital_labels:
+            self._orbital_basis[label] = AtomicOrbital()
 
         # Reference:
         # https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
@@ -1310,8 +1307,8 @@ class SOCTable:
                          ('dzx', 'dz2'): -0.8660254037844386,
                          ('dz2', 'dyz'): 0.8660254037844386j,
                          ('dz2', 'dzx'): 0.8660254037844386}
-        self._orbital_labels = {"s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
-                                "dzx", "dz2"}
+        self._orbital_labels = {"s", "px", "py", "pz",
+                                "dxy", "dx2-y2", "dyz", "dzx", "dz2"}
         self._spin_labels = {"up", "down"}
 
     def eval(self, label_i: str = "s",
@@ -1386,8 +1383,8 @@ class SOCTable2:
         for key, value in self._data.items():
             data2[(key[1], key[0])] = -value
         self._data.update(data2)
-        self._orbital_labels = {"s", "px", "py", "pz", "dxy", "dx2-y2", "dyz",
-                                "dzx", "dz2"}
+        self._orbital_labels = {"s", "px", "py", "pz",
+                                "dxy", "dx2-y2", "dyz", "dzx", "dz2"}
         self._spin_labels = {"up", "down"}
 
     def eval(self, label_i: str = "s",
