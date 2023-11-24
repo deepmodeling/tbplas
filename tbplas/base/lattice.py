@@ -132,11 +132,10 @@ def rotate_coord(coord: np.ndarray,
     Rotate Cartesian coordinates according to Euler angles.
 
     Reference:
-    https://mathworld.wolfram.com/RotationMatrix.html
-    https://mathworld.wolfram.com/EulerAngles.html
+    https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
 
-    Note that in the reference the axes are rotated, not the vectors.
-    So here you will see a minus sign before the angles.
+    Note that the right-hand rule is used, i.e., a positive value means the
+    angle is counter-clockwise.
 
     :param coord: (num_coord, 3) float64 array
         Cartesian coordinates to rotate
@@ -144,7 +143,6 @@ def rotate_coord(coord: np.ndarray,
         rotation angle in RADIAN, not degrees
     :param axis: string
         axis around which the rotation is performed
-        x - pitch, y - roll, z - yawn
     :param center: (3,) float64 array
         Cartesian coordinate of rotation center
     :return: (num_coord, 3) float64 array
@@ -157,25 +155,23 @@ def rotate_coord(coord: np.ndarray,
         center = np.array(center)
     if len(center) != 3:
         raise ValueError(f"Length of rotation center should be 3")
-    cos_ang, sin_ang = cos(-angle), sin(-angle)
-    rot_mat = np.eye(3)
-    if axis == "x":
-        rot_mat[1, 1] = cos_ang
-        rot_mat[1, 2] = sin_ang
-        rot_mat[2, 1] = -sin_ang
-        rot_mat[2, 2] = cos_ang
-    elif axis == "y":
-        rot_mat[0, 0] = cos_ang
-        rot_mat[0, 2] = -sin_ang
-        rot_mat[2, 0] = sin_ang
-        rot_mat[2, 2] = cos_ang
-    elif axis == "z":
-        rot_mat[0, 0] = cos_ang
-        rot_mat[0, 1] = sin_ang
-        rot_mat[1, 0] = -sin_ang
-        rot_mat[1, 1] = cos_ang
-    else:
+    if axis not in ("x", "y", "z"):
         raise ValueError("Axis should be in 'x', 'y', 'z'")
+
+    # Determine rotation matrix
+    if axis == "x":
+        u = np.array([1, 0, 0])
+    elif axis == "y":
+        u = np.array([0, 1, 0])
+    else:
+        u = np.array([0, 0, 1])
+    ux, uy, uz = u
+    u_prod = np.array([[0, -uz, uy], [uz, 0, -ux], [-uy, ux, 0]])
+    u_tens = np.tensordot(u, u, axes=0)
+    cos_ang, sin_ang = cos(angle), sin(angle)
+    rot_mat = cos_ang * np.eye(3) + sin_ang * u_prod + (1 - cos_ang) * u_tens
+
+    # Rotate coordinates
     coord_rot = np.zeros(shape=coord.shape, dtype=coord.dtype)
     for i in range(coord.shape[0]):
         coord_rot[i] = np.matmul(rot_mat, coord[i] - center) + center
