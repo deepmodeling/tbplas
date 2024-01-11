@@ -135,8 +135,8 @@ class MyTest(unittest.TestCase):
 
         # Dense
         kpt = np.array([0.5, 0.3, 0.0])
-        h1 = np.zeros((2, 2), dtype=np.complex)
-        h2 = np.zeros((2, 2), dtype=np.complex)
+        h1 = np.zeros((2, 2), dtype=np.complex128)
+        h2 = np.zeros((2, 2), dtype=np.complex128)
         cell.set_ham_dense(kpt, h1)
         overlap.set_overlap_dense(kpt, h2)
         th.test_equal_array(h1, h2)
