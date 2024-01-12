@@ -7,13 +7,7 @@ Requirements
 Operating system
 ^^^^^^^^^^^^^^^^
 
-.. rubric:: Linux
-
 TBPLaS has been developed and tested on Linux. Ideally, it should work on most Linux distributions.
-As examples, we have successfully installed and run TBPLaS on CentOS 7.7, openSUSE Leap 15.3 and
-Ubuntu 20.04 LTS.
-
-.. rubric:: Windows
 
 Due to compiler and library compatibility issues, native compilation of TBPLaS on Windows is particularly
 difficult. So, if you wish to install TBPLaS on Windows, the best practice is to use virtual machines,
@@ -22,8 +16,6 @@ compilation, and if you are an expert on computer, follow the guidelines
 `cython on windows <https://stackoverflow.com/questions/52864588/how-to-install-cython-an-anaconda-64-bits-with-windows-10>`_
 and
 `f2py on windows <https://stackoverflow.com/questions/48826283/compile-fortran-module-with-f2py-and-python-3-6-on-windows-10>`_
-
-.. rubric:: MacOS
 
 Unfortunately, we have no experience of MacOS. You are encouraged to send us feedbacks on this operating system.
 
@@ -36,14 +28,10 @@ math libraries for optimal performance. For Intel CPUs, it is recommended to use
 Library (MKL), which are now bundled as oneAPI. If the Intel toolchain is not available, GNU Compiler Collection
 (GCC) is a general choice. In that case, built-in sparse matrix library will be enabled automatically.
 
-As examples, we have successfully compiled TBPLaS with Intel Compiler 2019.0/2022.0 and GCC 6.3/7.5. Old versions
-may still work, although not recommended.
-
-
 Python
 ^^^^^^
 
-TBPLaS requires Python 3.6 or newer. Python 2 is not supported.
+TBPLaS requires Python 3.7 or newer. Python 2 is not supported.
 
 In addition to the Python interpreter, development headers are also required. The actual package name of
 development headers may vary among Linux distributions, e.g., ``python3-devel`` on rpm-based distributions
@@ -59,24 +47,24 @@ Dependencies
 ^^^^^^^^^^^^
 
 TBPLaS requires the following Python packages as mandatory dependencies:
-    * NumPy >= 1.19.2
-    * SciPy >= 1.5.2
-    * Matplotlib >= 3.3.2
-    * Cython >= 0.29.21
-    * Setupools >=50.3.1
+
+    * numpy
+    * scipy
+    * matplotlib
+    * cython
+    * scikit-build-core
 
 And the following packages as optional:
-    * ASE >=3.22.1 (for LAMMPS interface)
-    * MPI4PY >= 3.0.3 (for hybrid MPI+OpenMP parallelization)
 
-Old versions may still work, but not recommended.
+    * ase (for LAMMPS interface)
+    * mpi4py (for hybrid MPI+OpenMP parallelization)
 
-Most of the dependencies can be installed via the pip command, e.g., ``python -m pip install numpy``.
-If you do not have root privileges, add ``--user`` option to install into you home directory, e.g.,
-``python -m pip install --user numpy``. If your computer has no Internet access, try the
-`Anaconda <https://www.anaconda.com/products/individual>`_ offline installer.
+We recommend to install the latest version of the packages. The packages can be installed  via the ``pip`` or
+``conda`` commands, e.g., ``pip install numpy`` or ``conda install numpy``. If you do not have root privileges
+to make a system-wide installation, create a virtual environment under your home direcotry and activate it
+before installing the packages.
 
-The installation of MPI4PY is more complex. You need a working MPI implementation. Since OpenMPI
+The installation of ``mpi4py`` is somewhat complex. You need a working MPI implementation. Since OpenMPI
 suffers from a limitation on the number of OpenMP threads when there are too few MPI processes,
 MPICH3 or newer is preferred. See the following links for installing
 `MPICH <https://www.mpich.org/documentation/guides/>`_,
@@ -94,162 +82,74 @@ If you have downloading problems, send an e-mail to the development team at :ref
 Configuration
 -------------
 
+**CAUTION:** the old installation procedure based on ``setup.cfg`` and ``setup.py`` is deprecated.
+The files are kept for compatibility concerns only, and will be removed soon.
+
 General rules
 ^^^^^^^^^^^^^
 
-The configuration of compilation is stored in ``setup.cfg`` in the top directory of TBPLaS source code.
-Some examples are placed under ``config`` subdirectory. A common ``setyp.cfg`` consists of the following
-sections:
+The configuration of compilation is stored in the ``tool.scikit-build.cmake.define`` section in
+``pyproject.toml`` in the top directory of TBPLaS source code, which should look like:
 
-* config_cc: C compiler configuration
-* config_fc: FORTRAN compiler configuration
-* build_ext: external library configuration
-  
-You should adjust these settings according to your computer's hardware and software environment.
-Here is an example using Intel compilers and built-in sparse matrix library:
-
-.. code-block:: cfg
+.. code-block:: toml
     :emphasize-lines: 0
 
-    [config_cc]                                                                                                                                                                             
-    compiler = intelem
+    [tool.scikit-build.cmake.define]
+    USE_INDEX64 = "OFF"
+    USE_MKL = "OFF"
+    # GCC
+    CMAKE_C_COMPILER = "gcc"
+    CMAKE_Fortran_COMPILER = "gfortran"
+    CMAKE_C_FLAGS = "-march=native -mtune=native"
+    CMAKE_Fortran_FLAGS = "-cpp -march=native -mtune=native -fopenmp -fno-second-underscore"
+    ## Intel
+    #CMAKE_C_COMPILER = "icx"
+    #CMAKE_Fortran_COMPILER = "ifx"
+    #CMAKE_C_FLAGS = "-xHost"
+    #CMAKE_Fortran_FLAGS = "-fpp -xHost -qopenmp -ipo -heap-arrays 32"
 
-    [config_fc]
-    fcompiler = intelem
-    arch = -xHost
-    opt = -qopenmp -O3 -ipo -heap-arrays 32
-    f90flags = -fpp
+Here ``USE_INDEX64`` and ``USE_MKL`` are two switches whose value should be either ``ON`` or ``OFF``. The following
+lines define the C and Fortran compilers and the compilation flags. Uncomment the lines of the compiler you wish to
+use. Note that the executables of Intel compiler have been recently renamed to ``icx`` and ``ifx``. For older versions,
+they may be ``icc`` and ``ifort``. For Intel compiler, you can also use the sparse matrix library from MKL by setting
+``USE_MKL`` to ``ON``. 
 
-    [build_ext]
-    libraries = iomp5
+64-bit array index
+^^^^^^^^^^^^^^^^^^
 
-And here is the example using Intel compilers and MKL:
-
-.. code-block:: cfg
-    :emphasize-lines: 0
-
-    [config_cc]                                                                                                                                                                             
-    compiler = intelem
-
-    [config_fc]
-    fcompiler = intelem
-    arch = -xHost
-    opt = -qopenmp -O3 -ipo -heap-arrays 32
-    f90flags = -fpp -DMKL
-
-    [build_ext]
-    include_dirs = /software/intel/parallelstudio/2019/compilers_and_libraries/linux/mkl/include
-    library_dirs = /software/intel/parallelstudio/2019/compilers_and_libraries/linux/mkl/lib/intel64
-    libraries = mkl_rt iomp5 pthread m dl
-
-Another example using GCC and built-in sparse matrix library:
-
-.. code-block:: cfg
-    :emphasize-lines: 0
-
-    [config_cc]
-    compiler = unix
-
-    [config_fc]
-    fcompiler = gfortran
-    arch = -march=native
-    opt = -fopenmp -O3 -mtune=native
-    f90flags = -fno-second-underscore -cpp
-
-    [build_ext]
-    libraries = gomp
-
-Workaround for undefined symbol error
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-You may run into errors complaining about ``undefined symbol: GOMP_parallel`` when testing your build and
-installation if you use GCC. In that case, find the location of ``libgomp.so``, for instance, ``/usr/lib64``.
-Add it to ``library_dirs`` of ``build_ext`` section and re-compile TBPLaS. This issue will be solved.
-
-.. code-block:: cfg
-    :emphasize-lines: 0
-
-    [build_ext]                                                                                                                                                                             
-    library_dirs = /usr/lib64
-    libraries = gomp
-
-Similarily, if you run into errors of ``undefined symbol: __kmpc_ok_to_fork`` when using Intel compilers,
-search for ``libiomp5.so`` add its path to ``library_dirs``. Then re-compile TBPLaS.
-
-.. code-block:: cfg
-    :emphasize-lines: 0
-
-    [build_ext]
-    library_dirs = /opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin
-    libraries = iomp5
-
-64-bit integer
-^^^^^^^^^^^^^^
-
-TBPLaS uses 32-bit integer by default, even if it has been compiled and installed on a 64-bit host. While the RAM
+TBPLaS uses 32-bit array index by default, even if it has been compiled and installed on a 64-bit host. While the RAM
 usage is reduced in this approach, segmentation fault may be raised if the model is very large (billions of orbitals).
-In that case, the version with 64-bit integer should be used.
-
-To compile the 64-bit version, first go to ``tbplas/fortran`` directory and pre-process the FORTRAN source files by:
+In that case, the version with 64-bit array index should be used. To compile the 64-bit version, first go to
+``tbplas/fortran`` directory and pre-process the FORTRAN source files by:
 
 .. code-block:: bash
 
     cd tbplas/fortran
     ../../scripts/set_int.py
 
-Then add appropriate compilation flags to ``f90flags``. For ifort it should be ``-i8``:
-
-.. code-block:: cfg
-
-    [config_fc]
-    fcompiler = intelem
-    arch = -xHost
-    opt = -qopenmp -O3 -ipo -heap-arrays 32
-    f90flags = -fpp -i8
-
-
-while for gfortran it should be ``-fdefault-integer-8``:
-
-.. code-block:: cfg
-
-    [config_fc]
-    fcompiler = gfortran
-    arch = -march=native
-    opt = -fopenmp -O3 -mtune=native
-    f90flags = -fno-second-underscore -cpp -fdefault-integer-8
-
-Note that MKL **does not** work with 64-bit integer.
-
-Compilation
------------
-Once ``setup.cfg`` has been properly configured, you can build TBPLaS with this command: ``python setup.py build``.
-If everything goes well, a new ``build`` directory will be created. The Cython and FORTRAN extensions can be found
-under ``lib.linux-x86_64-3.x`` sub-directory, with x being the minor version of Python interpreter. If any error
-occurs, check ``setup.cfg`` carefully as described in previous sections.
+Then set the ``USE_INDEX64`` switch to ``ON``. Note that MKL DOES NOT work with 64-bit array index.
 
 Installation
 ------------
 
-TBPLaS can be installed to the default path, user-specified path, or kept in the source code directory. Installing
-into the default path is the simplest way, since it does not need to up environment variables. However, it is difficult
-to keep multiple versions or to update TBPLaS in that approach. Installing into user-specified path solves this problem,
-yet it requires appending a **long** path to environment variables. Keeping the source code simplifies the environment
-setting process, and offers the access to source code if necessary. So, personally, we suggest keeping the source code
-directory.
-
-Installing into default path
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Installing TBPLaS into the default path is as easy as ``python setup.py install``. After installation, go to some other
-directory and invoke Python, e.g., ``cd tests && python``. Since TBPLaS uses relative imports for package management,
-staying in the source code directory when invoking Python will cause errors like this:
+Once ``pyproject.toml`` has been properly configured, you can build and install TBPLaS with ``pip install .``.
+The package will be install to the default library path. If you do not have root privileges,
+try ``pip install --user .``, which will install TBPLaS to ``$HOME/.local/lib/pythonM.N``, with M and N being
+the version numbers. Alternatively, you can install TBPLaS to specific directory with the ``--prefix`` option,
+e.g., ``pip install --user --prefix=$HOME/test .`` will install TBPLaS into the directory of ``$HOME/test``.
+You must add the follow directory to the ``PYTHONPATH`` environment variable depending on your python version
 
 .. code-block:: shell
+    :emphasize-lines: 0
 
-    yhli@n02:~/proj/tbplas> python
-    Python 3.6.15 (default, Sep 23 2021, 15:41:43) [GCC] on linux
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> import tbplas
+    export PYTHONPATH=$HOME/test/lib/python3.12/site-packages:$PYTHONPATH
+
+After installation, go to some other directory and invoke Python, e.g., ``cd tests && python``. Since TBPLaS
+uses relative imports for package management, staying in the source code directory when invoking Python will
+cause errors like this:
+
+.. code-block:: txt
+
     Traceback (most recent call last):
       File "<stdin>", line 1, in <module>
       File "/home/yhli/proj/tbplas/tbplas/__init__.py", line 2, in <module>
@@ -257,54 +157,17 @@ staying in the source code directory when invoking Python will cause errors like
       File "/home/yhli/proj/tbplas/tbplas/adapter/__init__.py", line 2, in <module>
         from .wannier90 import *
       File "/home/yhli/proj/tbplas/tbplas/adapter/wannier90.py", line 11, in <module>
-        from ..builder import PrimitiveCell
+        from ..builder import PrimitiveCell, PCHopDiagonalError
       File "/home/yhli/proj/tbplas/tbplas/builder/__init__.py", line 2, in <module>
         from .advanced import *
       File "/home/yhli/proj/tbplas/tbplas/builder/advanced.py", line 17, in <module>
-        from .primitive import PrimitiveCell
-      File "/home/yhli/proj/tbplas/tbplas/builder/primitive.py", line 13, in <module>
-        from . import core
-    ImportError: cannot import name 'core'
+        from .primitive import PrimitiveCell, PCInterHopping
+      File "/home/yhli/proj/tbplas/tbplas/builder/primitive.py", line 12, in <module>
+        from ..cython import primitive as core
+    ImportError: cannot import name 'primitive' from 'tbplas.cython' (/home/yhli/proj/tbplas/tbplas/cython/__init__.py)
 
 So it is mandatory to go to another directory. After Python has been invoked, try ``import tbplas``. If no error occurs,
-then your installation is successful. If there are errors on undefined symbol, check the workaround in previous section.
-
-Installing into user-specified path
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Installing into user-specified path is achieved by adding ``--prefix`` option to the ``install`` command. For example,
-``python setup.py install --prefix=/home/foo/bar`` will install TBPLaS into the directory of ``/home/foo/bar``.
-You must add the follow directory to the ``PYTHONPATH`` environment variable:
-
-.. code-block:: shell
-    :emphasize-lines: 0
-
-    export PYTHONPATH=/home/foo/bar/lib/python3.6/site-packages:$PYTHONPATH
-
-or
-
-.. code-block:: shell
-    :emphasize-lines: 0
-
-    export PYTHONPATH=/home/foo/bar/lib/python3.8/site-packages/TBPLaS-0.9.8-py3.8-linux-x86_64.egg:$PYTHONPATH
-
-depending on your python environment. Anyway, the TBPLaS sub-directory must reside under the directory you add to
-``PYTHONPATH``. You can also add this command into your ``~/.bashrc`` to make it permanently effective, i.e.,
-you will not need to type it every time you log in or open a new terminal.
-
-Keeping TBPLaS in the source code directory
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To keep TBPLaS in the source code directory, you need to manually copy Cython/FORTRAN extensions from build directory
-to proper destinations with ``./scripts/cp_so.sh``. Then add the source code directory to ``PYTHONPATH``. For instance,
-
-.. code-block:: shell
-    :emphasize-lines: 0
-
-    export PYTHONPATH=/home/foo/bar/tbplas_src:$PYTHONPATH
-
-with ``tbplas_src`` being the source code directory, in which ``setup.py`` and other files reside. Also, do not forget
-to add this command to your ``~/.bashrc`` to make it permanently effective.
+then your installation is successful.
 
 Testing
 -------
