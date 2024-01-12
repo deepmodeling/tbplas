@@ -19,11 +19,16 @@ def main():
     new_release = input("Input the full version number: ")
 
     # Update setup.py
-    patterns = [r"^[\t ]*'version'"]
+    patterns = [r"^\s*'version'"]
     new_lines = [f"{'':4}'version': '{new_release}',\n"]
     replace("setup.py", patterns, new_lines)
 
-    # Update setup.py
+    # Update pyproject.toml
+    patterns = [r"^\s*version\s*="]
+    new_lines = [f"version = \"{new_release}\"\n"]
+    replace("pyproject.toml", patterns, new_lines)
+
+    # Update conf.py
     patterns = [r"^version =", r"^release ="]
     new_lines = [f"version = '{new_version}'\n", f"release = '{new_release}'\n"]
     replace("doc/source/conf.py", patterns, new_lines)
