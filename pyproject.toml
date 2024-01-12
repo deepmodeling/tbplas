@@ -46,6 +46,7 @@ cmake.minimum-version = "3.17"
 cmake.build-type = "Release"
 cmake.verbose = true
 logging.level = "INFO"
+build-dir = "build"
 wheel.packages = ["tbplas"]
 wheel.exclude = ["**.pyx", "**.F90", "**.f90", "**.h"]
 
