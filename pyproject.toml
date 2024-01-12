@@ -1,0 +1,64 @@
+[build-system]
+requires = ["scikit-build-core", "numpy", "cython"]
+build-backend = "scikit_build_core.build"
+
+# Metainfo and requirements
+# Reference: https://pypi.org/classifiers
+[project]
+name = "tbplas"
+version = "1.5.0"
+description = "Tight-binding Package for Large-scale Simulation"
+authors = [
+    {name = "Yunhai Li", email = "liyunhai1016@whu.edu.cn"},
+    {name = "Shengjun Yuan", email = "s.yuan@whu.edu.cn"},
+]
+urls = {homepage = "http://www.tbplas.net"}
+license = {text = "BSD-3-Clause"}
+readme = "README.rst"
+keywords = [
+    "condensed matter physics",
+    "tight-binding model",
+    "large-scale simulation"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Framework :: Matplotlib",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Cython",
+    "Programming Language :: Fortran",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.7"
+dependencies = ["numpy", "scipy", "matplotlib", "cython"]
+
+[project.optional-dependencies]
+lammps = ["ase"]
+mpi = ["mpi4py"]
+
+# Build options
+[tool.scikit-build]
+minimum-version = "0.6"
+ninja.minimum-version = "1.10"
+cmake.minimum-version = "3.17"
+cmake.build-type = "Release"
+cmake.verbose = true
+logging.level = "INFO"
+wheel.packages = ["tbplas"]
+wheel.exclude = ["**.pyx", "**.F90", "**.f90", "**.h"]
+
+[tool.scikit-build.cmake.define]
+USE_INDEX64 = "OFF"
+USE_MKL = "OFF"
+# GCC
+CMAKE_C_COMPILER = "gcc"
+CMAKE_Fortran_COMPILER = "gfortran"
+CMAKE_C_FLAGS = "-march=native -mtune=native"
+CMAKE_Fortran_FLAGS = "-cpp -march=native -mtune=native -fopenmp -fno-second-underscore"
+## Intel
+#CMAKE_C_COMPILER = "icx"
+#CMAKE_Fortran_COMPILER = "ifx"
+#CMAKE_C_FLAGS = "-xHost"
+#CMAKE_Fortran_FLAGS = "-fpp -xHost -qopenmp -ipo -heap-arrays 32"
