@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('../../.'))
 # -- Project information -----------------------------------------------------
 
 project = 'TBPLaS'
-copyright = 'TBPLaS development team'
+copyright = '2017-2024, TBPLaS development team. All rights reserved'
 author = 'Yunhai Li, Zhen Zhan, Xueheng Kuang, Yonggang Li and Shengjun Yuan'
 
 # The short X.Y version
