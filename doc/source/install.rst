@@ -55,7 +55,7 @@ And the following packages as optional:
 * ase (for LAMMPS interface)
 * mpi4py (for hybrid MPI+OpenMP parallelization)
 
-Note that ``scikit-build-core`` requires ``CMake>=3.15`` to be installed. We recommend to install the latest version of
+Note that ``scikit-build-core`` requires ``CMake>=3.17`` to be installed. We recommend to install the latest version of
 the packages via the ``pip`` or ``conda`` commands, e.g., ``pip install numpy`` or ``conda install numpy``.
 If you do not have root privileges to make a system-wide installation, try either of the following solutions:
 
