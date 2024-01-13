@@ -1,5 +1,5 @@
 #! /bin/bash
-# Build and install into ~/.local
+# Build so files
 
 test -d build && rm -rf build
-pip install --user --verbose .
+pip install --prefix=/tmp/tbplas --verbose .
