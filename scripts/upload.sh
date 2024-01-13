@@ -1,5 +1,4 @@
 #! /bin/bash
-
 # Upload documentation and source code to the official site
 
 function msg ()

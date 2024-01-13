@@ -1,4 +1,5 @@
 #! /bin/bash
+# Pack source code for distribution
 
 items="CITING.rst CMakeLists.txt config doc examples LICENSE.rst \
 pyproject.toml README.rst RELEASE.rst scripts setup.cfg setup.py \

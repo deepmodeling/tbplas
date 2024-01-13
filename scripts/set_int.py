@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Convert array index between 32 and 64 bits"""
 import re
 import glob
 import sys

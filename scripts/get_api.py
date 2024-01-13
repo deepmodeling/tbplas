@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Get the list of user functions and classes, for generating documentation"""
 from inspect import ismodule
 
 import tbplas as tb

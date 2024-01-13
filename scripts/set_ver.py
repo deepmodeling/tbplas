@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+"""Update version number in various files"""
 import re
 
 
