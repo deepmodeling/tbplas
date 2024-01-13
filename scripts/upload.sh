@@ -9,6 +9,15 @@ function msg ()
 top_dir=$(pwd)
 nginx_dir=/usr/share/nginx
 
+# Prepare a local copy of the so files as they are required by sphinx.
+msg "Preparing so files"
+cd $top_dir
+./scripts/build.sh
+wait
+./scripts/cp_so.sh
+wait
+msg "so files ready"
+
 # Generate doc
 msg "Generating documentation"
 cd $top_dir/doc
