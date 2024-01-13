@@ -59,9 +59,6 @@ The main features of TBPLaS include:
 Gallery
 -------
 
-Modeling
-^^^^^^^^
-
 .. figure:: images/fractal.png
     :alt: sierpinski carpet
     :align: center
@@ -89,9 +86,6 @@ Modeling
     :scale: 45%
 
     Arbitrary Deformation
-
-Properties
-^^^^^^^^^^
 
 .. figure:: images/param_fit.png
     :alt: param_fit
@@ -124,11 +118,11 @@ Properties
 Citation
 --------
 
-.. include:: ../../../CITING.rst
+.. include:: citing.rst
 
 License
 -------
 
 TBPLaS is release under the BSD license 2.0, the complete content of which is as following:
 
-.. include:: ../../../LICENSE.rst
+.. include:: license.rst
