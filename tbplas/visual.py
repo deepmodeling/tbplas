@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as mc
 from scipy.interpolate import griddata
 
-from .base import BOHR2NM
+from .base import BOHR2NM, cart2frac
 from .builder import PrimitiveCell, Sample
 from .parallel import MPIEnv
 from .cython import atom as core
@@ -454,35 +454,60 @@ class Visualizer(MPIEnv):
 
     def plot_wfc3d(self, model: Union[PrimitiveCell, Sample],
                    wfc: np.ndarray,
-                   qn: np.ndarray,
+                   quantum_numbers: np.ndarray,
+                   convention: int = 1,
+                   k_point: np.ndarray = None,
+                   rn_max: np.ndarray = None,
+                   cube_name: str = "wfc.cube",
                    cube_origin: np.ndarray = None,
                    cube_size: np.ndarray = None,
-                   resolution: float = 0.01,
-                   cutoff: float = 1.0,
-                   kind: str = "real") -> None:
+                   resolution: float = 0.005,
+                   kind: str = "real",) -> None:
         """
+        Plot wave function to cube file.
+
         :param model: model to which the wave function belongs
         :param wfc: (num_orb,) float64 array
             projection of wave function on all the sites
-        :param qn: (num_orb, 4) int32 array
+        :param quantum_numbers: (num_orb, 4) int32 array
             z, n, l, m of each orbital
+        :param convention: convention of Hamiltonian from which the wave
+            function is obtained
+        :param k_point: (3,) float64 array
+            fractional coordinate of the k-point
+        :param rn_max: (3,) int64 array
+            range of rn to evaluate the Bloch function, the actual range
+            is [-rn_max[i], rn_max[i]] along 3 directions
+        :param cube_name: name of output cube file
         :param cube_origin: (3,) float64 array
             Cartesian coordinate of origin of plotting range in nm
         :param cube_size: (3,) float64 array
             size of plotting range in nm
-        :param resolution: float
-            resolution of plotting range in nm
-        :param cutoff: float
-            cutoff for calculating atomic wave function in nm
+        :param resolution: resolution of plotting range in nm
         :param kind: data to plot, should be real, imag or abs2
         :return: None
         """
-        # Get orbital locations in bohr
+        # Get orbital positions and lattice vectors in nm
+        # CAUTION: we must copy the arrays, otherwise the /= BOHR2NM operations
+        # will pollute the models!
         if isinstance(model, PrimitiveCell):
-            orb_pos = model.orb_pos_nm
+            orb_pos = model.orb_pos_nm.copy()
+            lat_vec = model.lat_vec.copy()
         else:
             model.init_orb_pos()
-            orb_pos = model.orb_pos
+            orb_pos = model.orb_pos.copy()
+            lat_vec = model.sc0.sc_lat_vec.copy()
+
+        # Set Bloch parameters
+        if k_point is None:
+            k_point = [0, 0, 0]
+        k_point = np.array(k_point, dtype=np.float64)
+        if rn_max is None:
+            rn_max = np.zeros(3)
+        rn_frac = np.array([(i, j, k)
+                            for i in range(-rn_max[0], rn_max[0] + 1)
+                            for j in range(-rn_max[1], rn_max[1] + 1)
+                            for k in range(-rn_max[2], rn_max[2] + 1)])
 
         # Set cube parameters
         if cube_origin is None:
@@ -492,25 +517,36 @@ class Visualizer(MPIEnv):
             cube_size = np.zeros_like(cube_origin)
             for i in range(3):
                 delta = orb_pos[:, i].max() - orb_pos[:, i].min()
-                cube_size[i] = delta if delta >= cutoff else cutoff
+                cube_size[i] = delta if delta >= 1.0 else 1.0
         cube_size = np.array(cube_size, dtype=np.float64)
         num_grid = np.array([_ / resolution for _ in cube_size], dtype=np.int32)
 
         # Convert all to atomic units
         orb_pos /= BOHR2NM
+        lat_vec /= BOHR2NM
         cube_origin /= BOHR2NM
         cube_size /= BOHR2NM
         resolution /= BOHR2NM
-        cutoff /= BOHR2NM
 
-        # Collect contributions from each orbital
+        # Collect contributions from each Bloch state
+        orb_pos_frac = cart2frac(lat_vec, orb_pos)
+        quantum_numbers = np.array(quantum_numbers, dtype=np.int32)
         cube = np.zeros(num_grid, dtype=np.complex128)
-        cube_work = np.zeros(num_grid, dtype=np.float64)
         for i, pos in enumerate(orb_pos):
-            cube_work *= 0.0
-            core.set_cube(pos, qn[i], cube_origin, num_grid, resolution, cutoff,
-                          cube_work)
-            cube += wfc[i] * cube_work
+            bloch_state = np.zeros_like(cube)
+            for rn in rn_frac:
+                atomic_state = np.zeros_like(cube, dtype=np.float64)
+                pos_rn = pos + np.matmul(rn, lat_vec)
+                core.set_cube(pos_rn, quantum_numbers[i], cube_origin, num_grid,
+                              resolution, atomic_state)
+                if convention == 1:
+                    phase = 2 * np.pi * np.dot(k_point, rn + orb_pos_frac[i])
+                else:
+                    phase = 2 * np.pi * np.dot(k_point, rn)
+                factor = np.exp(1j * phase)
+                bloch_state += factor * atomic_state
+            bloch_state /= np.sqrt(rn_frac.shape[0])
+            cube += wfc[i] * bloch_state
         if kind == "real":
             cube = cube.real
         elif kind == "imag":
@@ -521,13 +557,15 @@ class Visualizer(MPIEnv):
         # Merge orbitals belonging to the same atom
         atom_pos = dict()
         for i, pos in enumerate(orb_pos):
-            atom_pos[tuple(pos)] = qn.item(i, 0)
+            for rn in rn_frac:
+                pos_rn = pos + np.matmul(rn, lat_vec)
+                atom_pos[tuple(pos_rn)] = quantum_numbers.item(i, 0)
 
         # Output
         if self.is_master:
-            with open("test.cube", "w") as f:
+            with open(cube_name, "w") as f:
                 # Header lines
-                f.write("Real part of wave function\n")
+                f.write(f"{kind} part of wave function\n")
                 f.write("Generated by tbplas\n")
 
                 # Number of atoms and origin

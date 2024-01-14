@@ -117,8 +117,7 @@ cdef double _ylm(int l, int m, double x, double y, double z, double r):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def set_cube(double [::1] c0, int[::1] qn, double[::1] cube_origin,
-             int [::1] num_grid, double res, double cutoff,
-             double [:,:,::1] cube):
+             int [::1] num_grid, double res, double [:,:,::1] cube):
     """
     Write atomic wavefunction to cube.
 
@@ -134,8 +133,6 @@ def set_cube(double [::1] c0, int[::1] qn, double[::1] cube_origin,
         number of grid points along x, y, and z directions
     res: float64
         resolution of cube
-    cutoff: float64
-        cutoff for evaluating atomic wave function in bohr
     cube: (nx, ny, nz) float64 array
         cube to store the atomic wave function
     """
@@ -157,7 +154,7 @@ def set_cube(double [::1] c0, int[::1] qn, double[::1] cube_origin,
             for k in range(num_grid[2]):
                 dz = zmin + res * k - c0[2]
                 r = sqrt(dx2y2 + dz**2)
-                if r > cutoff or r < 1.0e-7:
+                if r < 1.0e-7:
                     gridval = 0.0
                 else:
                     gridval = _radial(z, n, l, r) * _ylm(l, m, dx, dy, dz, r)
