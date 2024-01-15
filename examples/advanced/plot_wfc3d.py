@@ -7,7 +7,7 @@ def h2_molecule():
     """Plot the bonding and anti-boding states of H2 molecule."""
     # 1nm * 1nm * 1nm cubic cell
     lattice = np.eye(3, dtype=np.float64)
-    h_bond = tb.BOHR2NM
+    h_bond = 0.074  # H-H bond length in nm
     prim_cell = tb.PrimitiveCell(lattice, unit=tb.NM)
     prim_cell.add_orbital((0.5-0.5*h_bond, 0.5, 0.5))
     prim_cell.add_orbital((0.5+0.5*h_bond, 0.5, 0.5))
@@ -21,8 +21,8 @@ def h2_molecule():
 
     # Define plotting range
     # Cube volume: [0.25, 0.75] * [0.25, 0.75] * [0.25, 0.75] in nm
-    cube_origin = 0.25 * np.ones(3, dtype=np.float64)
-    cube_size = 0.5 * np.ones(3, dtype=np.float64)
+    cube_origin = np.array([0.25, 0.25, 0.25])
+    cube_size = np.array([0.5, 0.5, 0.5])
     rn_max = np.array([0, 0, 0])
 
     # Plot wave function
@@ -39,10 +39,10 @@ def h2_molecule():
 
 def h2_chain():
     """Plot the wave function of a hydrogen chain."""
-    # 1 bohr * 1 bohr * 1 bohr cubic cell
-    lattice = np.eye(3, dtype=np.float64)
-    prim_cell = tb.PrimitiveCell(lattice, unit=tb.BOHR2NM)
-    prim_cell.add_orbital((0.5, 0.5, 0.5))
+    # 0.074nm * 0.074nm * 0.074nm cubic cell
+    lattice = 0.074 * np.eye(3, dtype=np.float64)
+    prim_cell = tb.PrimitiveCell(lattice, unit=tb.NM)
+    prim_cell.add_orbital((0.0, 0.0, 0.0))
     prim_cell.add_hopping((1, 0, 0), 0, 0, -1.0)
     qn = np.array([(1, 1, 0, 0) for _ in range(prim_cell.num_orb)])
 
@@ -52,9 +52,9 @@ def h2_chain():
     bands, states = solver.calc_states(k_points, convention=1)
 
     # Define plotting range
-    # Cube volume: [-0.5, 0.5] * [-0.5, 0.5] * [-0.5, 0.5] in nm
-    cube_origin = -0.5 * np.ones(3, dtype=np.float64)
-    cube_size = np.ones(3, dtype=np.float64)
+    # Cube volume: [-0.75, 0.75] * [-0.25, 0.25] * [-0.25, 0.25] in nm
+    cube_origin = np.array([-0.75, -0.25, -0.25])
+    cube_size = np.array([1.5, 0.5, 0.5])
     rn_max = np.array([15, 0, 0])
 
     # Plot wave function
@@ -74,9 +74,9 @@ def graphene():
     bands, states = solver.calc_states(k_points, convention=1)
 
     # Define plotting range
-    # Cube volume: [-0.5, 0.5] * [-0.5, 0.5] * [-0.5, 0.5] in nm
-    cube_origin = -0.5 * np.ones(3, dtype=np.float64)
-    cube_size = np.ones(3, dtype=np.float64)
+    # Cube volume: [-0.75, 0.75] * [-0.75, 0.75] * [-0.25, 0.25] in nm
+    cube_origin = np.array([-0.75, -0.75, -0.25])
+    cube_size = np.array([1.5, 1.5, 0.5])
     rn_max = np.array([3, 3, 0])
 
     # Plot wave function
