@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 # Reference: https://pypi.org/classifiers
 [project]
 name = "tbplas"
-version = "1.5.0"
+version = "1.6.0"
 description = "Tight-binding Package for Large-scale Simulation"
 authors = [
     {name = "Yunhai Li", email = "liyunhai1016@whu.edu.cn"},

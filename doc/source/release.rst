@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+v1.6 | 2024-01-17
+-----------------
+
+New features
+------------
+
+* ``plot_wfc3d`` of :class:`.Visualizer` class now works for periodic systems.
+* New :class:`.SOCTable2` class for evaluating spin-orbital coupling terms.
+* New build system based on scikit-build-core and cmake.
+
+Changes
+-------
+
+* Dropped support for Python 3.6. Now Python >= 3.7 is required to install TBPLaS.
+
 v1.5 | 2023-08-17
 -----------------
 

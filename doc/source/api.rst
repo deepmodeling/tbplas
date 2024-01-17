@@ -25,6 +25,7 @@ API Reference
     SK
     SOC
     SOCTable
+    SOCTable2
     Sample
     Solver
     SpinTexture
