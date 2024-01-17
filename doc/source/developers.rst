@@ -25,11 +25,7 @@ Current developers
 
 * Dr. Zhen Zhan
   
-  * School of Physics and Technology, Wuhan University
-
-* Mr. Xueheng Kuang
-
-  * School of Physics and Technology, Wuhan University
+  * IMDEA Nanociencia Institute, Madrid, Spain
 
 * Mr. Yonggang Li
 
@@ -38,6 +34,7 @@ Current developers
 Former developers
 -----------------
 
+* Dr. Xueheng Kuang
 * Dr. Edo van Veen
 * Dr. Guus Slotman
 * Mr. Kaixiang Huang
