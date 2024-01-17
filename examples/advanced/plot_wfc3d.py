@@ -65,7 +65,13 @@ def h2_chain():
 
 
 def graphene():
-    prim_cell = tb.make_graphene_diamond()
+    vectors = tb.gen_lattice_vectors(a=0.246, b=0.246, gamma=60)
+    prim_cell = tb.PrimitiveCell(vectors, unit=tb.NM)
+    prim_cell.add_orbital((0.0, 0.0), label="C_pz")
+    prim_cell.add_orbital((1/3., 1/3.), label="C_pz")
+    prim_cell.add_hopping((0, 0), 0, 1, -2.7)
+    prim_cell.add_hopping((1, 0), 1, 0, -2.7)
+    prim_cell.add_hopping((0, 1), 1, 0, -2.7)
     qn = np.array([(6, 2, 1, 0) for _ in range(prim_cell.num_orb)])
 
     # Calculate wave function
