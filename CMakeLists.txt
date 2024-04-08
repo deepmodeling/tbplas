@@ -6,7 +6,7 @@ find_package(
   Python
   COMPONENTS Interpreter Development.Module NumPy
   REQUIRED)
-find_program(CYTHON "cython")
+find_program(CYTHON "cython" REQUIRED)
 
 #------------------------------ Compiler options ------------------------------#
 # Detect compiler vendor
